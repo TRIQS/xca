@@ -28,7 +28,7 @@ project(triqs_soehyb VERSION 0.0.1 LANGUAGES CXX)
 get_directory_property(IS_SUBPROJECT PARENT_DIRECTORY)
 
 # ############
-# Load TRIQS and CPP2PY
+# Load TRIQS
 find_package(TRIQS 3.3 REQUIRED)
 
 # Get the git hash & print status

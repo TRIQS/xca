@@ -41,9 +41,11 @@ for (int i = 0; i < dockerPlatforms.size(); i++) {
       /* build and tag */
       def args = ''
       if (platform == documentationPlatform)
-        args = '-DBuild_Documentation=1'
-      else if (platform == "sanitize")
-        args = '-DASAN=ON -DUBSAN=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo'
+        args = "-DBuild_Documentation=ON ${args}"
+      if (platform == "ubuntu-clang")
+        args = "-DUpdate_Python_Bindings=ON ${args}"
+      if (platform == "sanitize")
+        args = "-DASAN=ON -DUBSAN=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo ${args}"
       def img = docker.build("flatironjenkins/${dockerName}:${env.BRANCH_NAME}-${env.STAGE_NAME}", "--build-arg APPNAME=${projectName} --build-arg BUILD_ID=${env.BUILD_TAG} --build-arg CMAKE_ARGS='${args}' .")
       catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
         img.inside("--shm-size=4gb") {
