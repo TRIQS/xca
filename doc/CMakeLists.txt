@@ -4,7 +4,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/conf.py.in ${CMAKE_CURRENT_BINARY_DIR
 # --------------------------------------------------------
 # Build & Run the C++ doc examples and capture the output
 # --------------------------------------------------------
-
 add_custom_target(${PROJECT_NAME}_docs_example_output)
 file(GLOB_RECURSE ExampleList RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
 foreach(example ${ExampleList})
@@ -55,3 +54,8 @@ install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html/ COMPONENT documentation DEST
   REGEX "\\.(html|pdf|png|gif|jpg|svg|ico|js|xsl|css|py|txt|inv|bib|ttf|woff2|eot|sh)$"
   PATTERN "_*"
 )
+
+# ---------------------------------
+# Build doxygen documentation
+# ---------------------------------
+add_subdirectory(doxygen)

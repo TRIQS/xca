@@ -6,7 +6,7 @@ The TRIQS Sum-Of-Exponentials bold HYBridization expansion impurity solver (triq
 .. sidebar:: triqs_soehyb |PROJECT_VERSION|
 
    This is the homepage of triqs_soehyb |PROJECT_VERSION|.
-   For changes see the :ref:`changelog page <changelog>`.
+   For changes see the :doc:`changelog page <ChangeLog>`.
       
       .. image:: _static/logo_github.png
          :width: 75%
@@ -41,5 +41,5 @@ Note that this application uses the TRIQS library please also see its `citation 
    install
    documentation
    issues
-   ChangeLog.md
+   ChangeLog
    about
