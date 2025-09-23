@@ -17,13 +17,6 @@
 
 BlockDiagOpFun NCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl, BlockDiagOpFun const &Gt,
                       const std::vector<BlockOp> &Fs) {
-  // Evaluate NCA using block-sparse storage
-  // @param[in] hyb hybridization function
-  // @param[in] hyb_refl hybridization function eval'd at negative imag. times
-  // @param[in] Gt Greens function
-  // @param[in] F_list F operators
-  // @return NCA term of self-energy
-
   // get F^dagger operators
   int num_Fs  = Fs.size();
   auto F_dags = Fs;
@@ -388,9 +381,9 @@ BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_v
                       const std::vector<BlockOp> &Fs) {
 
   nda::vector_const_view<double> dlr_it = itops.get_itnodes();
-  int r = dlr_it.extent(0);
-  int p = hyb_poles.extent(0);
-  int n = Fs.size();
+  int r                                 = dlr_it.extent(0);
+  int p                                 = hyb_poles.extent(0);
+  int n                                 = Fs.size();
 
   auto F_dags = Fs;
   for (int i = 0; i < n; ++i) { F_dags[i] = dagger_bs(Fs[i]); }
@@ -475,12 +468,12 @@ BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_v
           // preallocate for i-th block
           auto Sigma_l = nda::make_regular(0 * Sigma.get_block(i));
           // sizes of intermediate matrices are known
-          nda::array<dcomplex, 3> Tright(r, block_dims(2), block_dims(1));        // output of OCA_bs_right
-          nda::array<dcomplex, 3> Tmid(r, block_dims(3), block_dims(0));          // output of OCA_bs_middle
+          nda::array<dcomplex, 3> Tright(r, block_dims(2), block_dims(1));   // output of OCA_bs_right
+          nda::array<dcomplex, 3> Tmid(r, block_dims(3), block_dims(0));     // output of OCA_bs_middle
           nda::array<dcomplex, 4> Tkaps(n, r, block_dims(2), block_dims(0)); // storage in OCA_bs_middle
-          nda::array<dcomplex, 3> Tmu(r, block_dims(2), block_dims(0));           // storage in OCA_bs_middle
-          nda::array<dcomplex, 3> Tleft(r, block_dims(4), block_dims(0));         // output of OCA_bs_left
-          nda::array<dcomplex, 3> GKt(r, block_dims(3), block_dims(3));           // storage in OCA_bs_left
+          nda::array<dcomplex, 3> Tmu(r, block_dims(2), block_dims(0));      // storage in OCA_bs_middle
+          nda::array<dcomplex, 3> Tleft(r, block_dims(4), block_dims(0));    // output of OCA_bs_left
+          nda::array<dcomplex, 3> GKt(r, block_dims(3), block_dims(3));      // storage in OCA_bs_left
 
           // TODO: make Fs have blocks that are 3D nda::array?
           auto Fkaps = nda::zeros<dcomplex>(n, F1list[0].get_block_size(i, 0), F1list[0].get_block_size(i, 1));
@@ -496,8 +489,8 @@ BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_v
               OCA_bs_right_in_place(beta, itops, dlr_it, hyb_poles(l), (fb2 == 1), Gt.get_block(ind_path(0)), Gt.get_block(ind_path(1)),
                                     F2list[lam].get_block(ind_path(0)), Tright);
               OCA_bs_middle_in_place((fb1 == 1), hyb, hyb_refl, Fkaps, Fmus, Tright, Tmid, Tkaps, Tmu);
-              OCA_bs_left_in_place(beta, itops, dlr_it, hyb_poles(l), (fb2 == 1), Gt.get_block(ind_path(2)), Fbar_array[lam][l].get_block(ind_path(2)),
-                                   Tmid, Tleft, GKt);
+              OCA_bs_left_in_place(beta, itops, dlr_it, hyb_poles(l), (fb2 == 1), Gt.get_block(ind_path(2)),
+                                   Fbar_array[lam][l].get_block(ind_path(2)), Tmid, Tleft, GKt);
               Sigma_l += Tleft;
             } // sum over lambda
 
@@ -538,7 +531,6 @@ void OCA_dense_right_in_place(double beta, imtime_ops &itops, nda::vector_const_
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), -omega_l) * nda::matmul(Flam, Gt(t, _, _)); }
       // 2. convolve by G
       T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
-      // T = itops.convolve(Gt_conv, T);
     } else {
       // 1. multiply G(tau_2-tau_1) K^+(tau_2-tau_1) F_lambda
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), omega_l) * nda::matmul(Gt(t, _, _), Flam); }
@@ -551,7 +543,6 @@ void OCA_dense_right_in_place(double beta, imtime_ops &itops, nda::vector_const_
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), omega_l) * nda::matmul(Flam, Gt(t, _, _)); }
       // 2. convolve by G
       T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
-      // T = itops.convolve(Gt_conv, T);
     } else {
       // 1. multiply G(tau_2-tau_1) K^-(tau_2-tau_1) F_lambda
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), -omega_l) * nda::matmul(Gt(t, _, _), Flam); }
@@ -650,7 +641,7 @@ nda::array<dcomplex, 3> OCA_dense(nda::array_const_view<dcomplex, 3> hyb, imtime
 
   auto hyb_coeffs      = itops.vals2coefs(hyb); // hybridization DLR coeffs
   auto hyb_refl        = itops.reflect(hyb);
-  auto hyb_refl_coeffs = hyb_coeffs; 
+  auto hyb_refl_coeffs = hyb_coeffs;
   int num_Fs           = Fs.extent(0);
 
   // compute Fbars and Fdagbars
@@ -722,10 +713,10 @@ nda::array<dcomplex, 3> OCA_dense(nda::array_const_view<dcomplex, 3> hyb, nda::a
                                   nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags) {
 
   nda::vector_const_view<double> dlr_it = itops.get_itnodes();
-  int r = dlr_it.extent(0);
-  int p = hyb_poles.extent(0);
-  int N = Gt.extent(1);
-  int n = Fs.extent(0);
+  int r                                 = dlr_it.extent(0);
+  int p                                 = hyb_poles.extent(0);
+  int N                                 = Gt.extent(1);
+  int n                                 = Fs.extent(0);
 
   // compute Fbars and Fdagbars
   auto Fdagbars  = nda::array<dcomplex, 4>(n, p, N, N);
@@ -740,7 +731,6 @@ nda::array<dcomplex, 3> OCA_dense(nda::array_const_view<dcomplex, 3> hyb, nda::a
   }
 
   // initialize self-energy
-  // TODO check r or p 
   nda::array<dcomplex, 3> Sigma(r, N, N);
 
   // preallocate intermediate arrays

@@ -6,7 +6,7 @@ import atom_diag_utils as utils
 
 if __name__ == "__main__":
     # parameters to tune 
-    norb = 2
+    norb = 5
     all_sym = True  # True for all symmetries, False for just particle number symmetry
     if all_sym:
         h5_fname = "spin_flip_fermion_all_sym.h5"

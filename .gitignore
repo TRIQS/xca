@@ -7,6 +7,7 @@ build/
 cmake_script
 .vscode/
 test/c++/h5/*.txt
+*.h5
 
 *.log
 

@@ -219,7 +219,7 @@ TEST(Backbone, OCA) {
 // OCA timing comparison
 // crank up number of orbitals for spin flip fermion, compare time between dense and block-sparse solvers, plot, maybe play with parameters (e.g. beta), single-core
 
-TEST(Backbone, spin_flip_fermion) {
+TEST(Backbone, PYTHON_spin_flip_fermion) {
   double beta   = 2.0;
   double Lambda = 100.0 * beta;
   double eps    = 1.0e-10;
@@ -291,7 +291,7 @@ TEST(Backbone, spin_flip_fermion) {
   }
 }
 
-TEST(Backbone, spin_flip_fermion_sym_sets) {
+TEST(Backbone, PYTHON_spin_flip_fermion_sym_sets) {
   double beta   = 2.0;
   double Lambda = 100.0 * beta;
   double eps    = 1.0e-10;
@@ -394,8 +394,8 @@ TEST(Backbone, PYTHON_third_order) {
   nda::array<int, 2> T_OCA = {{0, 2}, {1, 3}};
   auto B_OCA               = Backbone(T_OCA, n);
   auto D                   = DiagramBlockSparseEvaluator(beta, itops, Deltat, hyb_refl, dlr_rf, Gt, Fq); // create DiagramEvaluator object
-  D.eval_diagram_block_sparse(B_OCA);                                                                       // evaluate OCA diagram
-  auto OCA_result = D.Sigma; // get the result from the DiagramEvaluator
+  D.eval_diagram_block_sparse(B_OCA);                                                                    // evaluate OCA diagram
+  auto OCA_result = D.Sigma;                                                                             // get the result from the DiagramEvaluator
   D.reset();
 
   BlockDiagOpFun third_order_result(r, Gt.get_block_sizes());
@@ -471,7 +471,7 @@ TEST(Backbone, PYTHON_third_order) {
   }
 }
 
-TEST(Backbone, OCA_semicircle_bath_aaa) {
+TEST(Backbone, PYTHON_OCA_semicircle_bath_aaa) {
   // DLR parameters
   double beta   = 8.0;
   double Lambda = 10.0 * beta;
@@ -634,17 +634,166 @@ TEST(Backbone, OCA_semicircle_bath_aaa) {
   // generic diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = Backbone(topology, n);
-  
-  std::string filename = "../test/c++/h5/two_band_ad_semic.h5";
+
+  std::string filename           = "../test/c++/h5/two_band_ad_semic.h5";
   auto [Gt1, Fq, sym_set_labels] = load_from_hdf5(filename, beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
-  auto D = DiagramBlockSparseEvaluator(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq); 
-  D.eval_diagram_block_sparse(B); 
+  auto D                         = DiagramBlockSparseEvaluator(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq);
+  D.eval_diagram_block_sparse(B);
   auto OCA_result = D.Sigma; // get the result from the DiagramEvaluator
 
   int i = 0, s0 = 0, s1 = 0;
   for (std::vector<unsigned long> subspace : subspaces) {
     s1 += subspace.size();
     ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(i) - OCA_dense_result(_, range(s0, s1), range(s0, s1)))), eps);
+    i += 1;
+    s0 = s1;
+  }
+}
+
+TEST(Backbone, PYTHON_spin_flip_fermion_aaa) {
+  double beta   = 8.0;
+  double Lambda = 10.0 * beta;
+  double eps    = 1.0e-6;
+
+  // DLR generation
+  auto dlr_rf = build_dlr_rf(Lambda, eps);
+  auto itops  = imtime_ops(Lambda, dlr_rf);
+
+  std::string filename = "../test/c++/h5/spin_flip_fermion.h5";
+  int n                = 2 * 5; // 2 * number of orbitals
+  int p                = 7;
+  int r                = itops.rank();
+  nda::array<dcomplex, 3> hyb(r, n, n), hyb_coeffs(p, n, n);
+  nda::vector<dcomplex> hyb00(r), hyb_coeffs00(p);
+  hyb00         = {-0.4997496184487105, -0.4867352379479528, -0.4603465101833711, -0.4239204950540695, -0.3716597467714097,
+                   -0.2884886574148449, -0.2479810727230272, -0.2065525284769785, -0.1635819676241178, -0.1326995066858671,
+                   -0.1225444804140666, -0.1282199855712255, -0.1386184647087601, -0.1720919948804938, -0.2300400167898313,
+                   -0.3000508284935615, -0.3759657450111002, -0.4545389745912252, -0.4821599768174421, -0.4997496184487105};
+  hyb_coeffs00  = {0.0028042961182163, 0.088487039172428,  0.1575418229076625, 0.1953880665937937,
+                   0.2145207908265103, 0.1832496441339733, 0.1580088741667851};
+  for (int i = 0; i < n; i++) {
+    for (int j = i; j < n; j++) {
+      // if ((i == j) || (i == 0 && j == 1) || (i == 1 && j == 0) || (i == 2 && j == 3) || (i == 3 && j == 2)) {
+      if (i / 2 == j / 2) {
+        hyb(_, i, j)      = hyb00;
+        hyb_coeffs(_, i, j) = hyb_coeffs00;
+      }
+      else {
+        hyb(_, i, j)      = 0.0;
+        hyb_coeffs(_, i, j) = 0.0;
+      }
+    }
+  }                   
+  auto hyb_refl = nda::make_regular(-hyb);
+  nda::array<dcomplex, 3> hyb_refl_coeffs(p, n, n);
+  hyb_refl_coeffs = nda::make_regular(-hyb_coeffs);
+  nda::vector<double> hyb_poles(p);
+  hyb_poles                     = {-2.537191963500981,  1.7111725610238615, -1.514666605887425, 1.04941790134832,
+                                   -0.7410379494142222, 0.3763525311836938, -0.1312888711963961};
+  hyb_poles                     = hyb_poles * beta;
+  auto [Gt, Fq, sym_set_labels] = load_from_hdf5(filename, beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
+
+  // set up backbone and diagram evaluator
+  nda::array<int, 2> topology = {{0, 2}, {1, 3}};
+  auto B                      = Backbone(topology, n);
+  DiagramBlockSparseEvaluator D(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq);
+  auto start = std::chrono::high_resolution_clock::now();
+  D.eval_diagram_block_sparse(B);
+  auto end                               = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> duration = end - start;
+  std::cout << std::setprecision(16) << "Block-sparse OCA evaluation for n = " << n << " took " << duration.count() << " seconds." << std::endl;
+  auto result = D.Sigma;
+
+  // compare to dense result
+  auto [Gt_dense, Fset, subspaces] =
+     spin_flip_fermion_dense_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs, "../test/c++/h5/spin_flip_fermion.h5");
+
+  DiagramEvaluator D2(beta, itops, hyb, hyb_refl, hyb_poles, Gt_dense, Fset);
+  start = std::chrono::high_resolution_clock::now();
+  D2.eval_diagram_dense(B);
+  end      = std::chrono::high_resolution_clock::now();
+  duration = end - start;
+  std::cout << "Dense OCA evaluation for n = " << n << " took " << duration.count() << " seconds." << std::endl;
+  auto result_dense = D2.Sigma;
+
+  int i = 0, s0 = 0, s1 = 0;
+  for (nda::vector_view<unsigned long> subspace : subspaces) {
+    s1 += subspace.size();
+    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), eps);
+    i += 1;
+    s0 = s1;
+  }
+}
+
+TEST(Backbone, PYTHON_spin_flip_fermion_all_sym_aaa) {
+  double beta   = 8.0;
+  double Lambda = 10.0 * beta;
+  double eps    = 1.0e-6;
+
+  // DLR generation
+  auto dlr_rf = build_dlr_rf(Lambda, eps);
+  auto itops  = imtime_ops(Lambda, dlr_rf);
+
+  std::string filename = "../test/c++/h5/spin_flip_fermion_all_sym.h5";
+  int n                = 2 * 5; // 2 * number of orbitals
+  int p                = 7;
+  int r                = itops.rank();
+  nda::array<dcomplex, 3> hyb(r, n, n), hyb_coeffs(p, n, n);
+  nda::vector<dcomplex> hyb00(r), hyb_coeffs00(p);
+  hyb00         = {-0.4997496184487105, -0.4867352379479528, -0.4603465101833711, -0.4239204950540695, -0.3716597467714097,
+                   -0.2884886574148449, -0.2479810727230272, -0.2065525284769785, -0.1635819676241178, -0.1326995066858671,
+                   -0.1225444804140666, -0.1282199855712255, -0.1386184647087601, -0.1720919948804938, -0.2300400167898313,
+                   -0.3000508284935615, -0.3759657450111002, -0.4545389745912252, -0.4821599768174421, -0.4997496184487105};
+  hyb_coeffs00  = {0.0028042961182163, 0.088487039172428,  0.1575418229076625, 0.1953880665937937,
+                   0.2145207908265103, 0.1832496441339733, 0.1580088741667851};
+  for (int i = 0; i < n; i++) {
+    for (int j = i; j < n; j++) {
+      if ((i == j) || (j - i) % (n / 2) == 0) {
+        hyb(_, i, j)      = hyb00;
+        hyb_coeffs(_, i, j) = hyb_coeffs00;
+      }
+      else {
+        hyb(_, i, j)      = 0.0;
+        hyb_coeffs(_, i, j) = 0.0;
+      }
+    }
+  }  
+  auto hyb_refl = nda::make_regular(-hyb);
+  nda::array<dcomplex, 3> hyb_refl_coeffs(p, n, n);
+  hyb_refl_coeffs = nda::make_regular(-hyb_coeffs);
+  nda::vector<double> hyb_poles(p);
+  hyb_poles                     = {-2.537191963500981,  1.7111725610238615, -1.514666605887425, 1.04941790134832,
+                                   -0.7410379494142222, 0.3763525311836938, -0.1312888711963961};
+  hyb_poles                     = hyb_poles * beta;
+  auto [Gt, Fq, sym_set_labels] = load_from_hdf5(filename, beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
+
+  // set up backbone and diagram evaluator
+  nda::array<int, 2> topology = {{0, 2}, {1, 3}};
+  auto B                      = Backbone(topology, n);
+  DiagramBlockSparseEvaluator D(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq);
+  auto start = std::chrono::high_resolution_clock::now();
+  D.eval_diagram_block_sparse(B);
+  auto end                               = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> duration = end - start;
+  std::cout << std::setprecision(16) << "Block-sparse OCA evaluation for n = " << n << " took " << duration.count() << " seconds." << std::endl;
+  auto result = D.Sigma;
+
+  // compare to dense result
+  auto [Gt_dense, Fset, subspaces] =
+     spin_flip_fermion_dense_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs, "../test/c++/h5/spin_flip_fermion_all_sym.h5");
+
+  DiagramEvaluator D2(beta, itops, hyb, hyb_refl, hyb_poles, Gt_dense, Fset);
+  start = std::chrono::high_resolution_clock::now();
+  D2.eval_diagram_dense(B);
+  end      = std::chrono::high_resolution_clock::now();
+  duration = end - start;
+  std::cout << "Dense OCA evaluation for n = " << n << " took " << duration.count() << " seconds." << std::endl;
+  auto result_dense = D2.Sigma;
+
+  int i = 0, s0 = 0, s1 = 0;
+  for (nda::vector_view<unsigned long> subspace : subspaces) {
+    s1 += subspace.size();
+    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), eps);
     i += 1;
     s0 = s1;
   }

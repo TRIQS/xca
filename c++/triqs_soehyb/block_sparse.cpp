@@ -332,6 +332,10 @@ DenseFSet::DenseFSet(nda::array_const_view<dcomplex, 3> Fs, nda::array_const_vie
   }
 }
 
+std::size_t DenseFSet::get_num_orb_inds() const {
+  return Fs.extent(0);
+}
+
 /////////////// BlockOpSymSet class ///////////////
 
 BlockOpSymSet::BlockOpSymSet(nda::vector_const_view<int> block_indices, std::vector<nda::array<dcomplex, 3>> &blocks)

@@ -497,7 +497,5 @@ TEST(DenseBackbone, PYTHON_OCA_semicircle_bath_aaa) {
   auto OCA_result = D.Sigma; // get the result from the DiagramEvaluator
 
   // compare with the dense result
-  std::cout << "OCA result: " << OCA_result(10, _, _) << std::endl;
-  std::cout << "OCA dense result: " << OCA_dense_result(10, _, _) << std::endl;
   ASSERT_LE(nda::max_element(nda::abs(OCA_result - OCA_dense_result)), eps);
 }

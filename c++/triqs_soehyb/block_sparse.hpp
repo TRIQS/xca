@@ -184,6 +184,8 @@ class DenseFSet {
    */
   DenseFSet(nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags, nda::array_const_view<dcomplex, 3> hyb_coeffs,
             nda::array_const_view<dcomplex, 3> hyb_refl_coeffs);
+
+  std::size_t get_num_orb_inds() const; 
 };
 
 /**
@@ -263,7 +265,7 @@ class BlockOpSymQuartet {
   std::vector<BlockOpSymSet> F_dags;
   std::vector<BlockOpSymSetBar> F_dag_bars;
   std::vector<BlockOpSymSetBar> F_bars_refl;
-  nda::vector<long> sym_set_labels; // labels for each symmetry set, e.g. for symmetry breaking
+  nda::vector<long> sym_set_labels;   // TODO comment
   nda::vector<long> sym_set_inds;     // mapping from backbone orbital index to index within the symmetry set
   nda::vector<long> sym_set_sizes;    // sizes of the symmetry sets
   nda::array<long, 2> sym_set_to_orb; // mapping from symmetry set index to backbone orbital index
