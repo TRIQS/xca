@@ -175,22 +175,22 @@ void multiplicate_onto_left(nda::array_view<dcomplex, 3> Ft, nda::array_const_vi
 /** 
 * @brief cut hybridization lines
 * */
-void cut_hybridization(int v, int &Rv, nda::array_const_view<int, 2> D, double &constant, nda::array_const_view<dcomplex, 3> U_tilde_here,
+void cut_hybridization(int v, int Rv, nda::array_const_view<int, 2> D, double &constant, nda::array_const_view<dcomplex, 3> U_tilde_here,
                        nda::array_const_view<dcomplex, 3> V_tilde_here, nda::array_view<dcomplex, 4> line, nda::array_view<dcomplex, 4> vertex,
-                       double &chere, double &w_here, nda::array_const_view<double, 1> K_matrix_here, int &r, int &N);
+                       double chere, double w_here, nda::array_const_view<double, 1> K_matrix_here, int r, int N);
 
 /** 
 * @brief summation that happens only at the vertex connected to 0-th vertex
 * */
 void special_summation(nda::array_view<dcomplex, 3> T, nda::array_const_view<dcomplex, 3> F, nda::array_const_view<dcomplex, 3> F_dag,
-                       nda::array_const_view<dcomplex, 3> Deltat, nda::array_const_view<dcomplex, 3> Deltat_reflect, int &n, int &r, int &N,
+                       nda::array_const_view<dcomplex, 3> Deltat, nda::array_const_view<dcomplex, 3> Deltat_reflect, int n, int r, int N,
                        bool backward = true);
 
 /** 
 * @brief final step of impurity Green's function diagram
 * */
 void final_evaluation(nda::array_view<dcomplex, 3> Diagram, nda::array_const_view<dcomplex, 3> T, nda::array_const_view<dcomplex, 3> T_left,
-                      nda::array_const_view<dcomplex, 3> F, nda::array_const_view<dcomplex, 3> F_dag, int &n, int &r, int &N, double &constant);
+                      nda::array_const_view<dcomplex, 3> F, nda::array_const_view<dcomplex, 3> F_dag, int n, int r, int N, double constant);
 
 nda::array<dcomplex, 3> evaluate_one_diagram(hyb_F &hyb_F_self, hyb_F &hyb_F_reflect, nda::array_const_view<int, 2> D,
                                              nda::array_const_view<dcomplex, 3> Deltat, nda::array_const_view<dcomplex, 3> Deltat_reflect,

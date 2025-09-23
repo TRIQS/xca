@@ -250,7 +250,7 @@ nda::array<dcomplex, 3> fastdiagram::G_calc(nda::array<dcomplex, 3> Gt, std::str
   return make_regular(g_NCA + g_OCA + g_TCA);
 }
 
-nda::array<dcomplex, 3> fastdiagram::time_ordered_dyson(double &beta, nda::array<dcomplex, 2> H_S, double &eta_0,
+nda::array<dcomplex, 3> fastdiagram::time_ordered_dyson(double beta, nda::array<dcomplex, 2> H_S, double eta_0,
                                                         nda::array_const_view<dcomplex, 3> Sigma_t) {
   auto dys = dyson_it_ppsc(beta, itops, H_S);
   return dys.solve(Sigma_t, eta_0);

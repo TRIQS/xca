@@ -325,7 +325,7 @@ nda::array<dcomplex, 3> G_Diagram_calc(hyb_F &hyb_F_self, hyb_F &hyb_F_reflect, 
 }
 
 void final_evaluation(nda::array_view<dcomplex, 3> Diagram, nda::array_const_view<dcomplex, 3> T, nda::array_const_view<dcomplex, 3> T_left,
-                      nda::array_const_view<dcomplex, 3> F, nda::array_const_view<dcomplex, 3> F_dag, int &n, int &r, int &N, double &constant) {
+                      nda::array_const_view<dcomplex, 3> F, nda::array_const_view<dcomplex, 3> F_dag, int n, int r, int N, double constant) {
 
   for (int k = 0; k < r; ++k) {
     auto GF_left = nda::array<dcomplex, 3>(n, N, N);
@@ -658,9 +658,9 @@ nda::array<dcomplex, 3> Sigma_OCA_calc(hyb_F &hyb_F, nda::array_const_view<dcomp
   return Diagram;
 }
 
-void cut_hybridization(int v, int &Rv, nda::array_const_view<int, 2> D, double &constant, nda::array_const_view<dcomplex, 3> U_tilde_here,
+void cut_hybridization(int v, int Rv, nda::array_const_view<int, 2> D, double &constant, nda::array_const_view<dcomplex, 3> U_tilde_here,
                        nda::array_const_view<dcomplex, 3> V_tilde_here, nda::array_view<dcomplex, 4> line, nda::array_view<dcomplex, 4> vertex,
-                       double &chere, double &w_here, nda::array_const_view<double, 1> K_matrix_here, int &r, int &N) {
+                       double chere, double w_here, nda::array_const_view<double, 1> K_matrix_here, int r, int N) {
 
   constant *= chere;
   //when w(R(v))>0, we need to modify the line object, and the constant. The point object is assigned to be the identity matrix.
@@ -684,7 +684,7 @@ void cut_hybridization(int v, int &Rv, nda::array_const_view<int, 2> D, double &
 }
 
 void special_summation(nda::array_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> F, nda::array_const_view<dcomplex, 3> F_dag,
-                       nda::array_const_view<dcomplex, 3> Deltat, nda::array_const_view<dcomplex, 3> Deltat_reflect, int &n, int &r, int &N,
+                       nda::array_const_view<dcomplex, 3> Deltat, nda::array_const_view<dcomplex, 3> Deltat_reflect, int n, int r, int N,
                        bool backward) {
 
   //This implementation reduces cost from O(2rn^2N^3) to O(rn^2N^3 + 2rnN^3)

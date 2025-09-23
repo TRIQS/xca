@@ -32,7 +32,8 @@
 
 using namespace cppdlr;
 using namespace nda;
-void construct_G_and_Delta(nda::array_view<dcomplex, 3> Gt,nda::array_view<dcomplex, 3> Deltat,nda::vector_const_view<double> dlr_it_actual,const double &beta,const double &alpha_1,const double &alpha_2, int &r);
+void construct_G_and_Delta(nda::array_view<dcomplex, 3> Gt, nda::array_view<dcomplex, 3> Deltat, nda::vector_const_view<double> dlr_it_actual,
+                           double beta, double alpha_1, double alpha_2, int r);
 nda::array_view<dcomplex, 3> OCAtrue(double alpha_1,double alpha_2,double beta, nda::vector_const_view<double> dlr_it_actual, int r, int N,int dim);
 nda::array_view<dcomplex, 3> Diagramtrue_3rd(double alpha_1,double alpha_2,double beta, nda::vector_const_view<double> dlr_it_actual, int r, int N,int dim);
 
@@ -357,7 +358,8 @@ TEST(strong_coupling, G_diagrams) {
     
 }
 
-void construct_G_and_Delta(nda::array_view<dcomplex, 3> Gt,nda::array_view<dcomplex, 3> Deltat,nda::vector_const_view<double> dlr_it_actual,const double &beta,const double &alpha_1,const double &alpha_2, int &r){
+void construct_G_and_Delta(nda::array_view<dcomplex, 3> Gt, nda::array_view<dcomplex, 3> Deltat, nda::vector_const_view<double> dlr_it_actual,
+                           double beta, double alpha_1, double alpha_2, int r) {
     auto G_01 = exp(-alpha_1*beta*dlr_it_actual);
     Gt = 0;
     if (Gt.shape(1) == 1){
