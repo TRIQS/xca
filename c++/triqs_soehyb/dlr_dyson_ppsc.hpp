@@ -54,15 +54,15 @@ namespace cppdlr {
     * \note Hamiltonian must either be a symmetric matrix, a Hermitian matrix,
     * or a real scalar.
     */
-    dyson_it_ppsc(double beta, imtime_ops itops, Ht const &h) :
-      beta(beta),
-      itops_ptr(std::make_shared<imtime_ops>(itops)),
-      r(itops.rank()),
-      norb( std::floating_point<Ht> ? 1 : h.shape(0) ),
-      time_order(true),
-      g0(r, norb, norb),
-      g0c(r, norb, norb),
-      sysmat(r*norb, r*norb) {
+    dyson_it_ppsc(double beta, imtime_ops itops, Ht const &h)
+       : beta(beta),
+         itops_ptr(std::make_shared<imtime_ops>(itops)),
+         r(itops.rank()),
+         norb(std::floating_point<Ht> ? 1 : h.shape(0)),
+         time_order(true),
+         g0(r, norb, norb),
+         g0c(r, norb, norb),
+         sysmat(r * norb, r * norb) {
 
       // dyson_it_ppsc object contains a shared pointer to the imtime_ops object
       // itops. This is done to avoid making a copy of itops, which is meant to
@@ -74,14 +74,14 @@ namespace cppdlr {
 
       // Get right hand side of Dyson equation
       if constexpr (std::floating_point<Ht>) { // If h is real scalar, rhs is a vector
-	rhs.resize(r);
+        rhs.resize(r);
         rhs() = g0;
       } else { // Otherwise, rhs is given by g0 w/ some indices transposed (for compatibility w/ LAPACK)
         rhs.resize(norb, r, norb);
         rhs() = permuted_indices_view<nda::encode<3>({1, 2, 0})>(g0);
       }
     }
-    
+
     /**
     * @brief Solve pseudo-particle Dyson equation for given self-energy
     *
@@ -107,16 +107,15 @@ namespace cppdlr {
       // building a single matrix of convolution for (G0 * eta - G0 * Sig)
       // the product G0 * Sig is computed using matrix free convolution
       // avoiding matrix matrix operations (2x speedup and 1/2 memory foot print)
-      
+
       auto ggs = itops_ptr->convolve(beta, Fermion, g0c, sigc, time_order);
       ggs += eta * g0;
       ggs *= -1.0;
 
-      itops_ptr->convmat_inplace(nda::matrix_view<Sh, nda::C_layout>(sysmat),
-				 beta, Fermion, itops_ptr->vals2coefs(ggs), time_order);
-      
+      itops_ptr->convmat_inplace(nda::matrix_view<Sh, nda::C_layout>(sysmat), beta, Fermion, itops_ptr->vals2coefs(ggs), time_order);
+
       sysmat += nda::eye<double>(r * norb);
-      
+
       // Factorize system matrix
       auto ipiv = nda::vector<int>(r * norb);
       nda::lapack::getrf(sysmat, ipiv);
@@ -127,7 +126,7 @@ namespace cppdlr {
       auto g_rs = nda::matrix_view<get_value_t<Tg>>(nda::reshape(g, norb, r * norb)); // Reshape g to be compatible w/ LAPACK
       nda::lapack::getrs(sysmat, g_rs, ipiv);                                         // Back solve
 
-      if constexpr (std::floating_point<Ht>) {                                        // If h is scalar, g is scalar-valued
+      if constexpr (std::floating_point<Ht>) { // If h is scalar, g is scalar-valued
         return g;
       } else { // Otherwise, g is matrix-valued, and need to transpose some indices after solve to undo LAPACK formatting
         return permuted_indices_view<nda::encode<3>({2, 0, 1})>(g);
@@ -151,18 +150,18 @@ namespace cppdlr {
     // function, which is of type Tsig, with scalar type replaced by the common
     // type of the Hamiltonian's scalar type, and the self-energy's scalar type
     // (real if both are real, complex otherwise).
-    template <nda::MemoryArray Tsig, nda::MemoryArray Tg = make_common_t<Tsig, Sh, nda::get_value_t<Tsig>>> Tg solve_with_op(Tsig const &sig, double eta, nda::matrix_view<dcomplex> op) {
+    template <nda::MemoryArray Tsig, nda::MemoryArray Tg = make_common_t<Tsig, Sh, nda::get_value_t<Tsig>>>
+    Tg solve_with_op(Tsig const &sig, double eta, nda::matrix_view<dcomplex> op) {
 
       int r     = itops_ptr->rank();          // DLR rank
       auto sigc = itops_ptr->vals2coefs(sig); // DLR coefficients of self-energy
 
       auto ggs = itops_ptr->convolve(beta, Fermion, g0c, sigc, time_order);
       ggs += eta * g0;
-      for(int k = 0; k < r; ++k) ggs(k,_,_) += nda::matmul(g0(k,_,_), op);
+      for (int k = 0; k < r; ++k) ggs(k, _, _) += nda::matmul(g0(k, _, _), op);
       ggs *= -1.0;
-      
-      itops_ptr->convmat_inplace(nda::matrix_view<Sh, nda::C_layout>(sysmat),
-				 beta, Fermion, itops_ptr->vals2coefs(ggs), time_order);
+
+      itops_ptr->convmat_inplace(nda::matrix_view<Sh, nda::C_layout>(sysmat), beta, Fermion, itops_ptr->vals2coefs(ggs), time_order);
 
       sysmat += nda::eye<double>(r * norb);
 
@@ -176,7 +175,7 @@ namespace cppdlr {
       auto g_rs = nda::matrix_view<get_value_t<Tg>>(nda::reshape(g, norb, r * norb)); // Reshape g to be compatible w/ LAPACK
       nda::lapack::getrs(sysmat, g_rs, ipiv);                                         // Back solve
 
-      if constexpr (std::floating_point<Ht>) {                                        // If h is scalar, g is scalar-valued
+      if constexpr (std::floating_point<Ht>) { // If h is scalar, g is scalar-valued
         return g;
       } else { // Otherwise, g is matrix-valued, and need to transpose some indices after solve to undo LAPACK formatting
         return permuted_indices_view<nda::encode<3>({2, 0, 1})>(g);
@@ -184,7 +183,6 @@ namespace cppdlr {
     }
 
     private:
-    
     double beta;                           ///< Inverse temperature
     std::shared_ptr<imtime_ops> itops_ptr; ///< shared pointer to imtime_ops object
     int r;                                 ///< DLR rank
@@ -193,8 +191,8 @@ namespace cppdlr {
 
     typename std::conditional_t<std::floating_point<Ht>, nda::array<Sh, 1>, nda::array<Sh, 3>>
        rhs; ///< Right hand side of Dyson equation (in format compatible w/ LAPACK); vector if Hamiltonian is scalar, rank-3 array otherwise
-    nda::array<Sh, 3> g0; ///< free Green's function 
-    nda::array<Sh, 3> g0c; ///< free Green's function DLR coefficients
+    nda::array<Sh, 3> g0;                  ///< free Green's function
+    nda::array<Sh, 3> g0c;                 ///< free Green's function DLR coefficients
     nda::matrix<Sh, nda::C_layout> sysmat; ///< Dyson equation matrix representation
   };
 
@@ -223,7 +221,7 @@ namespace cppdlr {
     int r = itops.rank();
 
     if constexpr (std::floating_point<Ht>) { // If h is scalar, return scalar-valued Green's function
-      auto g = nda::array<Ht, 1>(r);
+      auto g    = nda::array<Ht, 1>(r);
       double mu = h;
       // Free Green's function for time-ordered Dyson equation
       for (int i = 0; i < r; i++) { g(i) = -exp(-beta * itops.get_itnodes(i) * (h - mu)); }
@@ -237,15 +235,15 @@ namespace cppdlr {
 
       auto E0 = nda::min_element(eval);
       eval -= E0;
-      auto Z = nda::sum(nda::exp(-beta * eval));
+      auto Z   = nda::sum(nda::exp(-beta * eval));
       auto eta = log(Z) / beta;
       eval += eta;
-      
+
       // Get free Green's function
       auto g = nda::array<nda::get_value_t<Ht>, 3>(r, norb, norb);
       g      = 0;
       for (int i = 0; i < r; i++) {
-	for (int j = 0; j < norb; j++) { g(i, j, j) = -exp(-beta * rel2abs(itops.get_itnodes(i)) * eval(j)); }
+        for (int j = 0; j < norb; j++) { g(i, j, j) = -exp(-beta * rel2abs(itops.get_itnodes(i)) * eval(j)); }
         g(i, _, _) = matmul(evec, matmul(g(i, _, _), transpose(conj(evec))));
       }
 
