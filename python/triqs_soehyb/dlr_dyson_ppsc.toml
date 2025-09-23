@@ -8,7 +8,7 @@ documentation = ""
 # List of namespaces as a space separated string e.g. "A A::B"
 # If non-empty, only the elements declared in EXACTLY these namespaces are wrapped.
 # NB e.g. in previous example A::detail will be ignored, whatever match_names.
-namespaces = "cppdlr"
+namespaces = ""
 
 # Match/reject elements according to a regex (LLVM regex)
 # If match_names/match_names are both set, the algorithm is 
@@ -17,7 +17,7 @@ namespaces = "cppdlr"
 #    if reject_names and reject_names matches Qname : skip X
 #    else keep X.
 #
-match_names = "dyson_it_ppsc_complex_matrix"
+match_names = "DysonItPPSC"
 reject_names = ""
 
 # Only keep elements declared in files matching the pattern

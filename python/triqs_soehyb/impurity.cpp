@@ -4,5 +4,6 @@
 
 #include "triqs_soehyb/impurity.hpp"
 
+#include "pycppdlr.wrap.hxx"
 
 #include "impurity.wrap.cxx"
