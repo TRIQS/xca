@@ -45,7 +45,7 @@ class fastdiagram {
     * @brief Constructor for fastdiagram, construct itops and diagram topology matrices
     * @param[in] beta inverse temperature
     * @param[in] lambda DLR cutoff parameter
-    * @param[in] eps DLR accuracy tolerance
+    * @param[in] itops CPPDLR imaginary time operations object
     * @param[in] F impurity annihilation operator in pseudo-particle space, of size n*N*N
     * @param[in] F_dag impurity creation operator in pseudo-particle space, of size n*N*N
     * */
@@ -55,8 +55,8 @@ class fastdiagram {
 
   /** 
     * @brief calculate decomposition and reflection of hybridization Deltat
-    * @param[in] Deltat hybridization function in imaginary time, nda array of size r*n*n
     * @param[in] poledlrflag flag for whether to use dlr for pole expansion. True for using dlr. False has not been implemented yet. 
+    * @param[in] eps SVD truncation threshold
     * */
   void hyb_decomposition(bool poledlrflag = true, double eps = 0.0);
 
