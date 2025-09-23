@@ -97,11 +97,11 @@ nda::array<dcomplex, 3> OCA_gf_tpz(nda::array_const_view<dcomplex, 3> hyb_coeffs
   double dt = beta / n_quad;
 
   nda::array<dcomplex, 2> GFGFGFGF(N, N);
-  for (int fb = 1; fb <= 1; fb++) {
+  for (int fb = 0; fb <= 1; fb++) {
     auto const &Flams = (fb) ? Fs(_, _, _) : F_dags(_, _, _);
     auto const &Fnus  = (fb) ? F_dags(_, _, _) : Fs(_, _, _);
     auto const &hyb   = (fb) ? hyb_eq : hyb_refl_eq;
-    int sfM           = (fb) ? 1 : -1;
+    int sfM           = 1; // (fb) ? 1 : -1;
 
     for (int kap = 0; kap < n; kap++) {
       for (int mu = 0; mu < n; mu++) {
@@ -236,11 +236,10 @@ nda::array<dcomplex, 3> OCA_gf_dense(nda::array_const_view<dcomplex, 3> hyb_coef
   nda::array<dcomplex, 3> gf(r, n, n);
 
   // initialize temporary arrays
-  nda::array<dcomplex, 3> T(r, N, N), U(r, N, N), GKt(r, N, N), Tnu(r, N, N), gf_temp(r, N, N);
+  nda::array<dcomplex, 3> T(r, N, N), U(r, N, N), GKt(r, N, N), Tnu(r, N, N);
 
-  gf_temp = 0;
   // loop over hybridization line directions
-  for (int fb = 1; fb <= 1; fb++) {
+  for (int fb = 0; fb <= 1; fb++) {
     // fb = 1 for forward line, else = 0
     auto const &F1   = (fb) ? Fs : F_dags;
     auto const &Fbar = (fb) ? Fdagbars : Fbarsrefl;
