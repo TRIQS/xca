@@ -20,7 +20,7 @@
 ################################################################################
 
 
-""" Test diagram evaluation for simple case that can be treated analytically.
+r""" Test diagram evaluation for simple case that can be treated analytically.
 
 Letting the local Hamiltonian being H_loc = 0 gives a degenerate atomic
 pseudo-particle propagator

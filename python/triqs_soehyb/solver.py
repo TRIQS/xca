@@ -31,7 +31,8 @@ from pyed.TriqsExactDiagonalization import TriqsExactDiagonalization
 from .pycppdlr import build_dlr_rf
 from .pycppdlr import ImTimeOps
 
-from .impurity import Fastdiagram, DysonItPPSC
+from .impurity import Fastdiagram
+from .dlr_dyson_ppsc import DysonItPPSC
 from .ac_pes import polefitting, kernel
 from .diag import all_connected_pairings
 
@@ -355,7 +356,7 @@ class Solver(object):
                 print(f'PPSC: Eta Newton: Z-1 = {Z-1:+2.2E}, Omega = {Omega:+2.2E}')
 
             G_xaa = self.ito.vals2coefs(G_iaa_new)
-            GG_iaa = self.ito.convolve(self.beta, "cppdlr::Fermion", G_xaa, G_xaa, True)
+            GG_iaa = self.ito.convolve(self.beta, "Fermion", G_xaa, G_xaa, True)
             TrGGb = self.fd.partition_function(GG_iaa)
             dOmega = TrGGb / self.beta / Z
 
@@ -384,8 +385,8 @@ class Solver(object):
 
             G_xaa = self.ito.vals2coefs(G_iaa_new)
 
-            GG_iaa = self.ito.convolve(self.beta, "cppdlr::Fermion", G_xaa, G_xaa, True)
-            GNG_iaa = self.ito.convolve(self.beta, "cppdlr::Fermion", G_xaa, self.N_op @ G_xaa, True)
+            GG_iaa = self.ito.convolve(self.beta, "Fermion", G_xaa, G_xaa, True)
+            GNG_iaa = self.ito.convolve(self.beta, "Fermion", G_xaa, self.N_op @ G_xaa, True)
 
             TrGb = -self.fd.partition_function(G_iaa_new)
             TrNGb = -self.fd.partition_function(self.N_op @ G_iaa_new)
@@ -616,7 +617,7 @@ class Solver(object):
 
         shape_iaa = Sigma_iaa.shape
         Sigma_xaa = self.ito.vals2coefs(Sigma_iaa)
-        G0Sigma_iaa = self.ito.convolve(self.beta, "cppdlr::Fermion", self.G0_xaa, Sigma_xaa, True)
+        G0Sigma_iaa = self.ito.convolve(self.beta, "Fermion", self.G0_xaa, Sigma_xaa, True)
         
         K_iaa = self.G0_iaa * eta + G0Sigma_iaa
         K_iaa += dmu * self.G0_iaa @ self.N_op
@@ -626,7 +627,7 @@ class Solver(object):
             """ Apply the matrix ( 1 - K ) to G.  """
             G_iaa = x.reshape(shape_iaa)
             G_xaa = self.ito.vals2coefs(G_iaa)            
-            KG_iaa = self.ito.convolve(self.beta, "cppdlr::Fermion", K_xaa, G_xaa, True)
+            KG_iaa = self.ito.convolve(self.beta, "Fermion", K_xaa, G_xaa, True)
             LHS_iaa = G_iaa - KG_iaa
             return LHS_iaa.flatten()
 
