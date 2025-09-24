@@ -3,7 +3,7 @@ FROM flatironinstitute/triqs:unstable-ubuntu-clang
 ARG APPNAME=triqs_soehyb
 
 # Install here missing dependencies, e.g.
-RUN apt-get update && apt-get install -y python3-h5py libzstd-dev
+RUN apt-get update && apt-get install -y doxygen python3-h5py libzstd-dev
 
 # Install pyed
 RUN git clone https://github.com/HugoStrand/pyed $SRC/pyed
