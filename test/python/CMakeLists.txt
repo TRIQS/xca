@@ -6,6 +6,7 @@ endforeach()
 
 # List of all tests
 set(all_tests
+  pycppdlr
   load_module
   spinless_dimer
   spinless_dimer_solver
