@@ -2,4 +2,4 @@
 
 [TOC]
 
-Explain how to integrate **app4triqs** in user's C++ codes.
+Explain how to integrate **soehyb** in user's C++ codes.

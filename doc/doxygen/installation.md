@@ -2,4 +2,4 @@
 
 [TOC]
 
-Explain how to install **app4triqs**.
+Explain how to install **soehyb**.
