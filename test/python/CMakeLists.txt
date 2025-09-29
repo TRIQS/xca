@@ -17,6 +17,7 @@ set(all_tests
   triqs_solver
   one_spinful_fermion
   analytic_diagrams
+  test_aaa
   )
 
 foreach(test ${all_tests})
