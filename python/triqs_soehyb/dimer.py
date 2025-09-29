@@ -1,7 +1,7 @@
 import numpy as np
 import time
-from impurity import Fastdiagram
-from ac_pes import *
+from .impurity import Fastdiagram
+from .ac_pes import *
 def two_band_init(U, v, mu):
     F = np.zeros((2,4,4), dtype=np.complex128)
     F_dag = np.zeros((2,4,4), dtype=np.complex128)
