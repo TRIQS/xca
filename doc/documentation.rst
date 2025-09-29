@@ -30,8 +30,12 @@ Tutorials
    tutorials/Metal insulator transition.ipynb
 
 
-Python reference manual
------------------------
+Python API Reference
+--------------------
 
-.. autoclass:: triqs_soehyb.triqs_solver.TriqsSolver
-   :members:   
+For the complete Python API reference, see:
+
+.. toctree::
+   :maxdepth: 2
+
+   python_api   
