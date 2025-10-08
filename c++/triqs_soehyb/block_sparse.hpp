@@ -185,7 +185,7 @@ class DenseFSet {
   DenseFSet(nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags, nda::array_const_view<dcomplex, 3> hyb_coeffs,
             nda::array_const_view<dcomplex, 3> hyb_refl_coeffs);
 
-  std::size_t get_num_orb_inds() const; 
+  std::size_t get_num_orb_inds() const;
 };
 
 /**
@@ -296,6 +296,20 @@ std::ostream &operator<<(std::ostream &os, BlockDiagOpFun &D);
 std::ostream &operator<<(std::ostream &os, BlockOp &F);
 
 /**
+ * @brief Print BlockOp3D to output stream
+ * @param[in] os output stream
+ * @param[in] F BlockOp3D
+ */
+std::ostream &operator<<(std::ostream &os, BlockOp3D &F);
+
+/**
+ * @brief Print BlockOpSymSetBar to output stream
+ * @param[in] os output stream
+ * @param[in] F BlockOpSymSetBar
+ */
+std::ostream &operator<<(std::ostream &os, BlockOpSymSetBar &F);
+
+/**
  * @brief Compute the adjoint of a BlockOp
  * @param[in] F BlockOp
  * @return F^dagger operator
@@ -306,7 +320,7 @@ BlockOp dagger_bs(BlockOp const &F);
   * @brief Compute a product between an integer and a BlockDiagOpFun
   * @param[in] i integer
   * @param[in] D BlockDiagOpFun
-  * @return n * D
+  * @return i * D
   */
 BlockDiagOpFun operator*(int i, BlockDiagOpFun const &D);
 

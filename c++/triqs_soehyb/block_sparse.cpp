@@ -36,13 +36,11 @@ BlockDiagOpFun &BlockDiagOpFun::operator+=(const BlockDiagOpFun &G) {
   for (int i = 0; i < this->num_block_cols; i++) {
     if (zero_block_indices(i) == -1) {
       if (G.get_zero_block_index(i) != -1) {
-        this->blocks[i] = G.blocks[i];
+        this->blocks[i]       = G.blocks[i];
         zero_block_indices(i) = 0;
       }
     } else {
-      if (G.get_zero_block_index(i) != -1) {
-        this->blocks[i] += G.blocks[i]; 
-      }
+      if (G.get_zero_block_index(i) != -1) { this->blocks[i] += G.blocks[i]; }
     }
   }
   return *this;
@@ -100,11 +98,11 @@ int BlockDiagOpFun::get_num_time_nodes() const {
   return 0; // BlockDiagOpFun is all zeros anyways
 }
 
-void BlockDiagOpFun::add_block(int i, nda::array_const_view<dcomplex, 3> block) { 
+void BlockDiagOpFun::add_block(int i, nda::array_const_view<dcomplex, 3> block) {
   if (zero_block_indices(i) == -1) {
     blocks[i] = block;
   } else {
-    blocks[i] = nda::make_regular(blocks[i] + block); 
+    blocks[i] = nda::make_regular(blocks[i] + block);
   }
   zero_block_indices(i) = 0; // mark block as non-zero
 }
@@ -332,9 +330,7 @@ DenseFSet::DenseFSet(nda::array_const_view<dcomplex, 3> Fs, nda::array_const_vie
   }
 }
 
-std::size_t DenseFSet::get_num_orb_inds() const {
-  return Fs.extent(0);
-}
+std::size_t DenseFSet::get_num_orb_inds() const { return Fs.extent(0); }
 
 /////////////// BlockOpSymSet class ///////////////
 
@@ -434,9 +430,14 @@ BlockOpSymQuartet::BlockOpSymQuartet(std::vector<BlockOpSymSet> Fs, std::vector<
   int p = hyb_coeffs.extent(0);
   std::vector<BlockOpSymSetBar> F_dag_bars, F_bars_refl;
   for (int i = 0; i < k; i++) {
+    // std::cout << "F_dags[i=" << i << "].get_size_sym_set() = " << F_dags[i].get_size_sym_set() << std::endl;
+    // std::cout << "F_dags[i=" << i << "].get_block_indices() = " << F_dags[i].get_block_indices() << std::endl;
+    // std::cout << "F_dags[i=" << i << "].get_block_sizes() = " << F_dags[i].get_block_sizes() << std::endl;
     F_dag_bars.emplace_back(F_dags[i].get_size_sym_set(), p, F_dags[i].get_block_indices(), F_dags[i].get_block_sizes());
     F_bars_refl.emplace_back(Fs[i].get_size_sym_set(), p, Fs[i].get_block_indices(), Fs[i].get_block_sizes());
   }
+  // std::cout << "F_dag_bars[1].get_block(1)" << F_dag_bars[1].get_block(1)(0, 0, _, _) << std::endl;
+  // std::cout << "F_dag_bars[1].get_block(1).shape() = " << F_dag_bars[1].get_block(1).shape() << std::endl;
 
   // calculate symmetry set indices
   long n         = sym_set_labels.size();                // number of orbital indices
@@ -461,7 +462,12 @@ BlockOpSymQuartet::BlockOpSymQuartet(std::vector<BlockOpSymSet> Fs, std::vector<
             long nu_orb  = sym_set_to_orb(p_nu, nu);
             for (int b = 0; b < F_dags[p_lam].get_num_block_cols(); b++) {
               if (F_dags[p_lam].get_block_index(b) != -1) {
+                // if (F_dag_bars[p_lam].get_block(b).shape(0) != 2) {
+                // std::cout << "F_dags[p_lam=" << p_lam << "].get_block(b=" << b << ").shape() = " << F_dags[p_lam].get_block(b).shape() << std::endl;
+                // std::cout << "before: F_dag_bars[p_lam=" << p_lam << "].get_block(b=" << b << ").shape() = " << F_dag_bars[p_lam].get_block(b).shape() << std::endl;
+                // std::cout << "hyb_coeffs(l=" << l << ", nu_orb=" << nu_orb << ", lam_orb=" << lam_orb << ") = " << hyb_coeffs(l, nu_orb, lam_orb) << std::endl;}
                 F_dag_bars[p_lam].add_block(b, lam, l, nda::make_regular(hyb_coeffs(l, nu_orb, lam_orb) * F_dags[p_lam].get_block(b)(nu, _, _)));
+                // if (F_dag_bars[p_lam].get_block(b).shape(0) != 2) { std::cout << "after: F_dag_bars[p_lam=" << p_lam << "].get_block(b=" << b << ").shape() = " << F_dag_bars[p_lam].get_block(b).shape() << std::endl; }
               }
             }
             for (int b = 0; b < Fs[p_nu].get_num_block_cols(); b++) {
@@ -506,6 +512,40 @@ std::ostream &operator<<(std::ostream &os, BlockOp &F) {
   }
   return os;
 };
+
+std::ostream &operator<<(std::ostream &os, BlockOp3D &F) {
+  // Print BlockOp3D
+  // @param[in] os output stream
+  // @param[in] F BlockOp3D
+  // @return output stream
+
+  os << "Block indices: " << F.get_block_indices() << "\n";
+  for (int i = 0; i < F.get_num_block_cols(); i++) {
+    if (F.get_block_indices()[i] == -1) {
+      os << "Block " << i << ": 0\n";
+    } else {
+      os << "Block " << i << ":\n" << F.get_block(i) << "\n";
+    }
+  }
+  return os;
+};
+
+std::ostream &operator<<(std::ostream &os, BlockOpSymSetBar &F) {
+  // Print BlockOpSymSetBar
+  // @param[in] os output stream
+  // @param[in] F BlockOpSymSetBar
+  // @return output stream
+
+  os << "Block indices: " << F.get_block_indices() << "\n";
+  for (int i = 0; i < F.get_num_block_cols(); i++) {
+    if (F.get_block_indices()[i] == -1) {
+      os << "Block " << i << ": 0\n";
+    } else {
+      os << "Block " << i << ":\n" << F.get_block(i) << "\n";
+    }
+  }
+  return os;
+}
 
 BlockOp dagger_bs(BlockOp const &F) {
   // Evaluate F^dagger in block-sparse storage

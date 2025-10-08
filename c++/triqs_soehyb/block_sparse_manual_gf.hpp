@@ -25,8 +25,9 @@ nda::array<dcomplex, 3> NCA_gf_dense(nda::array_const_view<dcomplex, 3> Gt, nda:
  */
 nda::array<dcomplex, 3> NCA_gf_bs(const BlockDiagOpFun &Gt, const BlockDiagOpFun &Gt_refl, const BlockOpSymQuartet &Fq);
 
-nda::array<dcomplex, 3> OCA_gf_tpz(nda::array_const_view<dcomplex, 3> hyb_coeffs, nda::array_const_view<dcomplex, 3> hyb_refl_coeffs, imtime_ops &itops,
-                                double beta, nda::array_const_view<dcomplex, 3> Gt_coeffs, nda::array_const_view<dcomplex, 3> Fs, int n_quad);
+nda::array<dcomplex, 3> OCA_gf_tpz(nda::array_const_view<dcomplex, 3> hyb_coeffs, nda::array_const_view<dcomplex, 3> hyb_refl_coeffs,
+                                   imtime_ops &itops, double beta, nda::array_const_view<dcomplex, 3> Gt_coeffs,
+                                   nda::array_const_view<dcomplex, 3> Fs, int n_quad);
 
 /**
  * @brief Evaluate OCA Green's function using dense storage

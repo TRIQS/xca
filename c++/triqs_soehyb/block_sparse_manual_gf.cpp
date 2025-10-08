@@ -87,7 +87,7 @@ nda::array<dcomplex, 3> OCA_gf_tpz(nda::array_const_view<dcomplex, 3> hyb_coeffs
 
   auto it_eq = cppdlr::eqptsrel(n_quad + 1);
   nda::array<dcomplex, 3> hyb_eq(n_quad + 1, n, n), hyb_refl_eq(n_quad + 1, n, n), Gt_eq(n_quad + 1, N, N), gf_eq(n_quad + 1, n, n);
-  gf_eq = 0; 
+  gf_eq = 0;
   for (int i = 0; i <= n_quad; i++) {
     hyb_eq(i, _, _)      = itops.coefs2eval(hyb_coeffs, it_eq(i));
     hyb_refl_eq(i, _, _) = itops.coefs2eval(hyb_refl_coeffs, it_eq(i));
@@ -97,7 +97,7 @@ nda::array<dcomplex, 3> OCA_gf_tpz(nda::array_const_view<dcomplex, 3> hyb_coeffs
   double dt = beta / n_quad;
 
   nda::array<dcomplex, 2> GFGFGFGF(N, N);
-  for (int fb = 0; fb <= 1; fb++) {
+  for (int fb = 1; fb <= 1; fb++) {
     auto const &Flams = (fb) ? Fs(_, _, _) : F_dags(_, _, _);
     auto const &Fnus  = (fb) ? F_dags(_, _, _) : Fs(_, _, _);
     auto const &hyb   = (fb) ? hyb_eq : hyb_refl_eq;
@@ -169,8 +169,7 @@ void OCA_gf_dense_right(double beta, imtime_ops &itops, nda::vector_const_view<d
 }
 
 void OCA_gf_dense_left(double beta, imtime_ops &itops, nda::vector_const_view<double> dlr_it, double omega_l, bool forward,
-                       nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 2> Fbar, nda::array_view<dcomplex, 3> T,
-                       nda::array_view<dcomplex, 3> GKt) {
+                       nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 2> Fbar, nda::array_view<dcomplex, 3> T) {
   long r = Gt.extent(0);
 
   if (forward) {
@@ -182,14 +181,12 @@ void OCA_gf_dense_left(double beta, imtime_ops &itops, nda::vector_const_view<do
       // convolve by G
       T = itops.convolve(beta, Fermion, itops.vals2coefs(T), itops.vals2coefs(Gt), TIME_ORDERED);
     } else {
-      // multiply G Fbar
-      for (int t = 0; t < r; t++) { T(t, _, _) = nda::matmul(Gt(t, _, _), Fbar); }
-      // multiply G K^+
-      for (int t = 0; t < r; t++) { GKt(t, _, _) = k_it(dlr_it(t), omega_l) * Gt(t, _, _); }
+      // multiply Fbar G K^+
+      for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), omega_l) * nda::matmul(Fbar, Gt(t, _, _)); }
       // std::cout << "Gt = " << Gt(_, 0, 0) << std::endl;
       // std::cout << "GKt before conv, omega_l > 0 = " << nda::make_regular(GKt / Fbar(0, 0)) << std::endl;
       // convolve
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(T), itops.vals2coefs(GKt), TIME_ORDERED);
+      T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
     }
   } else {
     if (omega_l > 0) {
@@ -198,12 +195,10 @@ void OCA_gf_dense_left(double beta, imtime_ops &itops, nda::vector_const_view<do
       // convolve by G
       T = itops.convolve(beta, Fermion, itops.vals2coefs(T), itops.vals2coefs(Gt), TIME_ORDERED);
     } else {
-      // multiply G Fbar
-      for (int t = 0; t < r; t++) { T(t, _, _) = nda::matmul(Gt(t, _, _), Fbar); }
-      // multiply G K^-
-      for (int t = 0; t < r; t++) { GKt(t, _, _) = k_it(dlr_it(t), -omega_l) * Gt(t, _, _); }
+      // multiply Fbar G K^+
+      for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), omega_l) * nda::matmul(Fbar, Gt(t, _, _)); }
       // convolve
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(T), itops.vals2coefs(GKt), TIME_ORDERED);
+      T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
     }
   }
   // reflect
@@ -239,7 +234,7 @@ nda::array<dcomplex, 3> OCA_gf_dense(nda::array_const_view<dcomplex, 3> hyb_coef
   nda::array<dcomplex, 3> T(r, N, N), U(r, N, N), GKt(r, N, N), Tnu(r, N, N);
 
   // loop over hybridization line directions
-  for (int fb = 0; fb <= 1; fb++) {
+  for (int fb = 1; fb <= 1; fb++) {
     // fb = 1 for forward line, else = 0
     auto const &F1   = (fb) ? Fs : F_dags;
     auto const &Fbar = (fb) ? Fdagbars : Fbarsrefl;
@@ -250,7 +245,7 @@ nda::array<dcomplex, 3> OCA_gf_dense(nda::array_const_view<dcomplex, 3> hyb_coef
         for (int l = 0; l < p; l++) {
           OCA_gf_dense_right(beta, itops, dlr_it, hyb_poles(l), fb, Gt, F1(lam, _, _), T);
           // std::cout << "T = " << T << std::endl;
-          OCA_gf_dense_left(beta, itops, dlr_it, hyb_poles(l), fb, Gt, Fbar(lam, l, _, _), U, GKt);
+          OCA_gf_dense_left(beta, itops, dlr_it, hyb_poles(l), fb, Gt, Fbar(lam, l, _, _), U);
           // std::cout << "U = ";
           // for (int i = 0; i < r; i++) {std::cout << U(i, 0, 0) / Fbar(0, l, 0, 0); }
           // std::cout << std::endl;

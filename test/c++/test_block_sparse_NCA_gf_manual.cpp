@@ -90,7 +90,6 @@ TEST(DenseNCAGF, matrices) {
       for (int t = 0; t < r; t++) {
         gf_temp = nda::matmul(Gt_refl(t, _, _), Fs(lam, _, _));
         gf_temp = nda::matmul(gf_temp, Gt(t, _, _));
-        ;
         gf_temp                 = nda::matmul(gf_temp, F_dags(kap, _, _));
         NCA_gf_man(t, lam, kap) = nda::trace(gf_temp);
       }
