@@ -128,7 +128,7 @@ void hyb_F::update_inplace(const hyb_decomp &hyb_decomp, nda::vector_const_view<
   int r_in = dlr_it.shape(0);
   int P_in = hyb_decomp.V.shape(0);
 
-  if (N_in != N || r_in != r || n_in != n || P_in > c.shape(0)) {
+  if (N_in != N || r_in != r || n_in != n || P_in != c.shape(0)) {
 
     mpi::communicator comm;
 
@@ -137,6 +137,7 @@ void hyb_F::update_inplace(const hyb_decomp &hyb_decomp, nda::vector_const_view<
                 << "N, P, r = " << N << ", " << P << ", " << r << " in (N, P, r = " << N_in << ", " << P_in << ", " << r_in << ") "
                 << "c.shape(0) = " << c.shape(0) << std::endl;
     N = N_in;
+    n = n_in;
     P = P_in;
     r = r_in;
     c.resize(P);
