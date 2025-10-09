@@ -258,12 +258,6 @@ TEST(Backbone, PYTHON_spin_flip_fermion) {
   std::chrono::duration<double> duration = end - start;
   std::cout << std::setprecision(16) << "Block-sparse OCA evaluation for n = " << n << " took " << duration.count() << " seconds." << std::endl;
   auto result = D.Sigma;
-  std::cout << "result slice:\n"; 
-  std::cout << result.get_block(0)(10, _, _) << "\n";
-  std::cout << result.get_block(1)(10, _, _) << "\n";
-  std::cout << result.get_block(2)(10, _, _) << "\n";
-  std::cout << result.get_block(3)(10, _, _) << "\n";
-  std::cout << result.get_block(4)(10, _, _) << "\n";
 
   // compare to dense result
   auto [Gt_dense, Fset, subspaces] =
@@ -301,9 +295,6 @@ TEST(Backbone, PYTHON_spin_flip_fermion) {
   int i = 0, s0 = 0, s1 = 0;
   for (nda::vector_view<unsigned long> subspace : subspaces) {
     s1 += subspace.size();
-    std::cout << "subspace " << i << ": " << subspace.size() << std::endl;
-    std::cout << result.get_block(i)(10, _, _) << std::endl;
-    std::cout << result_dense(10, range(s0, s1), range(s0, s1)) << std::endl;
     ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), 1e-10);
     i += 1;
     s0 = s1;
@@ -385,77 +376,6 @@ TEST(Backbone, spin_flip_fermion) {
   for (int i = 0; i < Gt_block_sizes.size(); i++) {
     s1 += Gt_block_sizes[i];
     ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), 1e-10);
-    s0 = s1;
-  }
-}
-// TODO continue removing calls to load_from_hdf5 in these tests
-TEST(Backbone, PYTHON_spin_flip_fermion_sym_sets) {
-  double beta   = 2.0;
-  double Lambda = 100.0 * beta;
-  double eps    = 1.0e-10;
-
-  // DLR generation
-  auto dlr_rf = build_dlr_rf(Lambda, eps);
-  auto itops  = imtime_ops(Lambda, dlr_rf);
-
-  std::string filename          = "../test/c++/h5/spin_flip_fermion_all_sym.h5";
-  int n                         = 2 * 2; // 2 * number of orbitals
-  auto [hyb, hyb_refl]          = discrete_bath_spin_flip_helper(beta, Lambda, eps, n);
-  auto hyb_coeffs               = itops.vals2coefs(hyb);          // hybridization DLR coeffs
-  hyb_refl                      = nda::make_regular(-hyb);        // nda::make_regular(-itops.reflect(Deltat));
-  auto hyb_refl_coeffs          = nda::make_regular(-hyb_coeffs); // itops.vals2coefs(hyb_refl);
-  auto [Gt, Fq, sym_set_labels] = load_from_hdf5(filename, beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
-
-  std::cout << std::setprecision(16);
-
-  // set up backbone and diagram evaluator
-  nda::array<int, 2> topology = {{0, 2}, {1, 3}};
-  auto B                      = Backbone(topology, n);
-  DiagramBlockSparseEvaluator D(beta, itops, hyb, hyb_refl, dlr_rf, Gt, Fq);
-  auto start = std::chrono::high_resolution_clock::now();
-  D.eval_diagram_block_sparse(B);
-  auto end                               = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> duration = end - start;
-  std::cout << "Block-sparse OCA evaluation for n = " << n << " took " << duration.count() << " seconds." << std::endl;
-  auto result = D.Sigma;
-
-  // compare to dense result
-  auto [Gt_dense, Fset, subspaces] =
-     spin_flip_fermion_dense_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs, "../test/c++/h5/spin_flip_fermion_all_sym.h5");
-
-  DiagramEvaluator D2(beta, itops, hyb, hyb_refl, dlr_rf, Gt_dense, Fset);
-  start = std::chrono::high_resolution_clock::now();
-  D2.eval_diagram_dense(B);
-  end      = std::chrono::high_resolution_clock::now();
-  duration = end - start;
-  std::cout << "Dense OCA evaluation for n = " << n << " took " << duration.count() << " seconds." << std::endl;
-  auto result_dense = D2.Sigma;
-
-  // use block-sparse solver but with trivial sparsity
-  std::vector<nda::array<dcomplex, 3>> Gt_dense_vec{Gt_dense};
-  nda::vector<int> triv_bi{0};
-  BlockDiagOpFun Gt_triv(Gt_dense_vec, triv_bi);
-  std::vector<nda::array<dcomplex, 3>> Fs_dense_vec{Fset.Fs};
-  auto F_sym_triv = BlockOpSymSet(triv_bi, Fs_dense_vec);
-  std::vector<nda::array<dcomplex, 3>> F_dags_dense_vec{Fset.F_dags};
-  auto F_dag_sym_triv = BlockOpSymSet(triv_bi, F_dags_dense_vec);
-  nda::vector<long> sym_set_labels_triv(n);
-  sym_set_labels_triv = 0;
-  auto Fq_triv        = BlockOpSymQuartet({F_sym_triv}, {F_dag_sym_triv}, hyb_coeffs, hyb_refl_coeffs, sym_set_labels_triv);
-  DiagramBlockSparseEvaluator D3(beta, itops, hyb, hyb_refl, dlr_rf, Gt_triv, Fq_triv);
-  start = std::chrono::high_resolution_clock::now();
-  D3.eval_diagram_block_sparse(B);
-  end      = std::chrono::high_resolution_clock::now();
-  duration = end - start;
-  std::cout << "Block-sparse trivial OCA evaluation for n = " << n << " took " << duration.count() << " seconds." << std::endl;
-  auto result_trivial_bs = D3.Sigma;
-
-  ASSERT_LE(nda::max_element(nda::abs(result_dense - result_trivial_bs.get_block(0))), 1e-10);
-  int i = 0, s0 = 0, s1 = 0;
-  for (nda::vector_view<unsigned long> subspace : subspaces) {
-    s1 += subspace.size();
-    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), 1e-10);
-    i += 1;
     s0 = s1;
   }
 }
@@ -646,185 +566,6 @@ TEST(Backbone, PYTHON_third_order) {
   }
 }
 
-TEST(Backbone, PYTHON_OCA_semicircle_bath_aaa) {
-  // DLR parameters
-  double beta   = 8.0;
-  double Lambda = 10.0 * beta;
-  double eps    = 1.0e-6;
-
-  // DLR generation
-  auto dlr_rf = build_dlr_rf(Lambda, eps);
-  auto itops  = imtime_ops(Lambda, dlr_rf);
-  int r       = itops.rank();
-
-  // call two band helper just for Gt_dense, Fs_dense, F_dags_dense
-  auto [num_blocks, Deltat, Deltat_refl, Gt, Fs, Fdags, Gt_dense, Fs_dense, F_dags_dense, subspaces, fock_state_order] =
-     two_band_discrete_bath_helper(beta, Lambda, eps);
-
-  int p = 7;
-  int n = 4;
-  nda::array<dcomplex, 3> hyb(r, n, n), hyb_coeffs(p, n, n);
-  hyb           = {{{-0.4997496184487105, -0.4997496184487105, -0., -0.},
-                    {-0.4997496184487105, -0.4997496184487105, -0., -0.},
-                    {-0., -0., -0.4997496184487105, -0.4997496184487105},
-                    {-0., -0., -0.4997496184487105, -0.4997496184487105}},
-                   {{-0.4867352379479528, -0.4867352379479528, -0., -0.},
-                    {-0.4867352379479528, -0.4867352379479528, -0., -0.},
-                    {-0., -0., -0.4867352379479528, -0.4867352379479528},
-                    {-0., -0., -0.4867352379479528, -0.4867352379479528}},
-                   {{-0.4603465101833711, -0.4603465101833711, -0., -0.},
-                    {-0.4603465101833711, -0.4603465101833711, -0., -0.},
-                    {-0., -0., -0.4603465101833711, -0.4603465101833711},
-                    {-0., -0., -0.4603465101833711, -0.4603465101833711}},
-                   {{-0.4239204950540695, -0.4239204950540695, -0., -0.},
-                    {-0.4239204950540695, -0.4239204950540695, -0., -0.},
-                    {-0., -0., -0.4239204950540695, -0.4239204950540695},
-                    {-0., -0., -0.4239204950540695, -0.4239204950540695}},
-                   {{-0.3716597467714097, -0.3716597467714097, -0., -0.},
-                    {-0.3716597467714097, -0.3716597467714097, -0., -0.},
-                    {-0., -0., -0.3716597467714097, -0.3716597467714097},
-                    {-0., -0., -0.3716597467714097, -0.3716597467714097}},
-                   {{-0.2884886574148449, -0.2884886574148449, -0., -0.},
-                    {-0.2884886574148449, -0.2884886574148449, -0., -0.},
-                    {-0., -0., -0.2884886574148449, -0.2884886574148449},
-                    {-0., -0., -0.2884886574148449, -0.2884886574148449}},
-                   {{-0.2479810727230272, -0.2479810727230272, -0., -0.},
-                    {-0.2479810727230272, -0.2479810727230272, -0., -0.},
-                    {-0., -0., -0.2479810727230272, -0.2479810727230272},
-                    {-0., -0., -0.2479810727230272, -0.2479810727230272}},
-                   {{-0.2065525284769785, -0.2065525284769785, -0., -0.},
-                    {-0.2065525284769785, -0.2065525284769785, -0., -0.},
-                    {-0., -0., -0.2065525284769785, -0.2065525284769785},
-                    {-0., -0., -0.2065525284769785, -0.2065525284769785}},
-                   {{-0.1635819676241178, -0.1635819676241178, -0., -0.},
-                    {-0.1635819676241178, -0.1635819676241178, -0., -0.},
-                    {-0., -0., -0.1635819676241178, -0.1635819676241178},
-                    {-0., -0., -0.1635819676241178, -0.1635819676241178}},
-                   {{-0.1326995066858671, -0.1326995066858671, -0., -0.},
-                    {-0.1326995066858671, -0.1326995066858671, -0., -0.},
-                    {-0., -0., -0.1326995066858671, -0.1326995066858671},
-                    {-0., -0., -0.1326995066858671, -0.1326995066858671}},
-                   {{-0.1225444804140666, -0.1225444804140666, -0., -0.},
-                    {-0.1225444804140666, -0.1225444804140666, -0., -0.},
-                    {-0., -0., -0.1225444804140666, -0.1225444804140666},
-                    {-0., -0., -0.1225444804140666, -0.1225444804140666}},
-                   {{-0.1282199855712255, -0.1282199855712255, -0., -0.},
-                    {-0.1282199855712255, -0.1282199855712255, -0., -0.},
-                    {-0., -0., -0.1282199855712255, -0.1282199855712255},
-                    {-0., -0., -0.1282199855712255, -0.1282199855712255}},
-                   {{-0.1386184647087601, -0.1386184647087601, -0., -0.},
-                    {-0.1386184647087601, -0.1386184647087601, -0., -0.},
-                    {-0., -0., -0.1386184647087601, -0.1386184647087601},
-                    {-0., -0., -0.1386184647087601, -0.1386184647087601}},
-                   {{-0.1720919948804938, -0.1720919948804938, -0., -0.},
-                    {-0.1720919948804938, -0.1720919948804938, -0., -0.},
-                    {-0., -0., -0.1720919948804938, -0.1720919948804938},
-                    {-0., -0., -0.1720919948804938, -0.1720919948804938}},
-                   {{-0.2300400167898313, -0.2300400167898313, -0., -0.},
-                    {-0.2300400167898313, -0.2300400167898313, -0., -0.},
-                    {-0., -0., -0.2300400167898313, -0.2300400167898313},
-                    {-0., -0., -0.2300400167898313, -0.2300400167898313}},
-                   {{-0.3000508284935615, -0.3000508284935615, -0., -0.},
-                    {-0.3000508284935615, -0.3000508284935615, -0., -0.},
-                    {-0., -0., -0.3000508284935615, -0.3000508284935615},
-                    {-0., -0., -0.3000508284935615, -0.3000508284935615}},
-                   {{-0.3759657450111002, -0.3759657450111002, -0., -0.},
-                    {-0.3759657450111002, -0.3759657450111002, -0., -0.},
-                    {-0., -0., -0.3759657450111002, -0.3759657450111002},
-                    {-0., -0., -0.3759657450111002, -0.3759657450111002}},
-                   {{-0.4545389745912252, -0.4545389745912252, -0., -0.},
-                    {-0.4545389745912252, -0.4545389745912252, -0., -0.},
-                    {-0., -0., -0.4545389745912252, -0.4545389745912252},
-                    {-0., -0., -0.4545389745912252, -0.4545389745912252}},
-                   {{-0.4821599768174421, -0.4821599768174421, -0., -0.},
-                    {-0.4821599768174421, -0.4821599768174421, -0., -0.},
-                    {-0., -0., -0.4821599768174421, -0.4821599768174421},
-                    {-0., -0., -0.4821599768174421, -0.4821599768174421}},
-                   {{-0.4997496184487105, -0.4997496184487105, -0., -0.},
-                    {-0.4997496184487105, -0.4997496184487105, -0., -0.},
-                    {-0., -0., -0.4997496184487105, -0.4997496184487105},
-                    {-0., -0., -0.4997496184487105, -0.4997496184487105}}};
-  hyb_coeffs    = {{{0.0028042961182163, 0.0028042961182163, 0., 0.},
-                    {0.0028042961182163, 0.0028042961182163, 0., 0.},
-                    {0., 0., 0.0028042961182163, 0.0028042961182163},
-                    {0., 0., 0.0028042961182163, 0.0028042961182163}},
-                   {{0.088487039172428, 0.088487039172428, 0., 0.},
-                    {0.088487039172428, 0.088487039172428, 0., 0.},
-                    {0., 0., 0.088487039172428, 0.088487039172428},
-                    {0., 0., 0.088487039172428, 0.088487039172428}},
-                   {{0.1575418229076625, 0.1575418229076625, 0., 0.},
-                    {0.1575418229076625, 0.1575418229076625, 0., 0.},
-                    {0., 0., 0.1575418229076625, 0.1575418229076625},
-                    {0., 0., 0.1575418229076625, 0.1575418229076625}},
-                   {{0.1953880665937937, 0.1953880665937937, 0., 0.},
-                    {0.1953880665937937, 0.1953880665937937, 0., 0.},
-                    {0., 0., 0.1953880665937937, 0.1953880665937937},
-                    {0., 0., 0.1953880665937937, 0.1953880665937937}},
-                   {{0.2145207908265103, 0.2145207908265103, 0., 0.},
-                    {0.2145207908265103, 0.2145207908265103, 0., 0.},
-                    {0., 0., 0.2145207908265103, 0.2145207908265103},
-                    {0., 0., 0.2145207908265103, 0.2145207908265103}},
-                   {{0.1832496441339733, 0.1832496441339733, 0., 0.},
-                    {0.1832496441339733, 0.1832496441339733, 0., 0.},
-                    {0., 0., 0.1832496441339733, 0.1832496441339733},
-                    {0., 0., 0.1832496441339733, 0.1832496441339733}},
-                   {{0.1580088741667851, 0.1580088741667851, 0., 0.},
-                    {0.1580088741667851, 0.1580088741667851, 0., 0.},
-                    {0., 0., 0.1580088741667851, 0.1580088741667851},
-                    {0., 0., 0.1580088741667851, 0.1580088741667851}}};
-  auto hyb_refl = nda::make_regular(-hyb);
-  nda::array<dcomplex, 3> hyb_refl_coeffs(p, n, n);
-  hyb_refl_coeffs = nda::make_regular(-hyb_coeffs);
-
-  nda::vector<double> hyb_poles(p);
-  hyb_poles = {-2.537191963500981,  1.7111725610238615, -1.514666605887425, 1.04941790134832,
-               -0.7410379494142222, 0.3763525311836938, -0.1312888711963961};
-  hyb_poles = hyb_poles * beta;
-
-  auto OCA_dense_result = OCA_dense(hyb, hyb_coeffs, hyb_refl, hyb_refl_coeffs, hyb_poles, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
-
-  // load NCA and OCA results from twoband.py
-  h5::file Gtfile("../test/c++/h5/two_band_py_semic.h5", 'r');
-  h5::group Gtgroup(Gtfile);
-  auto NCA_py = nda::zeros<dcomplex>(r, 16, 16);
-  h5::read(Gtgroup, "NCA", NCA_py);
-  auto OCA_py = nda::zeros<dcomplex>(r, 16, 16);
-  h5::read(Gtgroup, "OCA", OCA_py);
-  
-  // permute twoband.py results to match block structure from atom_diag
-  auto NCA_py_perm = nda::zeros<dcomplex>(r, 16, 16);
-  auto OCA_py_perm = nda::zeros<dcomplex>(r, 16, 16);
-  for (int t = 0; t < r; t++) {
-    for (int i = 0; i < 16; i++) {
-      for (int j = 0; j < 16; j++) {
-        NCA_py_perm(t, i, j) = NCA_py(t, fock_state_order[i], fock_state_order[j]);
-        OCA_py_perm(t, i, j) = OCA_py(t, fock_state_order[i], fock_state_order[j]);
-      }
-    }
-  }
-
-  // check that dense OCA calculation agree with twoband.py
-  ASSERT_LE(nda::max_element(nda::abs(OCA_dense_result - OCA_py_perm + NCA_py_perm)), eps);
-
-  // generic diagram evaluator
-  nda::array<int, 2> topology = {{0, 2}, {1, 3}};
-  auto B                      = Backbone(topology, n);
-
-  std::string filename           = "../test/c++/h5/two_band_ad_semic.h5";
-  auto [Gt1, Fq, sym_set_labels] = load_from_hdf5(filename, beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
-  auto D                         = DiagramBlockSparseEvaluator(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq);
-  D.eval_diagram_block_sparse(B);
-  auto OCA_result = D.Sigma; // get the result from the DiagramEvaluator
-
-  int i = 0, s0 = 0, s1 = 0;
-  for (std::vector<unsigned long> subspace : subspaces) {
-    s1 += subspace.size();
-    ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(i) - OCA_dense_result(_, range(s0, s1), range(s0, s1)))), eps);
-    i += 1;
-    s0 = s1;
-  }
-}
-
 TEST(Backbone, OCA_semicircle_bath_aaa) {
   // DLR parameters
   double beta   = 8.0;
@@ -969,7 +710,7 @@ TEST(Backbone, OCA_semicircle_bath_aaa) {
   h5::read(Gtgroup, "NCA", NCA_py);
   auto OCA_py = nda::zeros<dcomplex>(r, 16, 16);
   h5::read(Gtgroup, "OCA", OCA_py);
-  
+
   // permute twoband.py results to match block structure from atom_diag
   auto NCA_py_perm = nda::zeros<dcomplex>(r, 16, 16);
   auto OCA_py_perm = nda::zeros<dcomplex>(r, 16, 16);
@@ -989,7 +730,7 @@ TEST(Backbone, OCA_semicircle_bath_aaa) {
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = Backbone(topology, n);
 
-  auto [Gt1, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs); 
+  auto [Gt1, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
   auto D                         = DiagramBlockSparseEvaluator(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq);
   D.eval_diagram_block_sparse(B);
   auto OCA_result = D.Sigma; // get the result from the DiagramEvaluator
@@ -1003,7 +744,7 @@ TEST(Backbone, OCA_semicircle_bath_aaa) {
   }
 }
 
-TEST(Backbone, PYTHON_spin_flip_fermion_aaa) {
+TEST(Backbone, spin_flip_fermion_aaa) {
   double beta   = 8.0;
   double Lambda = 10.0 * beta;
   double eps    = 1.0e-6;
@@ -1012,11 +753,11 @@ TEST(Backbone, PYTHON_spin_flip_fermion_aaa) {
   auto dlr_rf = build_dlr_rf(Lambda, eps);
   auto itops  = imtime_ops(Lambda, dlr_rf);
 
-  std::string filename = "../test/c++/h5/spin_flip_fermion.h5";
-  int n                = 2 * 5; // 2 * number of orbitals
-  int p                = 7;
-  int r                = itops.rank();
-  nda::array<dcomplex, 3> hyb(r, n, n), hyb_coeffs(p, n, n);
+  int norb = 2;
+  int nn   = 2 * norb;
+  int p    = 7;
+  int r    = itops.rank();
+  nda::array<dcomplex, 3> hyb(r, nn, nn), hyb_coeffs(p, nn, nn);
   nda::vector<dcomplex> hyb00(r), hyb_coeffs00(p);
   hyb00        = {-0.4997496184487105, -0.4867352379479528, -0.4603465101833711, -0.4239204950540695, -0.3716597467714097,
                   -0.2884886574148449, -0.2479810727230272, -0.2065525284769785, -0.1635819676241178, -0.1326995066858671,
@@ -1024,9 +765,9 @@ TEST(Backbone, PYTHON_spin_flip_fermion_aaa) {
                   -0.3000508284935615, -0.3759657450111002, -0.4545389745912252, -0.4821599768174421, -0.4997496184487105};
   hyb_coeffs00 = {0.0028042961182163, 0.088487039172428,  0.1575418229076625, 0.1953880665937937,
                   0.2145207908265103, 0.1832496441339733, 0.1580088741667851};
-  for (int i = 0; i < n; i++) {
-    for (int j = i; j < n; j++) {
-      // if ((i == j) || (i == 0 && j == 1) || (i == 1 && j == 0) || (i == 2 && j == 3) || (i == 3 && j == 2)) {
+
+  for (int i = 0; i < nn; i++) {
+    for (int j = i; j < nn; j++) {
       if (i / 2 == j / 2) {
         hyb(_, i, j)        = hyb00;
         hyb_coeffs(_, i, j) = hyb_coeffs00;
@@ -1037,47 +778,78 @@ TEST(Backbone, PYTHON_spin_flip_fermion_aaa) {
     }
   }
   auto hyb_refl = nda::make_regular(-hyb);
-  nda::array<dcomplex, 3> hyb_refl_coeffs(p, n, n);
+  nda::array<dcomplex, 3> hyb_refl_coeffs(p, nn, nn);
   hyb_refl_coeffs = nda::make_regular(-hyb_coeffs);
   nda::vector<double> hyb_poles(p);
-  hyb_poles                     = {-2.537191963500981,  1.7111725610238615, -1.514666605887425, 1.04941790134832,
-                                   -0.7410379494142222, 0.3763525311836938, -0.1312888711963961};
-  hyb_poles                     = hyb_poles * beta;
-  auto [Gt, Fq, sym_set_labels] = load_from_hdf5(filename, beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
+  hyb_poles = {-2.537191963500981,  1.7111725610238615, -1.514666605887425, 1.04941790134832,
+               -0.7410379494142222, 0.3763525311836938, -0.1312888711963961};
+  hyb_poles = hyb_poles * beta;
+
+  // set up Hamiltonian
+  triqs::operators::many_body_operator_real H;
+  fundamental_operator_set fop_set;
+
+  double mu = 0.25;
+  double U  = 1.0;
+  double V  = 0.1;
+  for (int i = 0; i < norb; i++) {
+    H += U * n("up", i) * n("do", i) + mu * (n("up", i) + n("do", i)) + V * (c_dag("up", i) * c("do", i) + c_dag("do", i) * c("up", i));
+    fop_set.insert("do", i);
+  }
+  for (int i = 0; i < norb; i++) { fop_set.insert("up", i); }
+
+  // Construct particle number operator
+  triqs::operators::many_body_operator_real N;
+  for (int kap = 0; kap < norb; ++kap) { N += n("up", kap) + n("do", kap); }
+  std::vector<triqs::operators::many_body_operator_real> sym_ops = {N};
+
+  // create atom_diag object
+  triqs::atom_diag::atom_diag<false> ad(H, fop_set, sym_ops);
+
+  // get blocks of Hamiltonian and compute noninteracting Green's function
+  auto [H_blocks, H_block_inds] = get_hamiltonian_blocks(ad);
+  auto dlr_it                   = itops.get_itnodes();
+  auto dlr_it_abs               = cppdlr::rel2abs(dlr_it);
+  auto Gt                       = ad_to_nonint_gf(ad, beta, dlr_it_abs);
+  auto Gt_block_sizes           = Gt.get_block_sizes();
+
+  // generate creation/annihilation operators in block-sparse storage
+  auto [Fq, sym_set_labels] = get_operators(ad, norb, hyb_coeffs, hyb_refl_coeffs);
 
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
-  auto B                      = Backbone(topology, n);
+  auto B                      = Backbone(topology, nn);
   DiagramBlockSparseEvaluator D(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq);
   auto start = std::chrono::high_resolution_clock::now();
   D.eval_diagram_block_sparse(B);
   auto end                               = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> duration = end - start;
-  std::cout << std::setprecision(16) << "Block-sparse OCA evaluation for n = " << n << " took " << duration.count() << " seconds." << std::endl;
+  std::cout << std::setprecision(16) << "Block-sparse OCA evaluation for n = " << nn << " took " << duration.count() << " seconds." << std::endl;
   auto result = D.Sigma;
 
-  // compare to dense result
-  auto [Gt_dense, Fset, subspaces] =
-     spin_flip_fermion_dense_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs, "../test/c++/h5/spin_flip_fermion.h5");
+  // get dense Gt, field operators
+  auto H_mat    = get_full_h_atomic_perm(ad);
+  auto Gt_dense = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
+  auto Fset     = get_operators_dense(ad, norb, hyb_coeffs, hyb_refl_coeffs);
 
+  // compare to dense result
   DiagramEvaluator D2(beta, itops, hyb, hyb_refl, hyb_poles, Gt_dense, Fset);
   start = std::chrono::high_resolution_clock::now();
   D2.eval_diagram_dense(B);
   end      = std::chrono::high_resolution_clock::now();
   duration = end - start;
-  std::cout << "Dense OCA evaluation for n = " << n << " took " << duration.count() << " seconds." << std::endl;
+  std::cout << "Dense OCA evaluation for n = " << nn << " took " << duration.count() << " seconds." << std::endl;
   auto result_dense = D2.Sigma;
 
-  int i = 0, s0 = 0, s1 = 0;
-  for (nda::vector_view<unsigned long> subspace : subspaces) {
-    s1 += subspace.size();
-    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), eps);
-    i += 1;
+  int s0 = 0, s1 = 0;
+  for (int i = 0; i < Gt_block_sizes.size(); i++) {
+    s1 += Gt_block_sizes[i];
+    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), 1e-10);
     s0 = s1;
   }
 }
 
-TEST(Backbone, PYTHON_spin_flip_fermion_all_sym_aaa) {
+TEST(Backbone, spin_flip_fermion_all_sym_aaa) {
   double beta   = 8.0;
   double Lambda = 10.0 * beta;
   double eps    = 1.0e-6;
@@ -1086,11 +858,11 @@ TEST(Backbone, PYTHON_spin_flip_fermion_all_sym_aaa) {
   auto dlr_rf = build_dlr_rf(Lambda, eps);
   auto itops  = imtime_ops(Lambda, dlr_rf);
 
-  std::string filename = "../test/c++/h5/spin_flip_fermion_all_sym.h5";
-  int n                = 2 * 5; // 2 * number of orbitals
-  int p                = 7;
-  int r                = itops.rank();
-  nda::array<dcomplex, 3> hyb(r, n, n), hyb_coeffs(p, n, n);
+  int norb = 2;
+  int nn   = 2 * norb;
+  int p    = 7;
+  int r    = itops.rank();
+  nda::array<dcomplex, 3> hyb(r, nn, nn), hyb_coeffs(p, nn, nn);
   nda::vector<dcomplex> hyb00(r), hyb_coeffs00(p);
   hyb00        = {-0.4997496184487105, -0.4867352379479528, -0.4603465101833711, -0.4239204950540695, -0.3716597467714097,
                   -0.2884886574148449, -0.2479810727230272, -0.2065525284769785, -0.1635819676241178, -0.1326995066858671,
@@ -1098,9 +870,10 @@ TEST(Backbone, PYTHON_spin_flip_fermion_all_sym_aaa) {
                   -0.3000508284935615, -0.3759657450111002, -0.4545389745912252, -0.4821599768174421, -0.4997496184487105};
   hyb_coeffs00 = {0.0028042961182163, 0.088487039172428,  0.1575418229076625, 0.1953880665937937,
                   0.2145207908265103, 0.1832496441339733, 0.1580088741667851};
-  for (int i = 0; i < n; i++) {
-    for (int j = i; j < n; j++) {
-      if ((i == j) || (j - i) % (n / 2) == 0) {
+
+  for (int i = 0; i < nn; i++) {
+    for (int j = i; j < nn; j++) {
+      if ((i == j) || (j - i) % (nn / 2) == 0) {
         hyb(_, i, j)        = hyb00;
         hyb_coeffs(_, i, j) = hyb_coeffs00;
       } else {
@@ -1110,42 +883,68 @@ TEST(Backbone, PYTHON_spin_flip_fermion_all_sym_aaa) {
     }
   }
   auto hyb_refl = nda::make_regular(-hyb);
-  nda::array<dcomplex, 3> hyb_refl_coeffs(p, n, n);
+  nda::array<dcomplex, 3> hyb_refl_coeffs(p, nn, nn);
   hyb_refl_coeffs = nda::make_regular(-hyb_coeffs);
   nda::vector<double> hyb_poles(p);
-  hyb_poles                     = {-2.537191963500981,  1.7111725610238615, -1.514666605887425, 1.04941790134832,
-                                   -0.7410379494142222, 0.3763525311836938, -0.1312888711963961};
-  hyb_poles                     = hyb_poles * beta;
-  auto [Gt, Fq, sym_set_labels] = load_from_hdf5(filename, beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
+  hyb_poles = {-2.537191963500981,  1.7111725610238615, -1.514666605887425, 1.04941790134832,
+               -0.7410379494142222, 0.3763525311836938, -0.1312888711963961};
+  hyb_poles = hyb_poles * beta;
+
+  // set up Hamiltonian
+  triqs::operators::many_body_operator_real H;
+  fundamental_operator_set fop_set;
+
+  double mu = 0.25;
+  double U  = 1.0;
+  double V  = 0.1;
+  for (int i = 0; i < norb; i++) {
+    H += U * n("up", i) * n("do", i) + mu * (n("up", i) + n("do", i)) + V * (c_dag("up", i) * c("do", i) + c_dag("do", i) * c("up", i));
+    fop_set.insert("do", i);
+  }
+  for (int i = 0; i < norb; i++) { fop_set.insert("up", i); }
+
+  // create atom_diag object
+  triqs::atom_diag::atom_diag<false> ad(H, fop_set);
+
+  // get blocks of Hamiltonian and compute noninteracting Green's function
+  auto [H_blocks, H_block_inds] = get_hamiltonian_blocks(ad);
+  auto dlr_it                   = itops.get_itnodes();
+  auto dlr_it_abs               = cppdlr::rel2abs(dlr_it);
+  auto Gt                       = ad_to_nonint_gf(ad, beta, dlr_it_abs);
+  auto Gt_block_sizes           = Gt.get_block_sizes();
+
+  // generate creation/annihilation operators in block-sparse storage
+  auto [Fq, sym_set_labels] = get_operators(ad, norb, hyb_coeffs, hyb_refl_coeffs);
 
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
-  auto B                      = Backbone(topology, n);
+  auto B                      = Backbone(topology, nn);
   DiagramBlockSparseEvaluator D(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq);
   auto start = std::chrono::high_resolution_clock::now();
   D.eval_diagram_block_sparse(B);
   auto end                               = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> duration = end - start;
-  std::cout << std::setprecision(16) << "Block-sparse OCA evaluation for n = " << n << " took " << duration.count() << " seconds." << std::endl;
+  std::cout << std::setprecision(16) << "Block-sparse OCA evaluation for n = " << nn << " took " << duration.count() << " seconds." << std::endl;
   auto result = D.Sigma;
 
-  // compare to dense result
-  auto [Gt_dense, Fset, subspaces] =
-     spin_flip_fermion_dense_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs, "../test/c++/h5/spin_flip_fermion_all_sym.h5");
+  // get dense Gt, field operators
+  auto H_mat    = get_full_h_atomic_perm(ad);
+  auto Gt_dense = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
+  auto Fset     = get_operators_dense(ad, norb, hyb_coeffs, hyb_refl_coeffs);
 
+  // compare to dense result
   DiagramEvaluator D2(beta, itops, hyb, hyb_refl, hyb_poles, Gt_dense, Fset);
   start = std::chrono::high_resolution_clock::now();
   D2.eval_diagram_dense(B);
   end      = std::chrono::high_resolution_clock::now();
   duration = end - start;
-  std::cout << "Dense OCA evaluation for n = " << n << " took " << duration.count() << " seconds." << std::endl;
+  std::cout << "Dense OCA evaluation for n = " << nn << " took " << duration.count() << " seconds." << std::endl;
   auto result_dense = D2.Sigma;
 
-  int i = 0, s0 = 0, s1 = 0;
-  for (nda::vector_view<unsigned long> subspace : subspaces) {
-    s1 += subspace.size();
-    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), eps);
-    i += 1;
+  int s0 = 0, s1 = 0;
+  for (int i = 0; i < Gt_block_sizes.size(); i++) {
+    s1 += Gt_block_sizes[i];
+    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), 1e-10);
     s0 = s1;
   }
 }
