@@ -354,17 +354,3 @@ BlockDiagOpFun BOFtoBDOF(BlockOpFun const &A);
  */
 BlockDiagOpFun nonint_gf_BDOF(std::vector<nda::array<double, 2>> H_blocks, nda::vector<int> H_block_inds, double beta,
                               nda::vector_const_view<double> dlr_it_abs);
-
-/**
- * @brief Load block-sparse operator from HDF5 file
- * @param[in] filename path to the HDF5 file
- * @param[in] beta inverse temperature
- * @param[in] Lambda cutoff for DLR coefficients
- * @param[in] eps numerical precision for DLR coefficients
- * @param[in] hyb hybridization function
- * @param[in] hyb_refl reflected hybridization function
- * @return tuple containing the Green's function as a BDOF and the creation/annihilation operators as a BlockOpSymQuartet
- */
-std::tuple<BlockDiagOpFun, BlockOpSymQuartet, nda::vector<long>> load_from_hdf5(const std::string &filename, double beta, double Lambda, double eps,
-                                                                                nda::array_const_view<dcomplex, 3> hyb,
-                                                                                nda::array_const_view<dcomplex, 3> hyb_refl);
