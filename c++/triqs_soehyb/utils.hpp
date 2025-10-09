@@ -19,10 +19,12 @@
  *
  ******************************************************************************/
 
+#include <cstdint>
+
 // https://en.wikipedia.org/wiki/Exponentiation_by_squaring
 
-template <typename T> static constexpr inline T pown(T x, unsigned p) {
-  T result = 1;
+static constexpr inline int64_t pown(int64_t x, unsigned p) {
+  int64_t result = 1;
   while (p) {
     if (p & 0x1) result *= x;
     x *= x;

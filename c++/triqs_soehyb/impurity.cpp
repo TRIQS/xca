@@ -127,26 +127,26 @@ void fastdiagram::hyb_decomposition(bool poledlrflag, double eps) {
   P = Delta_F.P;
 }
 
-int fastdiagram::number_of_diagrams(int m) { return pown(P, m - 1) * pown(2, m - 1); }
+int64_t fastdiagram::number_of_diagrams(int m) { return pown(P, m - 1) * pown(2, m - 1); }
 
 nda::array<dcomplex, 3> fastdiagram::Sigma_calc_group(nda::array<dcomplex, 3> Gt, nda::array<int, 2> D, nda::array<int, 1> diagramindex) {
 
-  int N                  = Gt.shape(1);
-  int Nd                 = diagramindex.shape(0);
-  int m                  = D.shape(0);
-  int num_diagram_per_fb = pown(P, m - 1);
-  auto Diagram           = nda::array<dcomplex, 3>::zeros({r, N, N});
+  auto N                  = Gt.shape(1);
+  auto Nd                 = diagramindex.shape(0);
+  auto m                  = D.shape(0);
+  auto num_diagram_per_fb = pown(P, m - 1);
+  auto Diagram            = nda::array<dcomplex, 3>::zeros({r, N, N});
 
   for (int id = 0; id < Nd; ++id) {
 
-    auto fb  = nda::vector<int>(m); //utility for iteration
-    int num  = diagramindex(id);
-    int num0 = num / num_diagram_per_fb;
-    int num2 = num % num_diagram_per_fb;
+    auto fb   = nda::vector<int64_t>(m); //utility for iteration
+    auto num  = diagramindex(id);
+    auto num0 = num / num_diagram_per_fb;
+    auto num2 = num % num_diagram_per_fb;
 
     for (int v = 1; v < m; ++v) {
       fb[v] = num0 % 2;
-      num0  = int(num0 / 2);
+      num0  = int64_t(num0 / 2);
     }
 
     Diagram =
@@ -170,8 +170,8 @@ nda::array<dcomplex, 3> fastdiagram::Sigma_calc(nda::array<dcomplex, 3> Gt, std:
 
   // Do OCA calculation
   std::cout << "S-OCA: start\n";
-  int m               = D_OCA.shape(0);
-  int Num_diagram_oca = this->number_of_diagrams(m);
+  auto m               = D_OCA.shape(0);
+  auto Num_diagram_oca = this->number_of_diagrams(m);
 
   std::cout << "number of OCA diagrams = " << Num_diagram_oca << "\n";
 
@@ -194,23 +194,23 @@ nda::array<dcomplex, 3> fastdiagram::Sigma_calc(nda::array<dcomplex, 3> Gt, std:
 
 nda::array<dcomplex, 3> fastdiagram::G_calc_group(nda::array<dcomplex, 3> Gt, nda::array<int, 2> D, nda::array<int, 1> diagramindex) {
 
-  int N                  = Gt.shape(1);
-  int Nd                 = diagramindex.shape(0);
-  int m                  = D.shape(0);
-  auto Diagram           = nda::array<dcomplex, 3>::zeros({r, n, n});
-  int num_diagram_per_fb = pown(P, m - 1);
-  auto Gt_reflect        = itops.reflect(Gt);
+  auto N                   = Gt.shape(1);
+  auto Nd                  = diagramindex.shape(0);
+  auto m                   = D.shape(0);
+  auto Diagram            = nda::array<dcomplex, 3>::zeros({r, n, n});
+  auto num_diagram_per_fb = pown(P, m - 1);
+  auto Gt_reflect         = itops.reflect(Gt);
 
   // for (int i=0; i<r; ++i) Gt_reflect(i,_,_) = transpose(Gt_reflect(i,_,_));
 
   for (int id = 0; id < Nd; ++id) {
-    auto fb  = nda::vector<int>(m); //utility for iteration
-    int num  = diagramindex(id);
-    int num0 = num / num_diagram_per_fb;
+    auto fb   = nda::vector<int64_t>(m); //utility for iteration
+    auto num  = diagramindex(id);
+    auto num0 = num / num_diagram_per_fb;
 
     for (int v = 1; v < m; ++v) {
       fb[v] = num0 % 2;
-      num0  = int(num0 / 2);
+      num0  = int64_t(num0 / 2);
     }
 
     Diagram = Diagram + eval_one_diagram_G(Delta_F, Delta_F_reflect, D, Gt, Gt_reflect, itops, beta, F, F_dag, fb, num, m, n, r, N, P);
@@ -232,8 +232,8 @@ nda::array<dcomplex, 3> fastdiagram::G_calc(nda::array<dcomplex, 3> Gt, std::str
 
   // Do OCA calculation
   std::cout << "G-OCA: start\n";
-  int m               = D_OCA.shape(0);
-  int Num_diagram_oca = this->number_of_diagrams(m);
+  auto m               = D_OCA.shape(0);
+  auto Num_diagram_oca = this->number_of_diagrams(m);
   std::cout << "number of OCA diagrams = " << Num_diagram_oca << "\n";
   nda::array<dcomplex, 3> g_OCA = -G_calc_group(Gt, D_OCA, arange(Num_diagram_oca));
 

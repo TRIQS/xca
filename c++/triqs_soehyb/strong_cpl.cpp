@@ -173,16 +173,16 @@ nda::array<dcomplex, 3> G_Diagram_calc_sum_all(hyb_F &hyb_F_self, hyb_F &hyb_F_r
                                                nda::array_const_view<dcomplex, 3> Gt, imtime_ops &itops, double beta,
                                                nda::array_const_view<dcomplex, 3> F, nda::array_const_view<dcomplex, 3> F_dag) {
 
-  auto Gt_reflect          = itops.reflect(Gt);
-  int r                    = Gt.shape(0);  // size of time grid
-  int N                    = Gt.shape(1);  // size of G matrices
-  int m                    = D.shape(0);   // order of diagram
-  int P                    = hyb_F_self.P; //number of poles
-  int n                    = F.shape(0);   //impurity size
-  auto Diagram             = nda::array<dcomplex, 3>::zeros({r, n, n});
-  int total_num_fb_diagram = pown(2, m - 1); // total number of forward and backward choices
-  int num_diagram_per_fb   = pown(P, m - 1); //number of diagrams per fb
-  int total_num_diagram    = num_diagram_per_fb * total_num_fb_diagram;
+  auto Gt_reflect           = itops.reflect(Gt);
+  int r                     = Gt.shape(0);  // size of time grid
+  int N                     = Gt.shape(1);  // size of G matrices
+  int m                     = D.shape(0);   // order of diagram
+  int P                     = hyb_F_self.P; //number of poles
+  int n                     = F.shape(0);   //impurity size
+  auto Diagram              = nda::array<dcomplex, 3>::zeros({r, n, n});
+  auto total_num_fb_diagram = pown(2, m - 1); // total number of forward and backward choices
+  auto num_diagram_per_fb   = pown(P, m - 1); //number of diagrams per fb
+  auto total_num_diagram    = num_diagram_per_fb * total_num_fb_diagram;
 
   std::cout << "total_num_diagram = " << num_diagram_per_fb * total_num_fb_diagram << "\n";
 
@@ -192,12 +192,12 @@ nda::array<dcomplex, 3> G_Diagram_calc_sum_all(hyb_F &hyb_F_self, hyb_F &hyb_F_r
   //#pragma omp parallel
   //{
   //#pragma omp for
-  for (int num = 0; num < total_num_diagram; ++num) {
-    auto fb  = nda::vector<int>(m); //utility for iteration
-    int num0 = num / num_diagram_per_fb;
+  for (int64_t num = 0; num < total_num_diagram; ++num) {
+    auto fb   = nda::vector<int64_t>(m); //utility for iteration
+    auto num0 = num / num_diagram_per_fb;
     for (int v = 1; v < m; ++v) {
       fb[v] = num0 % 2;
-      num0  = int(num0 / 2);
+      num0  = num0 / 2;
     }
     // BUG! This accumulation has a race condition between threads! FIXME!
     Diagram = Diagram + eval_one_diagram_G(hyb_F_self, hyb_F_reflect, D, Gt, Gt_reflect, itops, beta, F, F_dag, fb, num, m, n, r, N, P);
@@ -212,7 +212,7 @@ nda::array<dcomplex, 3> G_Diagram_calc_sum_all(hyb_F &hyb_F_self, hyb_F &hyb_F_r
 nda::array<dcomplex, 3> eval_one_diagram_G(hyb_F &hyb_F_self, hyb_F &hyb_F_reflect, nda::array_const_view<int, 2> D,
                                            nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Gt_reflect, imtime_ops &itops,
                                            double beta, nda::array_const_view<dcomplex, 3> F, nda::array_const_view<dcomplex, 3> F_dag,
-                                           nda::vector_const_view<int> fb, int num0, int m, int n, int r, int N, int P) {
+                                           nda::vector_const_view<int64_t> fb, int num0, int m, int n, int r, int N, int P) {
   //initialize diagram
   auto Diagram = nda::array<dcomplex, 3>::zeros({r, n, n});
   if (m == 1) {
@@ -291,7 +291,7 @@ nda::array<dcomplex, 3> eval_one_diagram_G(hyb_F &hyb_F_self, hyb_F &hyb_F_refle
 
 nda::array<dcomplex, 3> G_Diagram_calc(hyb_F &hyb_F_self, hyb_F &hyb_F_reflect, nda::array_const_view<int, 2> D,
                                        nda::array_const_view<dcomplex, 3> Gt, imtime_ops &itops, double beta, nda::array_const_view<dcomplex, 3> F,
-                                       nda::array_const_view<dcomplex, 3> F_dag, nda::vector_const_view<int> fb) {
+                                       nda::array_const_view<dcomplex, 3> F_dag, nda::vector_const_view<int64_t> fb) {
 
   //obtain basic parameters
   int r = Gt.shape(0);  // size of time grid
@@ -314,11 +314,11 @@ nda::array<dcomplex, 3> G_Diagram_calc(hyb_F &hyb_F_self, hyb_F &hyb_F_reflect, 
 
   //iteration over the terms of 2, · · · , m-th hybridization. Note that 1-st hybridization is not decomposed.
 
-  int total_num_diagram = pown(P, m - 1);
+  auto total_num_diagram = pown(P, m - 1);
 #pragma omp parallel
   {
 #pragma omp for
-    for (int num = 0; num < total_num_diagram; ++num) {
+    for (int64_t num = 0; num < total_num_diagram; ++num) {
       Diagram = Diagram + eval_one_diagram_G(hyb_F_self, hyb_F_reflect, D, Gt, Gt_reflect, itops, beta, F, F_dag, fb, num, m, n, r, N, P);
     }
   }
@@ -344,7 +344,8 @@ void final_evaluation(nda::array_view<dcomplex, 3> Diagram, nda::array_const_vie
 }
 
 nda::array<dcomplex, 3> G_OCA_calc(hyb_F &hyb_F_self, hyb_F &hyb_F_reflect, nda::array_const_view<dcomplex, 3> Gt, imtime_ops &itops, double beta,
-                                   nda::array_const_view<dcomplex, 3> F, nda::array_const_view<dcomplex, 3> F_dag, nda::vector_const_view<int> fb) {
+                                   nda::array_const_view<dcomplex, 3> F, nda::array_const_view<dcomplex, 3> F_dag,
+                                   nda::vector_const_view<int64_t> fb) {
 
   auto D = nda::array<int, 2>{{0, 2}, {1, 3}};
 
@@ -423,7 +424,7 @@ nda::array<dcomplex, 3> evaluate_one_diagram(hyb_F &hyb_F_self, hyb_F &hyb_F_ref
                                              nda::array_const_view<dcomplex, 3> Deltat, nda::array_const_view<dcomplex, 3> Deltat_reflect,
                                              nda::array_const_view<dcomplex, 3> Gt, imtime_ops &itops, double beta,
                                              nda::array_const_view<dcomplex, 3> F, nda::array_const_view<dcomplex, 3> F_dag,
-                                             nda::vector_const_view<int> fb, bool backward, int num0, int m, int n, int r, int N, int P) {
+                                             nda::vector_const_view<int64_t> fb, bool backward, int num0, int m, int n, int r, int N, int P) {
   if (m == 1) {
     //calculate NCA diagram directly
     auto Diagram = nda::array<dcomplex, 3>(r, N, N);
@@ -490,7 +491,7 @@ nda::array<dcomplex, 3> Sigma_Diagram_calc(hyb_F &hyb_F_self, hyb_F &hyb_F_refle
                                            nda::array_const_view<dcomplex, 3> Deltat, nda::array_const_view<dcomplex, 3> Deltat_reflect,
                                            nda::array_const_view<dcomplex, 3> Gt, imtime_ops &itops, double beta,
                                            nda::array_const_view<dcomplex, 3> F, nda::array_const_view<dcomplex, 3> F_dag,
-                                           nda::vector_const_view<int> fb, bool backward) {
+                                           nda::vector_const_view<int64_t> fb, bool backward) {
 
   //obtain basic parameters
   int r = Gt.shape(0);  // size of time grid
@@ -510,7 +511,7 @@ nda::array<dcomplex, 3> Sigma_Diagram_calc(hyb_F &hyb_F_self, hyb_F &hyb_F_refle
   }
 
   //iteration over the terms of 2, · · · , m-th hybridization. Note that 1-st hybridization is not decomposed.
-  int total_num_diagram = pown(P, m - 1); //number of total diagrams
+  int64_t total_num_diagram = pown(P, m - 1); //number of total diagrams
 
   std::cout << "total_num_diagram = " << total_num_diagram << "\n";
   triqs::utility::timer timer_run;
@@ -520,7 +521,7 @@ nda::array<dcomplex, 3> Sigma_Diagram_calc(hyb_F &hyb_F_self, hyb_F &hyb_F_refle
   {
 
 #pragma omp for
-    for (int num = 0; num < total_num_diagram; ++num) {
+    for (int64_t num = 0; num < total_num_diagram; ++num) {
       Diagram = Diagram
          + evaluate_one_diagram(hyb_F_self, hyb_F_reflect, D, Deltat, Deltat_reflect, Gt, itops, beta, F, F_dag, fb, backward, num, m, n, r, N, P);
     }
@@ -536,18 +537,18 @@ nda::array<dcomplex, 3> Sigma_Diagram_calc_sum_all(hyb_F &hyb_F_self, hyb_F &hyb
                                                    nda::array_const_view<dcomplex, 3> F, nda::array_const_view<dcomplex, 3> F_dag) {
 
   //summing over all forward and backward choices
-  int r = Gt.shape(0);  // size of time grid
-  int N = Gt.shape(1);  // size of G matrices
-  int m = D.shape(0);   // order of diagram
-  int P = hyb_F_self.P; //number of poles
-  int n = F.shape(0);   //size of impurity
+  auto r = Gt.shape(0);  // size of time grid
+  auto N = Gt.shape(1);  // size of G matrices
+  auto m = D.shape(0);   // order of diagram
+  auto P = hyb_F_self.P; //number of poles
+  auto n = F.shape(0);   //size of impurity
 
   auto Diagram = nda::array<dcomplex, 3>::zeros({r, N, N});
 
-  int total_num_fb_diagram = pown(2, m - 1); // total number of forward and backward choices
+  auto total_num_fb_diagram = pown(2, m - 1); // total number of forward and backward choices
 
-  int num_diagram_per_fb = pown(P, m - 1); //number of diagrams per fb
-  int total_num_diagram  = num_diagram_per_fb * total_num_fb_diagram;
+  auto num_diagram_per_fb = pown(P, m - 1); //number of diagrams per fb
+  auto total_num_diagram  = num_diagram_per_fb * total_num_fb_diagram;
   std::cout << "total_num_diagram = " << num_diagram_per_fb * total_num_fb_diagram << "\n";
   triqs::utility::timer timer_run;
   timer_run.start();
@@ -555,13 +556,13 @@ nda::array<dcomplex, 3> Sigma_Diagram_calc_sum_all(hyb_F &hyb_F_self, hyb_F &hyb
   //#pragma omp parallel
   //{
   //#pragma omp for
-  for (int num = 0; num < total_num_diagram; ++num) {
-    auto fb  = nda::vector<int>(m); //utility for iteration
-    int num0 = num / num_diagram_per_fb;
-    int num2 = num % num_diagram_per_fb;
+  for (int64_t num = 0; num < total_num_diagram; ++num) {
+    auto fb   = nda::vector<int64_t>(m); //utility for iteration
+    auto num0 = num / num_diagram_per_fb;
+    auto num2 = num % num_diagram_per_fb;
     for (int v = 1; v < m; ++v) {
       fb[v] = num0 % 2;
-      num0  = int(num0 / 2);
+      num0  = int64_t(num0 / 2);
     }
     // BUG! This accumulation has a race condition between threads! FIXME!
     Diagram =

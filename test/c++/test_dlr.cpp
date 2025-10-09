@@ -95,9 +95,9 @@ TEST(strong_coupling, exponential_functions) {
   Delta_F_reflect.update_inplace(Delta_decomp_reflect, dlr_it, F_dag, F);
 
   bool backward = false;
-  auto fb2      = nda::vector<int>(2);
+  auto fb2      = nda::vector<int64_t>(2);
   fb2           = 0;
-  auto fb3      = nda::vector<int>(3);
+  auto fb3      = nda::vector<int64_t>(3);
   fb3           = 0;
   //Test OCA(2nd order) diagram
   std::cout << "Testing OCA diagram..." << std::endl;
@@ -336,9 +336,9 @@ TEST(strong_coupling, G_diagrams) {
 
   auto Delta_decomp_simple = hyb_decomp(A, pol);
   Delta_decomp_simple.check_accuracy(Deltat, dlr_it);
-  auto fb2 = nda::vector<int>(2);
+  auto fb2 = nda::vector<int64_t>(2);
   fb2      = 0;
-  auto fb3 = nda::vector<int>(3);
+  auto fb3 = nda::vector<int64_t>(3);
   fb3      = 0;
 
   hyb_F Delta_F_simple(N, r, dim);

@@ -120,15 +120,15 @@ nda::array<dcomplex, 3> Sigma_Diagram_calc(hyb_F &hyb_F_self, hyb_F &hyb_F_refle
                                            nda::array_const_view<dcomplex, 3> Deltat, nda::array_const_view<dcomplex, 3> Deltat_reflect,
                                            nda::array_const_view<dcomplex, 3> Gt, imtime_ops &itops, double beta,
                                            nda::array_const_view<dcomplex, 3> F, nda::array_const_view<dcomplex, 3> F_dag,
-                                           nda::vector_const_view<int> fb, bool backward = true);
+                                           nda::vector_const_view<int64_t> fb, bool backward = true);
 
-/** 
+/**
 * @brief Evaluating impurity Green's function diagram with given topology and forward/backward flag. Input arguments are the same as Sigma_Diagram_calc
 * @return impurity Green's function r*n*n
 * */
 nda::array<dcomplex, 3> G_Diagram_calc(hyb_F &hyb_F_self, hyb_F &hyb_F_reflect, nda::array_const_view<int, 2> D,
                                        nda::array_const_view<dcomplex, 3> Gt, imtime_ops &itops, double beta, nda::array_const_view<dcomplex, 3> F,
-                                       nda::array_const_view<dcomplex, 3> F_dag, nda::vector_const_view<int> fb);
+                                       nda::array_const_view<dcomplex, 3> F_dag, nda::vector_const_view<int64_t> fb);
 
 /** 
 * @brief Evaluating all pseudo-particle self energy diagram with given topology, which sum over all forward and backward choices. For explanation of input parameters, see Sigma_Diagram_calc.
@@ -160,7 +160,8 @@ nda::array<dcomplex, 3> Sigma_OCA_calc(hyb_F &hyb_F, nda::array_const_view<dcomp
 * @return impurity Green's function r*n*n
 * */
 nda::array<dcomplex, 3> G_OCA_calc(hyb_F &hyb_F_self, hyb_F &hyb_F_reflect, nda::array_const_view<dcomplex, 3> Gt, imtime_ops &itops, double beta,
-                                   nda::array_const_view<dcomplex, 3> F, nda::array_const_view<dcomplex, 3> F_dag, nda::vector_const_view<int> fb);
+                                   nda::array_const_view<dcomplex, 3> F, nda::array_const_view<dcomplex, 3> F_dag,
+                                   nda::vector_const_view<int64_t> fb);
 
 /** 
 * @brief Gt(k,_,_) = matmul(Ft(k,_,_), Gt(k,_,_))
@@ -196,11 +197,11 @@ nda::array<dcomplex, 3> evaluate_one_diagram(hyb_F &hyb_F_self, hyb_F &hyb_F_ref
                                              nda::array_const_view<dcomplex, 3> Deltat, nda::array_const_view<dcomplex, 3> Deltat_reflect,
                                              nda::array_const_view<dcomplex, 3> Gt, imtime_ops &itops, double beta,
                                              nda::array_const_view<dcomplex, 3> F, nda::array_const_view<dcomplex, 3> F_dag,
-                                             nda::vector_const_view<int> fb, bool backward, int num0, int m, int n, int r, int N, int P);
+                                             nda::vector_const_view<int64_t> fb, bool backward, int num0, int m, int n, int r, int N, int P);
 
 nda::array<dcomplex, 3> eval_one_diagram_G(hyb_F &hyb_F_self, hyb_F &hyb_F_reflect, nda::array_const_view<int, 2> D,
                                            nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Gt_reflect, imtime_ops &itops,
                                            double beta, nda::array_const_view<dcomplex, 3> F, nda::array_const_view<dcomplex, 3> F_dag,
-                                           nda::vector_const_view<int> fb, int num0, int m, int n, int r, int N, int P);
+                                           nda::vector_const_view<int64_t> fb, int num0, int m, int n, int r, int N, int P);
 
 dcomplex trace_matmul(nda::array_const_view<dcomplex, 2> M1, nda::array_const_view<dcomplex, 2> M2);
