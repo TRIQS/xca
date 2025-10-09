@@ -34,10 +34,10 @@ using namespace cppdlr;
 using namespace nda;
 void construct_G_and_Delta(nda::array_view<dcomplex, 3> Gt, nda::array_view<dcomplex, 3> Deltat, nda::vector_const_view<double> dlr_it_actual,
                            double beta, double alpha_1, double alpha_2, int r);
-nda::array_view<dcomplex, 3> OCAtrue(double alpha_1, double alpha_2, double beta, nda::vector_const_view<double> dlr_it_actual, int r, int N,
-                                     int dim);
-nda::array_view<dcomplex, 3> Diagramtrue_3rd(double alpha_1, double alpha_2, double beta, nda::vector_const_view<double> dlr_it_actual, int r, int N,
-                                             int dim);
+nda::array<dcomplex, 3> OCAtrue(double alpha_1, double alpha_2, double beta, nda::vector_const_view<double> dlr_it_actual, int r, int N,
+                                int dim);
+nda::array<dcomplex, 3> Diagramtrue_3rd(double alpha_1, double alpha_2, double beta, nda::vector_const_view<double> dlr_it_actual, int r, int N,
+                                        int dim);
 
 TEST(strong_coupling, exponential_functions) {
 
@@ -366,8 +366,8 @@ void construct_G_and_Delta(nda::array_view<dcomplex, 3> Gt, nda::array_view<dcom
   for (int i = 0; i < r; ++i) Deltat(i, _, _) = exp(-alpha_2 * beta * dlr_it_actual(i)) * eye<dcomplex>(Deltat.shape(1));
 }
 
-nda::array_view<dcomplex, 3> OCAtrue(double alpha_1, double alpha_2, double beta, nda::vector_const_view<double> dlr_it_actual, int r, int N,
-                                     int dim) {
+nda::array<dcomplex, 3> OCAtrue(double alpha_1, double alpha_2, double beta, nda::vector_const_view<double> dlr_it_actual, int r, int N,
+                                int dim) {
   auto OCA_true = nda::array<dcomplex, 3>(r, N, N);
   OCA_true      = 0;
   if (abs(alpha_2) > 1.0e-10) {
@@ -382,8 +382,8 @@ nda::array_view<dcomplex, 3> OCAtrue(double alpha_1, double alpha_2, double beta
   OCA_true          = OCA_true * pow(dim, 2);
   return OCA_true;
 }
-nda::array_view<dcomplex, 3> Diagramtrue_3rd(double alpha_1, double alpha_2, double beta, nda::vector_const_view<double> dlr_it_actual, int r, int N,
-                                             int dim) {
+nda::array<dcomplex, 3> Diagramtrue_3rd(double alpha_1, double alpha_2, double beta, nda::vector_const_view<double> dlr_it_actual, int r, int N,
+                                        int dim) {
   auto diagram_3rd_order_true = nda::array<dcomplex, 3>(r, N, N);
 
   diagram_3rd_order_true = 0;
