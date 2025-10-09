@@ -39,6 +39,19 @@ std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> discrete_bath_spin_
  * @param[in] beta Inverse temperature
  * @param[in] Lambda DLR cutoff parameter
  * @param[in] eps DLR epsilon parameter
+ * @param[in] hyb_coeffs Hybridization function coefficients
+ * @param[in] hyb_refl_coeffs Reflected hybridization function coefficients
+ * @return Tuple of non-interacting Green's function as a BDOF, field operators as a BlockOpSymQuartet, and vector of block symmetry labels
+ */
+std::tuple<BlockDiagOpFun, BlockOpSymQuartet, nda::vector<int>> two_band_helper(double beta, double Lambda, double eps,
+                                                                                nda::array_const_view<dcomplex, 3> hyb_coeffs,
+                                                                                nda::array_const_view<dcomplex, 3> hyb_refl_coeffs);
+
+/**
+ * @brief Helper function for setting up the two-band model
+ * @param[in] beta Inverse temperature
+ * @param[in] Lambda DLR cutoff parameter
+ * @param[in] eps DLR epsilon parameter
  * @return Tuple of number of blocks, hybridization function, reflected hybridization function, non-interacting Green's function as a BDOF,
  *         annihilation operators as a vector of BlockOps, creation operators as a vector of BlockOps, non-interacting Green's function in dense
  *         storage, annihilation operators in dense storage, creation operators in dense storage, vector of vector of subspaces, and flattened version

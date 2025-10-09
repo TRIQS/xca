@@ -117,6 +117,68 @@ std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> discrete_bath_spin_
   return std::make_tuple(Deltat, Deltat_refl);
 }
 
+std::tuple<BlockDiagOpFun, BlockOpSymQuartet, nda::vector<int>> two_band_helper(double beta, double Lambda, double eps,
+                                                                                nda::array_const_view<dcomplex, 3> hyb_coeffs,
+                                                                                nda::array_const_view<dcomplex, 3> hyb_refl_coeffs) {
+  auto dlr_rf        = build_dlr_rf(Lambda, eps);
+  auto itops         = imtime_ops(Lambda, dlr_rf);
+  auto const &dlr_it = itops.get_itnodes();
+  auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
+
+  // get Hamiltonian, creation/annihilation operators in block-sparse storage
+  int num_blocks = 5; // number of blocks of Hamiltonian
+
+  // Hamiltonian
+  std::vector<nda::array<double, 2>> H_blocks(num_blocks); // Hamiltonian in sparse storage
+  H_blocks[0]                   = nda::make_regular(-1 * nda::eye<double>(4));
+  H_blocks[1]                   = {{-0.6, 0, 0, 0, 0, 0},   {0, 8.27955e-19, 0, 0, 0.2, 0}, {0, 0, -0.4, 0.2, 0, 0},
+                                   {0, 0, 0.2, -0.4, 0, 0}, {0, 0.2, 0, 0, 8.27955e-19, 0}, {0, 0, 0, 0, 0, -0.6}};
+  H_blocks[2]                   = {{0}};
+  H_blocks[3]                   = nda::make_regular(2 * nda::eye<double>(4));
+  H_blocks[4]                   = {{6}};
+  nda::vector<int> H_block_inds = {0, 0, -1, 0, 0};
+
+  // Green's function
+  auto Gt = nonint_gf_BDOF(H_blocks, H_block_inds, beta, dlr_it_abs);
+
+  // creation/annihilation operators
+  nda::vector<int> ann_conn = {2, 0, -1, 1, 3}; // block column indices of F operators
+  nda::vector<int> cre_conn = {1, 3, 0, 4, -1}; // block column indices of F^dag operators
+  std::vector<nda::array<dcomplex, 3>> F_blocks(num_blocks), Fdag_blocks(num_blocks);
+
+  F_blocks[0] = {{{1, 0, 0, 0}}, {{0, 1, 0, 0}}, {{0, 0, 1, 0}}, {{0, 0, 0, 1}}};
+  F_blocks[1] = {{{0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0}, {0, 1, 0, 0, 0, 0}, {0, 0, 0, 1, 0, 0}},
+                 {{-1, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0}, {0, 0, 1, 0, 0, 0}, {0, 0, 0, 0, 1, 0}},
+                 {{0, -1, 0, 0, 0, 0}, {0, 0, -1, 0, 0, 0}, {0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 1}},
+                 {{0, 0, 0, -1, 0, 0}, {0, 0, 0, 0, -1, 0}, {0, 0, 0, 0, 0, -1}, {0, 0, 0, 0, 0, 0}}};
+  F_blocks[2] = {{{0}}};
+  F_blocks[3] = {{{0, 0, 0, 0}, {0, 0, 0, 0}, {1, 0, 0, 0}, {0, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}},
+                 {{0, 0, 0, 0}, {-1, 0, 0, 0}, {0, 0, 0, 0}, {0, -1, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 1}},
+                 {{1, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, -1, 0}, {0, 0, 0, -1}, {0, 0, 0, 0}},
+                 {{0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}};
+  F_blocks[4] = {{{0}, {0}, {0}, {1}}, {{0}, {0}, {-1}, {0}}, {{0}, {1}, {0}, {0}}, {{-1}, {0}, {0}, {0}}};
+
+  Fdag_blocks[0] = {{{0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 0}, {0, 0, 0, 1}, {0, 0, 0, 0}, {0, 0, 0, 0}},
+                    {{-1, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 0}, {0, 0, 0, 1}, {0, 0, 0, 0}},
+                    {{0, 0, 0, 0}, {-1, 0, 0, 0}, {0, -1, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 1}},
+                    {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {-1, 0, 0, 0}, {0, -1, 0, 0}, {0, 0, -1, 0}}};
+  Fdag_blocks[1] = {{{0, 0, 1, 0, 0, 0}, {0, 0, 0, 0, 1, 0}, {0, 0, 0, 0, 0, 1}, {0, 0, 0, 0, 0, 0}},
+                    {{0, -1, 0, 0, 0, 0}, {0, 0, 0, -1, 0, 0}, {0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 1}},
+                    {{1, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0}, {0, 0, 0, -1, 0, 0}, {0, 0, 0, 0, -1, 0}},
+                    {{0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0}, {0, 1, 0, 0, 0, 0}, {0, 0, 1, 0, 0, 0}}};
+  Fdag_blocks[2] = {{{1}, {0}, {0}, {0}}, {{0}, {1}, {0}, {0}}, {{0}, {0}, {1}, {0}}, {{0}, {0}, {0}, {1}}};
+  Fdag_blocks[3] = {{{0, 0, 0, 1}}, {{0, 0, -1, 0}}, {{0, 1, 0, 0}}, {{-1, 0, 0, 0}}};
+  Fdag_blocks[4] = {{{0}}};
+
+  BlockOpSymSet F_BOSS(ann_conn, F_blocks), Fdag_BOSS(cre_conn, Fdag_blocks);
+  std::vector<BlockOpSymSet> F_sym_vec{F_BOSS}, F_dag_sym_vec{Fdag_BOSS};
+  nda::vector<long> sym_set_labels(4);
+  sym_set_labels = 0; // all operators belong to the same symmetry set
+  BlockOpSymQuartet Fq(F_sym_vec, F_dag_sym_vec, hyb_coeffs, hyb_refl_coeffs, sym_set_labels);
+
+  return std::make_tuple(Gt, Fq, sym_set_labels);
+}
+
 std::tuple<int, nda::array<dcomplex, 3>, nda::array<dcomplex, 3>, BlockDiagOpFun, std::vector<BlockOp>, std::vector<BlockOp>, nda::array<dcomplex, 3>,
            nda::array<dcomplex, 3>, nda::array<dcomplex, 3>, std::vector<std::vector<unsigned long>>, std::vector<long>>
 two_band_discrete_bath_helper(double beta, double Lambda, double eps) {

@@ -311,7 +311,6 @@ DenseFSet get_operators_dense(const atom_diag::atom_diag<false> &ad, int norb, n
     auto fock_states = ad.get_fock_states(s);
     for (auto state : fock_states) { H_perm.push_back(state); }
   }
-  for (unsigned long h : H_perm) { std::cout << h << " "; }
   std::cout << std::endl;
 
   for (int oidx = 0; oidx < 2 * norb; ++oidx) {
