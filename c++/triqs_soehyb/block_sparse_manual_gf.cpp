@@ -97,7 +97,7 @@ nda::array<dcomplex, 3> OCA_gf_tpz(nda::array_const_view<dcomplex, 3> hyb_coeffs
   double dt = beta / n_quad;
 
   nda::array<dcomplex, 2> GFGFGFGF(N, N);
-  for (int fb = 1; fb <= 1; fb++) {
+  for (int fb = 0; fb <= 1; fb++) {
     auto const &Flams = (fb) ? Fs(_, _, _) : F_dags(_, _, _);
     auto const &Fnus  = (fb) ? F_dags(_, _, _) : Fs(_, _, _);
     auto const &hyb   = (fb) ? hyb_eq : hyb_refl_eq;
@@ -126,6 +126,7 @@ nda::array<dcomplex, 3> OCA_gf_tpz(nda::array_const_view<dcomplex, 3> hyb_coeffs
                 }
               }
             }
+            // std::cout << "gf_eq(_, " << mu << ", " << kap << ") = " << gf_eq(_, mu, kap) << std::endl;
           }
         }
       }
@@ -229,12 +230,13 @@ nda::array<dcomplex, 3> OCA_gf_dense(nda::array_const_view<dcomplex, 3> hyb_coef
 
   // initialize Green's function
   nda::array<dcomplex, 3> gf(r, n, n);
+  gf = 0;
 
   // initialize temporary arrays
   nda::array<dcomplex, 3> T(r, N, N), U(r, N, N), GKt(r, N, N), Tnu(r, N, N);
 
   // loop over hybridization line directions
-  for (int fb = 1; fb <= 1; fb++) {
+  for (int fb = 0; fb <= 1; fb++) {
     // fb = 1 for forward line, else = 0
     auto const &F1   = (fb) ? Fs : F_dags;
     auto const &Fbar = (fb) ? Fdagbars : Fbarsrefl;
@@ -243,13 +245,10 @@ nda::array<dcomplex, 3> OCA_gf_dense(nda::array_const_view<dcomplex, 3> hyb_coef
       Tnu = 0;
       for (int lam = 0; lam < n; lam++) {
         for (int l = 0; l < p; l++) {
+          T = 0;
+          U = 0;
           OCA_gf_dense_right(beta, itops, dlr_it, hyb_poles(l), fb, Gt, F1(lam, _, _), T);
-          // std::cout << "T = " << T << std::endl;
           OCA_gf_dense_left(beta, itops, dlr_it, hyb_poles(l), fb, Gt, Fbar(lam, l, _, _), U);
-          // std::cout << "U = ";
-          // for (int i = 0; i < r; i++) {std::cout << U(i, 0, 0) / Fbar(0, l, 0, 0); }
-          // std::cout << std::endl;
-          // for (int t = 0; t < r; t++) { Tnu(t, _, _) += nda::matmul(U(t, _, _), nda::matmul(Fs(nu, _, _), T(t, _, _))); }
           if (hyb_poles(l) <= 0) {
             for (int t = 0; t < r; t++) { Tnu(t, _, _) += nda::matmul(U(t, _, _), nda::matmul(Fs(nu, _, _), T(t, _, _))) / k_it(0, -hyb_poles(l)); }
           } else {
