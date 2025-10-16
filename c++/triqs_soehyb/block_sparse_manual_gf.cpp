@@ -93,8 +93,6 @@ nda::array<dcomplex, 3> OCA_gf_tpz(nda::array_const_view<dcomplex, 3> hyb_coeffs
     hyb_refl_eq(i, _, _) = itops.coefs2eval(hyb_refl_coeffs, it_eq(i));
     Gt_eq(i, _, _)       = itops.coefs2eval(Gt_coeffs, it_eq(i));
   }
-  std::cout << "hyb_eq = " << nda::make_regular(nda::real(hyb_eq(_, 0, 0))) << "\n\n";
-  std::cout << "hyb_refl_eq = " << nda::make_regular(nda::real(hyb_refl_eq(_, 0, 0))) << "\n\n";
 
   double dt = beta / n_quad;
 
