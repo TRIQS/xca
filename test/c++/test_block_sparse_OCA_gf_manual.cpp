@@ -183,40 +183,29 @@ TEST(DenseOCAGF, identity_hyb) {
 
 TEST(DenseOCAGF, two_band_discrete_bath_dense) {
   // DLR parameters
-  double beta   = 2.0;
+  double beta   = 1.0; // 2.0;
   double Lambda = 20.0 * beta;
   double eps    = 1.0e-10;
   // DLR generation
   auto dlr_rf = build_dlr_rf(Lambda, eps);
-  std::cout << "dlr_rf = " << dlr_rf << "\n\n";
   auto itops         = imtime_ops(Lambda, dlr_rf);
   auto const &dlr_it = itops.get_itnodes();
   auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
 
   auto [num_blocks, Deltat, Deltat_refl, Gt, Fs, Fdags, Gt_dense, Fs_dense, F_dags_dense, subspaces, fock_state_order] =
      two_band_discrete_bath_helper(beta, Lambda, eps);
-  // temporarily replace Deltat, Deltat_refl with identity matrix for testing
-  // int n = 4;
   int r = itops.rank();
-  // for (int t = 0; t < r; ++t) {
-  //   Deltat(t, _, _)      = 2 * nda::eye<dcomplex>(n);
-  //   Deltat(t, 0, 1) = 1.0; Deltat(t, 1, 0) = 1.0; Deltat(t, 2, 3) = 1.0; Deltat(t, 3, 2) = 1.0;
-  //   // Deltat_refl(t, _, _) = nda::eye<dcomplex>(n);
-  // }
   Deltat_refl = itops.reflect(Deltat);
-  std::cout << "Deltat = " << nda::make_regular(nda::real(Deltat(_, 0, 0))) << "\n\n";
-  std::cout << "Deltat slice = " << nda::make_regular(nda::real(Deltat(0, _, _))) << "\n\n";
-  std::cout << "Deltat_refl = " << nda::make_regular(nda::real(Deltat_refl(_, 0, 0))) << "\n\n";
+
   auto hyb_coeffs      = itops.vals2coefs(Deltat);
   auto hyb_refl_coeffs = itops.vals2coefs(Deltat_refl);
-  std::cout << "hyb_coeffs = " << nda::make_regular(nda::real(hyb_coeffs(_, 0, 0))) << "\n\n";
-  std::cout << "hyb_refl_coeffs = " << nda::make_regular(nda::real(hyb_refl_coeffs(_, 0, 0))) << "\n\n";
+  // hyb_refl_coeffs = hyb_coeffs; 
 
   auto OCA_gf_result = OCA_gf_dense(hyb_coeffs, hyb_refl_coeffs, dlr_rf, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
 
   // trapezoidal
   auto Gt_coeffs   = itops.vals2coefs(Gt_dense);
-  int n_quad       = 20;
+  int n_quad       = 40;
   auto OCA_gf_trap = OCA_gf_tpz(hyb_coeffs, hyb_refl_coeffs, itops, beta, Gt_coeffs, Fs_dense, n_quad);
   auto OCA_gf_eq   = eval_eq(itops, OCA_gf_result, n_quad);
 
@@ -236,12 +225,13 @@ TEST(DenseOCAGF, two_band_discrete_bath_dense) {
   nda::array<int, 2> D_OCA = {{1, 3}};
   // auto OCA_gf_Zhen = G_Diagram_calc(Delta_F, Delta_F_reflect, D_OCA, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb);
   auto OCA_gf_Zhen = G_Diagram_calc_sum_all(Delta_F, Delta_F_reflect, D_OCA, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense);
+  auto OCA_gf_Zhen_eq = eval_eq(itops, OCA_gf_Zhen, n_quad);
 
-  std::cout << "dense = " << nda::make_regular(nda::real(OCA_gf_eq(_, 0, 0))) << "\n\n";
-  std::cout << "tpz = " << nda::make_regular(nda::real(OCA_gf_trap(_, 0, 0))) << "\n\n";
-  std::cout << "Zhen = " << nda::make_regular(nda::real(OCA_gf_Zhen(_, 0, 0))) << "\n\n";
-  std::cout << "tpz / dense = " << nda::make_regular(nda::real(OCA_gf_trap(_, 0, 0) / OCA_gf_eq(_, 0, 0))) << "\n\n";
-  std::cout << "tpz / Zhen = " << nda::make_regular(nda::real(OCA_gf_trap(_, 0, 0) / OCA_gf_Zhen(_, 0, 0))) << "\n\n";
+  // std::cout << "dense = " << nda::make_regular(nda::real(OCA_gf_eq(_, 0, 0))) << "\n\n";
+  // std::cout << "tpz = " << nda::make_regular(nda::real(OCA_gf_trap(_, 0, 0))) << "\n\n";
+  // std::cout << "Zhen = " << nda::make_regular(nda::real(OCA_gf_Zhen_eq(_, 0, 0))) << "\n\n";
+  // std::cout << "tpz / dense = " << nda::make_regular(nda::real(OCA_gf_trap(_, 0, 0) / OCA_gf_eq(_, 0, 0))) << "\n\n";
+  // std::cout << "tpz / Zhen = " << nda::make_regular(nda::real(OCA_gf_trap(_, 0, 0) / OCA_gf_Zhen_eq(_, 0, 0))) << "\n\n";
 
-  ASSERT_LE(nda::max_element(nda::abs(OCA_gf_eq - OCA_gf_trap)), 27.0 / (n_quad * n_quad));
+  ASSERT_LE(nda::max_element(nda::abs(OCA_gf_eq - OCA_gf_trap)), 3.0 / (n_quad * n_quad));
 }

@@ -93,6 +93,8 @@ nda::array<dcomplex, 3> OCA_gf_tpz(nda::array_const_view<dcomplex, 3> hyb_coeffs
     hyb_refl_eq(i, _, _) = itops.coefs2eval(hyb_refl_coeffs, it_eq(i));
     Gt_eq(i, _, _)       = itops.coefs2eval(Gt_coeffs, it_eq(i));
   }
+  std::cout << "hyb_eq = " << nda::make_regular(nda::real(hyb_eq(_, 0, 0))) << "\n\n";
+  std::cout << "hyb_refl_eq = " << nda::make_regular(nda::real(hyb_refl_eq(_, 0, 0))) << "\n\n";
 
   double dt = beta / n_quad;
 
@@ -177,27 +179,23 @@ void OCA_gf_dense_left(double beta, imtime_ops &itops, nda::vector_const_view<do
     if (omega_l <= 0) {
       // multiply G K^- Fbar
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), -omega_l) * nda::matmul(Gt(t, _, _), Fbar); }
-      // std::cout << "Gt = " << Gt(_, 0, 0) << std::endl;
-      // std::cout << "T before conv, omega_l <= 0 = " << nda::make_regular(T / Fbar(0, 0)) << std::endl;
       // convolve by G
       T = itops.convolve(beta, Fermion, itops.vals2coefs(T), itops.vals2coefs(Gt), TIME_ORDERED);
     } else {
       // multiply Fbar G K^+
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), omega_l) * nda::matmul(Fbar, Gt(t, _, _)); }
-      // std::cout << "Gt = " << Gt(_, 0, 0) << std::endl;
-      // std::cout << "GKt before conv, omega_l > 0 = " << nda::make_regular(GKt / Fbar(0, 0)) << std::endl;
       // convolve
       T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
     }
   } else {
     if (omega_l > 0) {
       // multiply G K^+ Fbar
-      for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), omega_l) * nda::matmul(Fbar, Gt(t, _, _)); }
+      for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), omega_l) * nda::matmul(Gt(t, _, _), Fbar); }
       // convolve by G
       T = itops.convolve(beta, Fermion, itops.vals2coefs(T), itops.vals2coefs(Gt), TIME_ORDERED);
     } else {
-      // multiply Fbar G K^+
-      for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), omega_l) * nda::matmul(Fbar, Gt(t, _, _)); }
+      // multiply Fbar G K^-
+      for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), -omega_l) * nda::matmul(Fbar, Gt(t, _, _)); }
       // convolve
       T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
     }
