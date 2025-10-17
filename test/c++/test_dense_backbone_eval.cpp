@@ -140,7 +140,7 @@ TEST(DenseBackbone, PYTHON_OCA) {
   auto OCA_result = D.Sigma;
 
   int r = itops.rank(), N = 16;
-  h5::file hfile("../test/c++/h5/two_band_py_Lambda10.h5", 'r');
+  h5::file hfile("./h5/two_band_py_Lambda10.h5", 'r');
   h5::group hgroup(hfile);
   nda::array<dcomplex, 3> NCA_py(r, N, N), OCA_py(r, N, N);
   h5::read(hgroup, "NCA", NCA_py);
@@ -277,7 +277,7 @@ TEST(DenseBackbone, PYTHON_third_order) {
   std::cout << "Elapsed time for dense comp'n of 3rd order diags = " << duration.count() << " seconds" << std::endl;
 
   // load results from a run of twoband.py
-  h5::file hfile("../test/c++/h5/two_band_py_Lambda10.h5", 'r');
+  h5::file hfile("./h5/two_band_py_Lambda10.h5", 'r');
   h5::group hgroup(hfile);
   nda::array<dcomplex, 3> NCA_py(r, N, N), OCA_py(r, N, N);
   nda::array<dcomplex, 3> third_order_py(r, N, N);
@@ -466,7 +466,7 @@ TEST(DenseBackbone, PYTHON_OCA_semicircle_bath_aaa) {
   auto OCA_dense_result = OCA_dense(hyb, hyb_coeffs, hyb_refl, hyb_refl_coeffs, hyb_poles, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
 
   // load NCA and OCA results from twoband.py
-  h5::file Gtfile("../test/c++/h5/two_band_py_semic.h5", 'r');
+  h5::file Gtfile("./h5/two_band_py_semic.h5", 'r');
   h5::group Gtgroup(Gtfile);
   auto NCA_py = nda::zeros<dcomplex>(r, 16, 16);
   h5::read(Gtgroup, "NCA", NCA_py);

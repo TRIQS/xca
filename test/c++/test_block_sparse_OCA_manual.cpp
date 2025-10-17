@@ -84,7 +84,7 @@ TEST(BlockSparseOCAManual, H5_two_band_discrete_bath_bs) {
   // block-sparse NCA and OCA computations
   auto OCA_result = OCA_bs(Deltat, itops, beta, Gt, Fs);
   // load NCA and OCA results from twoband.py
-  h5::file Gtfile("../test/c++/h5/two_band_py.h5", 'r');
+  h5::file Gtfile("./h5/two_band_py.h5", 'r');
   h5::group Gtgroup(Gtfile);
   auto NCA_py = nda::zeros<dcomplex>(r, 16, 16);
   h5::read(Gtgroup, "NCA", NCA_py);
@@ -134,7 +134,7 @@ TEST(BlockSparseOCAManual, H5_two_band_discrete_bath_dense) {
   auto OCA_dense_result = OCA_dense(Deltat, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
 
   // load NCA and OCA results from twoband.py
-  h5::file Gtfile("../test/c++/h5/two_band_py.h5", 'r');
+  h5::file Gtfile("./h5/two_band_py.h5", 'r');
   h5::group Gtgroup(Gtfile);
   auto NCA_py = nda::zeros<dcomplex>(r, 16, 16);
   h5::read(Gtgroup, "NCA", NCA_py);
@@ -296,7 +296,7 @@ TEST(BlockSparseOCAManual, H5_two_band_semicircle_bath_aaa) {
   auto OCA_dense_result = OCA_dense(hyb, hyb_coeffs, hyb_refl, hyb_refl_coeffs, hyb_poles, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
 
   // load NCA and OCA results from twoband.py
-  h5::file Gtfile("../test/c++/h5/two_band_py_semic.h5", 'r');
+  h5::file Gtfile("./h5/two_band_py_semic.h5", 'r');
   h5::group Gtgroup(Gtfile);
   auto NCA_py = nda::zeros<dcomplex>(r, 16, 16);
   h5::read(Gtgroup, "NCA", NCA_py);
@@ -384,9 +384,9 @@ TEST(BlockSparseOCAManual, H5_two_band_discrete_bath_tpz) {
   // compute OCA using trapezoidal rule using 100 quadrature nodes0
   // load precomputed values from the following 3 lines:
   // auto OCA_tpz_result = OCA_tpz(Deltat, itops, beta, Gt_dense, Fs_dense, n_quad);
-  // h5::file tpz_file("../test/c++/h5/tpz100.h5", 'w');
+  // h5::file tpz_file("./h5/tpz100.h5", 'w');
   // h5::write(tpz_file, "OCA_tpz_result", OCA_tpz_result);
-  h5::file tpz_file("../test/c++/h5/tpz100.h5", 'r');
+  h5::file tpz_file("./h5/tpz100.h5", 'r');
   nda::array<dcomplex, 3> OCA_tpz_result(101, 16, 16);
   h5::read(tpz_file, "OCA_tpz_result", OCA_tpz_result);
 

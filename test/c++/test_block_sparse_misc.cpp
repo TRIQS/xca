@@ -90,7 +90,7 @@ TEST(BlockSparseMisc, PYTHON_compute_nonint_gf) {
 
   // load noninteracting Green's function from hdf5 file, produced from a
   // run of benchmarks/twoband.py
-  h5::file hfile2("../test/c++/h5/two_band_py.h5", 'r');
+  h5::file hfile2("./h5/two_band_py.h5", 'r');
   h5::group hgroup2(hfile2);
   auto G0_py = nda::zeros<dcomplex>(r, 16, 16);
   h5::read(hgroup2, "G0_iaa", G0_py);

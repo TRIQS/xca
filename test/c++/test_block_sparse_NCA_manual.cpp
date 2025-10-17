@@ -207,7 +207,7 @@ TEST(BlockSparseNCAManual, H5_two_band_discrete_bath_bs_vs_py) {
   auto NCA_result = NCA_bs(Deltat, Deltat_refl, Gt, Fs);
 
   // load NCA twoband.py
-  h5::file Gtfile("../test/c++/h5/two_band_py.h5", 'r');
+  h5::file Gtfile("./h5/two_band_py.h5", 'r');
   h5::group Gtgroup(Gtfile);
   auto NCA_py = nda::zeros<dcomplex>(r, 16, 16);
   h5::read(Gtgroup, "NCA", NCA_py);
@@ -334,7 +334,7 @@ TEST(BlockSparseNCAManual, H5_two_band_semicircle_bath_dense_aaa) {
   auto NCA_result = NCA_dense(hyb, hyb_refl, Gt_dense, Fs_dense, F_dags_dense);
 
   // load NCA result from twoband.py
-  h5::file Gtfile("../test/c++/h5/two_band_py_semic.h5", 'r');
+  h5::file Gtfile("./h5/two_band_py_semic.h5", 'r');
   h5::group Gtgroup(Gtfile);
   auto NCA_py = nda::zeros<dcomplex>(r, 16, 16);
   h5::read(Gtgroup, "NCA", NCA_py);
