@@ -188,25 +188,25 @@ TEST(DenseOCAGF, two_band_discrete_bath_dense) {
   double Lambda = 20.0 * beta;
   double eps    = 1.0e-10;
   // DLR generation
-  auto dlr_rf = build_dlr_rf(Lambda, eps);
+  auto dlr_rf        = build_dlr_rf(Lambda, eps);
   auto itops         = imtime_ops(Lambda, dlr_rf);
   auto const &dlr_it = itops.get_itnodes();
   auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
 
   auto [num_blocks, Deltat, Deltat_refl, Gt, Fs, Fdags, Gt_dense, Fs_dense, F_dags_dense, subspaces, fock_state_order] =
      two_band_discrete_bath_helper(beta, Lambda, eps);
-  int r = itops.rank();
+  int r       = itops.rank();
   Deltat_refl = itops.reflect(Deltat);
 
   auto hyb_coeffs      = itops.vals2coefs(Deltat);
   auto hyb_refl_coeffs = itops.vals2coefs(Deltat_refl);
-  // hyb_refl_coeffs = hyb_coeffs; 
+  // hyb_refl_coeffs = hyb_coeffs;
 
   auto OCA_gf_result = OCA_gf_dense(hyb_coeffs, hyb_refl_coeffs, dlr_rf, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
 
   // trapezoidal
   auto Gt_coeffs   = itops.vals2coefs(Gt_dense);
-  int n_quad       = 40;
+  int n_quad       = 10;
   auto OCA_gf_trap = OCA_gf_tpz(hyb_coeffs, hyb_refl_coeffs, itops, beta, Gt_coeffs, Fs_dense, n_quad);
   auto OCA_gf_eq   = eval_eq(itops, OCA_gf_result, n_quad);
 
@@ -223,18 +223,12 @@ TEST(DenseOCAGF, two_band_discrete_bath_dense) {
   Delta_F.update_inplace(Delta_decomp, dlr_rf, dlr_it, Fs_dense, F_dags_dense); // Compression of Delta(t) and F, F_dag matrices
   Delta_F_reflect.update_inplace(Delta_decomp_reflect, dlr_rf_reflect, dlr_it, F_dags_dense, Fs_dense);
   nda::vector<int> fb      = {1, 0};
-  nda::array<int, 2> D_OCA = {{1, 3}};
-  // auto OCA_gf_Zhen = G_Diagram_calc(Delta_F, Delta_F_reflect, D_OCA, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb);
-  auto OCA_gf_Zhen = G_Diagram_calc_sum_all(Delta_F, Delta_F_reflect, D_OCA, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense);
+  nda::array<int, 2> D_OCA = {{0, 2}, {1, 3}};
+  auto OCA_gf_Zhen    = G_Diagram_calc_sum_all(Delta_F, Delta_F_reflect, D_OCA, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense);
   auto OCA_gf_Zhen_eq = eval_eq(itops, OCA_gf_Zhen, n_quad);
 
-  // std::cout << "dense = " << nda::make_regular(nda::real(OCA_gf_eq(_, 0, 0))) << "\n\n";
-  // std::cout << "tpz = " << nda::make_regular(nda::real(OCA_gf_trap(_, 0, 0))) << "\n\n";
-  // std::cout << "Zhen = " << nda::make_regular(nda::real(OCA_gf_Zhen_eq(_, 0, 0))) << "\n\n";
-  // std::cout << "tpz / dense = " << nda::make_regular(nda::real(OCA_gf_trap(_, 0, 0) / OCA_gf_eq(_, 0, 0))) << "\n\n";
-  // std::cout << "tpz / Zhen = " << nda::make_regular(nda::real(OCA_gf_trap(_, 0, 0) / OCA_gf_Zhen_eq(_, 0, 0))) << "\n\n";
-
   ASSERT_LE(nda::max_element(nda::abs(OCA_gf_eq - OCA_gf_trap)), 3.0 / (n_quad * n_quad));
+  ASSERT_LE(nda::max_element(nda::abs(OCA_gf_eq - OCA_gf_Zhen_eq)), eps);
 }
 
 TEST(DenseOCAGF, two_band_semic_bath_dense) {
@@ -374,12 +368,12 @@ TEST(DenseOCAGF, two_band_semic_bath_dense) {
   auto OCA_gf_result = OCA_gf_dense(hyb_coeffs, hyb_refl_coeffs, hyb_poles, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
 
   // trapezoidal
-  auto Gt_coeffs   = itops.vals2coefs(Gt_dense);
-  int n_quad       = 40;
+  auto Gt_coeffs           = itops.vals2coefs(Gt_dense);
+  int n_quad               = 40;
   auto hyb_dlr_coeffs      = itops.vals2coefs(hyb);
   auto hyb_refl_dlr_coeffs = itops.vals2coefs(hyb_refl);
-  auto OCA_gf_trap = OCA_gf_tpz(hyb_dlr_coeffs, hyb_refl_dlr_coeffs, itops, beta, Gt_coeffs, Fs_dense, n_quad);
-  auto OCA_gf_eq   = eval_eq(itops, OCA_gf_result, n_quad);
+  auto OCA_gf_trap         = OCA_gf_tpz(hyb_dlr_coeffs, hyb_refl_dlr_coeffs, itops, beta, Gt_coeffs, Fs_dense, n_quad);
+  auto OCA_gf_eq           = eval_eq(itops, OCA_gf_result, n_quad);
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_gf_eq - OCA_gf_trap)), 20.0 / (n_quad * n_quad));
 }

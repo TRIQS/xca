@@ -8,6 +8,7 @@ cmake_script
 .vscode/
 test/c++/h5/*.txt
 *.h5
+!test/c++/h5/two_band_py_semic.h5
 
 *.log
 
