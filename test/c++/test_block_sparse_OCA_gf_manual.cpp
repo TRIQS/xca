@@ -58,9 +58,6 @@ TEST(DenseOCAGF, single_exponential) {
   auto OCA_gf_eq     = eval_eq(itops, OCA_gf, n_quad);
   auto OCA_gf_ana_eq = eval_eq(itops, OCA_gf_ana, n_quad);
 
-  std::cout << "dense = " << OCA_gf_eq << std::endl;
-  std::cout << "analytic = " << OCA_gf_ana_eq << std::endl;
-  std::cout << "tpz = " << OCA_gf_trap << std::endl;
   ASSERT_LE(nda::max_element(nda::abs(OCA_gf - OCA_gf_ana)), eps);
   ASSERT_LE(nda::max_element(nda::abs(OCA_gf_eq - OCA_gf_trap)), 1e-1 / (n_quad * n_quad));
 }
@@ -376,4 +373,83 @@ TEST(DenseOCAGF, two_band_semic_bath_dense) {
   auto OCA_gf_eq           = eval_eq(itops, OCA_gf_result, n_quad);
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_gf_eq - OCA_gf_trap)), 20.0 / (n_quad * n_quad));
+}
+
+TEST(BSOCAGF, single_exponential) {
+  double beta        = 1.0;
+  double Lambda      = 100.0;
+  double eps         = 1e-8;
+  auto dlr_rf        = build_dlr_rf(Lambda, eps);
+  auto itops         = imtime_ops(Lambda, dlr_rf);
+  auto const &dlr_it = itops.get_itnodes();
+  auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
+  int r              = itops.rank();
+
+  double omega = 0.1;
+  nda::array<dcomplex, 3> Gt_dense(r, 1, 1);
+  for (int t = 0; t < r; ++t) { Gt_dense(t, 0, 0) = k_it(dlr_it(t), omega); }
+  std::vector<nda::array<dcomplex, 3>> Gt_vec{Gt_dense};
+  nda::vector<int> bi{0};
+  BlockDiagOpFun Gt(Gt_vec, bi);
+
+  // create hybridization
+  double D    = -1.0; // 1.0;
+  auto Deltat = nda::array<dcomplex, 3>(r, 1, 1);
+  for (int t = 0; t < r; t++) Deltat(t, 0, 0) = k_it(dlr_it(t), D);
+  auto hyb_coeffs      = itops.vals2coefs(Deltat);
+  auto Deltat_refl     = itops.reflect(Deltat);
+  auto hyb_refl_coeffs = itops.vals2coefs(Deltat_refl);
+
+  int n = 1;
+  nda::array<dcomplex, 3> Fs(n, 1, 1), F_dags(n, 1, 1);
+  for (int i = 0; i < n; ++i) {
+    Fs(i, 0, 0)     = 1.0;
+    F_dags(i, 0, 0) = 1.0;
+  }
+  std::vector<nda::array<dcomplex, 3>> Fs_vec{Fs};
+  BlockOpSymSet Fset(bi, Fs_vec);
+  std::vector<nda::array<dcomplex, 3>> Fdags_vec{F_dags};
+  BlockOpSymSet Fdagset(bi, Fdags_vec);
+  std::vector<BlockOpSymSet> Fset_vec{Fset}, Fdagset_vec{Fdagset};
+  nda::vector<long> sym_set_labels{0};
+  BlockOpSymQuartet Fq(Fset_vec, Fdagset_vec, hyb_coeffs, hyb_refl_coeffs, sym_set_labels);
+
+  auto OCA_gf = OCA_gf_bs(dlr_rf, itops, beta, Gt, Fq);
+
+  nda::array<dcomplex, 3> OCA_gf_ana(r, 1, 1);
+  for (int t = 0; t < r; ++t) {
+    double tau          = dlr_it_abs(t);
+    OCA_gf_ana(t, 0, 0) = 2 * exp(3 * omega - tau * D) * (exp(tau * D) - exp(D)) * (exp(tau * D) - 1);
+  }
+  OCA_gf_ana = OCA_gf_ana / (D * D * (1 + exp(D)) * (1 + exp(omega)) * (1 + exp(omega)) * (1 + exp(omega)) * (1 + exp(omega)));
+
+  std::cout << "OCA_gf = " << nda::make_regular(nda::real(OCA_gf(_, 0, 0))) << std::endl;
+  std::cout << "\nOCA_gf_ana = " << nda::make_regular(nda::real(OCA_gf_ana(_, 0, 0))) << std::endl;
+  ASSERT_LE(nda::max_element(nda::abs(OCA_gf - OCA_gf_ana)), eps);
+}
+
+TEST(BSOCAGF, two_band_discrete_bath_bs) {
+  // DLR parameters
+  double beta   = 2.0;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-10;
+  // DLR generation
+  auto dlr_rf        = build_dlr_rf(Lambda, eps);
+  auto itops         = imtime_ops(Lambda, dlr_rf);
+  auto const &dlr_it = itops.get_itnodes();
+  auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
+
+  auto [num_blocks, Deltat, Deltat_refl, Gt, Fs, Fdags, Gt_dense, Fs_dense, F_dags_dense, subspaces, fock_state_order, Fq] =
+     two_band_discrete_bath_helper_sym(beta, Lambda, eps);
+  Deltat_refl = itops.reflect(Deltat);
+
+  auto hyb_coeffs      = itops.vals2coefs(Deltat);
+  auto hyb_refl_coeffs = itops.vals2coefs(Deltat_refl);
+
+  auto OCA_gf_result = OCA_gf_bs(dlr_rf, itops, beta, Gt, Fq);
+  auto OCA_gf_dense_result = OCA_gf_dense(hyb_coeffs, hyb_refl_coeffs, dlr_rf, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
+  std::cout << "bs = " << OCA_gf_result(_, 0, 0) << std::endl;
+  std::cout << "\ndense = " << OCA_gf_dense_result(_, 0, 0) << std::endl;
+
+  ASSERT_LE(nda::max_element(nda::abs(OCA_gf_result - OCA_gf_dense_result)), eps);
 }

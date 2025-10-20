@@ -37,10 +37,20 @@ nda::array<dcomplex, 3> OCA_gf_tpz(nda::array_const_view<dcomplex, 3> hyb_coeffs
  * @param[in] itops cppdlr imaginary time object
  * @param[in] beta inverse temperature
  * @param[in] Gt pseudoparticle Green's function
- * @param[in] Gt_refl pseudoparticle Green's function at (beta - tau)
  * @param[in] Fs F operators
  * @param[in] F_dags F^dagger operators
  */
 nda::array<dcomplex, 3> OCA_gf_dense(nda::array_const_view<dcomplex, 3> hyb_coeffs, nda::array_const_view<dcomplex, 3> hyb_refl_coeffs,
                                      nda::vector_const_view<double> hyb_poles, imtime_ops &itops, double beta, nda::array_const_view<dcomplex, 3> Gt,
                                      nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags);
+
+/**
+ * @brief Evaluate OCA Green's function using block-sparse storage
+ * @param[in] hyb_poles hybridization poles
+ * @param[in] itops cppdlr imaginary time object
+ * @param[in] beta inverse temperature
+ * @param[in] Gt pseudoparticle Green's function as a BDOF
+ * @param[in] Fq quartet of F operators
+ */
+nda::array<dcomplex, 3> OCA_gf_bs(nda::vector_const_view<double> hyb_poles, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt,
+                                  const BlockOpSymQuartet &Fq);

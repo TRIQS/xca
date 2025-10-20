@@ -393,6 +393,14 @@ nda::array_const_view<dcomplex, 4> BlockOpSymSetBar::get_block(int i) const {
   }
 }
 
+int BlockOpSymSetBar::get_block_size(int block_ind, int dim) const {
+  if (block_indices(block_ind) != -1) {
+    return blocks[block_ind].shape(dim + 2); // index 0 for sym set index, 1 for DLR indices, 2 for row, 3 for col
+  } else {
+    return -1;
+  }
+}
+
 int BlockOpSymSetBar::get_num_block_cols() const { return num_block_cols; }
 
 int BlockOpSymSetBar::get_size_sym_set() const {

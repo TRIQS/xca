@@ -232,6 +232,7 @@ class BlockOpSymSetBar {
   int get_block_index(int i) const;
   const std::vector<nda::array<dcomplex, 4>> &get_blocks() const;
   nda::array_const_view<dcomplex, 4> get_block(int i) const;
+  int get_block_size(int block_ind, int dim) const;
   int get_num_block_cols() const;
   int get_size_sym_set() const;
   int get_num_time_nodes() const;
