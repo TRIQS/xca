@@ -6,6 +6,7 @@ endforeach()
 
 # List of all tests
 set(all_tests
+  pycppdlr
   load_module
   spinless_dimer
   spinless_dimer_solver
@@ -14,6 +15,10 @@ set(all_tests
   unitary_invariance
   h5_io
   dense
+  triqs_solver
+  one_spinful_fermion
+  analytic_diagrams
+  test_aaa
   )
 
 foreach(test ${all_tests})

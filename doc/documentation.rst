@@ -3,27 +3,39 @@
 Documentation
 *************
 
-
-.. math::
-
-   (a + b)^2  &=  (a + b)(a + b) \\
-              &=  a^2 + 2ab + b^2
-
-
-C++ reference manual
-====================
+Background
+----------
 
 .. toctree::
-   :maxdepth: 5
+   :maxdepth: 1
 
-   cpp2rst_generated/contents
+   background/ppsc
 
-Python reference manual
-=======================
+User guide
+----------
 
-.. autosummary::
-   :toctree: _autosummary
-   :template: autosummary_module_template.rst
-   :recursive:
+.. toctree::
+   :maxdepth: 1
 
-   triqs_soehyb
+   user_guide/Step by step.ipynb
+
+   
+Tutorials
+---------
+
+.. toctree::
+   :maxdepth: 1
+
+   tutorials/Semi infinite chain.ipynb
+   tutorials/Metal insulator transition.ipynb
+
+
+Python API Reference
+--------------------
+
+For the complete Python API reference, see:
+
+.. toctree::
+   :maxdepth: 2
+
+   python_api   

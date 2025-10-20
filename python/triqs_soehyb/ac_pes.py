@@ -1,12 +1,38 @@
-# This is a python implementation for analytic continuation of Fermionic Green's functions/self energy
-# using PES (ES) method
-# Reference: PhysRevB.107.075151
+################################################################################
+#
+# triqs_soehyb - Sum-Of-Exponentials bold HYBridization expansion impurity solver
+#
+# Copyright (C) 2025 by Z. Huang
+#
+# triqs_soehyb is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# triqs_soehyb is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with
+# TRIQS. If not, see <http://www.gnu.org/licenses/>.
+#
+################################################################################
+
+"""
+Implementation of analytic continuation for Fermionic Green's functions and self-energies
+using the projection-estimation-semidefinite relaxation PES (ES) method.
+
+Z. Huang, E. Gull, L. Lin, Phys. Rev. B 107, 075151 (2023) https://doi.org/10.1103/PhysRevB.107.075151
+"""
+
 import numpy as np 
 import scipy
 import scipy.optimize
-# import cvxpy as cp
-# import mosek
-from triqs_soehyb.aaa import *
+
+from triqs_soehyb.aaa.aaa_matrix import aaa_matrix_real
+
+
 def kernel(tau, omega):
     kernel = np.empty((len(tau), len(omega)))
 
@@ -20,6 +46,8 @@ def kernel(tau, omega):
     kernel[:, m] = np.exp((1. - tau)*w_m) / (1 + np.exp(w_m))
 
     return kernel
+
+
 def eval_with_pole(pol, Z, weight):
     pol_t = np.reshape(pol,[pol.size,1])
     M = 1/(Z-pol_t)
@@ -29,6 +57,8 @@ def eval_with_pole(pol, Z, weight):
     else:
         G = M@np.reshape(weight, (weight.shape[0], weight.shape[1]*weight.shape[2]))
         return np.reshape(G, (G.shape[0],  weight.shape[1], weight.shape[2]))
+
+    
 def get_weight_t(pol, tgrid, Deltat, beta, maxiter=100000):
     M = -kernel(tgrid/beta, pol*beta)
     shape_iaa = Deltat.shape
@@ -39,6 +69,7 @@ def get_weight_t(pol, tgrid, Deltat, beta, maxiter=100000):
     
     weight = weight.reshape(shape_xaa)
     return weight, M, residue
+
 
 def erroreval_t(pol,  tgrid, Deltat, beta, maxiter=100000):
     R, M, residue = get_weight_t(pol, tgrid, Deltat, beta, maxiter=100000)
@@ -57,6 +88,7 @@ def erroreval_t(pol,  tgrid, Deltat, beta, maxiter=100000):
 
     grad = -grad/y
     return y, grad
+
 
 def get_weight(pol, Z, G, cleanflag=True, maxiter=100000, Hermitian = True):
     pol_t = np.reshape(pol,[pol.size,1])
@@ -95,6 +127,7 @@ def get_weight(pol, Z, G, cleanflag=True, maxiter=100000, Hermitian = True):
                         R[:,i,j] = R1 + 1j*R2
                         R[:,j,i] = R1 - 1j*R2
         else:
+            import cvxpy as cp
             X = [cp.Variable((Norb, Norb), hermitian=True) for i in range(Np) ]
             Nw = len(Z)
             constraints = [X[i] >> 0 for i in range(Np)]
@@ -105,6 +138,8 @@ def get_weight(pol, Z, G, cleanflag=True, maxiter=100000, Hermitian = True):
             objective = cp.Minimize(sum(Gfit))
             prob = cp.Problem(objective, constraints)
             result = prob.solve(solver = "SCS",verbose = False, eps = 1.e-8)
+
+            # import mosek
             # mosek_params_dict = {"MSK_DPAR_INTPNT_CO_TOL_PFEAS": 1.e-8,\
             #                     "MSK_DPAR_INTPNT_CO_TOL_DFEAS": 1.e-8,
             #                     "MSK_DPAR_INTPNT_CO_TOL_REL_GAP": 1.e-8, 
@@ -131,6 +166,7 @@ def aaa_reduce(pol, R, eps=1e-6):
     nonz_index = Rnorm>eps
     return pol[nonz_index], R[nonz_index]
 
+
 def erroreval(pol,  Z, G, cleanflag=True, maxiter=100000,Hermitian=True):
     R, M, residue = get_weight(pol,  Z, G, cleanflag=cleanflag, maxiter=maxiter,Hermitian=Hermitian)
     if len(G.shape)==1:
@@ -149,13 +185,14 @@ def erroreval(pol,  Z, G, cleanflag=True, maxiter=100000,Hermitian=True):
     grad = -grad/y
     return y, grad
 
+
 def polefitting(Deltaiw, Z, Deltat,tgrid, Deltat_dense, tgrid_dense,beta, Np_max=50,eps = 1e-5,Hermitian=True):
     Num_of_nonzero_entries = 0
     for i in range(Deltaiw.shape[1]):
         for j in range(Deltaiw.shape[2]):
             if np.max(np.abs((Deltat[:,i,j])))>1e-12:
                 Num_of_nonzero_entries += 1
-    
+
     for mmax in range(4,Np_max,2):
         r = aaa_matrix_real(Deltaiw, Z, mmax=mmax)
         pol = r.pol()
@@ -163,17 +200,24 @@ def polefitting(Deltaiw, Z, Deltat,tgrid, Deltat_dense, tgrid_dense,beta, Np_max
         pol = np.real(pol)
         weight, _, residue = get_weight_t(pol, tgrid, Deltat,beta)
         pol, weight = aaa_reduce(pol, weight,eps)
-        fhere = lambda pole: erroreval_t(pol, tgrid, Deltat,beta)
-        res = scipy.optimize.minimize(fhere,pol, method='L-BFGS-B', jac=True,options= {"disp" :False,"gtol":1e-14,"ftol":1e-14})
-        weight, _, residue = get_weight_t(res.x, tgrid, Deltat,beta)
-        M = -kernel(tgrid_dense/beta, res.x*beta)
+        fhere = lambda pole: erroreval_t(pole, tgrid, Deltat,beta)
+        if len(pol) > 0:
+            res = scipy.optimize.minimize(fhere,pol, method='L-BFGS-B', jac=True,options= {"disp" :False,"gtol":1e-14,"ftol":1e-14})
+            x = res.x
+        else:
+            x = pol
+        weight, _, residue = get_weight_t(x, tgrid, Deltat,beta)
+        M = -kernel(tgrid_dense/beta, x*beta)
         residue_dense = M@weight.reshape((weight.shape[0], weight.shape[1]*weight.shape[2])) - Deltat_dense.reshape((Deltat_dense.shape[0], Deltat_dense.shape[1]*Deltat_dense.shape[2]))
         error = np.linalg.norm(residue_dense.flatten()) / np.sqrt(len(tgrid_dense))
-        error =error/Num_of_nonzero_entries
-        if error<eps:
-            return weight, res.x, error
+        if Num_of_nonzero_entries != 0:
+            error =error/Num_of_nonzero_entries
+        if error < eps:
+            return weight, x, error
         
-    return weight, res.x, np.linalg.norm(residue)
+    return weight, x, np.linalg.norm(residue)
+
+
 # def polefitting(Deltaiw, Z, Np_max=50,eps = 1e-5,Hermitian=True):
 #     for mmax in range(4,Np_max,2):
 #         r = aaa_matrix_real(Deltaiw, Z, mmax=mmax)
