@@ -217,11 +217,11 @@ TEST(DenseOCAGF, two_band_discrete_bath_dense) {
   int dim                   = static_cast<int>(Deltat.extent(1));
   // int r                     = itops.rank();
   hyb_F Delta_F(16, r, dim), Delta_F_reflect(16, r, dim);
-  Delta_F.update_inplace(Delta_decomp, dlr_rf, dlr_it, Fs_dense, F_dags_dense); // Compression of Delta(t) and F, F_dag matrices
-  Delta_F_reflect.update_inplace(Delta_decomp_reflect, dlr_rf_reflect, dlr_it, F_dags_dense, Fs_dense);
+  Delta_F.update_inplace(Delta_decomp, dlr_it, Fs_dense, F_dags_dense); // Compression of Delta(t) and F, F_dag matrices
+  Delta_F_reflect.update_inplace(Delta_decomp_reflect, dlr_it, F_dags_dense, Fs_dense);
   nda::vector<int> fb      = {1, 0};
   nda::array<int, 2> D_OCA = {{0, 2}, {1, 3}};
-  auto OCA_gf_Zhen    = G_Diagram_calc_sum_all(Delta_F, Delta_F_reflect, D_OCA, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense);
+  auto OCA_gf_Zhen         = G_Diagram_calc_sum_all(Delta_F, Delta_F_reflect, D_OCA, Gt_dense, itops, beta, Fs_dense, F_dags_dense);
   auto OCA_gf_Zhen_eq = eval_eq(itops, OCA_gf_Zhen, n_quad);
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_gf_eq - OCA_gf_trap)), 3.0 / (n_quad * n_quad));

@@ -61,11 +61,11 @@ static auto const fun_2 = c2py::dispatcher_f_kw_t{c2py::cmethod(
 
 // convolve
 static auto const fun_3 = c2py::dispatcher_f_kw_t{c2py::cmethod(
-   [](cppdlr::imtime_ops const &self, double beta, cppdlr::statistic_t statistic,
+   [](cppdlr::imtime_ops const &self, double beta,
       const nda::basic_array<std::complex<double>, 3, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>> &fc,
       const nda::basic_array<std::complex<double>, 3, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>> &gc,
-      bool time_order) { return self.convolve(beta, statistic, fc, gc, time_order); },
-   "self", "beta", "statistic", "fc", "gc", "time_order"_a = false)};
+      bool time_order) { return self.convolve(beta, fc, gc, time_order); },
+   "self", "beta", "fc", "gc", "time_order"_a = false)};
 
 // convolve_init
 static auto const fun_4 = c2py::dispatcher_f_kw_t{c2py::cmethod([](cppdlr::imtime_ops const &self) { return self.convolve_init(); }, "self")};

@@ -13,8 +13,7 @@ template nda::array<nda::dcomplex, 3> cppdlr::imtime_ops::reflect<nda::array<nda
 
 template auto cppdlr::imtime_ops::coefs2eval<nda::array<nda::dcomplex, 3>>(nda::array<nda::dcomplex, 3> const &g, double t) const;
 
-template nda::array<nda::dcomplex, 3> cppdlr::imtime_ops::convolve<nda::array<nda::dcomplex, 3>>(double beta, statistic_t statistic,
-                                                                                                 nda::array<nda::dcomplex, 3> const &fc,
+template nda::array<nda::dcomplex, 3> cppdlr::imtime_ops::convolve<nda::array<nda::dcomplex, 3>>(double beta, nda::array<nda::dcomplex, 3> const &fc,
                                                                                                  nda::array<nda::dcomplex, 3> const &gc,
                                                                                                  bool time_order = false) const;
 
