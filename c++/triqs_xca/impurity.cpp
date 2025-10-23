@@ -194,9 +194,9 @@ nda::array<dcomplex, 3> fastdiagram::Sigma_calc(nda::array<dcomplex, 3> Gt, std:
 
 nda::array<dcomplex, 3> fastdiagram::G_calc_group(nda::array<dcomplex, 3> Gt, nda::array<int, 2> D, nda::array<int, 1> diagramindex) {
 
-  auto N                   = Gt.shape(1);
-  auto Nd                  = diagramindex.shape(0);
-  auto m                   = D.shape(0);
+  auto N                  = Gt.shape(1);
+  auto Nd                 = diagramindex.shape(0);
+  auto m                  = D.shape(0);
   auto Diagram            = nda::array<dcomplex, 3>::zeros({r, n, n});
   auto num_diagram_per_fb = pown(P, m - 1);
   auto Gt_reflect         = itops.reflect(Gt);

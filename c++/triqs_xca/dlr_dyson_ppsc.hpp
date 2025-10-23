@@ -121,10 +121,10 @@ namespace cppdlr {
       nda::lapack::getrf(sysmat, ipiv);
 
       // Solve Dyson equation
-      auto g    = Tg(sig.shape());                                                    // Declare Green's function
-      g         = rhs;                                                                // Get right hand side of Dyson equation
+      auto g    = Tg(sig.shape());                                                         // Declare Green's function
+      g         = rhs;                                                                     // Get right hand side of Dyson equation
       auto g_rs = nda::matrix_view<nda::get_value_t<Tg>>(nda::reshape(g, norb, r * norb)); // Reshape g to be compatible w/ LAPACK
-      nda::lapack::getrs(sysmat, g_rs, ipiv);                                         // Back solve
+      nda::lapack::getrs(sysmat, g_rs, ipiv);                                              // Back solve
 
       if constexpr (std::floating_point<Ht>) { // If h is scalar, g is scalar-valued
         return g;
@@ -170,10 +170,10 @@ namespace cppdlr {
       nda::lapack::getrf(sysmat, ipiv);
 
       // Solve Dyson equation
-      auto g    = Tg(sig.shape());                                                    // Declare Green's function
-      g         = rhs;                                                                // Get right hand side of Dyson equation
+      auto g    = Tg(sig.shape());                                                         // Declare Green's function
+      g         = rhs;                                                                     // Get right hand side of Dyson equation
       auto g_rs = nda::matrix_view<nda::get_value_t<Tg>>(nda::reshape(g, norb, r * norb)); // Reshape g to be compatible w/ LAPACK
-      nda::lapack::getrs(sysmat, g_rs, ipiv);                                         // Back solve
+      nda::lapack::getrs(sysmat, g_rs, ipiv);                                              // Back solve
 
       if constexpr (std::floating_point<Ht>) { // If h is scalar, g is scalar-valued
         return g;

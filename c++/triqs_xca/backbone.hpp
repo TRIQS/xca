@@ -61,7 +61,6 @@ class BackboneVertex {
  */
 class Backbone {
   private:
-
   nda::vector<int> prefactor_Ksigns; // for each of m-1 pole indices (l, l`, ...), the sign on K_l^?(0)
   nda::vector<int> prefactor_Kexps;  // for each of m-1 pole_indices, the exponent on K_l(0)^?
   nda::array<int, 2> edges;
@@ -85,15 +84,13 @@ class Backbone {
     */
   nda::vector<int> pole_inds; // values of the hybridization indices (i.e. values of l, l`, ...)
   nda::vector<int> orb_inds;  // orbital indices on the vertices, i.e., values of lambda, mu, ...
-  int f_ix; // flat index
+  int f_ix;                   // flat index
 
   protected:
-  
   nda::array<int, 2> topology;
-  nda::vector<int> fb;        // directions of the hybridization lines, 0 for backward, 1 for forward
+  nda::vector<int> fb; // directions of the hybridization lines, 0 for backward, 1 for forward
 
   public:
-
   virtual void set_directions(int fb_ix); // set directions from a single integer index in [[0, 2^m-1]]
   virtual void set_directions(nda::vector_const_view<int> fb);
   void reset_directions();
@@ -106,7 +103,7 @@ class Backbone {
   void set_flat_index(int f_ix,
                       nda::vector_const_view<double> dlr_rf); // set directions, pole indices, and orbital indices from a single integer index.
   // In terms of fb_ix, p_ix, and o_ix, f_ix = o_ix + n^(m-1) * p_ix + (n * r)^(m-1) * fb_ix, where r is the number of hybridization indices.
-  void reset_all_inds(); 
+  void reset_all_inds();
 
   int m;              // order
   int n;              // number of orbital indices
@@ -128,7 +125,7 @@ class Backbone {
   int get_topology(int i, int j);
   int get_pole_ind(int i);
   int get_fb(int i);
-  int get_orb_ind(int i); 
+  int get_orb_ind(int i);
   int get_flat_index();
 
   /**
@@ -158,7 +155,6 @@ std::ostream &operator<<(std::ostream &os, Backbone &B);
  */
 class GreensFunctionBackbone : public Backbone {
   public:
-
   void set_directions(int fb_ix) override; // one fewer hybridization edge - use only the first m-1 element of the edges array
   void set_directions(nda::vector_const_view<int> fb) override;
 };

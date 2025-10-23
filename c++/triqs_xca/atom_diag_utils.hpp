@@ -48,7 +48,8 @@ BlockDiagOpFun ad_to_nonint_gf(const atom_diag::atom_diag<false> &ad, double bet
  * @param[in] hyb_refl_coeffs Reflected hybridization SOE coefficients
  * @return Tuple of BlockOpSymSet objects
  */
-std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const atom_diag::atom_diag<false> &ad, int norb, nda::array_const_view<dcomplex, 3> hyb_coeffs,
+std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const atom_diag::atom_diag<false> &ad, int norb,
+                                                              nda::array_const_view<dcomplex, 3> hyb_coeffs,
                                                               nda::array_const_view<dcomplex, 3> hyb_refl_coeffs);
 
 /**

@@ -83,6 +83,4 @@ class GreensFunctionDiagramEvaluator {
   nda::array<dcomplex, 3> GKt;      // array for storing result of edge computation
   nda::array<dcomplex, 4> Tkaps;    // intermediate storage array
   nda::array<dcomplex, 3> Tmu;      // intermediate storage array
-
-  
 };

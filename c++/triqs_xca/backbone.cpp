@@ -27,7 +27,8 @@ Backbone::Backbone(nda::array<int, 2> topology, int n)
      m(topology.extent(0)),
      n(n),
      fb_ix_max(static_cast<int>(pow(2, m))),
-     o_ix_max(static_cast<int>(pow(n, m - 1))), prefactor_sign(1) {
+     o_ix_max(static_cast<int>(pow(n, m - 1))),
+     prefactor_sign(1) {
 
   prefactor_Ksigns = nda::vector<int>(m - 1, 0);
   prefactor_Kexps  = nda::vector<int>(m - 1, 0);
@@ -177,10 +178,10 @@ void Backbone::set_orb_inds(nda::vector_const_view<int> orb_inds) {
 
 void Backbone::set_orb_inds(int o_ix) {
   // set orbital indices from a single integer index
-  auto orb_inds = nda::vector<int>(2 * m);
-  orb_inds(0) = -1; 
+  auto orb_inds            = nda::vector<int>(2 * m);
+  orb_inds(0)              = -1;
   orb_inds(topology(0, 1)) = -1; // special vertex 0 and the one connected to it have no orbital indices explicitly summed over
-  for (int i = 1; i < m; i++) { // loop over lines, skipping the one connected to vertex 0
+  for (int i = 1; i < m; i++) {  // loop over lines, skipping the one connected to vertex 0
     orb_inds(topology(i, 0)) = o_ix % n;
     orb_inds(topology(i, 1)) = o_ix % n;
     // orbital indices on vertices connected by a line are the same
@@ -198,13 +199,13 @@ void Backbone::set_flat_index(int f_ix, nda::vector_const_view<double> hyb_poles
   // In terms of fb_ix, p_ix, and o_ix,
   // f_ix = o_ix + n^(m-1) * p_ix + (n * r)^(m-1) * fb_ix, where r is the number of hybridization indices.
 
-  this->f_ix = f_ix; 
-  int p   = hyb_poles.size();
-  int o_ix = f_ix % o_ix_max; // orbital indices
+  this->f_ix = f_ix;
+  int p      = hyb_poles.size();
+  int o_ix   = f_ix % o_ix_max; // orbital indices
   f_ix /= o_ix_max;
-  int p_ix_max = static_cast<int>(pow(p, m - 1)); 
-  int p_ix = f_ix % p_ix_max; // pole indices
-  int fb_ix = f_ix / p_ix_max; // directions
+  int p_ix_max = static_cast<int>(pow(p, m - 1));
+  int p_ix     = f_ix % p_ix_max; // pole indices
+  int fb_ix    = f_ix / p_ix_max; // directions
 
   set_directions(fb_ix);
   set_pole_inds(p_ix, hyb_poles);
@@ -246,7 +247,7 @@ void GreensFunctionBackbone::set_directions(nda::vector_const_view<int> fb) {
   // same logic as the Backbone method, but no line connected to vertex 0 -- just the "for loop" part
 
   this->fb(range(0, m - 1)) = fb;
-  this->fb(m - 1) = -1; // no line connected to vertex 0
+  this->fb(m - 1)           = -1; // no line connected to vertex 0
   if (m - 1 != fb.size()) { throw std::invalid_argument("fb must have m - 1 elements"); }
 
   for (int i = 1; i < m; i++) {

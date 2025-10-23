@@ -144,7 +144,8 @@ BlockDiagOpFun ad_to_nonint_gf(const atom_diag::atom_diag<false> &ad, double bet
   return nonint_gf_BDOF(H_blocks, H_block_inds, beta, dlr_it_abs);
 }
 
-std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const atom_diag::atom_diag<false> &ad, int norb, nda::array_const_view<dcomplex, 3> hyb_coeffs,
+std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const atom_diag::atom_diag<false> &ad, int norb,
+                                                              nda::array_const_view<dcomplex, 3> hyb_coeffs,
                                                               nda::array_const_view<dcomplex, 3> hyb_refl_coeffs) {
   // Find like rows of c_connection (resp. cdag_connection), which correspond with annihilation (resp. creation) operators that have the same
   // sparsity pattern

@@ -444,7 +444,8 @@ nda::array<dcomplex, 3> OCA_gf_bs(nda::vector_const_view<double> hyb_poles, imti
                     U = 0;
                     OCA_gf_bs_right(beta, itops, dlr_it, hyb_poles(l), fb, Gt, F1[p_lam], lam, T, ind_path, block_dims);
                     OCA_gf_bs_left(beta, itops, dlr_it, hyb_poles(l), fb, Gt, Fbar[p_lam], lam, l, U, ind_path, block_dims);
-                    std::cout << "bs T(0, :, :) = " << nda::make_regular(nda::real(T(0, range(0, block_dims(2)), range(0, block_dims(1))))) << std::endl;
+                    std::cout << "bs T(0, :, :) = " << nda::make_regular(nda::real(T(0, range(0, block_dims(2)), range(0, block_dims(1)))))
+                              << std::endl;
                     if (hyb_poles(l) <= 0) {
                       for (int t = 0; t < r; t++) {
                         Tmu(t, range(0, block_dims(4)), range(0, block_dims(1))) +=
@@ -467,8 +468,8 @@ nda::array<dcomplex, 3> OCA_gf_bs(nda::vector_const_view<double> hyb_poles, imti
                 for (int kap = 0; kap < Fq.sym_set_sizes(p_kap); kap++) {
                   long kap_orb = Fq.sym_set_to_orb(p_kap, kap);
                   for (int t = 0; t < r; t++) {
-                    gf(t, mu_orb, kap_orb) += nda::trace(nda::matmul(Tmu(t, range(0, block_dims(4)), range(0, block_dims(1))),
-                                                Fq.F_dags[p_kap].get_block(b)(kap, _, _)));
+                    gf(t, mu_orb, kap_orb) +=
+                       nda::trace(nda::matmul(Tmu(t, range(0, block_dims(4)), range(0, block_dims(1))), Fq.F_dags[p_kap].get_block(b)(kap, _, _)));
                   }
                 }
               }

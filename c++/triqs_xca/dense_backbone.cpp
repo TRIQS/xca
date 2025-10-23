@@ -5,27 +5,28 @@
 #include <triqs_xca/dense_backbone.hpp>
 
 DiagramEvaluator::DiagramEvaluator(double beta, imtime_ops &itops, nda::array_const_view<dcomplex, 3> hyb,
-                                   nda::array_const_view<dcomplex, 3> hyb_refl, nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> Gt, DenseFSet &Fset)
+                                   nda::array_const_view<dcomplex, 3> hyb_refl, nda::vector_const_view<double> hyb_poles,
+                                   nda::array_const_view<dcomplex, 3> Gt, DenseFSet &Fset)
    : beta(beta), itops(itops), hyb(hyb), hyb_refl(hyb_refl), Gt(Gt), Fset(Fset), r(itops.rank()), hyb_poles(hyb_poles) {
 
   dlr_it = itops.get_itnodes();
 
   // allocate arrays
-  int n  = hyb.extent(1);
-  int N  = Gt.extent(1);
-  T      = nda::zeros<dcomplex>(r, N, N);
-  GKt    = nda::zeros<dcomplex>(r, N, N);
-  Tkaps  = nda::zeros<dcomplex>(n, r, N, N);
-  Tmu    = nda::zeros<dcomplex>(r, N, N);
-  Sigma  = nda::zeros<dcomplex>(r, N, N);
+  int n = hyb.extent(1);
+  int N = Gt.extent(1);
+  T     = nda::zeros<dcomplex>(r, N, N);
+  GKt   = nda::zeros<dcomplex>(r, N, N);
+  Tkaps = nda::zeros<dcomplex>(n, r, N, N);
+  Tmu   = nda::zeros<dcomplex>(r, N, N);
+  Sigma = nda::zeros<dcomplex>(r, N, N);
 }
 
 void DiagramEvaluator::reset() {
-  T      = 0;
-  GKt    = 0;
-  Tkaps  = 0;
-  Tmu    = 0;
-  Sigma  = 0;
+  T     = 0;
+  GKt   = 0;
+  Tkaps = 0;
+  Tmu   = 0;
+  Sigma = 0;
 }
 
 void DiagramEvaluator::multiply_vertex_dense(Backbone &backbone, int v_ix) {
@@ -106,9 +107,9 @@ void DiagramEvaluator::eval_diagram_dense(Backbone &backbone) {
   // loop over all flat indices
   int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), m - 1));
   for (int f_ix = 0; f_ix < f_ix_max; f_ix++) {
-    backbone.set_flat_index(f_ix, hyb_poles);       // set directions, pole indices, and orbital indices from a single integer index
+    backbone.set_flat_index(f_ix, hyb_poles);    // set directions, pole indices, and orbital indices from a single integer index
     eval_backbone_fixed_indices_dense(backbone); // evaluate the diagram with these directions, poles, and orbital indices
-    backbone.reset_all_inds(); // reset directions, pole indices, and orbital indices for the next iteration
+    backbone.reset_all_inds();                   // reset directions, pole indices, and orbital indices for the next iteration
   }
 }
 
@@ -135,10 +136,10 @@ void DiagramEvaluator::eval_backbone_fixed_indices_dense(Backbone &backbone) {
   }
 
   // Multiply by prefactor
-  for (int m_ix = 0; m_ix < m - 1; m_ix++) {           // loop over hybridization indices
+  for (int m_ix = 0; m_ix < m - 1; m_ix++) {     // loop over hybridization indices
     int exp = backbone.get_prefactor_Kexp(m_ix); // exponent on K for this hybridization index
     if (exp != 0) {
-      int Ksign = backbone.get_prefactor_Ksign(m_ix);  // sign on K for this hybridization index
+      int Ksign = backbone.get_prefactor_Ksign(m_ix);     // sign on K for this hybridization index
       double om = hyb_poles(backbone.get_pole_ind(m_ix)); // DLR frequency for this value of this hybridization index
       double k  = k_it(0, Ksign * om);
       for (int q = 0; q < exp; q++) T /= k;

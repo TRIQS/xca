@@ -446,7 +446,7 @@ TEST(BSOCAGF, two_band_discrete_bath_bs) {
   auto hyb_coeffs      = itops.vals2coefs(Deltat);
   auto hyb_refl_coeffs = itops.vals2coefs(Deltat_refl);
 
-  auto OCA_gf_result = OCA_gf_bs(dlr_rf, itops, beta, Gt, Fq);
+  auto OCA_gf_result       = OCA_gf_bs(dlr_rf, itops, beta, Gt, Fq);
   auto OCA_gf_dense_result = OCA_gf_dense(hyb_coeffs, hyb_refl_coeffs, dlr_rf, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
   std::cout << "bs = " << OCA_gf_result(_, 0, 0) << std::endl;
   std::cout << "\ndense = " << OCA_gf_dense_result(_, 0, 0) << std::endl;
