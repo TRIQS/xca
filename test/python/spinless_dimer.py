@@ -1,21 +1,21 @@
 ################################################################################
 #
-# triqs_soehyb: Sum-Of-Exponentials bold HYBridization expansion impurity solver
+# triqs_xca: Sum-Of-Exponentials bold HYBridization expansion impurity solver
 #
 # Copyright (C) 2023 by H. U.R. Strand
 #
-# triqs_soehyb is free software: you can redistribute it and/or modify it under the
+# triqs_xca is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
 # Foundation, either version 3 of the License, or (at your option) any later
 # version.
 #
-# triqs_soehyb is distributed in the hope that it will be useful, but WITHOUT ANY
+# triqs_xca is distributed in the hope that it will be useful, but WITHOUT ANY
 # WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 # FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
 # details.
 #
 # You should have received a copy of the GNU General Public License along with
-# triqs_soehyb. If not, see <http://www.gnu.org/licenses/>.
+# triqs_xca. If not, see <http://www.gnu.org/licenses/>.
 #
 ################################################################################
 
@@ -27,11 +27,11 @@ from triqs.gf import Gf, MeshImTime
 from triqs.operators import c, c_dag
 from pyed.TriqsExactDiagonalization import TriqsExactDiagonalization
 
-from triqs_soehyb.pycppdlr import build_dlr_rf
-from triqs_soehyb.pycppdlr import ImTimeOps
+from triqs_xca.pycppdlr import build_dlr_rf
+from triqs_xca.pycppdlr import ImTimeOps
 
-from triqs_soehyb.impurity import Fastdiagram
-from triqs_soehyb.solver import Sigma_calc_loop, G_calc_loop, is_root
+from triqs_xca.impurity import Fastdiagram
+from triqs_xca.solver import Sigma_calc_loop, G_calc_loop, is_root
 
 
 def spinless_dimer_ed(ntau=500, beta=1.0, t=1.0, ek=0.0, mu=0.01):

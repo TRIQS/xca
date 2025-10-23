@@ -2,7 +2,7 @@
 #include <triqs/atom_diag/atom_diag.hpp>
 #include <gtest/gtest.h>
 #include <triqs/operators/many_body_operator.hpp>
-#include <triqs_soehyb/atom_diag_utils.hpp>
+#include <triqs_xca/atom_diag_utils.hpp>
 #include <cppdlr/utils.hpp>
 
 using namespace nda;

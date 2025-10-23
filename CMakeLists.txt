@@ -1,20 +1,20 @@
 # ##############################################################################
 #
-# triqs_soehyb - An example application using triqs and cpp2py
+# triqs_xca - An example application using triqs and cpp2py
 #
 # Copyright (C) ...
 #
-# triqs_soehyb is free software: you can redistribute it and/or modify it under the
+# triqs_xca is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
 # Foundation, either version 3 of the License, or (at your option) any later
 # version.
 #
-# triqs_soehyb is distributed in the hope that it will be useful, but WITHOUT ANY
+# triqs_xca is distributed in the hope that it will be useful, but WITHOUT ANY
 # WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
 # A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License along with
-# triqs_soehyb (in the file COPYING.txt in this directory). If not, see
+# triqs_xca (in the file COPYING.txt in this directory). If not, see
 # <http://www.gnu.org/licenses/>.
 #
 # ##############################################################################
@@ -24,7 +24,7 @@ cmake_policy(VERSION ${CMAKE_VERSION})
 
 # ############
 # Define Project
-project(triqs_soehyb VERSION 0.0.1 LANGUAGES CXX)
+project(triqs_xca VERSION 0.0.1 LANGUAGES CXX)
 get_directory_property(IS_SUBPROJECT PARENT_DIRECTORY)
 
 # ############

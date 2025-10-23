@@ -19,11 +19,11 @@ where :math:`G_0(\tau)` is the atomic many-body propagator and :math:`\Sigma(\ta
 
 Once convergence is reached physical response functions like the single particle Green's function :math:`g(\tau) = \langle \mathcal{T} c(\tau) c^\dagger(0) \rangle` can be evaluted by a separate diagrammatic series (similar to :math:`\Sigma`).
 
-The ``triqs_soehyb`` solver implements the bold hybridization expansion using the Discrete Lehmann Representation (DLR) [#dlr]_ [#cppdlr]_ for compact representation of propagators in imaginary time :math:`\tau` and a separate hybridization function compression approach [#soehyb]_ (based on the famous AAA algorithm) to evaluate the diagram series for :math:`\Sigma` with lower computational complexity than standard quadrature integration. [#dlrhyb]_
+The ``triqs_xca`` solver implements the bold hybridization expansion using the Discrete Lehmann Representation (DLR) [#dlr]_ [#cppdlr]_ for compact representation of propagators in imaginary time :math:`\tau` and a separate hybridization function compression approach [#xca]_ (based on the famous AAA algorithm) to evaluate the diagram series for :math:`\Sigma` with lower computational complexity than standard quadrature integration. [#dlrhyb]_
 
 
 .. [#ppscintro] `M. Eckstein, P. Werner, Phys. Rev. B 82, 115115 (2010) <https://doi.org/10.1103/PhysRevB.82.115115>`_
 .. [#dlrhyb] `J. Kaye, Z. Huang, H. U.R. Strand, D. Golež, Phys. Rev. X 14, 031034 (2024) <https://doi.org/10.1103/PhysRevX.14.031034>`_
-.. [#soehyb] `Z. Huang, D. Golež, H. U.R. Strand, J. Kaye, arXiv:2503.19727 (2025) <https://doi.org/10.48550/arXiv.2503.19727>`_
+.. [#xca] `Z. Huang, D. Golež, H. U.R. Strand, J. Kaye, arXiv:2503.19727 (2025) <https://doi.org/10.48550/arXiv.2503.19727>`_
 .. [#cppdlr] `J. Kaye, H. U.R. Strand, N. Wentzell, J. Open Source Softw., 9(100), 6297, (2024) <https://doi.org/10.21105/joss.06297>`_
 .. [#dlr] `J. Kaye, K. Chen, O. Parcollet, Phys. Rev. B 105, 235115 (2021) <https://doi.org/10.1103/PhysRevB.105.235115>`_   

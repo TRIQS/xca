@@ -3,13 +3,13 @@
 Python API Reference
 ====================
 
-This section contains the complete Python API reference for the triqs_soehyb package,
+This section contains the complete Python API reference for the triqs_xca package,
 including all modules, classes, and compiled extensions.
 
 Main Module
 -----------
 
-The main triqs_soehyb module provides access to all submodules and the high-level Solver interface.
+The main triqs_xca module provides access to all submodules and the high-level Solver interface.
 
 High-Level Solver Interface
 ----------------------------
@@ -18,8 +18,8 @@ High-Level Solver Interface
    :toctree: generated
    :template: autosummary_class_template.rst
 
-   triqs_soehyb.triqs_solver.TriqsSolver
-   triqs_soehyb.solver
+   triqs_xca.triqs_solver.TriqsSolver
+   triqs_xca.solver
 
 Compiled Extension Modules
 --------------------------
@@ -33,8 +33,8 @@ Impurity Module
    :toctree: generated
    :template: autosummary_module_template.rst
 
-   triqs_soehyb.impurity
-   triqs_soehyb.impurity.Fastdiagram
+   triqs_xca.impurity
+   triqs_xca.impurity.Fastdiagram
 
 DLR Dyson Module
 ~~~~~~~~~~~~~~~~
@@ -43,8 +43,8 @@ DLR Dyson Module
    :toctree: generated
    :template: autosummary_module_template.rst
 
-   triqs_soehyb.dlr_dyson_ppsc
-   triqs_soehyb.dlr_dyson_ppsc.DysonItPPSC
+   triqs_xca.dlr_dyson_ppsc
+   triqs_xca.dlr_dyson_ppsc.DysonItPPSC
 
 PyCppDLR Module
 ~~~~~~~~~~~~~~~
@@ -53,9 +53,9 @@ PyCppDLR Module
    :toctree: generated
    :template: autosummary_module_template.rst
 
-   triqs_soehyb.pycppdlr
-   triqs_soehyb.pycppdlr.ImTimeOps
-   triqs_soehyb.pycppdlr.build_dlr_rf
+   triqs_xca.pycppdlr
+   triqs_xca.pycppdlr.ImTimeOps
+   triqs_xca.pycppdlr.build_dlr_rf
 
 Additional Modules
 ------------------
@@ -66,8 +66,8 @@ AAA Module
 .. autosummary::
    :toctree: generated
 
-   triqs_soehyb.aaa.aaa
-   triqs_soehyb.aaa.aaa_matrix
+   triqs_xca.aaa.aaa
+   triqs_xca.aaa.aaa_matrix
 
 Utilities
 ~~~~~~~~~
@@ -76,8 +76,8 @@ Utilities
    :toctree: generated
    :template: autosummary_module_template.rst
 
-   triqs_soehyb.diag
-   triqs_soehyb.dimer
-   triqs_soehyb.dimer_new
-   triqs_soehyb.ac_pes
+   triqs_xca.diag
+   triqs_xca.dimer
+   triqs_xca.dimer_new
+   triqs_xca.ac_pes
 

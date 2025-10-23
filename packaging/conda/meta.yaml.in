@@ -1,11 +1,11 @@
 {% set version = "@PROJECT_VERSION@" %}
 
 package:
-  name: triqs_soehyb
+  name: triqs_xca
   version: {{ version }}
 
 source:
-  url: https://github.com/TRIQS/triqs_soehyb/releases/download/{{ version }}/triqs_soehyb-{{ version }}.tar.gz
+  url: https://github.com/TRIQS/triqs_xca/releases/download/{{ version }}/triqs_xca-{{ version }}.tar.gz
   sha256: PUT HERE THE SHA256 OF YOUR RELEASE TARBALL
 
 build:
@@ -42,10 +42,10 @@ test:
     - export OMPI_MCA_rmaps_base_oversubscribe=yes
     - export OMPI_MCA_btl_vader_single_copy_mechanism=none
     - export mpiexec="mpiexec --allow-run-as-root"
-    - python -c "import triqs_soehyb"
+    - python -c "import triqs_xca"
 
 about:
-  home: https://triqs.github.io/triqs_soehyb
+  home: https://triqs.github.io/triqs_xca
   license: GPL-3.0-or-later
   license_family: GPL
   license_file: LICENSE.txt

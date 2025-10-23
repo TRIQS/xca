@@ -1,21 +1,21 @@
 ################################################################################
 #
-# triqs_soehyb: Sum-Of-Exponentials bold HYBridization expansion impurity solver
+# triqs_xca: Sum-Of-Exponentials bold HYBridization expansion impurity solver
 #
 # Copyright (C) 2023 by H. U.R. Strand
 #
-# triqs_soehyb is free software: you can redistribute it and/or modify it under the
+# triqs_xca is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
 # Foundation, either version 3 of the License, or (at your option) any later
 # version.
 #
-# triqs_soehyb is distributed in the hope that it will be useful, but WITHOUT ANY
+# triqs_xca is distributed in the hope that it will be useful, but WITHOUT ANY
 # WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 # FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
 # details.
 #
 # You should have received a copy of the GNU General Public License along with
-# triqs_soehyb. If not, see <http://www.gnu.org/licenses/>.
+# triqs_xca. If not, see <http://www.gnu.org/licenses/>.
 #
 ################################################################################
 
@@ -40,7 +40,7 @@ from triqs.operators.util import N_op
 
 from triqs.gf import make_gf_dlr_imtime, make_gf_dlr_imfreq, SemiCircular, inverse, iOmega_n
 
-from triqs_soehyb.triqs_solver import TriqsSolver
+from triqs_xca.triqs_solver import TriqsSolver
 
 from itertools import product
 
@@ -150,11 +150,11 @@ def test_one_spinful_fermion(verbose=True):
         nessi.nca = load_nessi_ppsc(path, 'data_ppsc_nca.h5', 'input_param_nca.txt')
         nessi.oca = load_nessi_ppsc(path, 'data_ppsc_oca.h5', 'input_param_oca.txt')
 
-    soehyb = Dummy()
+    xca = Dummy()
     
-    soehyb.atom = solve_one_spinful_fermion(V=0.0, order=1)
-    soehyb.nca = solve_one_spinful_fermion(order=1)
-    soehyb.oca = solve_one_spinful_fermion(order=2)
+    xca.atom = solve_one_spinful_fermion(V=0.0, order=1)
+    xca.nca = solve_one_spinful_fermion(order=1)
+    xca.oca = solve_one_spinful_fermion(order=2)
 
     if verbose:
         #import matplotlib.pyplot as plt
@@ -172,15 +172,15 @@ def test_one_spinful_fermion(verbose=True):
         plt.plot(nessi.nca.imp.tau, nessi.nca.d.mat.flatten().real, '--', label='nca nessi')
         plt.plot(nessi.oca.imp.tau, nessi.oca.d.mat.flatten().real, ':', label='oca nessi')
 
-        plt.plot(soehyb.nca.S.tau_i, soehyb.nca.delta_iaa[:, 0, 0].real, '+', label='soehyb nca')
-        plt.plot(soehyb.oca.S.tau_i, soehyb.oca.delta_iaa[:, 0, 0].real, 'x', label='soehyb oca')
+        plt.plot(xca.nca.S.tau_i, xca.nca.delta_iaa[:, 0, 0].real, '+', label='xca nca')
+        plt.plot(xca.oca.S.tau_i, xca.oca.delta_iaa[:, 0, 0].real, 'x', label='xca oca')
 
         plt.ylabel(r'$\Delta(\tau)$')
         plt.legend(loc='best')
 
         plt.subplot(*subp); subp[-1] += 1
 
-        delta_nca_diff = nessi.nca.d.mat.flatten().real - soehyb.nca.Delta_tau_fine['up_0'].data.flatten().real
+        delta_nca_diff = nessi.nca.d.mat.flatten().real - xca.nca.Delta_tau_fine['up_0'].data.flatten().real
         plt.plot(nessi.nca.imp.tau, delta_nca_diff)
 
         plt.ylabel(r'Diff in $\Delta(\tau)$')
@@ -191,21 +191,21 @@ def test_one_spinful_fermion(verbose=True):
         plt.plot(nessi.nca.imp.tau, nessi.nca.g.mat.flatten().real, '--', label='nca nessi')
         plt.plot(nessi.oca.imp.tau, nessi.oca.g.mat.flatten().real, ':', label='oca nessi')
 
-        plt.plot(soehyb.atom.S.tau_i, soehyb.atom.g_iaa[:, 0, 0].real, '.', label='soehyb atom')
-        plt.plot(soehyb.nca.S.tau_i, soehyb.nca.g_iaa[:, 0, 0].real, '+', label='soehyb nca')
-        plt.plot(soehyb.oca.S.tau_i, soehyb.oca.g_iaa[:, 0, 0].real, 'x', label='soehyb oca')
-        plt.plot(soehyb.oca.S.tau_i, soehyb.oca.g_iaa_nca[:, 0, 0].real, 'x', label='soehyb oca (g@nca)')
+        plt.plot(xca.atom.S.tau_i, xca.atom.g_iaa[:, 0, 0].real, '.', label='xca atom')
+        plt.plot(xca.nca.S.tau_i, xca.nca.g_iaa[:, 0, 0].real, '+', label='xca nca')
+        plt.plot(xca.oca.S.tau_i, xca.oca.g_iaa[:, 0, 0].real, 'x', label='xca oca')
+        plt.plot(xca.oca.S.tau_i, xca.oca.g_iaa_nca[:, 0, 0].real, 'x', label='xca oca (g@nca)')
         
-        #oplotr(soehyb.nca.G_tau_fine['up_0'], label='soehyb nca')
+        #oplotr(xca.nca.G_tau_fine['up_0'], label='xca nca')
 
         plt.ylabel(r'$g(\tau)$')
         plt.legend(loc='best')
 
         plt.subplot(*subp); subp[-1] += 1
 
-        g_atom_diff = nessi.atom.g.mat.flatten().real - soehyb.atom.G_tau_fine['up_0'].data.flatten().real
-        g_nca_diff = nessi.nca.g.mat.flatten().real - soehyb.nca.G_tau_fine['up_0'].data.flatten().real
-        g_oca_diff = nessi.oca.g.mat.flatten().real - soehyb.oca.G_tau_fine['up_0'].data.flatten().real
+        g_atom_diff = nessi.atom.g.mat.flatten().real - xca.atom.G_tau_fine['up_0'].data.flatten().real
+        g_nca_diff = nessi.nca.g.mat.flatten().real - xca.nca.G_tau_fine['up_0'].data.flatten().real
+        g_oca_diff = nessi.oca.g.mat.flatten().real - xca.oca.G_tau_fine['up_0'].data.flatten().real
 
         plt.plot(nessi.atom.imp.tau, g_atom_diff, label='atom diff')
         plt.plot(nessi.nca.imp.tau, g_nca_diff, label='nca diff')
@@ -220,11 +220,11 @@ def test_one_spinful_fermion(verbose=True):
 
 
         
-    delta_diff = nessi.atom.d.mat.flatten().real - soehyb.atom.Delta_tau_fine['up_0'].data.flatten().real
+    delta_diff = nessi.atom.d.mat.flatten().real - xca.atom.Delta_tau_fine['up_0'].data.flatten().real
 
-    g_atom_diff = nessi.atom.g.mat.flatten().real - soehyb.atom.G_tau_fine['up_0'].data.flatten().real
-    g_nca_diff = nessi.nca.g.mat.flatten().real - soehyb.nca.G_tau_fine['up_0'].data.flatten().real
-    g_oca_diff = nessi.oca.g.mat.flatten().real - soehyb.oca.G_tau_fine['up_0'].data.flatten().real
+    g_atom_diff = nessi.atom.g.mat.flatten().real - xca.atom.G_tau_fine['up_0'].data.flatten().real
+    g_nca_diff = nessi.nca.g.mat.flatten().real - xca.nca.G_tau_fine['up_0'].data.flatten().real
+    g_oca_diff = nessi.oca.g.mat.flatten().real - xca.oca.G_tau_fine['up_0'].data.flatten().real
 
     print('='*72)
     print('Comparing SoE-HYB with NESSi-ppsc reference solution')
@@ -237,16 +237,16 @@ def test_one_spinful_fermion(verbose=True):
     print('='*72)
     
     np.testing.assert_array_almost_equal(
-        nessi.atom.d.mat.flatten().real, soehyb.atom.Delta_tau_fine['up_0'].data.flatten().real)
+        nessi.atom.d.mat.flatten().real, xca.atom.Delta_tau_fine['up_0'].data.flatten().real)
 
     np.testing.assert_array_almost_equal(
-        nessi.atom.g.mat.flatten().real, soehyb.atom.G_tau_fine['up_0'].data.flatten().real)
+        nessi.atom.g.mat.flatten().real, xca.atom.G_tau_fine['up_0'].data.flatten().real)
 
     np.testing.assert_array_almost_equal(
-        nessi.nca.g.mat.flatten().real, soehyb.nca.G_tau_fine['up_0'].data.flatten().real)
+        nessi.nca.g.mat.flatten().real, xca.nca.G_tau_fine['up_0'].data.flatten().real)
 
     np.testing.assert_array_almost_equal(
-        nessi.oca.g.mat.flatten().real, soehyb.oca.G_tau_fine['up_0'].data.flatten().real)
+        nessi.oca.g.mat.flatten().real, xca.oca.G_tau_fine['up_0'].data.flatten().real)
          
 
 if __name__ == '__main__':

@@ -2,10 +2,10 @@
 #include <nda/nda.hpp>
 #include <cppdlr/cppdlr.hpp>
 #include "block_sparse_utils.hpp"
-#include <triqs_soehyb/block_sparse.hpp>
-#include <triqs_soehyb/block_sparse_manual.hpp>
-#include <triqs_soehyb/backbone.hpp>
-#include <triqs_soehyb/dense_backbone.hpp>
+#include <triqs_xca/block_sparse.hpp>
+#include <triqs_xca/block_sparse_manual.hpp>
+#include <triqs_xca/backbone.hpp>
+#include <triqs_xca/dense_backbone.hpp>
 
 TEST(DenseBackbone, one_vertex_and_edge) {
   nda::array<int, 2> topology = {{0, 2}, {1, 4}, {3, 5}};

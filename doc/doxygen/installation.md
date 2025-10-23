@@ -2,4 +2,4 @@
 
 [TOC]
 
-Explain how to install **soehyb**.
+Explain how to install **xca**.

@@ -1,4 +1,4 @@
-[![build](https://github.com/TRIQS/soehyb/workflows/build/badge.svg)](https://github.com/TRIQS/soehyb/actions?query=workflow%3Abuild)
+[![build](https://github.com/TRIQS/xca/workflows/build/badge.svg)](https://github.com/TRIQS/xca/actions?query=workflow%3Abuild)
 
 ## TRIQS Sum-Of-Exponentials bold HYBridization expansion impurity solver
 
@@ -7,7 +7,7 @@ added regularly. Until a stable release is announced, use at your own risk!
 
 ### Documentation
 
-For documentation and installation instructions see [triqs.github.io/soehyb](https://triqs.github.io/soehyb).
+For documentation and installation instructions see [triqs.github.io/xca](https://triqs.github.io/xca).
 
 ### License
 
@@ -27,4 +27,4 @@ PARTICULAR PURPOSE. See the GNU General Public License for more details.
   <img alt="Flatiron Center for Computational Quantum Physics logo." width="20%" src="doc/_static/CCQ.png">
 </picture>
 
-TRIQS/soehyb is supported by the Flatiron Institute, a division of the Simons Foundation.
+TRIQS/xca is supported by the Flatiron Institute, a division of the Simons Foundation.

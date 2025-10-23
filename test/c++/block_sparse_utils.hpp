@@ -1,7 +1,7 @@
 #pragma once
 #include <nda/nda.hpp>
 #include <cppdlr/cppdlr.hpp>
-#include <triqs_soehyb/block_sparse.hpp>
+#include <triqs_xca/block_sparse.hpp>
 
 using namespace nda;
 using namespace cppdlr;

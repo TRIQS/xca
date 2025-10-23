@@ -1,6 +1,6 @@
 # See ../triqs/packaging for other options
 FROM flatironinstitute/triqs:unstable-ubuntu-clang
-ARG APPNAME=triqs_soehyb
+ARG APPNAME=triqs_xca
 
 # Install here missing dependencies, e.g.
 RUN apt-get update && apt-get install -y doxygen python3-h5py libzstd-dev

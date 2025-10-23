@@ -5,11 +5,11 @@
 #include <cppdlr/cppdlr.hpp>
 #include "block_sparse_utils.hpp"
 #include <set>
-#include <triqs_soehyb/block_sparse.hpp>
-#include <triqs_soehyb/block_sparse_manual.hpp>
-#include <triqs_soehyb/backbone.hpp>
-#include <triqs_soehyb/dense_backbone.hpp>
-#include <triqs_soehyb/block_sparse_backbone.hpp>
+#include <triqs_xca/block_sparse.hpp>
+#include <triqs_xca/block_sparse_manual.hpp>
+#include <triqs_xca/backbone.hpp>
+#include <triqs_xca/dense_backbone.hpp>
+#include <triqs_xca/block_sparse_backbone.hpp>
 #include <iomanip>
 
 TEST(BlockSparseOCAManual, single_exponential) {

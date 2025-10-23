@@ -1,30 +1,30 @@
 ################################################################################
 #
-# triqs_soehyb: Sum-Of-Exponentials bold HYBridization expansion impurity solver
+# triqs_xca: Sum-Of-Exponentials bold HYBridization expansion impurity solver
 #
 # Copyright (C) 2023 by H. U.R. Strand
 #
-# triqs_soehyb is free software: you can redistribute it and/or modify it under the
+# triqs_xca is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
 # Foundation, either version 3 of the License, or (at your option) any later
 # version.
 #
-# triqs_soehyb is distributed in the hope that it will be useful, but WITHOUT ANY
+# triqs_xca is distributed in the hope that it will be useful, but WITHOUT ANY
 # WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 # FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
 # details.
 #
 # You should have received a copy of the GNU General Public License along with
-# triqs_soehyb. If not, see <http://www.gnu.org/licenses/>.
+# triqs_xca. If not, see <http://www.gnu.org/licenses/>.
 #
 ################################################################################
 
 """ Diagram generator tests """
 
 
-from triqs_soehyb.diag import is_crossing, is_connected
-from triqs_soehyb.diag import pop_pair, flatten_pairing_to_list
-from triqs_soehyb.diag import all_pairings, all_connected_pairings, all_gf_pairings
+from triqs_xca.diag import is_crossing, is_connected
+from triqs_xca.diag import pop_pair, flatten_pairing_to_list
+from triqs_xca.diag import all_pairings, all_connected_pairings, all_gf_pairings
 
 
 # Number of irreducible chord diagrams with 2n nodes. [https://oeis.org/A000699]

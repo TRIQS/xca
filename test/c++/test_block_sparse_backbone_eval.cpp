@@ -5,14 +5,14 @@
 #include <nda/nda.hpp>
 #include <cppdlr/cppdlr.hpp>
 #include "block_sparse_utils.hpp"
-#include "triqs_soehyb/dense_backbone.hpp"
-#include <triqs_soehyb/block_sparse.hpp>
-#include <triqs_soehyb/block_sparse_manual.hpp>
-#include <triqs_soehyb/backbone.hpp>
-#include <triqs_soehyb/block_sparse_backbone.hpp>
+#include "triqs_xca/dense_backbone.hpp"
+#include <triqs_xca/block_sparse.hpp>
+#include <triqs_xca/block_sparse_manual.hpp>
+#include <triqs_xca/backbone.hpp>
+#include <triqs_xca/block_sparse_backbone.hpp>
 #include <triqs/atom_diag/atom_diag.hpp>
 #include <triqs/operators/many_body_operator.hpp>
-#include <triqs_soehyb/atom_diag_utils.hpp>
+#include <triqs_xca/atom_diag_utils.hpp>
 
 using namespace triqs;
 using namespace triqs::operators;

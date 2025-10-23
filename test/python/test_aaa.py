@@ -1,5 +1,5 @@
 import numpy as np
-from triqs_soehyb.aaa import aaa
+from triqs_xca.aaa import aaa
 import scipy.interpolate
 
 def test_approx():

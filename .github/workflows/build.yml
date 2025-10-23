@@ -125,13 +125,13 @@ jobs:
         cmake -S triqs -B triqs/build -G Ninja -DBuild_Tests=OFF -DCMAKE_INSTALL_PREFIX=$HOME/install
         cmake --build triqs/build --target install --verbose
 
-    - name: Build triqs_soehyb
+    - name: Build triqs_xca
       run: |
         source $HOME/install/share/triqs/triqsvars.sh
         cmake -S . -B build -G Ninja
         cmake --build build --verbose
 
-    - name: Test triqs_soehyb
+    - name: Test triqs_xca
       env:
         OPENBLAS_NUM_THREADS: "1"
       run: |

@@ -3,8 +3,8 @@
 #include <nda/nda.hpp>
 #include <cppdlr/cppdlr.hpp>
 #include "block_sparse_utils.hpp"
-#include <triqs_soehyb/block_sparse.hpp>
-#include <triqs_soehyb/block_sparse_manual_gf.hpp>
+#include <triqs_xca/block_sparse.hpp>
+#include <triqs_xca/block_sparse_manual_gf.hpp>
 
 using namespace nda;
 

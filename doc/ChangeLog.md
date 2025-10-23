@@ -2,7 +2,7 @@
 
 ## Version 0.0.1
 
-triqs_soehyb Version 0.0.1 provides a 
+triqs_xca Version 0.0.1 provides a 
 sum-of-exponentials based bold hybridization 
 expansion solver for quantum impurity problems.
 

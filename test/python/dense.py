@@ -5,9 +5,9 @@ from mpi4py import MPI
 
 from triqs.operators import c, c_dag
 
-from triqs_soehyb.solver import Solver
+from triqs_xca.solver import Solver
 
-from triqs_soehyb.dense import NCA_dense, OCA_dense
+from triqs_xca.dense import NCA_dense, OCA_dense
 
 
 def test_block_sparsity_NCA_dense(verbose=True):

@@ -1,25 +1,25 @@
 /*******************************************************************************
  *
- * triqs_soehyb: Sum-Of-Exponentials bold HYBridization expansion impurity solver
+ * triqs_xca: Sum-Of-Exponentials bold HYBridization expansion impurity solver
  *
  * Copyright (C) 2025, Z. Huang
  *
- * triqs_soehyb is free software: you can redistribute it and/or modify it under the
+ * triqs_xca is free software: you can redistribute it and/or modify it under the
  * terms of the GNU General Public License as published by the Free Software
  * Foundation, either version 3 of the License, or (at your option) any later
  * version.
  *
- * triqs_soehyb is distributed in the hope that it will be useful, but WITHOUT ANY
+ * triqs_xca is distributed in the hope that it will be useful, but WITHOUT ANY
  * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
  * details.
  *
  * You should have received a copy of the GNU General Public License along with
- * triqs_soehyb. If not, see <http://www.gnu.org/licenses/>.
+ * triqs_xca. If not, see <http://www.gnu.org/licenses/>.
  *
  ******************************************************************************/
 
-#include "triqs_soehyb/strong_cpl.hpp"
+#include "triqs_xca/strong_cpl.hpp"
 #include "nda/nda.hpp"
 #include <cppdlr/cppdlr.hpp>
 #include <gtest/gtest.h>
