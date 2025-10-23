@@ -56,13 +56,13 @@ TEST(test_dlr, test_dlr_convolve) {
   auto fc = itops.vals2coefs(f);
   auto gc = itops.vals2coefs(g);
 
-  auto h = itops.convolve(beta, Fermion, fc, gc, TIME_ORDERED);
+  auto h = itops.convolve(beta, fc, gc, TIME_ORDERED);
   std::cout << "f is " << f << std::endl << "g is " << g << std::endl << "their convolution is" << h << std::endl;
   for (int i = 0; i < r; ++i)
     if (dlr_it(i) > 0)
       std::cout << f(i) * dlr_it(i) << " ";
     else
       std::cout << f(i) * (1 + dlr_it(i)) << " ";
-  // h = itops.convolve(beta, Fermion, fc, gc);
+  // h = itops.convolve(beta, fc, gc);
   // std::cout<<"f is "<< f<<std::endl<<"g is "<<g<<std::endl<<"their convolution is" << h ;
 }
