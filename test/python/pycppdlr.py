@@ -112,7 +112,7 @@ def test_pycppdlr(verbose=True):
     c = 1./(e1 - e2)
     gg_iaa_anal = c * g1_iaa - c * g2_iaa
 
-    gg_iaa = itops.convolve(beta, "Fermion", g1_xaa, g2_xaa)
+    gg_iaa = itops.convolve(beta, g1_xaa, g2_xaa)
         
     if verbose:
         import matplotlib.pyplot as plt

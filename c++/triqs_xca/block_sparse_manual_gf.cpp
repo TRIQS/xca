@@ -147,12 +147,12 @@ void OCA_gf_dense_right(double beta, imtime_ops &itops, nda::vector_const_view<d
       // 1. multiply F_lambda G(tau_1) K^-(tau_1)
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), -omega_l) * nda::matmul(Flam, Gt(t, _, _)); }
       // 2. convolve by G
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
     } else {
       // 1. multiply G(tau-tau_1) K^+(tau-tau_1) F_lambda
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), omega_l) * nda::matmul(Gt(t, _, _), Flam); }
       // 2. convolve by G
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(T), itops.vals2coefs(Gt), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(T), itops.vals2coefs(Gt), TIME_ORDERED);
     }
   } else {
     if (omega_l >= 0) {
@@ -162,12 +162,12 @@ void OCA_gf_dense_right(double beta, imtime_ops &itops, nda::vector_const_view<d
       std::cout << "Gt(0, :, :) = " << nda::make_regular(nda::real(Gt(0, _, _))) << std::endl;
       std::cout << "dense T(0, :, :) = " << nda::make_regular(nda::real(T(0, _, _))) << std::endl;
       // 2. convolve by G
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
     } else {
       // 1. multiply G(tau-tau_1) K^-(tau-tau_1) F_lambda
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), -omega_l) * nda::matmul(Gt(t, _, _), Flam); }
       // 2. convolve by G
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(T), itops.vals2coefs(Gt), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(T), itops.vals2coefs(Gt), TIME_ORDERED);
     }
   }
 }
@@ -181,24 +181,24 @@ void OCA_gf_dense_left(double beta, imtime_ops &itops, nda::vector_const_view<do
       // multiply G K^- Fbar
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), -omega_l) * nda::matmul(Gt(t, _, _), Fbar); }
       // convolve by G
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(T), itops.vals2coefs(Gt), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(T), itops.vals2coefs(Gt), TIME_ORDERED);
     } else {
       // multiply Fbar G K^+
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), omega_l) * nda::matmul(Fbar, Gt(t, _, _)); }
       // convolve
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
     }
   } else {
     if (omega_l > 0) {
       // multiply G K^+ Fbar
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), omega_l) * nda::matmul(Gt(t, _, _), Fbar); }
       // convolve by G
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(T), itops.vals2coefs(Gt), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(T), itops.vals2coefs(Gt), TIME_ORDERED);
     } else {
       // multiply Fbar G K^-
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), -omega_l) * nda::matmul(Fbar, Gt(t, _, _)); }
       // convolve
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
     }
   }
   // reflect
@@ -280,7 +280,7 @@ void OCA_gf_bs_right(double beta, imtime_ops &itops, nda::vector_const_view<doub
       }
       // convolve by G
       T(_, range(0, block_dims(2)), range(0, block_dims(1))) =
-         itops.convolve(beta, Fermion, itops.vals2coefs(Gt.get_block(ind_path(1))),
+         itops.convolve(beta, itops.vals2coefs(Gt.get_block(ind_path(1))),
                         itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))), TIME_ORDERED);
     } else {
       // multiply G(tau-tau_1) K^+(tau-tau_1) F_lambda
@@ -290,7 +290,7 @@ void OCA_gf_bs_right(double beta, imtime_ops &itops, nda::vector_const_view<doub
       }
       // convolve by G
       T(_, range(0, block_dims(2)), range(0, block_dims(1))) =
-         itops.convolve(beta, Fermion, itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))),
+         itops.convolve(beta, itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))),
                         itops.vals2coefs(Gt.get_block(ind_path(0))), TIME_ORDERED);
     }
   } else {
@@ -306,7 +306,7 @@ void OCA_gf_bs_right(double beta, imtime_ops &itops, nda::vector_const_view<doub
       // std::cout << "bs T(0, :, :) = " << nda::make_regular(nda::real(T(0, range(0, block_dims(2)), range(0, block_dims(1))))) << std::endl;
       // convolve by G
       T(_, range(0, block_dims(2)), range(0, block_dims(1))) =
-         itops.convolve(beta, Fermion, itops.vals2coefs(Gt.get_block(ind_path(1))),
+         itops.convolve(beta, itops.vals2coefs(Gt.get_block(ind_path(1))),
                         itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))), TIME_ORDERED);
     } else {
       // multiply G(tau-tau_1) K^-(tau-tau_1) F_lambda
@@ -316,7 +316,7 @@ void OCA_gf_bs_right(double beta, imtime_ops &itops, nda::vector_const_view<doub
       }
       // convolve by G
       T(_, range(0, block_dims(2)), range(0, block_dims(1))) =
-         itops.convolve(beta, Fermion, itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))),
+         itops.convolve(beta, itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))),
                         itops.vals2coefs(Gt.get_block(ind_path(0))), TIME_ORDERED);
     }
   }
@@ -336,7 +336,7 @@ void OCA_gf_bs_left(double beta, imtime_ops &itops, nda::vector_const_view<doubl
       }
       // convolve by G
       T(_, range(0, block_dims(4)), range(0, block_dims(3))) =
-         itops.convolve(beta, Fermion, itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))),
+         itops.convolve(beta, itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))),
                         itops.vals2coefs(Gt.get_block(ind_path(2))), TIME_ORDERED);
     } else {
       // multiply Fbar G K^+
@@ -346,7 +346,7 @@ void OCA_gf_bs_left(double beta, imtime_ops &itops, nda::vector_const_view<doubl
       }
       // convolve
       T(_, range(0, block_dims(4)), range(0, block_dims(3))) =
-         itops.convolve(beta, Fermion, itops.vals2coefs(Gt.get_block(ind_path(3))),
+         itops.convolve(beta, itops.vals2coefs(Gt.get_block(ind_path(3))),
                         itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))), TIME_ORDERED);
     }
   } else {
@@ -358,7 +358,7 @@ void OCA_gf_bs_left(double beta, imtime_ops &itops, nda::vector_const_view<doubl
       }
       // convolve by G
       T(_, range(0, block_dims(4)), range(0, block_dims(3))) =
-         itops.convolve(beta, Fermion, itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))),
+         itops.convolve(beta, itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))),
                         itops.vals2coefs(Gt.get_block(ind_path(2))), TIME_ORDERED);
     } else {
       // multiply Fbar G K^-
@@ -368,7 +368,7 @@ void OCA_gf_bs_left(double beta, imtime_ops &itops, nda::vector_const_view<doubl
       }
       // convolve
       T(_, range(0, block_dims(4)), range(0, block_dims(3))) =
-         itops.convolve(beta, Fermion, itops.vals2coefs(Gt.get_block(ind_path(3))),
+         itops.convolve(beta, itops.vals2coefs(Gt.get_block(ind_path(3))),
                         itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))), TIME_ORDERED);
     }
   }

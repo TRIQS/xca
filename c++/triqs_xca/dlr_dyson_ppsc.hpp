@@ -108,7 +108,7 @@ namespace cppdlr {
       // the product G0 * Sig is computed using matrix free convolution
       // avoiding matrix matrix operations (2x speedup and 1/2 memory foot print)
 
-      auto ggs = itops_ptr->convolve(beta, Fermion, g0c, sigc, time_order);
+      auto ggs = itops_ptr->convolve(beta, g0c, sigc, time_order);
       ggs += eta * g0;
       ggs *= -1.0;
 
@@ -156,7 +156,7 @@ namespace cppdlr {
       int r     = itops_ptr->rank();          // DLR rank
       auto sigc = itops_ptr->vals2coefs(sig); // DLR coefficients of self-energy
 
-      auto ggs = itops_ptr->convolve(beta, Fermion, g0c, sigc, time_order);
+      auto ggs = itops_ptr->convolve(beta, g0c, sigc, time_order);
       ggs += eta * g0;
       for (int k = 0; k < r; ++k) ggs(k, _, _) += nda::matmul(g0(k, _, _), op);
       ggs *= -1.0;

@@ -123,24 +123,24 @@ void OCA_bs_right_in_place(double beta, imtime_ops &itops, nda::vector_const_vie
       // 1. multiply F_lambda G(tau_1) K^-(tau_1)
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), -omega_l) * nda::matmul(Flam, Gt0(t, _, _)); }
       // 2. convolve by G
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt1), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(Gt1), itops.vals2coefs(T), TIME_ORDERED);
     } else {
       // 1. multiply G(tau_2-tau_1) K^+(tau_2-tau_1) F_lambda
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), omega_l) * nda::matmul(Gt1(t, _, _), Flam); }
       // 2. convolve by G
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(T), itops.vals2coefs(Gt0), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(T), itops.vals2coefs(Gt0), TIME_ORDERED);
     }
   } else {
     if (omega_l >= 0) {
       // 1. multiply F_lambda G(tau_1) K^+(tau_1)
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), omega_l) * nda::matmul(Flam, Gt0(t, _, _)); }
       // 2. convolve by G
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt1), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(Gt1), itops.vals2coefs(T), TIME_ORDERED);
     } else {
       // 1. multiply G(tau_2-tau_1) K^-(tau_2-tau_1) F_lambda
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), -omega_l) * nda::matmul(Gt1(t, _, _), Flam); }
       // 2. convolve by G
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(T), itops.vals2coefs(Gt0), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(T), itops.vals2coefs(Gt0), TIME_ORDERED);
     }
   }
 }
@@ -191,26 +191,26 @@ void OCA_bs_left_in_place(double beta, imtime_ops &itops, nda::vector_const_view
   if (forward) {
     if (omega_l <= 0) {
       // 6. convolve by G
-      Tin = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(Tin), TIME_ORDERED);
+      Tin = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(Tin), TIME_ORDERED);
       // 7. multiply by Fbar
       for (int t = 0; t < r; t++) { Tout(t, _, _) = nda::matmul(Fbar, Tin(t, _, _)); }
     } else {
       // 6. convolve by G K^+
       for (int t = 0; t < r; t++) { GKt(t, _, _) = k_it(dlr_it(t), omega_l) * Gt(t, _, _); }
-      Tin = itops.convolve(beta, Fermion, itops.vals2coefs(GKt), itops.vals2coefs(Tin), TIME_ORDERED);
+      Tin = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(Tin), TIME_ORDERED);
       // 7. multiply by Fbar
       for (int t = 0; t < r; t++) { Tout(t, _, _) = nda::matmul(Fbar, Tin(t, _, _)); }
     }
   } else {
     if (omega_l >= 0) {
       // 6. convolve by G
-      Tin = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(Tin), TIME_ORDERED);
+      Tin = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(Tin), TIME_ORDERED);
       // 7. multiply by Fbar
       for (int t = 0; t < r; t++) { Tout(t, _, _) = nda::matmul(Fbar, Tin(t, _, _)); }
     } else {
       // 6. convolve by G K^-
       for (int t = 0; t < r; t++) { GKt(t, _, _) = k_it(dlr_it(t), -omega_l) * Gt(t, _, _); }
-      Tin = itops.convolve(beta, Fermion, itops.vals2coefs(GKt), itops.vals2coefs(Tin), TIME_ORDERED);
+      Tin = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(Tin), TIME_ORDERED);
       // 7. multiply by Fbar
       for (int t = 0; t < r; t++) { Tout(t, _, _) = nda::matmul(Fbar, Tin(t, _, _)); }
     }
@@ -530,24 +530,24 @@ void OCA_dense_right_in_place(double beta, imtime_ops &itops, nda::vector_const_
       // 1. multiply F_lambda G(tau_1) K^-(tau_1)
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), -omega_l) * nda::matmul(Flam, Gt(t, _, _)); }
       // 2. convolve by G
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
     } else {
       // 1. multiply G(tau_2-tau_1) K^+(tau_2-tau_1) F_lambda
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), omega_l) * nda::matmul(Gt(t, _, _), Flam); }
       // 2. convolve by G
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(T), itops.vals2coefs(Gt), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(T), itops.vals2coefs(Gt), TIME_ORDERED);
     }
   } else {
     if (omega_l >= 0) {
       // 1. multiply F_lambda G(tau_1) K^+(tau_1)
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), omega_l) * nda::matmul(Flam, Gt(t, _, _)); }
       // 2. convolve by G
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
     } else {
       // 1. multiply G(tau_2-tau_1) K^-(tau_2-tau_1) F_lambda
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), -omega_l) * nda::matmul(Gt(t, _, _), Flam); }
       // 2. convolve by G
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(T), itops.vals2coefs(Gt), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(T), itops.vals2coefs(Gt), TIME_ORDERED);
     }
   }
 }
@@ -591,26 +591,26 @@ void OCA_dense_left_in_place(double beta, imtime_ops &itops, nda::vector_const_v
   if (forward) {
     if (omega_l <= 0) {
       // 6. convolve by G
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
       // 7. multiply by Fbar
       for (int t = 0; t < r; t++) { T(t, _, _) = nda::matmul(Fbar, T(t, _, _)); }
     } else {
       // 6. convolve by G K^+
       for (int t = 0; t < r; t++) { GKt(t, _, _) = k_it(dlr_it(t), omega_l) * Gt(t, _, _); }
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
       // 7. multiply by Fbar
       for (int t = 0; t < r; t++) { T(t, _, _) = nda::matmul(Fbar, T(t, _, _)); }
     }
   } else {
     if (omega_l >= 0) {
       // 6. convolve by G
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
       // 7. multiply by Fbar
       for (int t = 0; t < r; t++) { T(t, _, _) = nda::matmul(Fbar, T(t, _, _)); }
     } else {
       // 6. convolve by G K^-
       for (int t = 0; t < r; t++) { GKt(t, _, _) = k_it(dlr_it(t), -omega_l) * Gt(t, _, _); }
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
       // 7. multiply by Fbar
       for (int t = 0; t < r; t++) { T(t, _, _) = nda::matmul(Fbar, T(t, _, _)); }
     }
@@ -910,7 +910,7 @@ nda::array<dcomplex, 3> third_order_dense_partial(nda::array_const_view<dcomplex
       int v = 1;
       for (int t = 0; t < r; t++) T(t, _, _) = nda::matmul(Fs(states(v), _, _), T(t, _, _));
       for (int t = 0; t < r; t++) T(t, _, _) = k_it(dlr_it(t), -1 * poles(1)) * T(t, _, _);
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
 
       v = 2;
       for (int kap = 0; kap < n; kap++) {
@@ -924,17 +924,17 @@ nda::array<dcomplex, 3> third_order_dense_partial(nda::array_const_view<dcomplex
         }
         for (int t = 0; t < r; t++) T(t, _, _) += nda::matmul(F_dags(mu, _, _), Tmu(t, _, _));
       }
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
 
       v = 3;
       for (int t = 0; t < r; t++) T(t, _, _) = nda::matmul(Fs(states(v), _, _), T(t, _, _));
       for (int t = 0; t < r; t++) T(t, _, _) = k_it(dlr_it(t), -1 * poles(0)) * T(t, _, _);
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
 
       v = 4;
       for (int t = 0; t < r; t++) T(t, _, _) = nda::matmul(Fdagbars(states(v), l(1), _, _), T(t, _, _));
       for (int t = 0; t < r; t++) T(t, _, _) = k_it(dlr_it(t), poles(1)) * T(t, _, _);
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
 
       v = 5;
       for (int t = 0; t < r; t++) T(t, _, _) = nda::matmul(Fdagbars(states(v), l(0), _, _), T(t, _, _));
@@ -946,7 +946,7 @@ nda::array<dcomplex, 3> third_order_dense_partial(nda::array_const_view<dcomplex
       int v = 1;
       for (int t = 0; t < r; t++) T(t, _, _) = nda::matmul(Fs(states(v), _, _), T(t, _, _));
       for (int t = 0; t < r; t++) GKt(t, _, _) = k_it(dlr_it(t), poles(1)) * Gt(t, _, _);
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
 
       v = 2;
       for (int kap = 0; kap < n; kap++) {
@@ -960,16 +960,16 @@ nda::array<dcomplex, 3> third_order_dense_partial(nda::array_const_view<dcomplex
         }
         for (int t = 0; t < r; t++) T(t, _, _) += nda::matmul(F_dags(mu, _, _), Tmu(t, _, _));
       }
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
 
       v = 3;
       for (int t = 0; t < r; t++) T(t, _, _) = nda::matmul(Fs(states(v), _, _), T(t, _, _));
       for (int t = 0; t < r; t++) T(t, _, _) = k_it(dlr_it(t), -poles(0)) * T(t, _, _);
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
 
       v = 4;
       for (int t = 0; t < r; t++) T(t, _, _) = nda::matmul(Fdagbars(states(v), l(1), _, _), T(t, _, _));
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
 
       v = 5;
       for (int t = 0; t < r; t++) T(t, _, _) = nda::matmul(Fdagbars(states(v), l(0), _, _), T(t, _, _));
@@ -981,7 +981,7 @@ nda::array<dcomplex, 3> third_order_dense_partial(nda::array_const_view<dcomplex
       int v = 1;
       for (int t = 0; t < r; t++) T(t, _, _) = nda::matmul(Fs(states(v), _, _), T(t, _, _));
       for (int t = 0; t < r; t++) T(t, _, _) = k_it(dlr_it(t), -1 * poles(1)) * T(t, _, _);
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
 
       v = 2;
       for (int kap = 0; kap < n; kap++) {
@@ -995,17 +995,17 @@ nda::array<dcomplex, 3> third_order_dense_partial(nda::array_const_view<dcomplex
         }
         for (int t = 0; t < r; t++) T(t, _, _) += nda::matmul(F_dags(mu, _, _), Tmu(t, _, _));
       }
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
 
       v = 3;
       for (int t = 0; t < r; t++) T(t, _, _) = nda::matmul(Fs(states(v), _, _), T(t, _, _));
       for (int t = 0; t < r; t++) GKt(t, _, _) = k_it(dlr_it(t), poles(0)) * Gt(t, _, _);
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
 
       v = 4;
       for (int t = 0; t < r; t++) T(t, _, _) = nda::matmul(Fdagbars(states(v), l(1), _, _), T(t, _, _));
       for (int t = 0; t < r; t++) T(t, _, _) = k_it(dlr_it(t), poles(1)) * T(t, _, _);
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
 
       v = 5;
       for (int t = 0; t < r; t++) T(t, _, _) = nda::matmul(Fdagbars(states(v), l(0), _, _), T(t, _, _));
@@ -1016,7 +1016,7 @@ nda::array<dcomplex, 3> third_order_dense_partial(nda::array_const_view<dcomplex
       int v = 1;
       for (int t = 0; t < r; t++) T(t, _, _) = nda::matmul(Fs(states(v), _, _), T(t, _, _));
       for (int t = 0; t < r; t++) GKt(t, _, _) = k_it(dlr_it(t), poles(1)) * Gt(t, _, _);
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
 
       v = 2;
       for (int kap = 0; kap < n; kap++) {
@@ -1030,17 +1030,17 @@ nda::array<dcomplex, 3> third_order_dense_partial(nda::array_const_view<dcomplex
         }
         for (int t = 0; t < r; t++) T(t, _, _) += nda::matmul(F_dags(mu, _, _), Tmu(t, _, _));
       }
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
 
       v = 3;
       for (int t = 0; t < r; t++) T(t, _, _) = nda::matmul(Fs(states(v), _, _), T(t, _, _));
       for (int t = 0; t < r; t++) GKt(t, _, _) = k_it(dlr_it(t), poles(0)) * k_it(dlr_it(t), poles(1)) * Gt(t, _, _);
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
 
       v = 4;
       for (int t = 0; t < r; t++) T(t, _, _) = nda::matmul(Fdagbars(states(v), l(1), _, _), T(t, _, _));
       for (int t = 0; t < r; t++) GKt(t, _, _) = k_it(dlr_it(t), poles(0)) * Gt(t, _, _);
-      T = itops.convolve(beta, Fermion, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
 
       v = 5;
       for (int t = 0; t < r; t++) T(t, _, _) = nda::matmul(Fdagbars(states(v), l(0), _, _), T(t, _, _));

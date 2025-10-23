@@ -68,7 +68,7 @@ void DiagramEvaluator::compose_with_edge_dense(Backbone &backbone, int e_ix) {
       for (int t = 0; t < r; t++) { GKt(t, _, _) = k_it(dlr_it(t), be * hyb_poles(backbone.get_pole_ind(x))) * GKt(t, _, _); }
     }
   }
-  T = itops.convolve(beta, Fermion, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
+  T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
 }
 
 void DiagramEvaluator::multiply_zero_vertex(Backbone &backbone, bool is_forward) {

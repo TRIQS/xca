@@ -101,7 +101,7 @@ void DiagramBlockSparseEvaluator::compose_with_edge_block(Backbone &backbone, in
     }
   }
   T(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r)) =
-     itops.convolve(beta, Fermion, itops.vals2coefs(GKt(_, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1)))),
+     itops.convolve(beta, itops.vals2coefs(GKt(_, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1)))),
                     itops.vals2coefs(T(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r))), TIME_ORDERED);
 }
 
