@@ -223,8 +223,6 @@ std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const atom_diag::a
       }
 
       // Initialize arrays with proper dimensions
-      // if (cidx >= 0) { c_blocks[gidx][sidx] = nda::zeros<dcomplex>(dim_c_final, dim_c_initial, ops_per_group[gidx]); }
-      // if (didx >= 0) { cdag_blocks[gidx][sidx] = nda::zeros<dcomplex>(dim_cdag_final, dim_cdag_initial, ops_per_group[gidx]); }
       if (cidx >= 0) { c_blocks[gidx][sidx] = nda::zeros<dcomplex>(ops_per_group[gidx], dim_c_final, dim_c_initial); }
       if (didx >= 0) { cdag_blocks[gidx][sidx] = nda::zeros<dcomplex>(ops_per_group[gidx], dim_cdag_final, dim_cdag_initial); }
     }
@@ -295,7 +293,7 @@ std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const atom_diag::a
     F_sym_vec.emplace_back(F_block_inds(i, _), c_blocks[i]);
     F_dag_sym_vec.emplace_back(F_dag_block_inds(i, _), cdag_blocks[i]);
   }
-
+  
   BlockOpSymQuartet Fq(F_sym_vec, F_dag_sym_vec, hyb_coeffs, hyb_refl_coeffs, sym_set_labels);
   return std::make_tuple(Fq, sym_set_labels);
 }

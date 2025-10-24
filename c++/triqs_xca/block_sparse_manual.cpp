@@ -4,8 +4,6 @@
 #include <cppdlr/utils.hpp>
 #include <h5/format.hpp>
 #include <cppdlr/dlr_kernels.hpp>
-#include <iomanip>
-#include <iostream>
 #include <nda/algorithms.hpp>
 #include <nda/blas/tools.hpp>
 #include <nda/declarations.hpp>
@@ -63,6 +61,65 @@ BlockDiagOpFun NCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_v
               } else {
                 block(t, _, _) =
                    hyb_refl(t, kap, lam) * nda::matmul(F2.get_block(ind_path), nda::matmul(Gt.get_block(ind_path)(t, _, _), F1.get_block(i)));
+              }
+            }
+            block = sfM * block;
+            Sigma.add_block(i, block);
+          }
+        }
+      }
+    }
+  }
+
+  return Sigma;
+}
+
+BlockDiagOpFun NCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl, BlockDiagOpFun const &Gt,
+                      const BlockOpSymQuartet &Fq) {
+  // get F^dagger operators
+  int n = Fq.sym_set_labels.size();
+  // initialize self-energy, with same shape as Gt
+  int r = Gt.get_num_time_nodes();
+  BlockDiagOpFun Sigma(r, Gt.get_block_sizes());
+
+  for (int fb = 0; fb <= 1; fb++) {
+    // fb = 1 for forward line, 0 for backward line
+    auto const &F1 = (fb) ? Fq.Fs[0] : Fq.F_dags[0];
+    auto const &F2 = (fb) ? Fq.F_dags[0] : Fq.Fs[0];
+    int sfM        = -1;
+
+    for (int lam = 0; lam < n; lam++) {
+      for (int kap = 0; kap < n; kap++) {
+        // auto &F1              = F1list(kap, _, _);
+        // auto &F2              = F2list[lam];
+        int ind_path          = 0;
+        bool path_all_nonzero = true; // if set to false during backwards pass,
+        // the i-th block of Sigma is zero, so no computation needed
+
+        for (int i = 0; i < Gt.get_num_block_cols(); i++) {
+          // "backwards pass"
+          // for each self-energy block, find contributing blocks of factors
+          path_all_nonzero = true;
+          ind_path         = F1.get_block_index(i); // Sigma = F2 G F1
+          // ind_path = block-column index of F1 corresponding with
+          // block that contributes to i-th block of Sigma
+          if (ind_path == -1 || Gt.get_zero_block_index(ind_path) == -1 || F2.get_block_index(ind_path) == -1) {
+            path_all_nonzero = false; // one of the blocks of F1,
+                                      // Gt, Ft that contribute to block i of Sigma is zero
+          }
+
+          // matmuls
+          // if path involves all nonzero blocks, compute product
+          // of blocks indexed by ind_path
+          if (path_all_nonzero) {
+            auto block = nda::zeros<dcomplex>(r, Gt.get_block_size(i), Gt.get_block_size(i));
+            for (int t = 0; t < r; t++) {
+              if (fb == 1) {
+                block(t, _, _) = hyb(t, lam, kap)
+                   * nda::matmul(F2.get_block(ind_path)(lam, _, _), nda::matmul(Gt.get_block(ind_path)(t, _, _), F1.get_block(i)(kap, _, _)));
+              } else {
+                block(t, _, _) = hyb_refl(t, kap, lam)
+                   * nda::matmul(F2.get_block(ind_path)(lam, _, _), nda::matmul(Gt.get_block(ind_path)(t, _, _), F1.get_block(i)(kap, _, _)));
               }
             }
             block = sfM * block;
@@ -219,15 +276,6 @@ void OCA_bs_left_in_place(double beta, imtime_ops &itops, nda::vector_const_view
 
 BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt,
                       const std::vector<BlockOp> &Fs) {
-  // Evaluate OCA using block-sparse storage
-  // @param[in] hyb hybridization on imaginary-time grid
-  // @param[in] itops cppdlr imaginary time object
-  // @param[in] beta inverse temperature
-  // @param[in] Gt Greens function at times dlr_it with DLR coefficients
-  // @param[in] Fs F operators
-  // @return OCA term of self-energy
-
-  // TODO: exceptions for bad argument sizes
 
   nda::vector_const_view<double> dlr_rf = itops.get_rfnodes();
   nda::vector_const_view<double> dlr_it = itops.get_itnodes();
@@ -346,6 +394,129 @@ BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops,
               OCA_bs_middle_in_place((fb1 == 1), hyb, hyb_refl, Fkaps, Fmus, Tright, Tmid, Tkaps, Tmu);
               OCA_bs_left_in_place(beta, itops, dlr_it, dlr_rf(l), (fb2 == 1), Gt.get_block(ind_path(2)), Fbar_array[lam][l].get_block(ind_path(2)),
                                    Tmid, Tleft, GKt);
+              Sigma_l += Tleft;
+            } // sum over lambda
+
+            // prefactor with Ks
+            if (fb2 == 1) {
+              if (dlr_rf(l) <= 0) {
+                for (int t = 0; t < r; t++) { Sigma_l(t, _, _) = k_it(dlr_it(t), dlr_rf(l)) * Sigma_l(t, _, _); }
+                Sigma_l = Sigma_l / k_it(0, -dlr_rf(l));
+              } else {
+                Sigma_l = Sigma_l / k_it(0, dlr_rf(l));
+              }
+            } else {
+              if (dlr_rf(l) >= 0) {
+                for (int t = 0; t < r; t++) { Sigma_l(t, _, _) = k_it(dlr_it(t), -dlr_rf(l)) * Sigma_l(t, _, _); }
+                Sigma_l = Sigma_l / k_it(0, dlr_rf(l));
+              } else {
+                Sigma_l = Sigma_l / k_it(0, -dlr_rf(l));
+              }
+            }
+            Sigma_block_i += nda::make_regular(sfM * Sigma_l);
+          } // sum over l
+          Sigma.add_block(i, Sigma_block_i);
+        } // end if(path_all_nonzero)
+      } // end loop over i
+    } // end loop over fb2
+  } // end loop over fb1
+  return Sigma;
+}
+
+BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt, const BlockOpSymQuartet &Fq) {
+
+  long n                                = Fq.sym_set_labels.size();
+  nda::vector_const_view<double> dlr_rf = itops.get_rfnodes();
+  nda::vector_const_view<double> dlr_it = itops.get_itnodes();
+  // number of imaginary time nodes
+  long r = dlr_it.shape(0);
+
+  auto hyb_coeffs      = itops.vals2coefs(hyb); // hybridization DLR coeffs
+  auto hyb_refl        = itops.reflect(hyb);
+  auto hyb_refl_coeffs = hyb_coeffs;
+
+  // initialize self-energy
+  BlockDiagOpFun Sigma = BlockDiagOpFun(r, Gt.get_block_sizes());
+  int num_block_cols   = Gt.get_num_block_cols();
+
+  // preallocation
+  bool path_all_nonzero = true;
+  nda::vector<int> ind_path(3);
+  nda::vector<int> block_dims(5); // intermediate block dimensions
+
+  // loop over hybridization lines
+  for (int fb1 = 0; fb1 <= 1; fb1++) {
+    for (int fb2 = 0; fb2 <= 1; fb2++) {
+      // fb = 1 for forward line, else = 0
+      // fb1 corresponds with line from 0 to tau_2
+      auto const &F1   = (fb1) ? Fq.Fs : Fq.F_dags;
+      auto const &F2   = (fb2) ? Fq.Fs : Fq.F_dags;
+      auto const &F3   = (fb1) ? Fq.F_dags : Fq.Fs;
+      auto const &Fbar = (fb2) ? Fq.F_dag_bars : Fq.F_bars_refl;
+      int sfM          = -1; // (fb1 ^ fb2) ? 1 : -1; // sign
+
+      for (int i = 0; i < num_block_cols; i++) {
+
+        // "backwards pass"
+        //
+        // for each self-energy block, find contributing blocks of factors
+        //
+        // paths_all_nonzero: false if for i-th block of
+        // Sigma, factors assoc'd with lambda, mu, kappa don't contribute
+        //
+        // ind_path: a vector of column indices of the
+        // blocks of the factors that contribute. if paths_all_nonzero is
+        // false at this index, values in ind_path are garbage.
+        //
+        // ATTN: assumes all BlockOps in F(1,2,3)list have the same structure
+        // i.e, index path is independent of kappa, mu
+        path_all_nonzero   = true;
+        auto Sigma_block_i = nda::make_regular(0 * Sigma.get_block(i));
+
+        ind_path(0) = F1[0].get_block_index(i);
+        if (ind_path(0) == -1 || Gt.get_zero_block_index(ind_path(0)) == -1) {
+          path_all_nonzero = false;
+        } else {
+          block_dims(0) = F1[0].get_block_size(i, 1);
+          block_dims(1) = F1[0].get_block_size(i, 0);
+          ind_path(1)   = F2[0].get_block_index(ind_path(0));
+          if (ind_path(1) == -1 || Gt.get_zero_block_index(ind_path(1)) == -1) {
+            path_all_nonzero = false;
+          } else {
+            block_dims(2) = F2[0].get_block_size(ind_path(0), 0);
+            ind_path(2)   = F3[0].get_block_index(ind_path(1));
+            if (ind_path(2) == -1 || Gt.get_zero_block_index(ind_path(2)) == -1 || Fbar[0].get_block_index(ind_path(2)) == -1) {
+              path_all_nonzero = false;
+            } else {
+              block_dims(3) = F3[0].get_block_size(ind_path(1), 0);
+              block_dims(4) = Fbar[0].get_block_size(ind_path(2), 0);
+            }
+          }
+        }
+
+        // matmuls and convolutions
+        if (path_all_nonzero) {
+          // preallocate for i-th block
+          auto Sigma_l = nda::make_regular(0 * Sigma.get_block(i));
+          // sizes of intermediate matrices are known
+          nda::array<dcomplex, 3> Tright(r, block_dims(2), block_dims(1));   // output of OCA_bs_right
+          nda::array<dcomplex, 3> Tmid(r, block_dims(3), block_dims(0));     // output of OCA_bs_middle
+          nda::array<dcomplex, 4> Tkaps(n, r, block_dims(2), block_dims(0)); // storage in OCA_bs_middle
+          nda::array<dcomplex, 3> Tmu(r, block_dims(2), block_dims(0));      // storage in OCA_bs_middle
+          nda::array<dcomplex, 3> Tleft(r, block_dims(4), block_dims(0));    // output of OCA_bs_left
+          nda::array<dcomplex, 3> GKt(r, block_dims(3), block_dims(3));      // storage in OCA_bs_left
+
+          auto Fkaps = F1[0].get_block(i);
+          auto Fmus  = F3[0].get_block(ind_path(1));
+
+          for (int l = 0; l < r; l++) {
+            Sigma_l = 0;
+            for (int lam = 0; lam < n; lam++) {
+              OCA_bs_right_in_place(beta, itops, dlr_it, dlr_rf(l), (fb2 == 1), Gt.get_block(ind_path(0)), Gt.get_block(ind_path(1)),
+                                    F2[0].get_block(ind_path(0))(lam, _, _), Tright);
+              OCA_bs_middle_in_place((fb1 == 1), hyb, hyb_refl, Fkaps, Fmus, Tright, Tmid, Tkaps, Tmu);
+              OCA_bs_left_in_place(beta, itops, dlr_it, dlr_rf(l), (fb2 == 1), Gt.get_block(ind_path(2)),
+                                   Fbar[0].get_block(ind_path(2))(lam, l, _, _), Tmid, Tleft, GKt);
               Sigma_l += Tleft;
             } // sum over lambda
 
@@ -746,7 +917,7 @@ nda::array<dcomplex, 3> OCA_dense(nda::array_const_view<dcomplex, 3> hyb, nda::a
       auto const &F2list     = (fb2 == 1) ? Fs(_, _, _) : F_dags(_, _, _);
       auto const &F3list     = (fb1 == 1) ? F_dags(_, _, _) : Fs(_, _, _);
       auto const &Fbar_array = (fb2 == 1) ? Fdagbars(_, _, _, _) : Fbarsrefl(_, _, _, _);
-      int sfM                = (fb1 ^ fb2) ? 1 : -1; // sign
+      int sfM                = -1; // (fb1 ^ fb2) ? 1 : -1; // sign
 
       for (int l = 0; l < p; l++) {
         Sigma_l = 0;

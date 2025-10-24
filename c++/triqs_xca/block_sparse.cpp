@@ -437,15 +437,16 @@ BlockOpSymQuartet::BlockOpSymQuartet(std::vector<BlockOpSymSet> Fs, std::vector<
   // initialize F_dag_bars and F_bars_refl
   int p = hyb_coeffs.extent(0);
   std::vector<BlockOpSymSetBar> F_dag_bars, F_bars_refl;
+  nda::vector<int> block_indices_dag = F_dags[0].get_block_indices();
+  nda::vector<int> block_indices_f   = Fs[0].get_block_indices();
   for (int i = 0; i < k; i++) {
-    // std::cout << "F_dags[i=" << i << "].get_size_sym_set() = " << F_dags[i].get_size_sym_set() << std::endl;
-    // std::cout << "F_dags[i=" << i << "].get_block_indices() = " << F_dags[i].get_block_indices() << std::endl;
-    // std::cout << "F_dags[i=" << i << "].get_block_sizes() = " << F_dags[i].get_block_sizes() << std::endl;
-    F_dag_bars.emplace_back(F_dags[i].get_size_sym_set(), p, F_dags[i].get_block_indices(), F_dags[i].get_block_sizes());
-    F_bars_refl.emplace_back(Fs[i].get_size_sym_set(), p, Fs[i].get_block_indices(), Fs[i].get_block_sizes());
+    block_indices_dag = F_dags[i].get_block_indices();
+    block_indices_f   = Fs[i].get_block_indices();
+    std::cout << "Block indices dag: " << block_indices_dag << "\n";
+    F_dag_bars.emplace_back(F_dags[i].get_size_sym_set(), p, block_indices_dag, F_dags[i].get_block_sizes());
+    std::cout << "Block indices f: " << block_indices_f << "\n";
+    F_bars_refl.emplace_back(Fs[i].get_size_sym_set(), p, block_indices_f, Fs[i].get_block_sizes());
   }
-  // std::cout << "F_dag_bars[1].get_block(1)" << F_dag_bars[1].get_block(1)(0, 0, _, _) << std::endl;
-  // std::cout << "F_dag_bars[1].get_block(1).shape() = " << F_dag_bars[1].get_block(1).shape() << std::endl;
 
   // calculate symmetry set indices
   long n         = sym_set_labels.size();                // number of orbital indices
@@ -470,12 +471,7 @@ BlockOpSymQuartet::BlockOpSymQuartet(std::vector<BlockOpSymSet> Fs, std::vector<
             long nu_orb  = sym_set_to_orb(p_nu, nu);
             for (int b = 0; b < F_dags[p_lam].get_num_block_cols(); b++) {
               if (F_dags[p_lam].get_block_index(b) != -1) {
-                // if (F_dag_bars[p_lam].get_block(b).shape(0) != 2) {
-                // std::cout << "F_dags[p_lam=" << p_lam << "].get_block(b=" << b << ").shape() = " << F_dags[p_lam].get_block(b).shape() << std::endl;
-                // std::cout << "before: F_dag_bars[p_lam=" << p_lam << "].get_block(b=" << b << ").shape() = " << F_dag_bars[p_lam].get_block(b).shape() << std::endl;
-                // std::cout << "hyb_coeffs(l=" << l << ", nu_orb=" << nu_orb << ", lam_orb=" << lam_orb << ") = " << hyb_coeffs(l, nu_orb, lam_orb) << std::endl;}
                 F_dag_bars[p_lam].add_block(b, lam, l, nda::make_regular(hyb_coeffs(l, nu_orb, lam_orb) * F_dags[p_lam].get_block(b)(nu, _, _)));
-                // if (F_dag_bars[p_lam].get_block(b).shape(0) != 2) { std::cout << "after: F_dag_bars[p_lam=" << p_lam << "].get_block(b=" << b << ").shape() = " << F_dag_bars[p_lam].get_block(b).shape() << std::endl; }
               }
             }
             for (int b = 0; b < Fs[p_nu].get_num_block_cols(); b++) {

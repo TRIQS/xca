@@ -17,6 +17,16 @@ BlockDiagOpFun NCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_v
                       const std::vector<BlockOp> &Fs);
 
 /**
+ * @brief Evaluate NCA self-energy term using block-sparse storage 
+ * @param[in] hyb hybridization function
+ * @param[in] hyb_refl hybridization function eval'd at (beta - tau)
+ * @param[in] Gt pseudoparticle Green's function as a BDOF
+ * @param[in] Fq quartet of F operators
+ */
+BlockDiagOpFun NCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl, BlockDiagOpFun const &Gt,
+                      const BlockOpSymQuartet &Fq);
+
+/**
  * @brief Evaluate NCA self-energy term using dense storage
  * @param[in] hyb hybridization function
  * @param[in] hyb_refl hyb evaluated at (beta - tau)
@@ -65,6 +75,17 @@ BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_v
                       nda::array_const_view<dcomplex, 3> hyb_refl, nda::array_const_view<dcomplex, 3> hyb_refl_coeffs,
                       nda::vector_const_view<double> hyb_poles, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt,
                       const std::vector<BlockOp> &Fs);
+
+/**
+ * @brief Evaluate OCA self-energy using block-sparse storage
+ * @param[in] hyb hybridization function at imaginary times
+ * @param[in] itops cppdlr imaginary time object
+ * @param[in] beta inverse temperature
+ * @param[in] Gt pseudoparticle Green's function as a BDOF
+ * @param[in] Fq quartet of F operators
+ */
+BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt,
+                      const BlockOpSymQuartet &Fq);
 
 nda::array<dcomplex, 3> eval_eq(imtime_ops &itops, nda::array_const_view<dcomplex, 3> f, int n_quad);
 

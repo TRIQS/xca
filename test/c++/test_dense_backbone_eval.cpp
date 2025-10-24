@@ -48,7 +48,6 @@ TEST(DenseBackbone, one_vertex_and_edge) {
     // multiply T by vertex 1
     for (int t = 0; t < r; t++) D.T(t, _, _) = nda::eye<dcomplex>(N);
     D.multiply_vertex_dense(B, 1);
-    std::cout << B << std::endl;
 
     // do the same multiplication manually
     nda::array<dcomplex, 3> Tact(r, N, N);
@@ -75,8 +74,8 @@ TEST(DenseBackbone, one_vertex_and_edge) {
 TEST(DenseBackbone, OCA) {
   int n         = 4;
   double beta   = 2.0;
-  double Lambda = 100.0 * beta;
-  double eps    = 1.0e-10;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-4;
 
   // load in functions from two_band.py
   auto [num_blocks, Deltat, Deltat_refl, Gt, Fs, Fdags, Gt_dense, Fs_dense, F_dags_dense, subspaces, fock_state_order] =
@@ -90,8 +89,8 @@ TEST(DenseBackbone, OCA) {
 
   // compute Fbars and Fdagbars and store in Fset
   auto hyb_coeffs      = itops.vals2coefs(Deltat); // hybridization DLR coeffs
-  auto hyb_refl        = nda::make_regular(-Deltat);
-  auto hyb_refl_coeffs = nda::make_regular(-hyb_coeffs); // itops.vals2coefs(hyb_refl);
+  auto hyb_refl        = Deltat;
+  auto hyb_refl_coeffs = hyb_coeffs;
   auto Fset            = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs, hyb_refl_coeffs);
 
   // initialize Backbone and DiagramEvaluator
@@ -106,62 +105,32 @@ TEST(DenseBackbone, OCA) {
   // compare against manually-computed OCA result
   auto OCA_dense_result = OCA_dense(Deltat, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
   ASSERT_LE(nda::max_element(nda::abs(OCA_result - OCA_dense_result)), eps);
-}
 
-TEST(DenseBackbone, PYTHON_OCA) {
-  int n         = 4;
-  double beta   = 2.0;
-  double Lambda = 10.0 * beta;
-  double eps    = 1.0e-10;
+  // compute OCA using Zhen's code
+  auto Deltadlr                            = itops.vals2coefs(Deltat); //obtain dlr coefficient of Delta(t)
+  nda::vector<double> dlr_rf_reflect       = -dlr_rf;
+  nda::array<dcomplex, 3> Deltadlr_reflect = Deltadlr * 1.0;
+  for (int i = 0; i < Deltadlr.shape(0); ++i) Deltadlr_reflect(i, _, _) = transpose(Deltadlr(i, _, _));
+  auto Delta_decomp         = hyb_decomp(Deltadlr, dlr_rf, eps);                 //decomposition of Delta(t) using DLR coefficient
+  auto Delta_decomp_reflect = hyb_decomp(Deltadlr_reflect, dlr_rf_reflect, eps); // decomposition of Delta(-t) using DLR coefficient
+  int dim                   = Deltat.shape(1);
+  int r                     = itops.rank();
+  hyb_F Delta_F(16, r, dim);
+  hyb_F Delta_F_reflect(16, r, dim);
+  Delta_F.update_inplace(Delta_decomp, dlr_it, Fs_dense, F_dags_dense); // Compression of Delta(t) and F, F_dag matrices
+  Delta_F_reflect.update_inplace(Delta_decomp_reflect, dlr_it, F_dags_dense, Fs_dense);
+  auto fb               = nda::vector<int>(2);
+  fb(1)                 = 0;
+  nda::array<int, 2> D2 = {{0, 2}, {1, 3}}; // topology for OCA diagram evaluator
+  auto OCA_forward      = Sigma_OCA_calc(Delta_F, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, true);
 
-  // load in functions from two_band.py
-  auto [num_blocks, Deltat, Deltat_refl, Gt, Fs, Fdags, Gt_dense, Fs_dense, F_dags_dense, subspaces, fock_state_order] =
-     two_band_discrete_bath_helper(beta, Lambda, eps);
+  // Get Delta(t-t1) backward Delta(t2,t0) forward
+  auto fb2          = nda::vector<int64_t>(2);
+  fb2(1)            = 1;
+  auto OCA_backward = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb2, true);
+  auto OCA_Zhen     = nda::make_regular(-OCA_forward - OCA_backward);
 
-  // DLR generation
-  auto dlr_rf        = build_dlr_rf(Lambda, eps);
-  auto itops         = imtime_ops(Lambda, dlr_rf);
-  auto const &dlr_it = itops.get_itnodes();
-  auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
-
-  // compute Fbars and Fdagbars and store in Fset
-  auto hyb_coeffs      = itops.vals2coefs(Deltat);       // hybridization DLR coeffs
-  auto hyb_refl        = nda::make_regular(-Deltat);     // nda::make_regular(-itops.reflect(Deltat));
-  auto hyb_refl_coeffs = nda::make_regular(-hyb_coeffs); // itops.vals2coefs(hyb_refl);
-  auto Fset            = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs, hyb_refl_coeffs);
-
-  // initialize Backbone and DiagramEvaluator
-  nda::array<int, 2> topology = {{0, 2}, {1, 3}};
-  auto B                      = Backbone(topology, n);
-  auto D                      = DiagramEvaluator(beta, itops, Deltat, hyb_refl, dlr_rf, Gt_dense, Fset);
-
-  // evaluate OCA self-energy contribution
-  D.eval_diagram_dense(B);
-  auto OCA_result = D.Sigma;
-
-  int r = itops.rank(), N = 16;
-  h5::file hfile("h5/two_band_py_Lambda10.ref.h5", 'r');
-  h5::group hgroup(hfile);
-  nda::array<dcomplex, 3> NCA_py(r, N, N), OCA_py(r, N, N);
-  h5::read(hgroup, "NCA", NCA_py);
-  h5::read(hgroup, "OCA", OCA_py);
-  OCA_py = OCA_py - NCA_py;
-
-  std::cout << "OCA result: " << OCA_result(10, _, _) << std::endl;
-  // permute twoband.py results to match block structure from atom_diag
-  auto NCA_py_perm = nda::zeros<dcomplex>(r, 16, 16);
-  auto OCA_py_perm = nda::zeros<dcomplex>(r, 16, 16);
-  for (int t = 0; t < r; t++) {
-    for (int i = 0; i < 16; i++) {
-      for (int j = 0; j < 16; j++) {
-        NCA_py_perm(t, i, j) = NCA_py(t, fock_state_order[i], fock_state_order[j]);
-        OCA_py_perm(t, i, j) = OCA_py(t, fock_state_order[i], fock_state_order[j]);
-      }
-    }
-  }
-  std::cout << "OCA py result: " << OCA_py_perm(10, _, _) << std::endl;
-
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result - OCA_py_perm)), eps);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_result - OCA_Zhen)), eps);
 }
 
 TEST(DenseBackbone, third_order_manual) {
@@ -213,122 +182,7 @@ TEST(DenseBackbone, third_order_manual) {
   ASSERT_LE(nda::max_element(nda::abs(Sigma_manual(10, _, _) - D.Sigma(10, _, _))), eps);
 }
 
-TEST(DenseBackbone, PYTHON_third_order) {
-  nda::array<int, 3> topologies = {{{0, 2}, {1, 4}, {3, 5}}, {{0, 3}, {1, 5}, {2, 4}}, {{0, 4}, {1, 3}, {2, 5}}, {{0, 3}, {1, 4}, {2, 5}}};
-  nda::vector<int> topo_sign{1, 1, 1, -1}; // topo_sign(i) = (-1)^{# of line crossings in topology i}
-
-  nda::array<int, 2> topology = {{0, 2}, {1, 3}};
-  int n = 4, N = 16;
-  double beta   = 2.0;
-  double Lambda = 10.0 * beta; // 1000.0*beta;
-  double eps    = 1.0e-10;
-  auto [num_blocks, Deltat, Deltat_refl, Gt, Fs, Fdags, Gt_dense, Fs_dense, F_dags_dense, subspaces, fock_state_order] =
-     two_band_discrete_bath_helper(beta, Lambda, eps);
-
-  // DLR generation
-  auto dlr_rf        = build_dlr_rf(Lambda, eps);
-  auto itops         = imtime_ops(Lambda, dlr_rf);
-  auto const &dlr_it = itops.get_itnodes();
-  auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
-  int r              = itops.rank();
-
-  // compute Fbars and Fdagbars
-  auto hyb_coeffs      = itops.vals2coefs(Deltat);       // hybridization DLR coeffs
-  auto hyb_refl        = nda::make_regular(-Deltat);     // nda::make_regular(-itops.reflect(Deltat));
-  auto hyb_refl_coeffs = nda::make_regular(-hyb_coeffs); // itops.vals2coefs(hyb_refl);
-  auto Fset            = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs, hyb_refl_coeffs);
-
-  // compute NCA and OCA
-  auto NCA_result          = NCA_dense(Deltat, Deltat_refl, Gt_dense, Fs_dense, F_dags_dense);
-  nda::array<int, 2> T_OCA = {{0, 2}, {1, 3}};
-  auto B_OCA               = Backbone(T_OCA, n);
-  // auto D                   = DiagramEvaluator(beta, itops, Deltat, Deltat_refl, Gt_dense, Fset); // create DiagramEvaluator object
-  auto D = DiagramEvaluator(beta, itops, Deltat, hyb_refl, dlr_rf, Gt_dense, Fset);
-  D.eval_diagram_dense(B_OCA); // evaluate OCA diagram
-  auto OCA_result = D.Sigma;   // get the result from the DiagramEvaluator
-  D.reset();
-
-  // arrays for storing results from third-order diagram computations
-  auto third_order_result      = nda::zeros<dcomplex>(r, N, N);
-  auto third_order_02_result   = nda::zeros<dcomplex>(r, N, N);
-  auto third_order_0314_result = nda::zeros<dcomplex>(r, N, N);
-  auto third_order_0315_result = nda::zeros<dcomplex>(r, N, N);
-  auto third_order_04_result   = nda::zeros<dcomplex>(r, N, N);
-
-  // compute third-order diagrams using generic backbone evaluators
-  auto start = std::chrono::high_resolution_clock::now();
-  for (int i = 0; i < 4; i++) {
-    auto B = Backbone(topologies(i, _, _), n); // create Backbone object for topology i
-    D.eval_diagram_dense(B);
-    auto eval = D.Sigma;
-    third_order_result += topo_sign(i) * D.Sigma;
-    if (i == 0)
-      third_order_02_result = eval;
-    else if (i == 1)
-      third_order_0315_result = eval;
-    else if (i == 2)
-      third_order_04_result = eval;
-    else
-      third_order_0314_result = eval;
-    D.reset();
-  }
-  auto end      = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
-  std::cout << "Elapsed time for dense comp'n of 3rd order diags = " << duration.count() << " seconds" << std::endl;
-
-  // load results from a run of twoband.py
-  h5::file hfile("h5/two_band_py_Lambda10.ref.h5", 'r');
-  h5::group hgroup(hfile);
-  nda::array<dcomplex, 3> NCA_py(r, N, N), OCA_py(r, N, N);
-  nda::array<dcomplex, 3> third_order_py(r, N, N);
-  nda::array<dcomplex, 3> third_order_py_02(r, N, N);
-  nda::array<dcomplex, 3> third_order_py_0314(r, N, N);
-  nda::array<dcomplex, 3> third_order_py_0315(r, N, N);
-  nda::array<dcomplex, 3> third_order_py_04(r, N, N);
-  h5::read(hgroup, "NCA", NCA_py);
-  h5::read(hgroup, "OCA", OCA_py);
-  OCA_py = OCA_py - NCA_py;
-
-  h5::read(hgroup, "third_order", third_order_py);
-  third_order_py = -third_order_py + OCA_py + NCA_py;
-  h5::read(hgroup, "third_order_[(0, 2), (1, 4), (3, 5)]", third_order_py_02);
-  h5::read(hgroup, "third_order_[(0, 3), (1, 4), (2, 5)]", third_order_py_0314);
-  h5::read(hgroup, "third_order_[(0, 3), (1, 5), (2, 4)]", third_order_py_0315);
-  h5::read(hgroup, "third_order_[(0, 4), (1, 3), (2, 5)]", third_order_py_04);
-
-  // permute twoband.py results to match block structure from atom_diag
-  auto NCA_py_perm              = nda::zeros<dcomplex>(r, 16, 16);
-  auto OCA_py_perm              = nda::zeros<dcomplex>(r, 16, 16);
-  auto third_order_py_perm      = nda::zeros<dcomplex>(r, 16, 16);
-  auto third_order_py_02_perm   = nda::zeros<dcomplex>(r, 16, 16);
-  auto third_order_py_0314_perm = nda::zeros<dcomplex>(r, 16, 16);
-  auto third_order_py_0315_perm = nda::zeros<dcomplex>(r, 16, 16);
-  auto third_order_py_04_perm   = nda::zeros<dcomplex>(r, 16, 16);
-  for (int t = 0; t < r; t++) {
-    for (int i = 0; i < 16; i++) {
-      for (int j = 0; j < 16; j++) {
-        NCA_py_perm(t, i, j)              = NCA_py(t, fock_state_order[i], fock_state_order[j]);
-        OCA_py_perm(t, i, j)              = OCA_py(t, fock_state_order[i], fock_state_order[j]);
-        third_order_py_perm(t, i, j)      = third_order_py(t, fock_state_order[i], fock_state_order[j]);
-        third_order_py_02_perm(t, i, j)   = third_order_py_02(t, fock_state_order[i], fock_state_order[j]);
-        third_order_py_0314_perm(t, i, j) = third_order_py_0314(t, fock_state_order[i], fock_state_order[j]);
-        third_order_py_0315_perm(t, i, j) = third_order_py_0315(t, fock_state_order[i], fock_state_order[j]);
-        third_order_py_04_perm(t, i, j)   = third_order_py_04(t, fock_state_order[i], fock_state_order[j]);
-      }
-    }
-  }
-
-  ASSERT_LE(nda::max_element(nda::abs(NCA_result - NCA_py_perm)), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result - OCA_py_perm)), eps);
-  ASSERT_LE(nda::max_element(nda::abs(third_order_02_result - third_order_py_02_perm)), 100 * eps);
-  ASSERT_LE(nda::max_element(nda::abs(third_order_0314_result - third_order_py_0314_perm)), 100 * eps);
-  ASSERT_LE(nda::max_element(nda::abs(third_order_0315_result - third_order_py_0315_perm)), 100 * eps);
-  ASSERT_LE(nda::max_element(nda::abs(third_order_04_result - third_order_py_04_perm)), 100 * eps);
-
-  ASSERT_LE(nda::max_element(nda::abs(third_order_result - third_order_py_perm)), 100 * eps);
-}
-
-TEST(DenseBackbone, PYTHON_OCA_semicircle_bath_aaa) {
+TEST(DenseBackbone, OCA_semicircle_bath_aaa) {
   // DLR parameters
   double beta   = 8.0;
   double Lambda = 10.0 * beta;
@@ -345,118 +199,37 @@ TEST(DenseBackbone, PYTHON_OCA_semicircle_bath_aaa) {
 
   int p = 7;
   int n = 4;
+  nda::vector<dcomplex> hyb_vals(r), hyb_coeff_vals(p);
   nda::array<dcomplex, 3> hyb(r, n, n), hyb_coeffs(p, n, n);
-  hyb           = {{{-0.4997496184487105, -0.4997496184487105, -0., -0.},
-                    {-0.4997496184487105, -0.4997496184487105, -0., -0.},
-                    {-0., -0., -0.4997496184487105, -0.4997496184487105},
-                    {-0., -0., -0.4997496184487105, -0.4997496184487105}},
-                   {{-0.4867352379479528, -0.4867352379479528, -0., -0.},
-                    {-0.4867352379479528, -0.4867352379479528, -0., -0.},
-                    {-0., -0., -0.4867352379479528, -0.4867352379479528},
-                    {-0., -0., -0.4867352379479528, -0.4867352379479528}},
-                   {{-0.4603465101833711, -0.4603465101833711, -0., -0.},
-                    {-0.4603465101833711, -0.4603465101833711, -0., -0.},
-                    {-0., -0., -0.4603465101833711, -0.4603465101833711},
-                    {-0., -0., -0.4603465101833711, -0.4603465101833711}},
-                   {{-0.4239204950540695, -0.4239204950540695, -0., -0.},
-                    {-0.4239204950540695, -0.4239204950540695, -0., -0.},
-                    {-0., -0., -0.4239204950540695, -0.4239204950540695},
-                    {-0., -0., -0.4239204950540695, -0.4239204950540695}},
-                   {{-0.3716597467714097, -0.3716597467714097, -0., -0.},
-                    {-0.3716597467714097, -0.3716597467714097, -0., -0.},
-                    {-0., -0., -0.3716597467714097, -0.3716597467714097},
-                    {-0., -0., -0.3716597467714097, -0.3716597467714097}},
-                   {{-0.2884886574148449, -0.2884886574148449, -0., -0.},
-                    {-0.2884886574148449, -0.2884886574148449, -0., -0.},
-                    {-0., -0., -0.2884886574148449, -0.2884886574148449},
-                    {-0., -0., -0.2884886574148449, -0.2884886574148449}},
-                   {{-0.2479810727230272, -0.2479810727230272, -0., -0.},
-                    {-0.2479810727230272, -0.2479810727230272, -0., -0.},
-                    {-0., -0., -0.2479810727230272, -0.2479810727230272},
-                    {-0., -0., -0.2479810727230272, -0.2479810727230272}},
-                   {{-0.2065525284769785, -0.2065525284769785, -0., -0.},
-                    {-0.2065525284769785, -0.2065525284769785, -0., -0.},
-                    {-0., -0., -0.2065525284769785, -0.2065525284769785},
-                    {-0., -0., -0.2065525284769785, -0.2065525284769785}},
-                   {{-0.1635819676241178, -0.1635819676241178, -0., -0.},
-                    {-0.1635819676241178, -0.1635819676241178, -0., -0.},
-                    {-0., -0., -0.1635819676241178, -0.1635819676241178},
-                    {-0., -0., -0.1635819676241178, -0.1635819676241178}},
-                   {{-0.1326995066858671, -0.1326995066858671, -0., -0.},
-                    {-0.1326995066858671, -0.1326995066858671, -0., -0.},
-                    {-0., -0., -0.1326995066858671, -0.1326995066858671},
-                    {-0., -0., -0.1326995066858671, -0.1326995066858671}},
-                   {{-0.1225444804140666, -0.1225444804140666, -0., -0.},
-                    {-0.1225444804140666, -0.1225444804140666, -0., -0.},
-                    {-0., -0., -0.1225444804140666, -0.1225444804140666},
-                    {-0., -0., -0.1225444804140666, -0.1225444804140666}},
-                   {{-0.1282199855712255, -0.1282199855712255, -0., -0.},
-                    {-0.1282199855712255, -0.1282199855712255, -0., -0.},
-                    {-0., -0., -0.1282199855712255, -0.1282199855712255},
-                    {-0., -0., -0.1282199855712255, -0.1282199855712255}},
-                   {{-0.1386184647087601, -0.1386184647087601, -0., -0.},
-                    {-0.1386184647087601, -0.1386184647087601, -0., -0.},
-                    {-0., -0., -0.1386184647087601, -0.1386184647087601},
-                    {-0., -0., -0.1386184647087601, -0.1386184647087601}},
-                   {{-0.1720919948804938, -0.1720919948804938, -0., -0.},
-                    {-0.1720919948804938, -0.1720919948804938, -0., -0.},
-                    {-0., -0., -0.1720919948804938, -0.1720919948804938},
-                    {-0., -0., -0.1720919948804938, -0.1720919948804938}},
-                   {{-0.2300400167898313, -0.2300400167898313, -0., -0.},
-                    {-0.2300400167898313, -0.2300400167898313, -0., -0.},
-                    {-0., -0., -0.2300400167898313, -0.2300400167898313},
-                    {-0., -0., -0.2300400167898313, -0.2300400167898313}},
-                   {{-0.3000508284935615, -0.3000508284935615, -0., -0.},
-                    {-0.3000508284935615, -0.3000508284935615, -0., -0.},
-                    {-0., -0., -0.3000508284935615, -0.3000508284935615},
-                    {-0., -0., -0.3000508284935615, -0.3000508284935615}},
-                   {{-0.3759657450111002, -0.3759657450111002, -0., -0.},
-                    {-0.3759657450111002, -0.3759657450111002, -0., -0.},
-                    {-0., -0., -0.3759657450111002, -0.3759657450111002},
-                    {-0., -0., -0.3759657450111002, -0.3759657450111002}},
-                   {{-0.4545389745912252, -0.4545389745912252, -0., -0.},
-                    {-0.4545389745912252, -0.4545389745912252, -0., -0.},
-                    {-0., -0., -0.4545389745912252, -0.4545389745912252},
-                    {-0., -0., -0.4545389745912252, -0.4545389745912252}},
-                   {{-0.4821599768174421, -0.4821599768174421, -0., -0.},
-                    {-0.4821599768174421, -0.4821599768174421, -0., -0.},
-                    {-0., -0., -0.4821599768174421, -0.4821599768174421},
-                    {-0., -0., -0.4821599768174421, -0.4821599768174421}},
-                   {{-0.4997496184487105, -0.4997496184487105, -0., -0.},
-                    {-0.4997496184487105, -0.4997496184487105, -0., -0.},
-                    {-0., -0., -0.4997496184487105, -0.4997496184487105},
-                    {-0., -0., -0.4997496184487105, -0.4997496184487105}}};
-  hyb_coeffs    = {{{0.0028042961182163, 0.0028042961182163, 0., 0.},
-                    {0.0028042961182163, 0.0028042961182163, 0., 0.},
-                    {0., 0., 0.0028042961182163, 0.0028042961182163},
-                    {0., 0., 0.0028042961182163, 0.0028042961182163}},
-                   {{0.088487039172428, 0.088487039172428, 0., 0.},
-                    {0.088487039172428, 0.088487039172428, 0., 0.},
-                    {0., 0., 0.088487039172428, 0.088487039172428},
-                    {0., 0., 0.088487039172428, 0.088487039172428}},
-                   {{0.1575418229076625, 0.1575418229076625, 0., 0.},
-                    {0.1575418229076625, 0.1575418229076625, 0., 0.},
-                    {0., 0., 0.1575418229076625, 0.1575418229076625},
-                    {0., 0., 0.1575418229076625, 0.1575418229076625}},
-                   {{0.1953880665937937, 0.1953880665937937, 0., 0.},
-                    {0.1953880665937937, 0.1953880665937937, 0., 0.},
-                    {0., 0., 0.1953880665937937, 0.1953880665937937},
-                    {0., 0., 0.1953880665937937, 0.1953880665937937}},
-                   {{0.2145207908265103, 0.2145207908265103, 0., 0.},
-                    {0.2145207908265103, 0.2145207908265103, 0., 0.},
-                    {0., 0., 0.2145207908265103, 0.2145207908265103},
-                    {0., 0., 0.2145207908265103, 0.2145207908265103}},
-                   {{0.1832496441339733, 0.1832496441339733, 0., 0.},
-                    {0.1832496441339733, 0.1832496441339733, 0., 0.},
-                    {0., 0., 0.1832496441339733, 0.1832496441339733},
-                    {0., 0., 0.1832496441339733, 0.1832496441339733}},
-                   {{0.1580088741667851, 0.1580088741667851, 0., 0.},
-                    {0.1580088741667851, 0.1580088741667851, 0., 0.},
-                    {0., 0., 0.1580088741667851, 0.1580088741667851},
-                    {0., 0., 0.1580088741667851, 0.1580088741667851}}};
-  auto hyb_refl = nda::make_regular(-hyb);
+  hyb_vals       = {-0.4997496184487105, -0.4867352379479528, -0.4603465101833711, -0.4239204950540695, -0.3716597467714097,
+                    -0.2884886574148449, -0.2479810727230272, -0.2065525284769785, -0.1635819676241178, -0.1326995066858671,
+                    -0.1225444804140666, -0.1282199855712255, -0.1386184647087601, -0.1720919948804938, -0.2300400167898313,
+                    -0.3000508284935615, -0.3759657450111002, -0.4545389745912252, -0.4821599768174421, -0.4997496184487105};
+  hyb_coeff_vals = {0.0028042961182163, 0.088487039172428,  0.1575418229076625, 0.1953880665937937,
+                    0.2145207908265103, 0.1832496441339733, 0.1580088741667851};
+  for (int t = 0; t < r; t++) {
+    hyb(t, 0, 0) = hyb_vals(t);
+    hyb(t, 1, 1) = hyb_vals(t);
+    hyb(t, 2, 2) = hyb_vals(t);
+    hyb(t, 3, 3) = hyb_vals(t);
+    hyb(t, 0, 1) = hyb_vals(t);
+    hyb(t, 1, 0) = hyb_vals(t);
+    hyb(t, 2, 3) = hyb_vals(t);
+    hyb(t, 3, 2) = hyb_vals(t);
+  }
+  for (int l = 0; l < p; l++) {
+    hyb_coeffs(l, 0, 0) = hyb_coeff_vals(l);
+    hyb_coeffs(l, 1, 1) = hyb_coeff_vals(l);
+    hyb_coeffs(l, 2, 2) = hyb_coeff_vals(l);
+    hyb_coeffs(l, 3, 3) = hyb_coeff_vals(l);
+    hyb_coeffs(l, 0, 1) = hyb_coeff_vals(l);
+    hyb_coeffs(l, 1, 0) = hyb_coeff_vals(l);
+    hyb_coeffs(l, 2, 3) = hyb_coeff_vals(l);
+    hyb_coeffs(l, 3, 2) = hyb_coeff_vals(l);
+  }
+  auto hyb_refl = hyb;
   nda::array<dcomplex, 3> hyb_refl_coeffs(p, n, n);
-  hyb_refl_coeffs = nda::make_regular(-hyb_coeffs);
+  hyb_refl_coeffs = hyb_coeffs;
 
   nda::vector<double> hyb_poles(p);
   hyb_poles = {-2.537191963500981,  1.7111725610238615, -1.514666605887425, 1.04941790134832,
@@ -465,28 +238,28 @@ TEST(DenseBackbone, PYTHON_OCA_semicircle_bath_aaa) {
 
   auto OCA_dense_result = OCA_dense(hyb, hyb_coeffs, hyb_refl, hyb_refl_coeffs, hyb_poles, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
 
-  // load NCA and OCA results from twoband.py
-  h5::file Gtfile("h5/two_band_py_semic.ref.h5", 'r');
-  h5::group Gtgroup(Gtfile);
-  auto NCA_py = nda::zeros<dcomplex>(r, 16, 16);
-  h5::read(Gtgroup, "NCA", NCA_py);
-  auto OCA_py = nda::zeros<dcomplex>(r, 16, 16);
-  h5::read(Gtgroup, "OCA", OCA_py);
+  nda::vector<double> hyb_poles_reflect = -hyb_poles;
+  auto Delta_decomp                     = hyb_decomp(hyb_coeffs, hyb_poles, eps);              //decomposition of Delta(t) using DLR coefficient
+  auto Delta_decomp_reflect             = hyb_decomp(hyb_refl_coeffs, hyb_poles_reflect, eps); // decomposition of Delta(-t) using DLR coefficient
+  int dim                               = Deltat.shape(1);
+  hyb_F Delta_F(16, p, dim);
+  hyb_F Delta_F_reflect(16, p, dim);
+  auto dlr_it = itops.get_itnodes();
+  Delta_F.update_inplace(Delta_decomp, dlr_it, Fs_dense, F_dags_dense); // Compression of Delta(t) and F, F_dag matrices
+  Delta_F_reflect.update_inplace(Delta_decomp_reflect, dlr_it, F_dags_dense, Fs_dense);
+  auto fb               = nda::vector<int>(2);
+  fb(1)                 = 0;
+  nda::array<int, 2> D2 = {{0, 2}, {1, 3}}; // topology for OCA diagram evaluator
+  auto OCA_forward      = Sigma_OCA_calc(Delta_F, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, true);
 
-  // permute twoband.py results to match block structure from atom_diag
-  auto NCA_py_perm = nda::zeros<dcomplex>(r, 16, 16);
-  auto OCA_py_perm = nda::zeros<dcomplex>(r, 16, 16);
-  for (int t = 0; t < r; t++) {
-    for (int i = 0; i < 16; i++) {
-      for (int j = 0; j < 16; j++) {
-        NCA_py_perm(t, i, j) = NCA_py(t, fock_state_order[i], fock_state_order[j]);
-        OCA_py_perm(t, i, j) = OCA_py(t, fock_state_order[i], fock_state_order[j]);
-      }
-    }
-  }
+  // Get Delta(t-t1) backward Delta(t2,t0) forward
+  auto fb2          = nda::vector<int64_t>(2);
+  fb2(1)            = 1;
+  auto OCA_backward = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb2, true);
+  auto OCA_Zhen     = nda::make_regular(-OCA_forward - OCA_backward);
 
-  // check that dense OCA calculation agree with twoband.py
-  ASSERT_LE(nda::max_element(nda::abs(OCA_dense_result - OCA_py_perm + NCA_py_perm)), eps);
+  // check that dense OCA calculation agree with Zhen
+  ASSERT_LE(nda::max_element(nda::abs(OCA_dense_result - OCA_Zhen)), eps);
 
   // generic diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};

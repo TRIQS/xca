@@ -56,7 +56,7 @@ void DiagramBlockSparseEvaluator::multiply_vertex_block(Backbone &backbone, int 
     } else {
       for (int t = 0; t < r; t++) {
         T(t, range(0, block_dims(v_ix + 1)), range(0, n_col_r)) =
-           nda::matmul(Fq.F_bars_refl[q_ix].get_block(b_ix)(qo_ix, l_ix, _, _), T(t, range(0, block_dims(v_ix)), range(0, n_col_r)));
+           -nda::matmul(Fq.F_bars_refl[q_ix].get_block(b_ix)(qo_ix, l_ix, _, _), T(t, range(0, block_dims(v_ix)), range(0, n_col_r)));
       }
     }
   } else {
@@ -143,7 +143,7 @@ void DiagramBlockSparseEvaluator::multiply_zero_vertex_block(Backbone &backbone,
       Tmu = 0;
       for (int kap = 0; kap < Fq.sym_set_sizes(p_kap); kap++) {
         for (int t = 0; t < r; t++) {
-          Tmu(t, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(0))) +=
+          Tmu(t, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(0))) -=
              hyb_refl(t, Fq.sym_set_to_orb(p_mu, mu), Fq.sym_set_to_orb(p_kap, kap))
              * Tkaps(kap, t, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(0)));
         }

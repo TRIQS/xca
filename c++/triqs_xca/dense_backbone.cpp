@@ -40,7 +40,7 @@ void DiagramEvaluator::multiply_vertex_dense(Backbone &backbone, int v_ix) {
     if (backbone.has_vertex_dag(v_ix)) { // F has dagger
       for (int t = 0; t < r; t++) T(t, _, _) = nda::matmul(Fset.F_dag_bars(o_ix, l_ix, _, _), T(t, _, _));
     } else {
-      for (int t = 0; t < r; t++) T(t, _, _) = nda::matmul(Fset.F_bars_refl(o_ix, l_ix, _, _), T(t, _, _));
+      for (int t = 0; t < r; t++) T(t, _, _) = -nda::matmul(Fset.F_bars_refl(o_ix, l_ix, _, _), T(t, _, _));
     }
   } else {
     if (backbone.has_vertex_dag(v_ix)) { // F has dagger
@@ -94,7 +94,7 @@ void DiagramEvaluator::multiply_zero_vertex(Backbone &backbone, bool is_forward)
     for (int mu = 0; mu < n; mu++) {
       Tmu = 0;
       for (int kap = 0; kap < n; kap++) {
-        for (int t = 0; t < r; t++) { Tmu(t, _, _) += hyb_refl(t, mu, kap) * Tkaps(kap, t, _, _); }
+        for (int t = 0; t < r; t++) { Tmu(t, _, _) -= hyb_refl(t, mu, kap) * Tkaps(kap, t, _, _); }
       }
       for (int t = 0; t < r; t++) { T(t, _, _) += nda::matmul(Fset.Fs(mu, _, _), Tmu(t, _, _)); }
     }

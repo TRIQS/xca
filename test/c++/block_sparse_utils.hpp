@@ -35,6 +35,15 @@ std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> discrete_bath_helpe
 std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> discrete_bath_spin_flip_helper(double beta, double Lambda, double eps, int n);
 
 /**
+ * @brief Helper function for setting up the two-band model in dense storage
+ * @param[in] beta Inverse temperature
+ * @param[in] Lambda DLR cutoff parameter
+ * @param[in] eps DLR epsilon parameter
+ * @return Tuple of non-interacting Green's function in dense storage, annihilation operators in dense storage, and creation operators in dense storage
+ */
+std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> two_band_dense_helper(double beta, double Lambda, double eps);
+
+/**
  * @brief Helper function for setting up the two-band model
  * @param[in] beta Inverse temperature
  * @param[in] Lambda DLR cutoff parameter

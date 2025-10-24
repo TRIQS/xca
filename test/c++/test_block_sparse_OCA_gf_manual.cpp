@@ -112,11 +112,6 @@ TEST(DenseOCAGF, degen_matrices) {
   auto OCA_gf_eq     = eval_eq(itops, OCA_gf, n_quad);
   auto OCA_gf_ana_eq = eval_eq(itops, OCA_gf_ana, n_quad);
 
-  std::cout << "dense = " << nda::make_regular(nda::real(OCA_gf_eq(_, 0, 0))) << std::endl;
-  std::cout << "\nanalytic = " << nda::make_regular(nda::real(OCA_gf_ana_eq(_, 0, 0))) << std::endl;
-  std::cout << "\ntpz = " << nda::make_regular(nda::real(OCA_gf_trap(_, 0, 0))) << std::endl;
-  std::cout << "\nanalytic / dense = " << nda::make_regular(nda::real(OCA_gf_ana_eq(_, 0, 0) / OCA_gf_eq(_, 0, 0))) << std::endl;
-  std::cout << "\ntpz / dense = " << nda::make_regular(nda::real(OCA_gf_trap(_, 0, 0) / OCA_gf_eq(_, 0, 0))) << std::endl;
   ASSERT_LE(nda::max_element(nda::abs(OCA_gf - OCA_gf_ana)), eps);
   ASSERT_LE(nda::max_element(nda::abs(OCA_gf_eq - OCA_gf_trap)), 1e-1 / (n_quad * n_quad));
 }
@@ -423,8 +418,6 @@ TEST(BSOCAGF, single_exponential) {
   }
   OCA_gf_ana = OCA_gf_ana / (D * D * (1 + exp(D)) * (1 + exp(omega)) * (1 + exp(omega)) * (1 + exp(omega)) * (1 + exp(omega)));
 
-  std::cout << "OCA_gf = " << nda::make_regular(nda::real(OCA_gf(_, 0, 0))) << std::endl;
-  std::cout << "\nOCA_gf_ana = " << nda::make_regular(nda::real(OCA_gf_ana(_, 0, 0))) << std::endl;
   ASSERT_LE(nda::max_element(nda::abs(OCA_gf - OCA_gf_ana)), eps);
 }
 
@@ -448,8 +441,8 @@ TEST(BSOCAGF, two_band_discrete_bath_bs) {
 
   auto OCA_gf_result       = OCA_gf_bs(dlr_rf, itops, beta, Gt, Fq);
   auto OCA_gf_dense_result = OCA_gf_dense(hyb_coeffs, hyb_refl_coeffs, dlr_rf, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
-  std::cout << "bs = " << OCA_gf_result(_, 0, 0) << std::endl;
-  std::cout << "\ndense = " << OCA_gf_dense_result(_, 0, 0) << std::endl;
+  // cout << "bs = " << OCA_gf_result(_, 0, 0) << std::endl;
+  // std::cout << "\ndense = " << OCA_gf_dense_result(_, 0, 0) << std::endl;
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_gf_result - OCA_gf_dense_result)), eps);
 }

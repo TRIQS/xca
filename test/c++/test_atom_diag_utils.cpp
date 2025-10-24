@@ -451,5 +451,5 @@ TEST(AtomDiagUtils, operators) {
   auto [Fq, sym_set_labels] = get_operators(ad, norb, hyb_coeffs, hyb_refl_coeffs);
 
   // TODO through equality check for Fq
-  std::cout << Fq.F_bars_refl[1] << std::endl;
+  // std::cout << Fq.F_bars_refl[1] << std::endl;
 }
