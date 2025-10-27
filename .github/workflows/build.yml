@@ -63,6 +63,7 @@ jobs:
         gfortran
         hdf5-tools
         libboost-dev
+        llvm-dev
         libclang-dev
         libc++-dev
         libc++abi-dev
@@ -125,10 +126,19 @@ jobs:
         cmake -S triqs -B triqs/build -G Ninja -DBuild_Tests=OFF -DCMAKE_INSTALL_PREFIX=$HOME/install
         cmake --build triqs/build --target install --verbose
 
+    - name: Build & Install clair
+      env:
+        CXX: ${{ matrix.clang_cxx }}
+        CXXFLAGS: ""
+      run: |
+        git clone https://github.com/flatironinstitute/clair --branch doc
+        cmake -S clair -B clair/build -G Ninja -DBuild_Tests=OFF -DCMAKE_INSTALL_PREFIX=$HOME/install
+        cmake --build clair/build --target install --verbose
+
     - name: Build triqs_xca
       run: |
         source $HOME/install/share/triqs/triqsvars.sh
-        cmake -S . -B build -G Ninja
+        cmake -S . -B build -G Ninja -DUpdate_Python_Bindings=ON
         cmake --build build --verbose
 
     - name: Test triqs_xca

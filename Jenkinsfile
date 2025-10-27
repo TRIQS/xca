@@ -4,7 +4,7 @@ def dockerName = projectName.toLowerCase();
 /* which platform to build documentation on */
 def documentationPlatform = "ubuntu-clang"
 /* depend on triqs upstream branch/project */
-def triqsBranch = "unstable" /*env.CHANGE_TARGET ?: env.BRANCH_NAME*/
+def triqsBranch = env.CHANGE_TARGET ?: env.BRANCH_NAME
 def triqsProject = '/TRIQS/triqs/' + triqsBranch.replaceAll('/', '%2F')
 /* whether to keep and publish the results */
 def keepInstall = !env.BRANCH_NAME.startsWith("PR-")
@@ -39,12 +39,10 @@ for (int i = 0; i < dockerPlatforms.size(); i++) {
       """
       archiveArtifacts(artifacts: "Dockerfile.${env.STAGE_NAME}")
       /* build and tag */
-      def args = ''
+      def args = '-DUpdate_Python_Bindings=ON'
       if (platform == documentationPlatform)
         args = "-DBuild_Documentation=ON ${args}"
-      if (platform == "ubuntu-clang")
-        args = "-DUpdate_Python_Bindings=ON ${args}"
-      if (platform == "sanitize")
+      else if (platform == "sanitize")
         args = "-DASAN=ON -DUBSAN=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo ${args}"
       def img = docker.build("flatironjenkins/${dockerName}:${env.BRANCH_NAME}-${env.STAGE_NAME}", "--build-arg APPNAME=${projectName} --build-arg BUILD_ID=${env.BUILD_TAG} --build-arg CMAKE_ARGS='${args}' .")
       catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
