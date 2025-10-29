@@ -193,7 +193,7 @@ TEST(BSNCAGF, matrices) {
   BlockOpSymSet Fs{F_bi, Fs_vec}, F_dags{F_dag_bi, F_dags_vec};
   std::vector<BlockOpSymSet> Fs_sets{Fs}, F_dags_sets{F_dags};
   int r = itops.rank();
-  nda::array<dcomplex, 3> hyb_coeffs(r, 1, 1), hyb_refl_coeffs(r, 1, 1);
+  nda::array<dcomplex, 3> hyb_coeffs(r, n, n), hyb_refl_coeffs(r, n, n);
   nda::vector<long> sym_set_labels{0, 0};
   BlockOpSymQuartet Fq(Fs_sets, F_dags_sets, hyb_coeffs, hyb_refl_coeffs, sym_set_labels);
 
