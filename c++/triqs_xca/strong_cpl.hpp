@@ -23,9 +23,11 @@
 #include "nda/nda.hpp"
 #include "cppdlr/cppdlr.hpp"
 #include <nda/blas/tools.hpp>
+#include <nda/linalg/matmul.hpp>
 
 using namespace cppdlr;
 using namespace nda;
+using nda::linalg::matmul;
 
 /**
 @note n is size of hybridization matrix,i.e. impurity size (number of single-particle basis of impurity); 

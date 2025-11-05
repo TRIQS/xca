@@ -51,24 +51,24 @@ void DiagramBlockSparseEvaluator::multiply_vertex_block(Backbone &backbone, int 
     if (backbone.has_vertex_dag(v_ix)) { // F has dagger
       for (int t = 0; t < r; t++) {
         T(t, range(0, block_dims(v_ix + 1)), range(0, n_col_r)) =
-           nda::matmul(Fq.F_dag_bars[q_ix].get_block(b_ix)(qo_ix, l_ix, _, _), T(t, range(0, block_dims(v_ix)), range(0, n_col_r)));
+           matmul(Fq.F_dag_bars[q_ix].get_block(b_ix)(qo_ix, l_ix, _, _), T(t, range(0, block_dims(v_ix)), range(0, n_col_r)));
       }
     } else {
       for (int t = 0; t < r; t++) {
         T(t, range(0, block_dims(v_ix + 1)), range(0, n_col_r)) =
-           -nda::matmul(Fq.F_bars_refl[q_ix].get_block(b_ix)(qo_ix, l_ix, _, _), T(t, range(0, block_dims(v_ix)), range(0, n_col_r)));
+           -matmul(Fq.F_bars_refl[q_ix].get_block(b_ix)(qo_ix, l_ix, _, _), T(t, range(0, block_dims(v_ix)), range(0, n_col_r)));
       }
     }
   } else {
     if (backbone.has_vertex_dag(v_ix)) { // F has dagger
       for (int t = 0; t < r; t++) {
         T(t, range(0, block_dims(v_ix + 1)), range(0, n_col_r)) =
-           nda::matmul(Fq.F_dags[q_ix].get_block(b_ix)(qo_ix, _, _), T(t, range(0, block_dims(v_ix)), range(0, n_col_r)));
+           matmul(Fq.F_dags[q_ix].get_block(b_ix)(qo_ix, _, _), T(t, range(0, block_dims(v_ix)), range(0, n_col_r)));
       }
     } else {
       for (int t = 0; t < r; t++) {
         T(t, range(0, block_dims(v_ix + 1)), range(0, n_col_r)) =
-           nda::matmul(Fq.Fs[q_ix].get_block(b_ix)(qo_ix, _, _), T(t, range(0, block_dims(v_ix)), range(0, n_col_r)));
+           matmul(Fq.Fs[q_ix].get_block(b_ix)(qo_ix, _, _), T(t, range(0, block_dims(v_ix)), range(0, n_col_r)));
       }
     }
   }
@@ -113,7 +113,7 @@ void DiagramBlockSparseEvaluator::multiply_zero_vertex_block(Backbone &backbone,
     for (int kap = 0; kap < Fq.sym_set_sizes(p_kap); kap++) {
       for (int t = 0; t < r; t++) {
         Tkaps(kap, t, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(0))) =
-           nda::matmul(T(t, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(1))), Fq.Fs[p_kap].get_block(b_ix_0)(kap, _, _));
+           matmul(T(t, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(1))), Fq.Fs[p_kap].get_block(b_ix_0)(kap, _, _));
       }
     }
     T = 0;
@@ -127,15 +127,15 @@ void DiagramBlockSparseEvaluator::multiply_zero_vertex_block(Backbone &backbone,
         }
       }
       for (int t = 0; t < r; t++) {
-        T(t, range(0, block_dims(backbone.get_topology(0, 1) + 1)), range(0, block_dims(0))) += nda::matmul(
-           Fq.F_dags[p_mu].get_block(b_ix_mu)(mu, _, _), Tmu(t, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(0))));
+        T(t, range(0, block_dims(backbone.get_topology(0, 1) + 1)), range(0, block_dims(0))) +=
+           matmul(Fq.F_dags[p_mu].get_block(b_ix_mu)(mu, _, _), Tmu(t, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(0))));
       }
     }
   } else {
     for (int kap = 0; kap < Fq.sym_set_sizes(p_kap); kap++) {
       for (int t = 0; t < r; t++) {
-        Tkaps(kap, t, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(0))) = nda::matmul(
-           T(t, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(1))), Fq.F_dags[p_kap].get_block(b_ix_0)(kap, _, _));
+        Tkaps(kap, t, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(0))) =
+           matmul(T(t, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(1))), Fq.F_dags[p_kap].get_block(b_ix_0)(kap, _, _));
       }
     }
     T = 0;
@@ -150,7 +150,7 @@ void DiagramBlockSparseEvaluator::multiply_zero_vertex_block(Backbone &backbone,
       }
       for (int t = 0; t < r; t++) {
         T(t, range(0, block_dims(backbone.get_topology(0, 1) + 1)), range(0, block_dims(0))) +=
-           nda::matmul(Fq.Fs[p_mu].get_block(b_ix_mu)(mu, _, _), Tmu(t, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(0))));
+           matmul(Fq.Fs[p_mu].get_block(b_ix_mu)(mu, _, _), Tmu(t, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(0))));
       }
     }
   }

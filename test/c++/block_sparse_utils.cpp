@@ -22,7 +22,7 @@ nda::array<dcomplex, 3> Hmat_to_Gtmat(nda::array<dcomplex, 2> Hmat, double beta,
   auto Gbeta      = nda::zeros<dcomplex>(N, N);
   for (int t = 0; t < r; t++) {
     for (int i = 0; i < N; i++) { Gt_evals_t(i, i) = -exp(-beta * dlr_it_abs(t) * H_loc_eval(i)); }
-    Gt_mat(t, _, _) = nda::matmul(H_loc_evec, nda::matmul(Gt_evals_t, nda::transpose(H_loc_evec)));
+    Gt_mat(t, _, _) = matmul(H_loc_evec, matmul(Gt_evals_t, nda::transpose(H_loc_evec)));
   }
   return Gt_mat;
 }

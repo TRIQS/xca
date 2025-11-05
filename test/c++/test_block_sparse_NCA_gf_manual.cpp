@@ -88,9 +88,9 @@ TEST(DenseNCAGF, matrices) {
   for (int lam = 0; lam < n; lam++) {
     for (int kap = 0; kap < n; kap++) {
       for (int t = 0; t < r; t++) {
-        gf_temp                 = nda::matmul(Gt_refl(t, _, _), Fs(lam, _, _));
-        gf_temp                 = nda::matmul(gf_temp, Gt(t, _, _));
-        gf_temp                 = nda::matmul(gf_temp, F_dags(kap, _, _));
+        gf_temp                 = matmul(Gt_refl(t, _, _), Fs(lam, _, _));
+        gf_temp                 = matmul(gf_temp, Gt(t, _, _));
+        gf_temp                 = matmul(gf_temp, F_dags(kap, _, _));
         NCA_gf_man(t, lam, kap) = nda::trace(gf_temp);
       }
     }
@@ -204,9 +204,9 @@ TEST(BSNCAGF, matrices) {
   for (int lam = 0; lam < n; lam++) {
     for (int kap = 0; kap < n; kap++) {
       for (int t = 0; t < r; t++) {
-        gf_temp                 = nda::matmul(Gt_refl.get_block(1)(t, _, _), Fs.get_block(2)(lam, _, _));
-        gf_temp                 = nda::matmul(gf_temp, Gt.get_block(2)(t, _, _));
-        gf_temp                 = nda::matmul(gf_temp, F_dags.get_block(1)(kap, _, _));
+        gf_temp                 = matmul(Gt_refl.get_block(1)(t, _, _), Fs.get_block(2)(lam, _, _));
+        gf_temp                 = matmul(gf_temp, Gt.get_block(2)(t, _, _));
+        gf_temp                 = matmul(gf_temp, F_dags.get_block(1)(kap, _, _));
         NCA_gf_man(t, lam, kap) = nda::trace(gf_temp);
       }
     }

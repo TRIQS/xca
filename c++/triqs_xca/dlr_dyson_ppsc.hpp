@@ -158,7 +158,7 @@ namespace cppdlr {
 
       auto ggs = itops_ptr->convolve(beta, g0c, sigc, time_order);
       ggs += eta * g0;
-      for (int k = 0; k < r; ++k) ggs(k, _, _) += nda::matmul(g0(k, _, _), op);
+      for (int k = 0; k < r; ++k) ggs(k, _, _) += nda::linalg::matmul(g0(k, _, _), op);
       ggs *= -1.0;
 
       itops_ptr->convmat_inplace(nda::matrix_view<Sh, nda::C_layout>(sysmat), beta, Fermion, itops_ptr->vals2coefs(ggs), time_order);

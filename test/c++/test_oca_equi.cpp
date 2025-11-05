@@ -20,9 +20,11 @@
  ******************************************************************************/
 
 #include "nda/nda.hpp"
+#include <nda/linalg/matmul.hpp>
 #include <gtest/gtest.h>
 
 using namespace nda;
+using nda::linalg::matmul;
 
 double oca_equi_error(const int Num) {
   double beta = 1;

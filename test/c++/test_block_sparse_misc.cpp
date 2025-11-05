@@ -44,8 +44,8 @@ TEST(BlockSparseMisc, compute_nonint_gf) {
   auto Gbeta      = nda::zeros<dcomplex>(16, 16);
   Gt_mat          = Hmat_to_Gtmat(H_dense, beta, dlr_it_abs);
   for (int i = 0; i < 16; i++) { Gbeta(i, i) = -exp(-beta * H_loc_eval(i)); }
-  Gbeta = nda::matmul(Gbeta, nda::transpose(H_loc_evec));
-  Gbeta = nda::matmul(H_loc_evec, Gbeta);
+  Gbeta = matmul(Gbeta, nda::transpose(H_loc_evec));
+  Gbeta = matmul(H_loc_evec, Gbeta);
   // check that trace of noninteracting Green's function from dense
   // Hamiltonian at tau = beta has trace 1
   ASSERT_LE(nda::abs(nda::trace(Gbeta) + 1), 1e-13);

@@ -677,7 +677,7 @@ BlockDiagOpFun nonint_gf_BDOF(std::vector<nda::array<double, 2>> H_blocks, nda::
     auto Gt_temp  = nda::make_regular(0 * H_blocks[i]);
     for (int t = 0; t < r; t++) {
       for (int j = 0; j < H_block_sizes(i); j++) { Gt_temp(j, j) = -exp(-beta * dlr_it_abs(t) * (H_evals[i](j) + eta_0)); }
-      Gt_block(t, _, _) = nda::matmul(H_evecs[i], nda::matmul(Gt_temp, nda::transpose(H_evecs[i])));
+      Gt_block(t, _, _) = matmul(H_evecs[i], matmul(Gt_temp, nda::transpose(H_evecs[i])));
     }
     Gt.set_block(i, Gt_block);
   }
