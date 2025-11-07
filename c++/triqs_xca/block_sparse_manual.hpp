@@ -79,12 +79,13 @@ BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_v
 /**
  * @brief Evaluate OCA self-energy using block-sparse storage
  * @param[in] hyb hybridization function at imaginary times
+ * @param[in] hyb_poles hybridization poles
  * @param[in] itops cppdlr imaginary time object
  * @param[in] beta inverse temperature
  * @param[in] Gt pseudoparticle Green's function as a BDOF
  * @param[in] Fq quartet of F operators
  */
-BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt,
+BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::vector_const_view<double> hyb_poles, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt,
                       const BlockOpSymQuartet &Fq);
 
 nda::array<dcomplex, 3> eval_eq(imtime_ops &itops, nda::array_const_view<dcomplex, 3> f, int n_quad);

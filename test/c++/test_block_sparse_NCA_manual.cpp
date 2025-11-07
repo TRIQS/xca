@@ -158,7 +158,7 @@ TEST(BlockSparseNCAManual, single_exponential) {
             1.0e-12);
 }
 
-TEST(BlockSparseNCAManual, two_band_discrete_bath_bs_vs_dense) {
+TEST(BlockSparseNCAManual, two_band_discrete_bath_bs_dense) {
   // DLR parameters
   double beta   = 2.0;
   double Lambda = 100 * beta;
@@ -169,79 +169,43 @@ TEST(BlockSparseNCAManual, two_band_discrete_bath_bs_vs_dense) {
   auto const &dlr_it = itops.get_itnodes();
   auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
 
-  auto [num_blocks, Deltat, Deltat_refl, Gt, Fs, Fdags, Gt_dense, Fs_dense, F_dags_dense, subspaces, fock_state_order] =
-     two_band_discrete_bath_helper(beta, Lambda, eps);
-  // auto [Deltat, Deltat_refl] = discrete_bath_helper(beta, Lambda, eps);
-  // auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
-  // auto hyb_coeffs = itops.vals2coefs(Deltat);
-  // auto hyb_refl_coeffs = itops.vals2coefs(Deltat_refl);
-  // auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
+  // model setup
+  auto [Deltat, Deltat_refl]              = discrete_bath_helper(beta, Lambda, eps);
+  auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
+  auto hyb_coeffs                         = itops.vals2coefs(Deltat);
+  auto hyb_refl_coeffs                    = itops.vals2coefs(Deltat_refl);
+  auto [Gt, Fq, sym_set_labels]           = two_band_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
 
   // block-sparse NCA compuation
-  // auto NCA_result = NCA_bs(Deltat, Deltat_refl, Gt, Fq);
-  auto NCA_result = NCA_bs(Deltat, Deltat_refl, Gt, Fs);
+  auto NCA_result = NCA_bs(Deltat, Deltat_refl, Gt, Fq);
 
   // dense-matrix NCA computation
   auto NCA_dense_result = NCA_dense(Deltat, Deltat_refl, Gt_dense, Fs_dense, F_dags_dense);
 
-  // check that block-sparse NCA calculation agrees with dense NCA calculation
-  // int s0 = 0;
-  // int s1 = subspaces[0].size();
-  // for (int i = 0; i < Gt.get_num_block_cols(); i++) { // compare each block
-  //   ASSERT_LE(nda::max_element(nda::abs(NCA_result.get_block(i) - NCA_dense_result(_, range(s0, s1), range(s0, s1)))), 10 * eps);
-  //   s0 = s1;
-  //   if (i < Gt.get_num_block_cols() - 1) s1 += subspaces[i + 1].size();
-  // }
+  // Zhen's NCA computation
+  nda::vector<double> dlr_rf_reflect = -dlr_rf;
+  auto Delta_decomp                  = hyb_decomp(hyb_coeffs, dlr_rf, eps);              //decomposition of Delta(t) using DLR coefficient
+  auto Delta_decomp_reflect          = hyb_decomp(hyb_refl_coeffs, dlr_rf_reflect, eps); // decomposition of Delta(-t) using DLR coefficient
+  int dim                            = Deltat.shape(1);
+  int r                              = itops.rank();
+  hyb_F Delta_F(16, r, dim);
+  hyb_F Delta_F_reflect(16, r, dim);
+  Delta_F.update_inplace(Delta_decomp, dlr_it, Fs_dense, F_dags_dense); // Compression of Delta(t) and F, F_dag matrices
+  Delta_F_reflect.update_inplace(Delta_decomp_reflect, dlr_it, F_dags_dense, Fs_dense);
+  auto fb               = nda::vector<int64_t>(2);
+  nda::array<int, 2> D1 = {{0, 1}}; // topology for NCA diagram evaluator
+  auto NCA_Zhen = -Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D1, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
+
   ASSERT_LE(nda::max_element(nda::abs(NCA_result.get_block(0) - NCA_dense_result(_, range(0, 4), range(0, 4)))), 10 * eps);
   ASSERT_LE(nda::max_element(nda::abs(NCA_result.get_block(1) - NCA_dense_result(_, range(4, 10), range(4, 10)))), 10 * eps);
   ASSERT_LE(nda::max_element(nda::abs(NCA_result.get_block(2) - NCA_dense_result(_, range(10, 11), range(10, 11)))), 10 * eps);
   ASSERT_LE(nda::max_element(nda::abs(NCA_result.get_block(3) - NCA_dense_result(_, range(11, 15), range(11, 15)))), 10 * eps);
   ASSERT_LE(nda::max_element(nda::abs(NCA_result.get_block(4) - NCA_dense_result(_, range(15, 16), range(15, 16)))), 10 * eps);
+
+  ASSERT_LE(nda::max_element(nda::abs(NCA_dense_result - NCA_Zhen)), eps);
 }
 
-TEST(BlockSparseNCAManual, H5_two_band_discrete_bath_bs_vs_py) {
-  // DLR parameters
-  double beta   = 2.0;
-  double Lambda = 100 * beta;
-  double eps    = 1.0e-10;
-  // DLR generation
-  auto dlr_rf        = build_dlr_rf(Lambda, eps);
-  auto itops         = imtime_ops(Lambda, dlr_rf);
-  auto const &dlr_it = itops.get_itnodes();
-  auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
-  int r              = itops.rank();
-
-  auto [num_blocks, Deltat, Deltat_refl, Gt, Fs, Fdags, Gt_dense, Fs_dense, F_dags_dense, subspaces, fock_state_order] =
-     two_band_discrete_bath_helper(beta, Lambda, eps);
-
-  // block-sparse NCA compuation
-  auto NCA_result = NCA_bs(Deltat, Deltat_refl, Gt, Fs);
-
-  // load NCA twoband.py
-  h5::file Gtfile("h5/two_band_py.ref.h5", 'r');
-  h5::group Gtgroup(Gtfile);
-  auto NCA_py = nda::zeros<dcomplex>(r, 16, 16);
-  h5::read(Gtgroup, "NCA", NCA_py);
-
-  // permute twoband.py results to match block structure from atom_diag
-  auto NCA_py_perm = nda::zeros<dcomplex>(r, 16, 16);
-  for (int t = 0; t < r; t++) {
-    for (int i = 0; i < 16; i++) {
-      for (int j = 0; j < 16; j++) { NCA_py_perm(t, i, j) = NCA_py(t, fock_state_order[i], fock_state_order[j]); }
-    }
-  }
-
-  // check that NCA calculation agrees with python NCA calculation
-  int s0 = 0;
-  int s1 = subspaces[0].size();
-  for (int i = 0; i < num_blocks; i++) { // compare each block
-    ASSERT_LE(nda::max_element(nda::abs(NCA_result.get_block(i) - NCA_py_perm(_, range(s0, s1), range(s0, s1)))), 10 * eps);
-    s0 = s1;
-    if (i < num_blocks - 1) s1 += subspaces[i + 1].size();
-  }
-}
-
-TEST(BlockSparseNCAManual, H5_two_band_semicircle_bath_dense_aaa) {
+TEST(BlockSparseNCAManual, two_band_semicircle_bath_dense_aaa) {
   // DLR parameters
   double beta   = 8.0;
   double Lambda = 10.0 * beta;
@@ -252,10 +216,11 @@ TEST(BlockSparseNCAManual, H5_two_band_semicircle_bath_dense_aaa) {
   auto itops  = imtime_ops(Lambda, dlr_rf);
   int r       = itops.rank();
 
-  // call two band helper just for Gt_dense, Fs_dense, F_dags_dense
-  auto [num_blocks, Deltat, Deltat_refl, Gt, Fs, Fdags, Gt_dense, Fs_dense, F_dags_dense, subspaces, fock_state_order] =
-     two_band_discrete_bath_helper(beta, Lambda, eps);
+  // model setup
+  auto [Deltat, Deltat_refl]              = discrete_bath_helper(beta, Lambda, eps);
+  auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
 
+  // precomputed AAA decomposition of hybridization
   int p = 7;
   int n = 4;
   nda::vector<dcomplex> hyb_vals(r), hyb_coeff_vals(p);
@@ -291,19 +256,24 @@ TEST(BlockSparseNCAManual, H5_two_band_semicircle_bath_dense_aaa) {
   hyb_refl_coeffs = hyb_coeffs;
   auto NCA_result = NCA_dense(hyb, hyb_refl, Gt_dense, Fs_dense, F_dags_dense);
 
-  // load NCA result from twoband.py
-  h5::file Gtfile("h5/two_band_py_semic.ref.h5", 'r');
-  h5::group Gtgroup(Gtfile);
-  auto NCA_py = nda::zeros<dcomplex>(r, 16, 16);
-  h5::read(Gtgroup, "NCA", NCA_py);
+  // Zhen's NCA computation
+  nda::vector<double> hyb_poles(p);
+  hyb_poles                             = {-2.537191963500981,  1.7111725610238615, -1.514666605887425, 1.04941790134832,
+                                           -0.7410379494142222, 0.3763525311836938, -0.1312888711963961};
+  hyb_poles                             = hyb_poles * beta;
+  nda::vector<double> hyb_poles_reflect = -hyb_poles;
+  auto Delta_decomp                     = hyb_decomp(hyb_coeffs, hyb_poles, eps);              //decomposition of Delta(t) using DLR coefficient
+  auto Delta_decomp_reflect             = hyb_decomp(hyb_refl_coeffs, hyb_poles_reflect, eps); // decomposition of Delta(-t) using DLR coefficient
+  int dim                               = Deltat.shape(1);
+  hyb_F Delta_F(16, p, dim);
+  hyb_F Delta_F_reflect(16, p, dim);
+  auto dlr_it = itops.get_itnodes();
+  Delta_F.update_inplace(Delta_decomp, dlr_it, Fs_dense, F_dags_dense); // Compression of Delta(t) and F, F_dag matrices
+  Delta_F_reflect.update_inplace(Delta_decomp_reflect, dlr_it, F_dags_dense, Fs_dense);
+  auto fb               = nda::vector<int64_t>(2);
+  fb(1)                 = 0;
+  nda::array<int, 2> D1 = {{0, 1}}; // topology for OCA diagram evaluator
+  auto NCA_Zhen         = -Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D1, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
 
-  // permute twoband.py results to match block structure from atom_diag
-  auto NCA_py_perm = nda::zeros<dcomplex>(r, 16, 16);
-  for (int t = 0; t < r; t++) {
-    for (int i = 0; i < 16; i++) {
-      for (int j = 0; j < 16; j++) { NCA_py_perm(t, i, j) = NCA_py(t, fock_state_order[i], fock_state_order[j]); }
-    }
-  }
-
-  ASSERT_LE(nda::max_element(nda::abs(NCA_result - NCA_py_perm)), eps);
+  ASSERT_LE(nda::max_element(nda::abs(NCA_result - NCA_Zhen)), eps);
 }

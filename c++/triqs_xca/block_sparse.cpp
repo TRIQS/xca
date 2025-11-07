@@ -425,7 +425,7 @@ void BlockOpSymSetBar::add_block(int i, int s, int t, nda::array_const_view<dcom
 
 BlockOpSymQuartet::BlockOpSymQuartet(std::vector<BlockOpSymSet> Fs, std::vector<BlockOpSymSet> F_dags, nda::array_const_view<dcomplex, 3> hyb_coeffs,
                                      nda::array_const_view<dcomplex, 3> hyb_refl_coeffs, nda::vector_const_view<long> sym_set_labels)
-   : Fs(Fs), F_dags(F_dags), sym_set_labels(sym_set_labels) {
+   : Fs(Fs), F_dags(F_dags), sym_set_labels(sym_set_labels), p(hyb_coeffs.extent(0)) {
 
   // Fs and F_dags are vectors of BOSS
   // Each entry corresponds to a set of operators with the same block-sparse structure
@@ -442,9 +442,7 @@ BlockOpSymQuartet::BlockOpSymQuartet(std::vector<BlockOpSymSet> Fs, std::vector<
   for (int i = 0; i < k; i++) {
     block_indices_dag = F_dags[i].get_block_indices();
     block_indices_f   = Fs[i].get_block_indices();
-    std::cout << "Block indices dag: " << block_indices_dag << "\n";
     F_dag_bars.emplace_back(F_dags[i].get_size_sym_set(), p, block_indices_dag, F_dags[i].get_block_sizes());
-    std::cout << "Block indices f: " << block_indices_f << "\n";
     F_bars_refl.emplace_back(Fs[i].get_size_sym_set(), p, block_indices_f, Fs[i].get_block_sizes());
   }
 

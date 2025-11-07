@@ -13,8 +13,10 @@ TEST(DenseBackbone, one_vertex_and_edge) {
   double beta   = 2.0;
   double Lambda = 100.0 * beta;
   double eps    = 1.0e-6;
-  auto [num_blocks, Deltat, Deltat_refl, Gt, Fs, Fdags, Gt_dense, Fs_dense, F_dags_dense, subspaces, fock_state_order] =
-     two_band_discrete_bath_helper(beta, Lambda, eps);
+  
+  auto [Deltat, Deltat_refl]              = discrete_bath_helper(beta, Lambda, eps);
+  auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
+
   // DLR generation
   auto dlr_rf        = build_dlr_rf(Lambda, eps);
   auto itops         = imtime_ops(Lambda, dlr_rf);
@@ -78,8 +80,8 @@ TEST(DenseBackbone, OCA) {
   double eps    = 1.0e-4;
 
   // load in functions from two_band.py
-  auto [num_blocks, Deltat, Deltat_refl, Gt, Fs, Fdags, Gt_dense, Fs_dense, F_dags_dense, subspaces, fock_state_order] =
-     two_band_discrete_bath_helper(beta, Lambda, eps);
+  auto [Deltat, Deltat_refl]              = discrete_bath_helper(beta, Lambda, eps);
+  auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
 
   // DLR generation
   auto dlr_rf        = build_dlr_rf(Lambda, eps);
@@ -138,8 +140,9 @@ TEST(DenseBackbone, third_order_manual) {
   double beta   = 2.0;
   double Lambda = 10.0 * beta; // 1000.0*beta;
   double eps    = 1.0e-10;
-  auto [num_blocks, Deltat, Deltat_refl, Gt, Fs, Fdags, Gt_dense, Fs_dense, F_dags_dense, subspaces, fock_state_order] =
-     two_band_discrete_bath_helper(beta, Lambda, eps);
+  
+  auto [Deltat, Deltat_refl]              = discrete_bath_helper(beta, Lambda, eps);
+  auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
 
   // DLR generation
   auto dlr_rf        = build_dlr_rf(Lambda, eps);
@@ -193,9 +196,7 @@ TEST(DenseBackbone, OCA_semicircle_bath_aaa) {
   auto itops  = imtime_ops(Lambda, dlr_rf);
   int r       = itops.rank();
 
-  // call two band helper just for Gt_dense, Fs_dense, F_dags_dense
-  auto [num_blocks, Deltat, Deltat_refl, Gt, Fs, Fdags, Gt_dense, Fs_dense, F_dags_dense, subspaces, fock_state_order] =
-     two_band_discrete_bath_helper(beta, Lambda, eps);
+  auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
 
   int p = 7;
   int n = 4;
@@ -241,9 +242,8 @@ TEST(DenseBackbone, OCA_semicircle_bath_aaa) {
   nda::vector<double> hyb_poles_reflect = -hyb_poles;
   auto Delta_decomp                     = hyb_decomp(hyb_coeffs, hyb_poles, eps);              //decomposition of Delta(t) using DLR coefficient
   auto Delta_decomp_reflect             = hyb_decomp(hyb_refl_coeffs, hyb_poles_reflect, eps); // decomposition of Delta(-t) using DLR coefficient
-  int dim                               = Deltat.shape(1);
-  hyb_F Delta_F(16, p, dim);
-  hyb_F Delta_F_reflect(16, p, dim);
+  hyb_F Delta_F(16, p, n);
+  hyb_F Delta_F_reflect(16, p, n);
   auto dlr_it = itops.get_itnodes();
   Delta_F.update_inplace(Delta_decomp, dlr_it, Fs_dense, F_dags_dense); // Compression of Delta(t) and F, F_dag matrices
   Delta_F_reflect.update_inplace(Delta_decomp_reflect, dlr_it, F_dags_dense, Fs_dense);

@@ -270,6 +270,7 @@ class BlockOpSymQuartet {
   nda::vector<long> sym_set_inds;     // mapping from backbone orbital index to index within the symmetry set
   nda::vector<long> sym_set_sizes;    // sizes of the symmetry sets
   nda::array<long, 2> sym_set_to_orb; // mapping from symmetry set index to backbone orbital index
+  long p;                             // number of hybridization poles
 
   /** 
    * @brief Constructor for BlockOpSymQuartet

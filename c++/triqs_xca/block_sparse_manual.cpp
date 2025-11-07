@@ -421,17 +421,17 @@ BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops,
   return Sigma;
 }
 
-BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt, const BlockOpSymQuartet &Fq) {
+BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::vector_const_view<double> hyb_poles, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt, const BlockOpSymQuartet &Fq) {
 
   long n                                = Fq.sym_set_labels.size();
-  nda::vector_const_view<double> dlr_rf = itops.get_rfnodes();
   nda::vector_const_view<double> dlr_it = itops.get_itnodes();
   // number of imaginary time nodes
   long r = dlr_it.shape(0);
 
-  auto hyb_coeffs      = itops.vals2coefs(hyb); // hybridization DLR coeffs
+  // auto hyb_coeffs      = itops.vals2coefs(hyb); // hybridization DLR coeffs
   auto hyb_refl        = itops.reflect(hyb);
-  auto hyb_refl_coeffs = hyb_coeffs;
+  // auto hyb_refl_coeffs = hyb_coeffs;
+  long p = hyb_poles.shape(0);
 
   // initialize self-energy
   BlockDiagOpFun Sigma = BlockDiagOpFun(r, Gt.get_block_sizes());
@@ -507,31 +507,31 @@ BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops,
           auto Fkaps = F1[0].get_block(i);
           auto Fmus  = F3[0].get_block(ind_path(1));
 
-          for (int l = 0; l < r; l++) {
+          for (int l = 0; l < p; l++) {
             Sigma_l = 0;
             for (int lam = 0; lam < n; lam++) {
-              OCA_bs_right_in_place(beta, itops, dlr_it, dlr_rf(l), (fb2 == 1), Gt.get_block(ind_path(0)), Gt.get_block(ind_path(1)),
+              OCA_bs_right_in_place(beta, itops, dlr_it, hyb_poles(l), (fb2 == 1), Gt.get_block(ind_path(0)), Gt.get_block(ind_path(1)),
                                     F2[0].get_block(ind_path(0))(lam, _, _), Tright);
               OCA_bs_middle_in_place((fb1 == 1), hyb, hyb_refl, Fkaps, Fmus, Tright, Tmid, Tkaps, Tmu);
-              OCA_bs_left_in_place(beta, itops, dlr_it, dlr_rf(l), (fb2 == 1), Gt.get_block(ind_path(2)),
+              OCA_bs_left_in_place(beta, itops, dlr_it, hyb_poles(l), (fb2 == 1), Gt.get_block(ind_path(2)),
                                    Fbar[0].get_block(ind_path(2))(lam, l, _, _), Tmid, Tleft, GKt);
               Sigma_l += Tleft;
             } // sum over lambda
 
             // prefactor with Ks
             if (fb2 == 1) {
-              if (dlr_rf(l) <= 0) {
-                for (int t = 0; t < r; t++) { Sigma_l(t, _, _) = k_it(dlr_it(t), dlr_rf(l)) * Sigma_l(t, _, _); }
-                Sigma_l = Sigma_l / k_it(0, -dlr_rf(l));
+              if (hyb_poles(l) <= 0) {
+                for (int t = 0; t < r; t++) { Sigma_l(t, _, _) = k_it(dlr_it(t), hyb_poles(l)) * Sigma_l(t, _, _); }
+                Sigma_l = Sigma_l / k_it(0, -hyb_poles(l));
               } else {
-                Sigma_l = Sigma_l / k_it(0, dlr_rf(l));
+                Sigma_l = Sigma_l / k_it(0, hyb_poles(l));
               }
             } else {
-              if (dlr_rf(l) >= 0) {
-                for (int t = 0; t < r; t++) { Sigma_l(t, _, _) = k_it(dlr_it(t), -dlr_rf(l)) * Sigma_l(t, _, _); }
-                Sigma_l = Sigma_l / k_it(0, dlr_rf(l));
+              if (hyb_poles(l) >= 0) {
+                for (int t = 0; t < r; t++) { Sigma_l(t, _, _) = k_it(dlr_it(t), -hyb_poles(l)) * Sigma_l(t, _, _); }
+                Sigma_l = Sigma_l / k_it(0, hyb_poles(l));
               } else {
-                Sigma_l = Sigma_l / k_it(0, -dlr_rf(l));
+                Sigma_l = Sigma_l / k_it(0, -hyb_poles(l));
               }
             }
             Sigma_block_i += nda::make_regular(sfM * Sigma_l);
