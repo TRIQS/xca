@@ -1,7 +1,6 @@
 #include "block_sparse.hpp"
 #include <cppdlr/dlr_kernels.hpp>
 #include <cstddef>
-#include <iostream>
 #include <nda/algorithms.hpp>
 #include <nda/declarations.hpp>
 #include <nda/layout_transforms.hpp>
@@ -124,7 +123,6 @@ nda::array<dcomplex, 3> OCA_gf_tpz(nda::array_const_view<dcomplex, 3> hyb_coeffs
                 }
               }
             }
-            // std::cout << "gf_eq(_, " << mu << ", " << kap << ") = " << gf_eq(_, mu, kap) << std::endl;
           }
         }
       }
@@ -156,9 +154,6 @@ void OCA_gf_dense_right(double beta, imtime_ops &itops, nda::vector_const_view<d
     if (omega_l >= 0) {
       // 1. multiply F_lambda G(tau_1) K^+(tau_1)
       for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), omega_l) * matmul(Flam, Gt(t, _, _)); }
-      // std::cout << "Flam = " << nda::make_regular(nda::real(Flam)) << std::endl;
-      // std::cout << "Gt(0, :, :) = " << nda::make_regular(nda::real(Gt(0, _, _))) << std::endl;
-      // std::cout << "dense T(0, :, :) = " << nda::make_regular(nda::real(T(0, _, _))) << std::endl;
       // 2. convolve by G
       T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
     } else {
@@ -246,7 +241,6 @@ nda::array<dcomplex, 3> OCA_gf_dense(nda::array_const_view<dcomplex, 3> hyb_coef
           U = 0;
           OCA_gf_dense_right(beta, itops, dlr_it, hyb_poles(l), fb, Gt, F1(lam, _, _), T);
           OCA_gf_dense_left(beta, itops, dlr_it, hyb_poles(l), fb, Gt, Fbar(lam, l, _, _), U);
-          // std::cout << "dense T(0, :, :) = " << nda::make_regular(nda::real(T(0, _, _))) << std::endl;
           if (hyb_poles(l) <= 0) {
             for (int t = 0; t < r; t++) { Tnu(t, _, _) += matmul(U(t, _, _), matmul(Fs(nu, _, _), T(t, _, _))) / k_it(0, -hyb_poles(l)); }
           } else {
@@ -257,7 +251,6 @@ nda::array<dcomplex, 3> OCA_gf_dense(nda::array_const_view<dcomplex, 3> hyb_coef
       // if (fb == 0) Tnu = -1 * Tnu; // minus sign for backward line
       for (int kap = 0; kap < n; kap++) {
         for (int t = 0; t < r; t++) { gf(t, nu, kap) += nda::trace(matmul(Tnu(t, _, _), F_dags(kap, _, _))); }
-        // std::cout << "dense gf(" << nu << ", " << kap << ") = " << gf(_, nu, kap) << std::endl;
       }
     }
   }
@@ -298,10 +291,6 @@ void OCA_gf_bs_right(double beta, imtime_ops &itops, nda::vector_const_view<doub
         T(t, range(0, block_dims(2)), range(0, block_dims(1))) =
            k_it(dlr_it(t), omega_l) * matmul(Flam.get_block(ind_path(0))(lam, _, _), Gt.get_block(ind_path(0))(t, _, _));
       }
-      // std::cout << "ind_path = " << ind_path << std::endl;
-      // std::cout << "Flam block = " << nda::make_regular(nda::real(Flam.get_block(ind_path(0))(lam, _, _))) << std::endl;
-      // std::cout << "Gt block = " << nda::make_regular(nda::real(Gt.get_block(ind_path(0))(0, _, _))) << std::endl;
-      // std::cout << "bs T(0, :, :) = " << nda::make_regular(nda::real(T(0, range(0, block_dims(2)), range(0, block_dims(1))))) << std::endl;
       // convolve by G
       T(_, range(0, block_dims(2)), range(0, block_dims(1))) =
          itops.convolve(beta, itops.vals2coefs(Gt.get_block(ind_path(1))),
@@ -370,8 +359,8 @@ void OCA_gf_bs_left(double beta, imtime_ops &itops, nda::vector_const_view<doubl
                         itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))), TIME_ORDERED);
     }
   }
-  // reflect
-  T(_, range(0, block_dims(4)), range(0, block_dims(3))) = itops.reflect(T(_, range(0, block_dims(4)), range(0, block_dims(3))));
+  // reflect. Why does only reflecting all of T work?
+  T = itops.reflect(T);
 }
 
 nda::array<dcomplex, 3> OCA_gf_bs(nda::vector_const_view<double> hyb_poles, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt,
@@ -397,7 +386,6 @@ nda::array<dcomplex, 3> OCA_gf_bs(nda::vector_const_view<double> hyb_poles, imti
       for (int p_kap = 0; p_kap < q; p_kap++) {
         for (int p_mu = 0; p_mu < q; p_mu++) {
           for (int b = 0; b < Gt.get_num_block_cols(); b++) {
-            // std::cout << "fb = " << fb << ", b = " << b << std::endl;
             // backward pass
             bool path_all_nonzero = true;
             int ip                = Fq.F_dags[p_kap].get_block_index(b);
@@ -442,8 +430,6 @@ nda::array<dcomplex, 3> OCA_gf_bs(nda::vector_const_view<double> hyb_poles, imti
                     U = 0;
                     OCA_gf_bs_right(beta, itops, dlr_it, hyb_poles(l), fb, Gt, F1[p_lam], lam, T, ind_path, block_dims);
                     OCA_gf_bs_left(beta, itops, dlr_it, hyb_poles(l), fb, Gt, Fbar[p_lam], lam, l, U, ind_path, block_dims);
-                    // std::cout << "bs T(0, :, :) = " << nda::make_regular(nda::real(T(0, range(0, block_dims(2)), range(0, block_dims(1)))))
-                    //           << std::endl;
                     if (hyb_poles(l) <= 0) {
                       for (int t = 0; t < r; t++) {
                         Tmu(t, range(0, block_dims(4)), range(0, block_dims(1))) +=
