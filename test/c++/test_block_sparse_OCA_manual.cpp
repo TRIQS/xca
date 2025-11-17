@@ -87,37 +87,6 @@ TEST(BlockSparseOCAManual, two_band_discrete_bath_bs) {
   int r              = itops.rank();
 
   // set up local Hamiltonian and field operators
-  /*
-  many_body_operator_real H, N;
-  fundamental_operator_set fop_set;
-  double U = 2.0, J = 0.2;
-  double mu = (3 * U - 5 * J) / 2.0;
-  for (int i = 0; i < 2; i++) { H += U * n("up", i) * n("do", i); }
-  H += (U - 3 * J) * (n("up", 0) * n("up", 1) + n("do", 0) * n("do", 1));
-  H += (U - 2 * J) * (n("up", 0) * n("do", 1) + n("do", 0) * n("up", 1));
-  H += J
-     * (c_dag("up", 0) * c_dag("do", 0) * c("do", 1) * c("up", 1) + c_dag("up", 0) * c_dag("do", 1) * c("do", 0) * c("up", 1)
-        + c_dag("up", 1) * c_dag("do", 1) * c("do", 0) * c("up", 0) + c_dag("up", 1) * c_dag("do", 0) * c("do", 1) * c("up", 0));
-  H -= mu * (n("up", 0) * n("up", 1) + n("do", 0) * n("do", 1));
-  for (int i = 0; i < 2; i++) {
-    fop_set.insert("up", i);
-    fop_set.insert("do", i);
-  }
-  for (int kap = 0; kap < 2; ++kap) { N += n("up", kap) + n("do", kap); }
-  std::vector<triqs::operators::many_body_operator_real> sym_ops = {N};
-
-  // create atom_diag object
-  triqs::atom_diag::atom_diag<false> ad(H, fop_set, sym_ops);
-
-  // get blocks of Hamiltonian and compute noninteracting Green's function
-  auto [H_blocks, H_block_inds] = get_hamiltonian_blocks(ad);
-  auto Gt                       = ad_to_nonint_gf(ad, beta, dlr_it_abs);
-  auto Gt_block_sizes           = Gt.get_block_sizes();
-  auto [hyb, hyb_refl] = discrete_bath_helper(beta, Lambda, eps);
-  auto hyb_coeffs      = itops.vals2coefs(hyb);          // hybridization DLR coeffs
-  auto [Fq, sym_set_labels] = get_operators(ad, 2, hyb_coeffs, hyb_coeffs);
-  */
-
   // model setup
   auto [Deltat, Deltat_refl]              = discrete_bath_helper(beta, Lambda, eps);
   auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
@@ -139,15 +108,12 @@ TEST(BlockSparseOCAManual, two_band_discrete_bath_bs) {
   hyb_F Delta_F_reflect(16, r, dim);
   Delta_F.update_inplace(Delta_decomp, dlr_it, Fs_dense, F_dags_dense); // Compression of Delta(t) and F, F_dag matrices
   Delta_F_reflect.update_inplace(Delta_decomp_reflect, dlr_it, F_dags_dense, Fs_dense);
-  auto fb               = nda::vector<int>(2);
-  fb(1)                 = 0;
   nda::array<int, 2> D2 = {{0, 2}, {1, 3}}; // topology for OCA diagram evaluator
-  auto OCA_forward      = Sigma_OCA_calc(Delta_F, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, true);
-
-  // Get Delta(t-t1) backward Delta(t2,t0) forward
-  auto fb2          = nda::vector<int64_t>(2);
-  fb2(1)            = 1;
-  auto OCA_backward = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb2, true);
+  auto fb               = nda::vector<int64_t>(2);
+  fb                    = 0;
+  auto OCA_forward  = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
+  fb(1)             = 1;
+  auto OCA_backward = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
   auto OCA_Zhen     = nda::make_regular(-OCA_forward - OCA_backward);
 
   // check that block-sparse OCA calculation agrees with twoband.py
@@ -254,15 +220,14 @@ TEST(BlockSparseOCAManual, two_band_semicircle_bath_aaa) {
   auto dlr_it = itops.get_itnodes();
   Delta_F.update_inplace(Delta_decomp, dlr_it, Fs_dense, F_dags_dense); // Compression of Delta(t) and F, F_dag matrices
   Delta_F_reflect.update_inplace(Delta_decomp_reflect, dlr_it, F_dags_dense, Fs_dense);
-  auto fb               = nda::vector<int>(2);
-  fb(1)                 = 0;
   nda::array<int, 2> D2 = {{0, 2}, {1, 3}}; // topology for OCA diagram evaluator
-  auto OCA_forward      = Sigma_OCA_calc(Delta_F, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, true);
 
   // Get Delta(t-t1) backward Delta(t2,t0) forward
-  auto fb2          = nda::vector<int64_t>(2);
-  fb2(1)            = 1;
-  auto OCA_backward = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb2, true);
+  auto fb           = nda::vector<int64_t>(2);
+  fb                = 0;
+  auto OCA_forward  = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
+  fb(1)             = 1;
+  auto OCA_backward = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
   auto OCA_Zhen     = nda::make_regular(-OCA_forward - OCA_backward);
 
   // check that dense OCA calculation agree with Zhen's calculation

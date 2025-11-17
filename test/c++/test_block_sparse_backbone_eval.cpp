@@ -122,9 +122,9 @@ TEST(Backbone, OCA) {
   std::vector<nda::array<dcomplex, 3>> Fs_dense_vec{Fs_dense};
   auto F_sym_triv = BlockOpSymSet(triv_bi, Fs_dense_vec);
   std::vector<nda::array<dcomplex, 3>> F_dags_dense_vec{F_dags_dense};
-  auto F_dag_sym_triv = BlockOpSymSet(triv_bi, F_dags_dense_vec);
+  auto F_dag_sym_triv      = BlockOpSymSet(triv_bi, F_dags_dense_vec);
   auto sym_set_labels_triv = nda::zeros<long>(n);
-  auto Fq_triv        = BlockOpSymQuartet({F_sym_triv}, {F_dag_sym_triv}, hyb_coeffs, hyb_refl_coeffs, sym_set_labels_triv);
+  auto Fq_triv             = BlockOpSymQuartet({F_sym_triv}, {F_dag_sym_triv}, hyb_coeffs, hyb_refl_coeffs, sym_set_labels_triv);
 
   DiagramBlockSparseEvaluator D3(beta, itops, Deltat, hyb_refl, dlr_rf, Gt_triv, Fq_triv);
   start = std::chrono::high_resolution_clock::now();
@@ -355,23 +355,20 @@ TEST(Backbone, OCA_semicircle_bath_aaa) {
   auto dlr_it = itops.get_itnodes();
   Delta_F.update_inplace(Delta_decomp, dlr_it, Fs_dense, F_dags_dense); // Compression of Delta(t) and F, F_dag matrices
   Delta_F_reflect.update_inplace(Delta_decomp_reflect, dlr_it, F_dags_dense, Fs_dense);
-  auto fb               = nda::vector<int>(2);
-  fb(1)                 = 0;
   nda::array<int, 2> D2 = {{0, 2}, {1, 3}}; // topology for OCA diagram evaluator
-  auto OCA_forward      = Sigma_OCA_calc(Delta_F, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, true);
-
   // Get Delta(t-t1) backward Delta(t2,t0) forward
-  auto fb2          = nda::vector<int64_t>(2);
-  fb2(1)            = 1;
-  auto OCA_backward = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb2, true);
+  auto fb           = nda::vector<int64_t>(2);
+  fb                = 0;
+  auto OCA_forward  = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
+  fb(1)             = 1;
+  auto OCA_backward = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
   auto OCA_Zhen     = nda::make_regular(-OCA_forward - OCA_backward);
 
   // generic diagram evaluator
-  nda::array<int, 2> topology = {{0, 2}, {1, 3}};
-  auto B                      = Backbone(topology, n);
-
+  nda::array<int, 2> topology   = {{0, 2}, {1, 3}};
+  auto B                        = Backbone(topology, n);
   auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
-  auto D                         = DiagramBlockSparseEvaluator(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq);
+  auto D                        = DiagramBlockSparseEvaluator(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq);
   D.eval_diagram_block_sparse(B);
   auto OCA_result = D.Sigma; // get the result from the DiagramEvaluator
 

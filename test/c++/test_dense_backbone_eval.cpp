@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <iomanip>
 #include <nda/nda.hpp>
 #include <cppdlr/cppdlr.hpp>
 #include "block_sparse_utils.hpp"
@@ -13,7 +14,7 @@ TEST(DenseBackbone, one_vertex_and_edge) {
   double beta   = 2.0;
   double Lambda = 100.0 * beta;
   double eps    = 1.0e-6;
-  
+
   auto [Deltat, Deltat_refl]              = discrete_bath_helper(beta, Lambda, eps);
   auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
 
@@ -121,15 +122,12 @@ TEST(DenseBackbone, OCA) {
   hyb_F Delta_F_reflect(16, r, dim);
   Delta_F.update_inplace(Delta_decomp, dlr_it, Fs_dense, F_dags_dense); // Compression of Delta(t) and F, F_dag matrices
   Delta_F_reflect.update_inplace(Delta_decomp_reflect, dlr_it, F_dags_dense, Fs_dense);
-  auto fb               = nda::vector<int>(2);
-  fb(1)                 = 0;
   nda::array<int, 2> D2 = {{0, 2}, {1, 3}}; // topology for OCA diagram evaluator
-  auto OCA_forward      = Sigma_OCA_calc(Delta_F, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, true);
-
-  // Get Delta(t-t1) backward Delta(t2,t0) forward
-  auto fb2          = nda::vector<int64_t>(2);
-  fb2(1)            = 1;
-  auto OCA_backward = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb2, true);
+  auto fb               = nda::vector<int64_t>(2);
+  fb                    = 0;
+  auto OCA_forward  = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
+  fb(1)             = 1;
+  auto OCA_backward = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
   auto OCA_Zhen     = nda::make_regular(-OCA_forward - OCA_backward);
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_result - OCA_Zhen)), eps);
@@ -140,7 +138,7 @@ TEST(DenseBackbone, third_order_manual) {
   double beta   = 2.0;
   double Lambda = 10.0 * beta; // 1000.0*beta;
   double eps    = 1.0e-10;
-  
+
   auto [Deltat, Deltat_refl]              = discrete_bath_helper(beta, Lambda, eps);
   auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
 
@@ -247,16 +245,13 @@ TEST(DenseBackbone, OCA_semicircle_bath_aaa) {
   auto dlr_it = itops.get_itnodes();
   Delta_F.update_inplace(Delta_decomp, dlr_it, Fs_dense, F_dags_dense); // Compression of Delta(t) and F, F_dag matrices
   Delta_F_reflect.update_inplace(Delta_decomp_reflect, dlr_it, F_dags_dense, Fs_dense);
-  auto fb               = nda::vector<int>(2);
-  fb(1)                 = 0;
   nda::array<int, 2> D2 = {{0, 2}, {1, 3}}; // topology for OCA diagram evaluator
-  auto OCA_forward      = Sigma_OCA_calc(Delta_F, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, true);
-
-  // Get Delta(t-t1) backward Delta(t2,t0) forward
-  auto fb2          = nda::vector<int64_t>(2);
-  fb2(1)            = 1;
-  auto OCA_backward = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb2, true);
-  auto OCA_Zhen     = nda::make_regular(-OCA_forward - OCA_backward);
+  auto fb               = nda::vector<int64_t>(2);
+  fb                    = 0;
+  auto OCA_forward      = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
+  fb(1)                 = 1;
+  auto OCA_backward     = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
+  auto OCA_Zhen         = nda::make_regular(-OCA_forward - OCA_backward);
 
   // check that dense OCA calculation agree with Zhen
   ASSERT_LE(nda::max_element(nda::abs(OCA_dense_result - OCA_Zhen)), eps);
