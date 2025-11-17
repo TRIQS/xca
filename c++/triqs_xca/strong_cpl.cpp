@@ -315,9 +315,9 @@ nda::array<dcomplex, 3> G_Diagram_calc(hyb_F &hyb_F_self, hyb_F &hyb_F_reflect, 
   //iteration over the terms of 2, · · · , m-th hybridization. Note that 1-st hybridization is not decomposed.
 
   auto total_num_diagram = pown(P, m - 1);
-#pragma omp parallel
+  // #pragma omp parallel
   {
-#pragma omp for
+    // #pragma omp for
     for (int64_t num = 0; num < total_num_diagram; ++num) {
       Diagram = Diagram + eval_one_diagram_G(hyb_F_self, hyb_F_reflect, D, Gt, Gt_reflect, itops, beta, F, F_dag, fb, num, m, n, r, N, P);
     }
@@ -517,10 +517,10 @@ nda::array<dcomplex, 3> Sigma_Diagram_calc(hyb_F &hyb_F_self, hyb_F &hyb_F_refle
   triqs::utility::timer timer_run;
   timer_run.start();
 
-#pragma omp parallel
+  // #pragma omp parallel
   {
 
-#pragma omp for
+    // #pragma omp for
     for (int64_t num = 0; num < total_num_diagram; ++num) {
       Diagram = Diagram
          + evaluate_one_diagram(hyb_F_self, hyb_F_reflect, D, Deltat, Deltat_reflect, Gt, itops, beta, F, F_dag, fb, backward, num, m, n, r, N, P);
