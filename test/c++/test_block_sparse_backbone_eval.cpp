@@ -14,6 +14,7 @@
 #include <triqs/atom_diag/atom_diag.hpp>
 #include <triqs/operators/many_body_operator.hpp>
 #include <triqs_xca/atom_diag_utils.hpp>
+#include <triqs_xca/self_energy.hpp>
 
 using namespace triqs;
 using namespace triqs::operators;
@@ -442,7 +443,6 @@ TEST(Backbone, spin_flip_fermion_aaa) {
   triqs::atom_diag::atom_diag<false> ad(H, fop_set, sym_ops);
 
   // get blocks of Hamiltonian and compute noninteracting Green's function
-  auto [H_blocks, H_block_inds] = get_hamiltonian_blocks(ad);
   auto dlr_it                   = itops.get_itnodes();
   auto dlr_it_abs               = cppdlr::rel2abs(dlr_it);
   auto Gt                       = ad_to_nonint_gf(ad, beta, dlr_it_abs);
@@ -578,4 +578,71 @@ TEST(Backbone, spin_flip_fermion_all_sym_aaa) {
     ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), 1e-10);
     s0 = s1;
   }
+}
+
+TEST(Backbone, solve) {
+  // Test the solve function
+
+  double beta   = 8.0;
+  double Lambda = 10.0 * beta;
+  double eps    = 1.0e-6;
+
+  // DLR generation
+  auto dlr_rf = build_dlr_rf(Lambda, eps);
+  auto itops  = imtime_ops(Lambda, dlr_rf);
+
+  int norb = 2;
+  int nn   = 2 * norb;
+  int p    = 7;
+  int r    = itops.rank();
+  nda::array<dcomplex, 3> hyb(r, nn, nn), hyb_coeffs(p, nn, nn);
+  nda::vector<dcomplex> hyb00(r), hyb_coeffs00(p);
+  hyb00        = {-0.4997496184487105, -0.4867352379479528, -0.4603465101833711, -0.4239204950540695, -0.3716597467714097,
+                  -0.2884886574148449, -0.2479810727230272, -0.2065525284769785, -0.1635819676241178, -0.1326995066858671,
+                  -0.1225444804140666, -0.1282199855712255, -0.1386184647087601, -0.1720919948804938, -0.2300400167898313,
+                  -0.3000508284935615, -0.3759657450111002, -0.4545389745912252, -0.4821599768174421, -0.4997496184487105};
+  hyb_coeffs00 = {0.0028042961182163, 0.088487039172428,  0.1575418229076625, 0.1953880665937937,
+                  0.2145207908265103, 0.1832496441339733, 0.1580088741667851};
+
+  for (int i = 0; i < nn; i++) {
+    for (int j = i; j < nn; j++) {
+      if (i / 2 == j / 2) {
+        hyb(_, i, j)        = hyb00;
+        hyb_coeffs(_, i, j) = hyb_coeffs00;
+      } else {
+        hyb(_, i, j)        = 0.0;
+        hyb_coeffs(_, i, j) = 0.0;
+      }
+    }
+  }
+  auto hyb_refl = hyb;
+  nda::array<dcomplex, 3> hyb_refl_coeffs(p, nn, nn);
+  hyb_refl_coeffs = hyb_coeffs;
+  nda::vector<double> hyb_poles(p);
+  hyb_poles = {-2.537191963500981,  1.7111725610238615, -1.514666605887425, 1.04941790134832,
+               -0.7410379494142222, 0.3763525311836938, -0.1312888711963961};
+  hyb_poles = hyb_poles * beta;
+
+  // set up Hamiltonian
+  triqs::operators::many_body_operator_real H;
+  fundamental_operator_set fop_set;
+
+  double mu = 0.25;
+  double U  = 1.0;
+  double V  = 0.1;
+  for (int i = 0; i < norb; i++) {
+    H += U * n("up", i) * n("do", i) + mu * (n("up", i) + n("do", i)) + V * (c_dag("up", i) * c("do", i) + c_dag("do", i) * c("up", i));
+    fop_set.insert("do", i);
+  }
+  for (int i = 0; i < norb; i++) { fop_set.insert("up", i); }
+
+  // Construct particle number operator
+  triqs::operators::many_body_operator_real N;
+  for (int kap = 0; kap < norb; ++kap) { N += n("up", kap) + n("do", kap); }
+  std::vector<triqs::operators::many_body_operator_real> sym_ops = {N};
+
+  // create atom_diag object
+  triqs::atom_diag::atom_diag<false> ad(H, fop_set, sym_ops);
+
+  auto Sigma = solve(beta, Lambda, eps, hyb, hyb_poles, hyb_coeffs, ad, nn);
 }
