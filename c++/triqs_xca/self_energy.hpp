@@ -21,9 +21,6 @@ namespace triqs::atom_diag {
  * @param order Perturbation order (1, 2, or 3)
  * @return std::vector<nda::array<dcomplex, 3>> Self-energy blocks
  */
-std::vector<nda::array<dcomplex, 3>> solve(double beta, double Lambda, double eps, 
-                                           nda::array<dcomplex, 3> hyb, 
-                                           nda::vector<double> hyb_poles, 
-                                           nda::array<dcomplex, 3> hyb_coeffs,
-                                           triqs::atom_diag::atom_diag<false> ad, 
-                                           int order);
+std::vector<nda::array<dcomplex, 3>> compute_self_energy(double beta, double Lambda, double eps, nda::array<dcomplex, 3> hyb,
+                                                         nda::vector<double> hyb_poles, nda::array<dcomplex, 3> hyb_coeffs,
+                                                         triqs::atom_diag::atom_diag<false> ad, int order);
