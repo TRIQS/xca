@@ -84,24 +84,24 @@ class Backbone {
     */
   nda::vector<int> pole_inds; // values of the hybridization indices (i.e. values of l, l`, ...)
   nda::vector<int> orb_inds;  // orbital indices on the vertices, i.e., values of lambda, mu, ...
-  int f_ix;                   // flat index
 
   protected:
   nda::array<int, 2> topology;
   nda::vector<int> fb; // directions of the hybridization lines, 0 for backward, 1 for forward
+  int f_ix;                   // flat index
 
   public:
   virtual void set_directions(int fb_ix); // set directions from a single integer index in [[0, 2^m-1]]
-  virtual void set_directions(nda::vector_const_view<int> fb);
+  virtual void set_directions(nda::vector_const_view<int> fb_vec);
   void reset_directions();
   void set_pole_inds(int p_ix, nda::vector_const_view<double> dlr_rf); // set pole indices from a single integer index in [[0, r^(m-1)-1]]
-  void set_pole_inds(nda::vector_const_view<int> pole_inds, nda::vector_const_view<double> dlr_rf);
+  void set_pole_inds(nda::vector_const_view<int> pole_inds_vec, nda::vector_const_view<double> dlr_rf);
   void reset_pole_inds();
-  void set_orb_inds(nda::vector_const_view<int> orb_inds);
+  void set_orb_inds(nda::vector_const_view<int> orb_inds_vec);
   void set_orb_inds(int o_ix); // set orbital indices from a single integer index in [[0, n^(m-1)-1]]
   void reset_orb_inds();
-  void set_flat_index(int f_ix,
-                      nda::vector_const_view<double> dlr_rf); // set directions, pole indices, and orbital indices from a single integer index.
+  virtual void set_flat_index(int flat_ix,
+                      nda::vector_const_view<double> hyb_poles); // set directions, pole indices, and orbital indices from a single integer index.
   // In terms of fb_ix, p_ix, and o_ix, f_ix = o_ix + n^(m-1) * p_ix + (n * r)^(m-1) * fb_ix, where r is the number of hybridization indices.
   void reset_all_inds();
 
@@ -147,21 +147,31 @@ class Backbone {
 std::ostream &operator<<(std::ostream &os, Backbone &B);
 
 /**
- * @class GreensFunctionBackbone
+ * @class CorrelatorBackbone
  * @brief Abstract representation of a Green's function backbone diagram
  * 
  * This is a lightweight class used to represent a Green's function backbone
  * diagram of a specific order and topology. It inherits from Backbone and ... TODO
  */
-class GreensFunctionBackbone : public Backbone {
+class CorrelatorBackbone : public Backbone {
   public:
   void set_directions(int fb_ix) override; // one fewer hybridization edge - use only the first m-1 element of the edges array
   void set_directions(nda::vector_const_view<int> fb) override;
+  void set_flat_index(int flat_ix,
+                      nda::vector_const_view<double> hyb_poles) override; // set directions, pole indices, and orbital indices from a single integer index.
+
+  /**
+   * @brief Constructor for CorrelatorBackbone
+   * 
+   * @param[in] topology list of vertices connected by a hybridization line
+   * @param[in] n number of orbital indices
+   */
+  CorrelatorBackbone(nda::array<int, 2> topology, int n);
 };
 
 /**
- * @brief Print GreensFunctionBackbone to output stream
+ * @brief Print CorrelatorBackbone to output stream
  * @param[in] os output stream
- * @param[in] B GreensFunctionBackbone
+ * @param[in] B CorrelatorBackbone
  */
-std::ostream &operator<<(std::ostream &os, GreensFunctionBackbone &B);
+std::ostream &operator<<(std::ostream &os, CorrelatorBackbone &B);

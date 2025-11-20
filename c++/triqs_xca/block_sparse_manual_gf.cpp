@@ -270,9 +270,8 @@ void OCA_gf_bs_right(double beta, imtime_ops &itops, nda::vector_const_view<doub
            k_it(dlr_it(t), -omega_l) * matmul(Flam.get_block(ind_path(0))(lam, _, _), Gt.get_block(ind_path(0))(t, _, _));
       }
       // convolve by G
-      T(_, range(0, block_dims(2)), range(0, block_dims(1))) =
-         itops.convolve(beta, itops.vals2coefs(Gt.get_block(ind_path(1))),
-                        itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))), TIME_ORDERED);
+      T(_, range(0, block_dims(2)), range(0, block_dims(1))) = itops.convolve(
+         beta, itops.vals2coefs(Gt.get_block(ind_path(1))), itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))), TIME_ORDERED);
     } else {
       // multiply G(tau-tau_1) K^+(tau-tau_1) F_lambda
       for (int t = 0; t < r; t++) {
@@ -280,9 +279,8 @@ void OCA_gf_bs_right(double beta, imtime_ops &itops, nda::vector_const_view<doub
            k_it(dlr_it(t), omega_l) * matmul(Gt.get_block(ind_path(1))(t, _, _), Flam.get_block(ind_path(0))(lam, _, _));
       }
       // convolve by G
-      T(_, range(0, block_dims(2)), range(0, block_dims(1))) =
-         itops.convolve(beta, itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))),
-                        itops.vals2coefs(Gt.get_block(ind_path(0))), TIME_ORDERED);
+      T(_, range(0, block_dims(2)), range(0, block_dims(1))) = itops.convolve(
+         beta, itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))), itops.vals2coefs(Gt.get_block(ind_path(0))), TIME_ORDERED);
     }
   } else {
     if (omega_l >= 0) {
@@ -292,9 +290,8 @@ void OCA_gf_bs_right(double beta, imtime_ops &itops, nda::vector_const_view<doub
            k_it(dlr_it(t), omega_l) * matmul(Flam.get_block(ind_path(0))(lam, _, _), Gt.get_block(ind_path(0))(t, _, _));
       }
       // convolve by G
-      T(_, range(0, block_dims(2)), range(0, block_dims(1))) =
-         itops.convolve(beta, itops.vals2coefs(Gt.get_block(ind_path(1))),
-                        itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))), TIME_ORDERED);
+      T(_, range(0, block_dims(2)), range(0, block_dims(1))) = itops.convolve(
+         beta, itops.vals2coefs(Gt.get_block(ind_path(1))), itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))), TIME_ORDERED);
     } else {
       // multiply G(tau-tau_1) K^-(tau-tau_1) F_lambda
       for (int t = 0; t < r; t++) {
@@ -302,9 +299,8 @@ void OCA_gf_bs_right(double beta, imtime_ops &itops, nda::vector_const_view<doub
            k_it(dlr_it(t), -omega_l) * matmul(Gt.get_block(ind_path(1))(t, _, _), Flam.get_block(ind_path(0))(lam, _, _));
       }
       // convolve by G
-      T(_, range(0, block_dims(2)), range(0, block_dims(1))) =
-         itops.convolve(beta, itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))),
-                        itops.vals2coefs(Gt.get_block(ind_path(0))), TIME_ORDERED);
+      T(_, range(0, block_dims(2)), range(0, block_dims(1))) = itops.convolve(
+         beta, itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))), itops.vals2coefs(Gt.get_block(ind_path(0))), TIME_ORDERED);
     }
   }
 }
@@ -322,9 +318,8 @@ void OCA_gf_bs_left(double beta, imtime_ops &itops, nda::vector_const_view<doubl
            k_it(dlr_it(t), -omega_l) * matmul(Gt.get_block(ind_path(3))(t, _, _), Fbar.get_block(ind_path(2))(lam, pole_ind, _, _));
       }
       // convolve by G
-      T(_, range(0, block_dims(4)), range(0, block_dims(3))) =
-         itops.convolve(beta, itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))),
-                        itops.vals2coefs(Gt.get_block(ind_path(2))), TIME_ORDERED);
+      T(_, range(0, block_dims(4)), range(0, block_dims(3))) = itops.convolve(
+         beta, itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))), itops.vals2coefs(Gt.get_block(ind_path(2))), TIME_ORDERED);
     } else {
       // multiply Fbar G K^+
       for (int t = 0; t < r; t++) {
@@ -332,9 +327,8 @@ void OCA_gf_bs_left(double beta, imtime_ops &itops, nda::vector_const_view<doubl
            k_it(dlr_it(t), omega_l) * matmul(Fbar.get_block(ind_path(2))(lam, pole_ind, _, _), Gt.get_block(ind_path(2))(t, _, _));
       }
       // convolve
-      T(_, range(0, block_dims(4)), range(0, block_dims(3))) =
-         itops.convolve(beta, itops.vals2coefs(Gt.get_block(ind_path(3))),
-                        itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))), TIME_ORDERED);
+      T(_, range(0, block_dims(4)), range(0, block_dims(3))) = itops.convolve(
+         beta, itops.vals2coefs(Gt.get_block(ind_path(3))), itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))), TIME_ORDERED);
     }
   } else {
     if (omega_l > 0) {
@@ -344,9 +338,8 @@ void OCA_gf_bs_left(double beta, imtime_ops &itops, nda::vector_const_view<doubl
            k_it(dlr_it(t), omega_l) * matmul(Gt.get_block(ind_path(3))(t, _, _), Fbar.get_block(ind_path(2))(lam, pole_ind, _, _));
       }
       // convolve by G
-      T(_, range(0, block_dims(4)), range(0, block_dims(3))) =
-         itops.convolve(beta, itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))),
-                        itops.vals2coefs(Gt.get_block(ind_path(2))), TIME_ORDERED);
+      T(_, range(0, block_dims(4)), range(0, block_dims(3))) = itops.convolve(
+         beta, itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))), itops.vals2coefs(Gt.get_block(ind_path(2))), TIME_ORDERED);
     } else {
       // multiply Fbar G K^-
       for (int t = 0; t < r; t++) {
@@ -354,9 +347,8 @@ void OCA_gf_bs_left(double beta, imtime_ops &itops, nda::vector_const_view<doubl
            k_it(dlr_it(t), -omega_l) * matmul(Fbar.get_block(ind_path(2))(lam, pole_ind, _, _), Gt.get_block(ind_path(2))(t, _, _));
       }
       // convolve
-      T(_, range(0, block_dims(4)), range(0, block_dims(3))) =
-         itops.convolve(beta, itops.vals2coefs(Gt.get_block(ind_path(3))),
-                        itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))), TIME_ORDERED);
+      T(_, range(0, block_dims(4)), range(0, block_dims(3))) = itops.convolve(
+         beta, itops.vals2coefs(Gt.get_block(ind_path(3))), itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))), TIME_ORDERED);
     }
   }
   // reflect. Why does only reflecting all of T work?

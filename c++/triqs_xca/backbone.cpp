@@ -34,13 +34,13 @@ Backbone::Backbone(nda::array<int, 2> topology, int n)
   prefactor_Kexps  = nda::vector<int>(m - 1, 0);
   vertices         = std::vector<BackboneVertex>(2 * m);
   edges            = nda::zeros<int>(2 * m - 1, m - 1);
+  fb               = nda::vector<int>(m, 0);
 }
 
-void Backbone::set_directions(nda::vector_const_view<int> fb) {
-  // @param[in] fb forward/backward line information
+void Backbone::set_directions(nda::vector_const_view<int> fb_vec) {
 
-  this->fb = fb;
-  if (m != fb.size()) { throw std::invalid_argument("topology and fb must have same # of vertices"); }
+  this->fb = fb_vec;
+  if (m != fb_vec.size()) { throw std::invalid_argument("topology and fb must have same # of vertices"); }
   for (int i = 0; i < m; i++) {
     if (topology(i, 0) >= topology(i, 1)) { throw std::invalid_argument("first row of topology must contain smaller-numbered vertices"); }
   }
@@ -49,7 +49,7 @@ void Backbone::set_directions(nda::vector_const_view<int> fb) {
   // set operator flags for each vertex, depending on fb
   vertices[0].set_bar(false);              // operator on vertex 0 has no bar
   vertices[topology(0, 1)].set_bar(false); // operator on vertex connected to 0 has no bar
-  if (fb(0) == 1) {
+  if (fb_vec(0) == 1) {
     vertices[0].set_dag(false);             // annihilation operator on vertex 0
     vertices[topology(0, 1)].set_dag(true); // creation operator on vertex connected to 0
   } else {
@@ -60,7 +60,7 @@ void Backbone::set_directions(nda::vector_const_view<int> fb) {
   for (int i = 1; i < m; i++) {
     vertices[topology(i, 0)].set_bar(false); // operator on vertex i has no bar
     vertices[topology(i, 1)].set_bar(true);  // operator on vertex connected to i has a bar
-    if (fb(i) == 1) {
+    if (fb_vec(i) == 1) {
       vertices[topology(i, 0)].set_dag(false); // annihilation operator on vertex i
       vertices[topology(i, 1)].set_dag(true);  // creation operator on vertex i
     } else {
@@ -88,9 +88,9 @@ void Backbone::reset_directions() {
   }
 }
 
-void Backbone::set_pole_inds(nda::vector_const_view<int> pole_inds, nda::vector_const_view<double> hyb_poles) {
+void Backbone::set_pole_inds(nda::vector_const_view<int> pole_inds_vec, nda::vector_const_view<double> hyb_poles) {
 
-  this->pole_inds = pole_inds; // values of l, l`, etc.
+  this->pole_inds = pole_inds_vec; // values of l, l`, etc.
   for (int i = 1; i < m; i++) {
     if (fb(i) == 1) { // line i is forward
       if (hyb_poles(pole_inds(i - 1)) <= 0) {
@@ -145,13 +145,13 @@ void Backbone::set_pole_inds(nda::vector_const_view<int> pole_inds, nda::vector_
 
 void Backbone::set_pole_inds(int p_ix, nda::vector_const_view<double> hyb_poles) {
 
-  int p          = hyb_poles.size();
-  auto pole_inds = nda::vector<int>(m - 1);
+  int p              = hyb_poles.size();
+  auto pole_inds_vec = nda::vector<int>(m - 1);
   for (int i = 0; i < m - 1; i++) {
-    pole_inds(i) = p_ix % p;
+    pole_inds_vec(i) = p_ix % p;
     p_ix /= p;
   }
-  set_pole_inds(pole_inds, hyb_poles);
+  set_pole_inds(pole_inds_vec, hyb_poles);
 }
 
 void Backbone::reset_pole_inds() {
@@ -167,39 +167,39 @@ void Backbone::reset_pole_inds() {
   }
 }
 
-void Backbone::set_orb_inds(nda::vector_const_view<int> orb_inds) {
+void Backbone::set_orb_inds(nda::vector_const_view<int> orb_inds_vec) {
   // orb_inds = orbital indices (e.g. lambda, mu indices), going
   // right to left, excluding the ones associated with the special vertex
-  this->orb_inds = orb_inds;
+  this->orb_inds = orb_inds_vec;
   for (int i = 0; i < 2 * m; i++) {
-    if (i != 0 && i != topology(0, 1)) { vertices[i].set_orb(orb_inds(i)); }
+    if (i != 0 && i != topology(0, 1)) { vertices[i].set_orb(orb_inds_vec(i)); }
   }
 }
 
 void Backbone::set_orb_inds(int o_ix) {
   // set orbital indices from a single integer index
-  auto orb_inds            = nda::vector<int>(2 * m);
-  orb_inds(0)              = -1;
-  orb_inds(topology(0, 1)) = -1; // special vertex 0 and the one connected to it have no orbital indices explicitly summed over
-  for (int i = 1; i < m; i++) {  // loop over lines, skipping the one connected to vertex 0
-    orb_inds(topology(i, 0)) = o_ix % n;
-    orb_inds(topology(i, 1)) = o_ix % n;
+  auto orb_inds_vec            = nda::vector<int>(2 * m);
+  orb_inds_vec(0)              = -1;
+  orb_inds_vec(topology(0, 1)) = -1; // special vertex 0 and the one connected to it have no orbital indices explicitly summed over
+  for (int i = 1; i < m; i++) {      // loop over lines, skipping the one connected to vertex 0
+    orb_inds_vec(topology(i, 0)) = o_ix % n;
+    orb_inds_vec(topology(i, 1)) = o_ix % n;
     // orbital indices on vertices connected by a line are the same
     o_ix /= n;
   }
-  set_orb_inds(orb_inds);
+  set_orb_inds(orb_inds_vec);
 }
 
 void Backbone::reset_orb_inds() {
   for (int i = 0; i < 2 * m; i++) vertices[i].set_orb(0);
 }
 
-void Backbone::set_flat_index(int f_ix, nda::vector_const_view<double> hyb_poles) {
+void Backbone::set_flat_index(int flat_ix, nda::vector_const_view<double> hyb_poles) {
   // set directions, pole indices, and orbital indices from a single integer index.
   // In terms of fb_ix, p_ix, and o_ix,
   // f_ix = o_ix + n^(m-1) * p_ix + (n * r)^(m-1) * fb_ix, where r is the number of hybridization indices.
 
-  this->f_ix = f_ix;
+  this->f_ix = flat_ix;
   int p      = hyb_poles.size();
   int o_ix   = f_ix % o_ix_max; // orbital indices
   f_ix /= o_ix_max;
@@ -232,7 +232,9 @@ int Backbone::get_fb(int i) { return fb(i); }
 int Backbone::get_orb_ind(int i) { return orb_inds(i); }
 int Backbone::get_flat_index() { return f_ix; }
 
-void GreensFunctionBackbone::set_directions(int fb_ix) {
+CorrelatorBackbone::CorrelatorBackbone(nda::array<int, 2> topology, int n) : Backbone(topology, n) { fb_ix_max = static_cast<int>(pow(2, m - 1)); }
+
+void CorrelatorBackbone::set_directions(int fb_ix) {
 
   auto fb_vec = nda::vector<int>(m - 1);
   for (int i = 0; i < m - 1; i++) {
@@ -242,18 +244,22 @@ void GreensFunctionBackbone::set_directions(int fb_ix) {
   set_directions(fb_vec);
 }
 
-void GreensFunctionBackbone::set_directions(nda::vector_const_view<int> fb) {
+void CorrelatorBackbone::set_directions(nda::vector_const_view<int> fb_vec) {
   // @param[in] fb forward/backward line information
   // same logic as the Backbone method, but no line connected to vertex 0 -- just the "for loop" part
 
-  this->fb(range(0, m - 1)) = fb;
-  this->fb(m - 1)           = -1; // no line connected to vertex 0
-  if (m - 1 != fb.size()) { throw std::invalid_argument("fb must have m - 1 elements"); }
+  if (m - 1 != fb_vec.size()) { throw std::invalid_argument("fb must have m - 1 elements"); }
+  this->fb(range(1, m)) = fb_vec;
+  this->fb(0)           = -1; // no line connected to vertex 0
 
+  vertices[topology(0, 0)].set_bar(false); // operator on vertex 0 has no bar
+  vertices[topology(0, 1)].set_bar(false); // operator on vertex connected to 0 has no bar
+  vertices[topology(0, 0)].set_dag(true);  // creation operator on vertex 0
+  vertices[topology(0, 1)].set_dag(false); // annihilation operator on vertex connected to 0
   for (int i = 1; i < m; i++) {
     vertices[topology(i, 0)].set_bar(false); // operator on vertex i has no bar
     vertices[topology(i, 1)].set_bar(true);  // operator on vertex connected to i has a bar
-    if (fb(i - 1) == 1) {
+    if (fb(i) == 1) {
       vertices[topology(i, 0)].set_dag(false); // annihilation operator on vertex i
       vertices[topology(i, 1)].set_dag(true);  // creation operator on vertex i
     } else {
@@ -261,6 +267,24 @@ void GreensFunctionBackbone::set_directions(nda::vector_const_view<int> fb) {
       vertices[topology(i, 1)].set_dag(false); // annihilation operator on vertex i
     }
   }
+}
+
+void CorrelatorBackbone::set_flat_index(int flat_ix, nda::vector_const_view<double> hyb_poles) {
+  // set directions, pole indices, and orbital indices from a single integer index.
+  // In terms of fb_ix, p_ix, and o_ix,
+  // f_ix = o_ix + n^(m-1) * p_ix + (n * r)^(m-1) * fb_ix, where r is the number of hybridization indices.
+
+  this->f_ix = flat_ix;
+  int p      = hyb_poles.size();
+  int o_ix   = f_ix % o_ix_max; // orbital indices
+  f_ix /= o_ix_max;
+  int p_ix_max = static_cast<int>(pow(p, m - 1));
+  int p_ix     = f_ix % p_ix_max; // pole indices
+  int fb_ix    = f_ix / p_ix_max; // directions
+
+  set_directions(fb_ix);
+  set_pole_inds(p_ix, hyb_poles);
+  set_orb_inds(o_ix);
 }
 
 std::ostream &operator<<(std::ostream &os, Backbone &B) {
@@ -350,6 +374,102 @@ std::ostream &operator<<(std::ostream &os, Backbone &B) {
   }
   for (int i = 0; i < diag_str_cent - 1; i++) diag_str += " ";
   diag_str += "tau";
+
+  os << "\nPrefactor: " << p_str << "\nDiagram: \n" << diag_str;
+  return os;
+}
+
+std::ostream &operator<<(std::ostream &os, CorrelatorBackbone &B) {
+
+  std::string p_str = "1 / (";
+  int sign          = B.prefactor_sign;
+  if (sign == -1) p_str = "-" + p_str;
+  for (int i = 0; i < B.m - 1; i++) {
+    if (B.get_prefactor_Kexp(i) >= 1) {
+      p_str += "K_{l";
+      for (int j = 0; j < i; j++) p_str += "`";
+      p_str += "}";
+      if (B.get_prefactor_Ksign(i) == 1)
+        p_str += "^+";
+      else
+        p_str += "^-";
+    }
+    if (B.get_prefactor_Kexp(i) > 1) { p_str += "^" + std::to_string(B.get_prefactor_Kexp(i)); }
+    p_str += "(0)";
+    if (i < B.m - 2) p_str += " ";
+  }
+  p_str += ")";
+
+  int diag_str_cent    = 30;
+  std::string diag_str = "";
+  for (int i = 0; i < diag_str_cent; i++) diag_str += " ";
+  diag_str += "0\n";
+  std::string v_str_tmp = "", e_str_tmp = "";
+  for (int i = 0; i < 2 * B.m; i++) {
+    // K factor
+    if (B.get_vertex_Ksign(i) != 0) {
+      v_str_tmp += "K_{l";
+      for (int j = 0; j < B.get_vertex_hyb_ind(i); j++) v_str_tmp += "`";
+      v_str_tmp += "}";
+      if (B.get_vertex_Ksign(i) == 1)
+        v_str_tmp += "^+";
+      else
+        v_str_tmp += "^-";
+    }
+
+    // F operator
+    v_str_tmp += "F";
+    if (B.has_vertex_bar(i) || B.has_vertex_dag(i)) v_str_tmp += "^{";
+    if (B.has_vertex_bar(i)) v_str_tmp += "bar";
+    if (B.has_vertex_dag(i)) v_str_tmp += "dag";
+    if (B.has_vertex_bar(i) || B.has_vertex_dag(i)) v_str_tmp += "}";
+    if (not B.has_vertex_bar(i))
+      v_str_tmp += "_" + std::to_string(i);
+    else {
+      for (int j = 0; j < B.m; j++)
+        if (B.get_topology(j, 1) == i) v_str_tmp += "_" + std::to_string(B.get_topology(j, 0));
+      v_str_tmp += "l";
+      for (int j = 0; j < B.get_vertex_hyb_ind(i); j++) v_str_tmp += "`";
+    }
+    // hybridization
+    /*
+    if (i == B.get_topology(0, 1)) {
+      v_str_tmp += " Delta_{";
+      if (B.has_vertex_dag(i) == 1)
+        v_str_tmp += "0," + std::to_string(i) + "} ";
+      else
+        v_str_tmp += std::to_string(i) + ",0}";
+    } else
+     */
+    v_str_tmp += " ";
+    int vlen0 = v_str_tmp.size();
+    for (int j = vlen0; j < diag_str_cent - 2; j++) v_str_tmp = " " + v_str_tmp;
+    diag_str += v_str_tmp + "--| \n";
+    v_str_tmp = "";
+
+    // edges --> e_str
+    if (i < 2 * B.m - 1) {
+      for (int j = 0; j < B.m - 1; j++) {
+        if (B.get_edge(i, j) != 0) {
+          e_str_tmp += "K_{l";
+          for (int k = 0; k < j; k++) e_str_tmp += "`";
+          e_str_tmp += "}";
+          if (B.get_edge(i, j) == 1)
+            e_str_tmp += "^+ ";
+          else
+            e_str_tmp += "^- ";
+        }
+      }
+      e_str_tmp += "G ";
+      for (int j = 0; j < diag_str_cent; j++) diag_str += " ";
+      diag_str += "| " + e_str_tmp + "\n";
+      e_str_tmp = "";
+    }
+  }
+  for (int i = 0; i < diag_str_cent; i++) diag_str += " ";
+  diag_str += "| G\n";
+  for (int i = 0; i < diag_str_cent - 1; i++) diag_str += " ";
+  diag_str += "beta";
 
   os << "\nPrefactor: " << p_str << "\nDiagram: \n" << diag_str;
   return os;

@@ -644,5 +644,5 @@ TEST(Backbone, solve) {
   // create atom_diag object
   triqs::atom_diag::atom_diag<false> ad(H, fop_set, sym_ops);
 
-  auto Sigma = solve(beta, Lambda, eps, hyb, hyb_poles, hyb_coeffs, ad, nn);
+  auto Sigma = compute_self_energy(beta, Lambda, eps, hyb, hyb_poles, hyb_coeffs, ad, nn);
 }
