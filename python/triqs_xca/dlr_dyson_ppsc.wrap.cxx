@@ -48,8 +48,7 @@ template <>
 const std::string c2py::tp_ctor_doc<cppdlr::dyson_it_ppsc<
    nda::basic_array<std::complex<double>, 2, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>>,
    std::complex<double>>> =
-   init_0.doc(
-      R"DOC(
+   init_0.doc(R"DOC(
 Constructor for dyson_it
 
 .. note::
@@ -66,13 +65,10 @@ itops : {par_1}
 h : {par_2}
    Hamiltonian
 )DOC",
-      std::vector<std::string>{
-         c2py::join(std::vector<std::string>{c2py::python_typename<double>()}, ", "),
-         c2py::join(std::vector<std::string>{c2py::python_typename<cppdlr::imtime_ops>()}, ", "),
-         c2py::join(std::vector<std::string>{c2py::python_typename<const nda::basic_array<
-                       std::complex<double>, 2, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>> &>()},
-                    ", ")},
-      std::vector<std::string>{});
+              {{c2py::python_typename<double>()},
+               {c2py::python_typename<cppdlr::imtime_ops>()},
+               {c2py::python_typename<const nda::basic_array<std::complex<double>, 2, nda::C_layout, 'A',
+                                                             nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>> &>()}});
 // solve
 static auto const fun_0 = c2py::dispatcher_f_kw_t{c2py::cmethod(
    [](cppdlr::dyson_it_ppsc<
@@ -114,13 +110,11 @@ Returns
 {ret_0}
    Green's function at DLR imaginary time nodes
 )DOC",
-   std::vector<std::string>{
-      c2py::join(std::vector<std::string>{c2py::python_typename<const nda::basic_array_view<
-                    std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> &>()},
-                 ", "),
-      c2py::join(std::vector<std::string>{c2py::python_typename<double>()}, ", ")},
-   std::vector<std::string>{std::vector<std::string>{c2py::python_typename<
-      nda::basic_array<std::complex<double>, 3, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>>>()}});
+   {{c2py::python_typename<const nda::basic_array_view<std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                                       nda::borrowed<nda::mem::AddressSpace::Host>> &>()},
+    {c2py::python_typename<double>()}},
+   {c2py::python_typename<
+      nda::basic_array<std::complex<double>, 3, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>>>()});
 static const auto doc_d_1 = fun_1.doc(
    R"DOC(
 Solve pseudo-particle Dyson equation for given self-energy, chemical potential, and operator.
@@ -144,14 +138,12 @@ Returns
 {ret_0}
    Green's function at DLR imaginary time nodes
 )DOC",
-   std::vector<std::string>{
-      c2py::join(std::vector<std::string>{c2py::python_typename<const nda::basic_array_view<
-                    std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> &>()},
-                 ", "),
-      c2py::join(std::vector<std::string>{c2py::python_typename<double>()}, ", "),
-      c2py::join(std::vector<std::string>{c2py::python_typename<nda::matrix_view<cppdlr::dcomplex>>()}, ", ")},
-   std::vector<std::string>{std::vector<std::string>{c2py::python_typename<
-      nda::basic_array<std::complex<double>, 3, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>>>()}});
+   {{c2py::python_typename<const nda::basic_array_view<std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                                       nda::borrowed<nda::mem::AddressSpace::Host>> &>()},
+    {c2py::python_typename<double>()},
+    {c2py::python_typename<nda::matrix_view<cppdlr::dcomplex>>()}},
+   {c2py::python_typename<
+      nda::basic_array<std::complex<double>, 3, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>>>()});
 
 // ----- Method table ----
 template <>

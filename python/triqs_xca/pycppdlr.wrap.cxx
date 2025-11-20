@@ -39,7 +39,7 @@ static auto init_0                                                  = c2py::disp
                                                                         nda::matrix_const_view<double>, nda::vector_const_view<int>>("lambda", "dlr_rf", "dlr_it", "cf2it", "it2cf_lu", "it2cf_piv"),
    c2py::c_constructor<cppdlr::imtime_ops>()};
 template <> constexpr initproc c2py::tp_init<cppdlr::imtime_ops>    = c2py::pyfkw_constructor<init_0>;
-template <> const std::string c2py::tp_ctor_doc<cppdlr::imtime_ops> = init_0.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
+template <> const std::string c2py::tp_ctor_doc<cppdlr::imtime_ops> = init_0.doc(R"DOC()DOC");
 // build_evalvec
 static auto const fun_0 =
    c2py::dispatcher_f_kw_t{c2py::cmethod([](cppdlr::imtime_ops const &self, double t) { return self.build_evalvec(t); }, "self", "t")};
@@ -128,26 +128,26 @@ static auto const fun_19 = c2py::dispatcher_f_kw_t{c2py::cmethod(
       bool transpose) { return self.vals2coefs(g, transpose); },
    "self", "g", "transpose"_a = false)};
 
-static const auto doc_d_0  = fun_0.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_1  = fun_1.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_2  = fun_2.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_3  = fun_3.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_4  = fun_4.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_5  = fun_5.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_6  = fun_6.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_7  = fun_7.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_8  = fun_8.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_9  = fun_9.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_10 = fun_10.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_11 = fun_11.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_12 = fun_12.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_13 = fun_13.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_14 = fun_14.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_15 = fun_15.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_16 = fun_16.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_17 = fun_17.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_18 = fun_18.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_19 = fun_19.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
+static const auto doc_d_0  = fun_0.doc(R"DOC()DOC");
+static const auto doc_d_1  = fun_1.doc(R"DOC()DOC");
+static const auto doc_d_2  = fun_2.doc(R"DOC()DOC");
+static const auto doc_d_3  = fun_3.doc(R"DOC()DOC");
+static const auto doc_d_4  = fun_4.doc(R"DOC()DOC");
+static const auto doc_d_5  = fun_5.doc(R"DOC()DOC");
+static const auto doc_d_6  = fun_6.doc(R"DOC()DOC");
+static const auto doc_d_7  = fun_7.doc(R"DOC()DOC");
+static const auto doc_d_8  = fun_8.doc(R"DOC()DOC");
+static const auto doc_d_9  = fun_9.doc(R"DOC()DOC");
+static const auto doc_d_10 = fun_10.doc(R"DOC()DOC");
+static const auto doc_d_11 = fun_11.doc(R"DOC()DOC");
+static const auto doc_d_12 = fun_12.doc(R"DOC()DOC");
+static const auto doc_d_13 = fun_13.doc(R"DOC()DOC");
+static const auto doc_d_14 = fun_14.doc(R"DOC()DOC");
+static const auto doc_d_15 = fun_15.doc(R"DOC()DOC");
+static const auto doc_d_16 = fun_16.doc(R"DOC()DOC");
+static const auto doc_d_17 = fun_17.doc(R"DOC()DOC");
+static const auto doc_d_18 = fun_18.doc(R"DOC()DOC");
+static const auto doc_d_19 = fun_19.doc(R"DOC()DOC");
 
 // ----- Method table ----
 template <>
@@ -195,7 +195,7 @@ static auto const fun_20 =
                                       "lambda", "eps", "symmetrize"),
                            c2py::cfun([](double lambda, double eps) { return cppdlr::build_dlr_rf(lambda, eps); }, "lambda", "eps")};
 
-static const auto doc_d_20 = fun_20.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
+static const auto doc_d_20 = fun_20.doc(R"DOC()DOC");
 //--------------------- module function table  -----------------------------
 
 static PyMethodDef module_methods[] = {

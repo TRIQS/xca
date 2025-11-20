@@ -32,8 +32,7 @@ static auto init_0                                           = c2py::dispatcher_
       "beta", "lambda", "itops", "F", "F_dag")};
 template <> constexpr initproc c2py::tp_init<fastdiagram> = c2py::pyfkw_constructor<init_0>;
 template <>
-const std::string c2py::tp_ctor_doc<fastdiagram> =
-   init_0.doc(R"DOC(
+const std::string c2py::tp_ctor_doc<fastdiagram> = init_0.doc(R"DOC(
 Constructor for fastdiagram, construct itops and diagram topology matrices
 
 Parameters
@@ -49,12 +48,11 @@ F : {par_3}
 F_dag : {par_4}
    impurity creation operator in pseudo-particle space, of size n*N*N
 )DOC",
-              std::vector<std::string>{c2py::join(std::vector<std::string>{c2py::python_typename<double>()}, ", "),
-                                       c2py::join(std::vector<std::string>{c2py::python_typename<double>()}, ", "),
-                                       c2py::join(std::vector<std::string>{c2py::python_typename<cppdlr::imtime_ops>()}, ", "),
-                                       c2py::join(std::vector<std::string>{c2py::python_typename<nda::array<cppdlr::dcomplex, 3>>()}, ", "),
-                                       c2py::join(std::vector<std::string>{c2py::python_typename<nda::array<cppdlr::dcomplex, 3>>()}, ", ")},
-              std::vector<std::string>{});
+                                                              {{c2py::python_typename<double>()},
+                                                               {c2py::python_typename<double>()},
+                                                               {c2py::python_typename<cppdlr::imtime_ops>()},
+                                                               {c2py::python_typename<nda::array<cppdlr::dcomplex, 3>>()},
+                                                               {c2py::python_typename<nda::array<cppdlr::dcomplex, 3>>()}});
 // G_calc
 static auto const fun_0 = c2py::dispatcher_f_kw_t{c2py::cmethod(
    [](fastdiagram &self, nda::array<cppdlr::dcomplex, 3> Gt, std::string order) { return self.G_calc(Gt, order); }, "self", "Gt", "order")};
@@ -115,8 +113,7 @@ static auto const fun_12 = c2py::dispatcher_f_kw_t{
                     nda::array_const_view<cppdlr::dcomplex, 3> Sigma_t) { return self.time_ordered_dyson(beta, H_S, eta_0, Sigma_t); },
                  "self", "beta", "H_S", "eta_0", "Sigma_t")};
 
-static const auto doc_d_0 =
-   fun_0.doc(R"DOC(
+static const auto doc_d_0  = fun_0.doc(R"DOC(
 Compute impurity Green's function diagram of certain order, given pseudo-particle Green's function G(t)
 
 Parameters
@@ -131,12 +128,10 @@ Returns
 {ret_0}
    impurity Green's function diagram, r*n*n
 )DOC",
-             std::vector<std::string>{c2py::join(std::vector<std::string>{c2py::python_typename<nda::array<cppdlr::dcomplex, 3>>()}, ", "),
-                                      c2py::join(std::vector<std::string>{c2py::python_typename<std::string>()}, ", ")},
-             std::vector<std::string>{std::vector<std::string>{c2py::python_typename<nda::array<cppdlr::dcomplex, 3>>()}});
-static const auto doc_d_1 = fun_1.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_2 =
-   fun_2.doc(R"DOC(
+                                       {{c2py::python_typename<nda::array<cppdlr::dcomplex, 3>>()}, {c2py::python_typename<std::string>()}},
+                                       {c2py::python_typename<nda::array<cppdlr::dcomplex, 3>>()});
+static const auto doc_d_1  = fun_1.doc(R"DOC()DOC");
+static const auto doc_d_2  = fun_2.doc(R"DOC(
 Compute pseudo-particle self energy diagram of certain order, given pseudo-particle Green's function G(t)
 
 Parameters
@@ -151,20 +146,17 @@ Returns
 {ret_0}
    pseudo-particle self energy diagram, r*N*N
 )DOC",
-             std::vector<std::string>{c2py::join(std::vector<std::string>{c2py::python_typename<nda::array<cppdlr::dcomplex, 3>>()}, ", "),
-                                      c2py::join(std::vector<std::string>{c2py::python_typename<std::string>()}, ", ")},
-             std::vector<std::string>{std::vector<std::string>{c2py::python_typename<nda::array<cppdlr::dcomplex, 3>>()}});
-static const auto doc_d_3  = fun_3.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_4  = fun_4.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
+                                       {{c2py::python_typename<nda::array<cppdlr::dcomplex, 3>>()}, {c2py::python_typename<std::string>()}},
+                                       {c2py::python_typename<nda::array<cppdlr::dcomplex, 3>>()});
+static const auto doc_d_3  = fun_3.doc(R"DOC()DOC");
+static const auto doc_d_4  = fun_4.doc(R"DOC()DOC");
 static const auto doc_d_5  = fun_5.doc(R"DOC(
 free green's function, wrapped from free_gf of cppdlr
-)DOC",
-                                       std::vector<std::string>{}, std::vector<std::string>{});
+)DOC");
 static const auto doc_d_6  = fun_6.doc(R"DOC(
 free pseudo-particle green's function, wrapped from free_gf_ppsc
-)DOC",
-                                       std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_7  = fun_7.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
+)DOC");
+static const auto doc_d_7  = fun_7.doc(R"DOC()DOC");
 static const auto doc_d_8  = fun_8.doc(R"DOC(
 calculate decomposition and reflection of hybridization Deltat
 
@@ -175,13 +167,11 @@ poledlrflag : {par_0}
 eps : {par_1}
    SVD truncation threshold
 )DOC",
-                                       std::vector<std::string>{c2py::join(std::vector<std::string>{c2py::python_typename<bool>()}, ", "),
-                                                                c2py::join(std::vector<std::string>{c2py::python_typename<double>()}, ", ")},
-                                       std::vector<std::string>{});
-static const auto doc_d_9  = fun_9.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_10 = fun_10.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_11 = fun_11.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
-static const auto doc_d_12 = fun_12.doc(R"DOC()DOC", std::vector<std::string>{}, std::vector<std::string>{});
+                                       {{c2py::python_typename<bool>()}, {c2py::python_typename<double>()}});
+static const auto doc_d_9  = fun_9.doc(R"DOC()DOC");
+static const auto doc_d_10 = fun_10.doc(R"DOC()DOC");
+static const auto doc_d_11 = fun_11.doc(R"DOC()DOC");
+static const auto doc_d_12 = fun_12.doc(R"DOC()DOC");
 
 // ----- Method table ----
 template <>
