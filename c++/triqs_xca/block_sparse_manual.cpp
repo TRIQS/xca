@@ -9,7 +9,7 @@
 #include <nda/declarations.hpp>
 #include <nda/basic_functions.hpp>
 #include <nda/layout_transforms.hpp>
-#include <nda/linalg/eigenelements.hpp>
+#include <nda/linalg/eigh.hpp>
 #include <nda/print.hpp>
 #include <vector>
 

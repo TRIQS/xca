@@ -28,7 +28,7 @@
 #include <cppdlr/dlr_imtime.hpp>
 #include <cppdlr/dlr_kernels.hpp>
 
-#include <nda/linalg/eigenelements.hpp>
+#include <nda/linalg/eigh.hpp>
 #include <type_traits>
 
 namespace cppdlr {
@@ -124,7 +124,7 @@ namespace cppdlr {
       auto g    = Tg(sig.shape());                                                         // Declare Green's function
       g         = rhs;                                                                     // Get right hand side of Dyson equation
       auto g_rs = nda::matrix_view<nda::get_value_t<Tg>>(nda::reshape(g, norb, r * norb)); // Reshape g to be compatible w/ LAPACK
-      nda::lapack::getrs(sysmat, g_rs, ipiv);                                              // Back solve
+      nda::lapack::getrs(sysmat, transpose(g_rs), ipiv);                                   // Back solve
 
       if constexpr (std::floating_point<Ht>) { // If h is scalar, g is scalar-valued
         return g;
@@ -173,7 +173,7 @@ namespace cppdlr {
       auto g    = Tg(sig.shape());                                                         // Declare Green's function
       g         = rhs;                                                                     // Get right hand side of Dyson equation
       auto g_rs = nda::matrix_view<nda::get_value_t<Tg>>(nda::reshape(g, norb, r * norb)); // Reshape g to be compatible w/ LAPACK
-      nda::lapack::getrs(sysmat, g_rs, ipiv);                                              // Back solve
+      nda::lapack::getrs(sysmat, transpose(g_rs), ipiv);                                              // Back solve
 
       if constexpr (std::floating_point<Ht>) { // If h is scalar, g is scalar-valued
         return g;
@@ -231,7 +231,7 @@ namespace cppdlr {
       int norb = h.shape(0);
 
       // Diagonalize Hamiltonian
-      auto [eval, evec] = nda::linalg::eigenelements(h);
+      auto [eval, evec] = nda::linalg::eigh(h);
 
       auto E0 = nda::min_element(eval);
       eval -= E0;

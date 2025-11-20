@@ -10,7 +10,7 @@ nda::array<dcomplex, 3> Hmat_to_Gtmat(nda::array<dcomplex, 2> Hmat, double beta,
   // Helper function for computing the non-interacting Green's function from the Hamiltonian, both in dense storage
 
   int N                         = Hmat.extent(0);
-  auto [H_loc_eval, H_loc_evec] = nda::linalg::eigenelements(Hmat);
+  auto [H_loc_eval, H_loc_evec] = nda::linalg::eigh(Hmat);
   auto E0                       = nda::min_element(H_loc_eval);
   H_loc_eval -= E0;
   auto tr_exp_minusbetaH = nda::sum(exp(-beta * H_loc_eval));

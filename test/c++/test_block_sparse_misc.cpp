@@ -33,7 +33,7 @@ TEST(BlockSparseMisc, compute_nonint_gf) {
   H_dense(15, 15)                       = 6;
 
   // compute noninteracting Green's function from dense Hamiltonian
-  auto [H_loc_eval, H_loc_evec] = nda::linalg::eigenelements(H_dense);
+  auto [H_loc_eval, H_loc_evec] = nda::linalg::eigh(H_dense);
   auto E0                       = nda::min_element(H_loc_eval);
   H_loc_eval -= E0;
   auto tr_exp_minusbetaH = nda::sum(exp(-beta * H_loc_eval));

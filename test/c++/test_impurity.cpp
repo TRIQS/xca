@@ -119,7 +119,7 @@ TEST(strong_coupling, dimer) {
   H                         = H - t * (matmul(c1_dag, c4) + matmul(c4_dag, c1)) - t * (matmul(c1_dag, c5) + matmul(c5_dag, c1));
   H                         = H - tp * (matmul(c2_dag, c4) + matmul(c4_dag, c2)) - tp * (matmul(c3_dag, c5) + matmul(c5_dag, c3));
 
-  auto [eval, evec] = nda::linalg::eigenelements(H);
+  auto [eval, evec] = nda::linalg::eigh(H);
 
   // std::cout<<exp_eval;
   double beta                  = 8;
@@ -213,7 +213,7 @@ TEST(strong_coupling, dimer) {
   H_S                         = H_S - v * (matmul(c0_S_dag, c1_S) + matmul(c1_S_dag, c0_S));
   H_S                         = H_S - mu * (matmul(c0_S_dag, c0_S) + matmul(c1_S_dag, c1_S));
 
-  auto [E_HS, U_HS] = nda::linalg::eigenelements(H_S);
+  auto [E_HS, U_HS] = nda::linalg::eigh(H_S);
   auto E0_HS        = min_element(E_HS);
   E_HS -= E0_HS;
   auto Z_HS  = sum(exp(-beta * E_HS));

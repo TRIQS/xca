@@ -9,7 +9,7 @@
 #include <nda/declarations.hpp>
 #include <nda/basic_functions.hpp>
 #include <nda/layout_transforms.hpp>
-#include <nda/linalg/eigenelements.hpp>
+#include <nda/linalg/eigh.hpp>
 #include <nda/print.hpp>
 #include <ostream>
 #include <string>
@@ -656,7 +656,7 @@ BlockDiagOpFun nonint_gf_BDOF(std::vector<nda::array<double, 2>> H_blocks, nda::
         H_evals[i] = nda::array<double, 1>{H_blocks[i](0, 0)};
         H_evecs[i] = nda::array<double, 2>{{1}};
       } else {
-        auto H_block_eig = nda::linalg::eigenelements(H_blocks[i]);
+        auto H_block_eig = nda::linalg::eigh(H_blocks[i]);
         H_evals[i]       = std::get<0>(H_block_eig);
         H_evecs[i]       = std::get<1>(H_block_eig);
       }

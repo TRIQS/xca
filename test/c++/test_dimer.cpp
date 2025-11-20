@@ -116,7 +116,7 @@ TEST(strong_coupling, dimer) {
   H                         = H - t * (matmul(c1_dag, c4) + matmul(c4_dag, c1)) - t * (matmul(c1_dag, c5) + matmul(c5_dag, c1));
   H                         = H - tp * (matmul(c2_dag, c4) + matmul(c4_dag, c2)) - tp * (matmul(c3_dag, c5) + matmul(c5_dag, c3));
 
-  auto [eval, evec] = nda::linalg::eigenelements(H);
+  auto [eval, evec] = nda::linalg::eigh(H);
 
   // std::cout<<exp_eval;
   double beta                  = 8;
@@ -210,7 +210,7 @@ TEST(strong_coupling, dimer) {
 
   auto G0_S_dlr = itops.vals2coefs(G0_S_tau);
   //
-  auto [E_HS, U_HS] = nda::linalg::eigenelements(H_S);
+  auto [E_HS, U_HS] = nda::linalg::eigh(H_S);
 
   auto E0_HS = min_element(E_HS);
   E_HS -= E0_HS;
@@ -322,7 +322,7 @@ TEST(strong_coupling, dimer) {
 nda::array<dcomplex, 3> ppsc_free_greens_tau(nda::vector_const_view<double> tau_i, nda::array_view<dcomplex, 2> H_S, double beta) {
   int na                       = H_S.shape(0);
   nda::array<dcomplex, 2> I_aa = nda::eye<dcomplex>(na);
-  auto [E, U]                  = nda::linalg::eigenelements(H_S);
+  auto [E, U]                  = nda::linalg::eigh(H_S);
 
   auto E0 = min_element(E);
   E -= E0;

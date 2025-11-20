@@ -153,8 +153,8 @@ TEST(BlockSparseNCAManual, single_exponential) {
     NCA_ana(i) = -exp(-(D + g) * tau) - exp((D - g) * tau);
   }
 
-  EXPECT_LT(nda::norm((NCA_result.get_block(0)(_, 0, 0) - NCA_ana), std::numeric_limits<double>::infinity())
-               / nda::norm(NCA_ana, std::numeric_limits<double>::infinity()),
+  EXPECT_LT(nda::linalg::norm((NCA_result.get_block(0)(_, 0, 0) - NCA_ana), std::numeric_limits<double>::infinity())
+               / nda::linalg::norm(NCA_ana, std::numeric_limits<double>::infinity()),
             1.0e-12);
 }
 
