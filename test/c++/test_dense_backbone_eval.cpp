@@ -109,7 +109,7 @@ TEST(DenseBackbone, OCA) {
   auto OCA_dense_result = OCA_dense(Deltat, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
   ASSERT_LE(nda::max_element(nda::abs(OCA_result - OCA_dense_result)), eps);
 
-  // compute OCA using Zhen's code
+  // compute OCA using old code
   auto Deltadlr                            = itops.vals2coefs(Deltat); //obtain dlr coefficient of Delta(t)
   nda::vector<double> dlr_rf_reflect       = -dlr_rf;
   nda::array<dcomplex, 3> Deltadlr_reflect = Deltadlr * 1.0;
@@ -128,9 +128,9 @@ TEST(DenseBackbone, OCA) {
   auto OCA_forward  = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
   fb(1)             = 1;
   auto OCA_backward = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
-  auto OCA_Zhen     = nda::make_regular(-OCA_forward - OCA_backward);
+  auto OCA_old      = nda::make_regular(-OCA_forward - OCA_backward);
 
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result - OCA_Zhen)), eps);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_result - OCA_old)), eps);
 }
 
 TEST(DenseBackbone, third_order_manual) {
@@ -251,10 +251,10 @@ TEST(DenseBackbone, OCA_semicircle_bath_aaa) {
   auto OCA_forward      = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
   fb(1)                 = 1;
   auto OCA_backward     = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
-  auto OCA_Zhen         = nda::make_regular(-OCA_forward - OCA_backward);
+  auto OCA_old          = nda::make_regular(-OCA_forward - OCA_backward);
 
-  // check that dense OCA calculation agree with Zhen
-  ASSERT_LE(nda::max_element(nda::abs(OCA_dense_result - OCA_Zhen)), eps);
+  // check that dense OCA calculation agree with old
+  ASSERT_LE(nda::max_element(nda::abs(OCA_dense_result - OCA_old)), eps);
 
   // generic diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};

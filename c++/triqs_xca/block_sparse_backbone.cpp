@@ -86,9 +86,8 @@ void DiagramBlockSparseEvaluator::multiply_vertex_block(Backbone &backbone, int 
 void DiagramBlockSparseEvaluator::compose_with_edge_block(Backbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
                                                           nda::vector_const_view<int> block_dims) {
 
-  int n_col_r = e_ix < backbone.get_topology(0, 1) ? block_dims(1) : block_dims(0);
-  int b_ix    = ind_path(e_ix); // block index for the edge e_ix
-  // TODO check block dims
+  int n_col_r                                                            = e_ix < backbone.get_topology(0, 1) ? block_dims(1) : block_dims(0);
+  int b_ix                                                               = ind_path(e_ix); // block index for the edge e_ix
   GKt(_, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1))) = Gt.get_block(b_ix);
   int m                                                                  = backbone.m;
   for (int x = 0; x < m - 1; x++) {
@@ -156,6 +155,20 @@ void DiagramBlockSparseEvaluator::multiply_zero_vertex_block(Backbone &backbone,
   }
 }
 
+void DiagramBlockSparseEvaluator::multiply_prefactor(Backbone &backbone, nda::vector_const_view<int> block_dims) {
+  int m = backbone.m;
+  // Multiply by prefactor
+  for (int m_ix = 0; m_ix < m - 1; m_ix++) {
+    int exp = backbone.get_prefactor_Kexp(m_ix);
+    if (exp != 0) {
+      int Ksign = backbone.get_prefactor_Ksign(m_ix);
+      double om = hyb_poles(backbone.get_pole_ind(m_ix));
+      double k  = k_it(0, Ksign * om);
+      for (int x = 0; x < exp; x++) T(_, range(0, block_dims(2 * m)), range(0, block_dims(0))) /= k;
+    }
+  }
+}
+
 void DiagramBlockSparseEvaluator::reset() {
   T     = 0;
   GKt   = 0;
@@ -170,13 +183,7 @@ void DiagramBlockSparseEvaluator::eval_diagram_block_sparse(Backbone &backbone) 
 
   int m = backbone.m;
   nda::vector<int> ind_path(2 * m - 1); // tracks block indices of factors for computing a particular block of the self-energy
-  // nda::vector<int> ind_path(backbone.get_topology(0, 1) - 1);
-  // ^ tracks block indices of factors for computing a particular block of the self-energy before the vertex connected to zero
-  // nda::array<int, 2> ind_path_forks(2 * m - backbone.get_topology(0, 1), q);
   nda::vector<int> block_dims(2 * m + 1); // tracks the dimensions of the blocks in these factors
-  // nda::vector<int> block_dims(backbone.get_topology(0, 1) + 1);
-  // ^ tracks the dimensions of the blocks in these factors before the vertex connected to zero
-  // nda::array<int, 2> block_dims_forks(2 * m - backbone.get_topology(0, 1), q);
 
   // loop over all flat indices
   int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), m - 1));
@@ -291,19 +298,168 @@ void DiagramBlockSparseEvaluator::eval_backbone_fixed_indices_block_sparse(Backb
     multiply_vertex_block(backbone, v, ind_path, block_dims);
   }
 
-  for (int m_ix = 0; m_ix < m - 1; m_ix++) {
-    int exp = backbone.get_prefactor_Kexp(m_ix);
-    if (exp != 0) {
-      int Ksign = backbone.get_prefactor_Ksign(m_ix);
-      double om = hyb_poles(backbone.get_pole_ind(m_ix));
-      double k  = k_it(0, Ksign * om);
-      for (int x = 0; x < exp; x++) T(_, range(0, block_dims(2 * m)), range(0, block_dims(0))) /= k;
-    }
-  }
+  multiply_prefactor(backbone, block_dims);
   int diag_order_sign = (m % 2 == 0) ? -1 : 1;
   if (backbone.get_fb(0) == 0) diag_order_sign *= -1;
   T(_, range(0, block_dims(2 * m)), range(0, block_dims(0))) *= diag_order_sign * backbone.prefactor_sign;
   // TODO: temporary fix: have backward pass consider sparsity of hybridization function (hyb, hyb_refl) during zero vertex
   if (nda::max_element(nda::abs(T(_, range(0, block_dims(2 * m)), range(0, block_dims(0))))) > 1e-16)
     Sigma.add_block(b_ix, T(_, range(0, block_dims(2 * m)), range(0, block_dims(0))));
+}
+
+CorrelatorDiagramBlockSparseEvaluator::CorrelatorDiagramBlockSparseEvaluator(double beta, imtime_ops &itops, nda::array_const_view<dcomplex, 3> hyb,
+                                                                             nda::array_const_view<dcomplex, 3> hyb_refl,
+                                                                             nda::vector_const_view<double> hyb_poles, BlockDiagOpFun &Gt,
+                                                                             BlockOpSymQuartet &Fq)
+   : DiagramBlockSparseEvaluator(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq) {
+  U = nda::zeros<dcomplex>(r, Nmax, Nmax);
+}
+
+void CorrelatorDiagramBlockSparseEvaluator::multiply_vertex_corr_left_block(Backbone &backbone, int v_ix, nda::vector_const_view<int> ind_path,
+                                                                            nda::vector_const_view<int> block_dims) {
+
+  int o_ix = backbone.get_vertex_orb(v_ix); // orbital_index
+  // split backbone orbital index into symmetry set index and orbital index within the symmetry set
+  // i.e. have mapping between backbone orbital index and symmetry set index
+  int q_ix    = static_cast<int>(Fq.sym_set_labels(o_ix)); // symmetry set index
+  int qo_ix   = static_cast<int>(Fq.sym_set_inds(o_ix));   // index within the symmetry set
+  int l_ix    = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(v_ix));
+  int n_col_r = block_dims(backbone.get_topology(0, 1) + 1); // number of columns for the left-hand side of the diagram
+  int b_ix    = ind_path(v_ix - 1);                          // block index for the vertex v_ix
+
+  if (backbone.has_vertex_bar(v_ix)) {   // F has bar
+    if (backbone.has_vertex_dag(v_ix)) { // F has dagger
+      for (int t = 0; t < r; t++) {
+        U(t, range(0, block_dims(v_ix + 1)), range(0, n_col_r)) =
+           matmul(Fq.F_dag_bars[q_ix].get_block(b_ix)(qo_ix, l_ix, _, _), U(t, range(0, block_dims(v_ix)), range(0, n_col_r)));
+      }
+    } else {
+      for (int t = 0; t < r; t++) {
+        U(t, range(0, block_dims(v_ix + 1)), range(0, n_col_r)) =
+           -matmul(Fq.F_bars_refl[q_ix].get_block(b_ix)(qo_ix, l_ix, _, _), U(t, range(0, block_dims(v_ix)), range(0, n_col_r)));
+      }
+    }
+  } else {
+    if (backbone.has_vertex_dag(v_ix)) { // F has dagger
+      for (int t = 0; t < r; t++) {
+        U(t, range(0, block_dims(v_ix + 1)), range(0, n_col_r)) =
+           matmul(Fq.F_dags[q_ix].get_block(b_ix)(qo_ix, _, _), U(t, range(0, block_dims(v_ix)), range(0, n_col_r)));
+      }
+    } else {
+      for (int t = 0; t < r; t++) {
+        U(t, range(0, block_dims(v_ix + 1)), range(0, n_col_r)) =
+           matmul(Fq.Fs[q_ix].get_block(b_ix)(qo_ix, _, _), U(t, range(0, block_dims(v_ix)), range(0, n_col_r)));
+      }
+    }
+  }
+
+  // K factor
+  int bv      = backbone.get_vertex_Ksign(v_ix); // sign on K
+  double pole = hyb_poles(l_ix);
+  if (bv != 0) {
+    for (int t = 0; t < r; t++) {
+      U(t, range(0, block_dims(v_ix + 1)), range(0, n_col_r)) = k_it(dlr_it(t), bv * pole) * U(t, range(0, block_dims(v_ix + 1)), range(0, n_col_r));
+    }
+  }
+}
+
+void CorrelatorDiagramBlockSparseEvaluator::compose_with_edge_corr_left_block(Backbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
+                                                                              nda::vector_const_view<int> block_dims) {
+
+  int n_col_r                                                            = e_ix < backbone.get_topology(0, 1) ? block_dims(1) : block_dims(0);
+  int b_ix                                                               = ind_path(e_ix); // block index for the edge e_ix
+  GKt(_, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1))) = Gt.get_block(b_ix);
+  int m                                                                  = backbone.m;
+  for (int x = 0; x < m - 1; x++) {
+    int be = backbone.get_edge(e_ix, x); // sign on K
+    if (be != 0) {
+      for (int t = 0; t < r; t++) {
+        GKt(t, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1))) =
+           k_it(dlr_it(t), be * hyb_poles(backbone.get_pole_ind(x))) * GKt(t, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1)));
+      }
+    }
+  }
+  U(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r)) =
+     itops.convolve(beta, itops.vals2coefs(GKt(_, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1)))),
+                    itops.vals2coefs(U(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r))), TIME_ORDERED);
+}
+
+nda::array<dcomplex, 3> CorrelatorDiagramBlockSparseEvaluator::eval_diagram_block_sparse(Backbone &backbone, std::vector<BlockOp> mu_ops,
+                            std::vector<BlockOp> kap_ops) {
+  int m = backbone.m;
+  nda::vector<int> ind_path(2 * m); // tracks block indices of factors for computing a particular block's contribution to the correlator
+  nda::vector<int> block_dims(2 * m + 1); // tracks the dimensions of the blocks in these factors
+  int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), m - 1));
+  nda::array<dcomplex, 3> correlator = nda::zeros<dcomplex>(r, mu_ops.size(), kap_ops.size());
+  nda::array<dcomplex, 3> Tmuop = nda::zeros<dcomplex>(r, Nmax, Nmax);
+  // loop over all flat indices
+  for (int f_ix = 0; f_ix < f_ix_max; ++f_ix) {
+    backbone.set_flat_index(f_ix, hyb_poles); // set directions, pole indices, and orbital indices from a single integer index
+    /*  Example of block_dims for m = 2 (OCA): each number is an index of block_dims, and each square represents a block of a matrix 
+            4            3            3            2            2            1            1            0
+        --------     --------     --------     --------     --------     --------     --------     --------
+      4 |   G  |   4 |   F  |   3 |   G  |   3 |   F  |   2 |   G  |   2 |   F  |   1 |   G  |   1 |   F  |
+        |      |     |      |     |      |     |      |     |      |     |      |     |      |     |      |
+        --------     --------     --------     --------     --------     --------     --------     --------
+    */
+  }
+  
+  return correlator;
+}
+
+void CorrelatorDiagramBlockSparseEvaluator::eval_backbone_fixed_indices_block_sparse(Backbone &backbone, int b_ix, int p_kap, int p_mu,
+                                                                                     nda::vector_const_view<int> ind_path,
+                                                                                     nda::vector_const_view<int> block_dims) {
+
+  int m = backbone.m;
+
+  // evaluate the first sequence of backbone products and convolutions from tau_1 to tau, proceeding right to left, not inculding the creation and
+  // annihilation matrices at the end points. the result is an N x N matrix-valued function of tau.
+  T(_, range(0, block_dims(1)), range(0, block_dims(1))) = Gt.get_block(ind_path(0));
+  for (int v = 1; v < backbone.get_topology(0, 1); ++v) {
+    multiply_vertex_block(backbone, v, ind_path, block_dims);
+    compose_with_edge_block(backbone, v, ind_path, block_dims);
+  }
+
+  // evaluate the second sequence of backbone products and convolutions from tau to beta, using a change of variables to perform convolutions. the
+  // result is another N x N matrix-valued function of tau.
+  U(_, range(0, block_dims(backbone.get_topology(0, 1) + 1)), range(0, block_dims(backbone.get_topology(0, 1) + 1))) =
+     Gt.get_block(ind_path(backbone.get_topology(0, 1)));
+  int be = 0;
+  for (int i = 0; i < m - 1; ++i) {
+    be = backbone.get_edge(backbone.get_topology(0, 1), i);
+    if (be != 0) {
+      for (int t = 0; t < r; t++) {
+        U(t, range(0, block_dims(backbone.get_topology(0, 1) + 1)), range(0, block_dims(backbone.get_topology(0, 1) + 1))) =
+           k_it(dlr_it(t), be * hyb_poles(backbone.get_pole_ind(i)))
+           * U(t, range(0, block_dims(backbone.get_topology(0, 1) + 1)), range(0, block_dims(backbone.get_topology(0, 1) + 1)));
+      }
+    }
+  }
+  for (int v = backbone.get_topology(0, 1) + 1; v < 2 * m - 1; ++v) {
+    multiply_vertex_corr_left_block(backbone, v, ind_path, block_dims);
+    compose_with_edge_corr_left_block(backbone, v, ind_path, block_dims);
+  }
+  // multiply by the last vertex
+  multiply_vertex_corr_left_block(backbone, 2 * m - 1, ind_path, block_dims);
+  // convolve with last edge
+  GKt(_, range(0, block_dims(2 * m)), range(0, block_dims(2 * m))) = Gt.get_block(ind_path(2 * m - 1));
+  int bv                                                           = backbone.get_vertex_Ksign(2 * m - 1); // sign on K
+  int l_ix                                                         = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(2 * m - 1));
+  double pole                                                      = hyb_poles(l_ix);
+  if (bv != 0) {
+    for (int t = 0; t < r; t++) {
+      GKt(t, range(0, block_dims(2 * m)), range(0, block_dims(2 * m))) =
+         k_it(dlr_it(t), bv * pole) * GKt(t, range(0, block_dims(2 * m)), range(0, block_dims(2 * m)));
+    }
+  }
+  U(_, range(0, block_dims(2 * m)), range(0, block_dims(backbone.get_topology(0, 1) + 1))) =
+     itops.convolve(beta, itops.vals2coefs(GKt(_, range(0, block_dims(2 * m)), range(0, block_dims(2 * m)))),
+                    itops.vals2coefs(U(_, range(0, block_dims(2 * m)), range(0, block_dims(backbone.get_topology(0, 1) + 1)))), TIME_ORDERED);
+  U = itops.reflect(U);
+
+  multiply_prefactor(backbone, block_dims);
+  int diag_order_sign = (m % 2 == 0) ? -1 : 1;
+  if (backbone.get_fb(0) == 0) diag_order_sign *= -1;
+  T(_, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(1))) *= diag_order_sign * backbone.prefactor_sign;
 }

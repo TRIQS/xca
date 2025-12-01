@@ -38,7 +38,7 @@ class DiagramEvaluator {
   void compose_with_edge_dense(Backbone &backbone, int e_ix);     // convolve with a single edge, e_ix, in a backbone diagram using dense storage
   void reset();                                                   // reset all arrays to zero
   void multiply_zero_vertex(Backbone &backbone, bool is_forward); // multiply by the zero vertex and the vertex connected to zero
-  void multiply_prefactor(Backbone &backbone);               // multiply by the prefactor associated with the backbone
+  void multiply_prefactor(Backbone &backbone);                    // multiply by the prefactor associated with the backbone
   void eval_diagram_dense(
      Backbone &
         backbone); // evaluate a diagram of a given order and topology in dense storage (i.e., evaluate and sum all backbones with different orbital indices, poles, and hybridization line directions)

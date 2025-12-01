@@ -154,6 +154,13 @@ void DiagramEvaluator::eval_backbone_fixed_indices_dense(Backbone &backbone) {
   Sigma += T;
 }
 
+CorrelatorDiagramEvaluator::CorrelatorDiagramEvaluator(double beta, imtime_ops &itops, nda::array_const_view<dcomplex, 3> hyb,
+                                                       nda::array_const_view<dcomplex, 3> hyb_refl, nda::vector_const_view<double> hyb_poles,
+                                                       nda::array_const_view<dcomplex, 3> Gt, DenseFSet &Fset)
+   : DiagramEvaluator(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fset) {
+  U = nda::zeros<dcomplex>(r, Gt.extent(1), Gt.extent(2));
+}
+
 void CorrelatorDiagramEvaluator::multiply_vertex_corr_left_dense(Backbone &backbone, int v_ix) {
 
   int o_ix = backbone.get_vertex_orb(v_ix); // orbital index
@@ -220,19 +227,11 @@ nda::array<dcomplex, 3> CorrelatorDiagramEvaluator::eval_diagram_dense(Correlato
   return correlator;
 }
 
-CorrelatorDiagramEvaluator::CorrelatorDiagramEvaluator(double beta, imtime_ops &itops, nda::array_const_view<dcomplex, 3> hyb,
-                                                       nda::array_const_view<dcomplex, 3> hyb_refl, nda::vector_const_view<double> hyb_poles,
-                                                       nda::array_const_view<dcomplex, 3> Gt, DenseFSet &Fset)
-   : DiagramEvaluator(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fset) {
-  U = nda::zeros<dcomplex>(r, Gt.extent(1), Gt.extent(2));
-}
-
 void CorrelatorDiagramEvaluator::eval_backbone_fixed_indices_dense(CorrelatorBackbone &backbone) {
   int m = backbone.m;
 
   // evaluate the first sequence of backbone products and convolutions from tau_1 to tau, proceeding right to left, not inculding the creation and
   // annihilation matrices at the end points. the result is an N x N matrix-valued function of tau.
-
   T = Gt; // T stores the result moving right to left
   // T is initialized to Gt, which is always the function at the rightmost edge
   for (int v = 1; v < backbone.get_topology(0, 1); ++v) { // loop from the first vertex to before the special vertex

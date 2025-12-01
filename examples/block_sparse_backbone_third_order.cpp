@@ -291,28 +291,28 @@ int main() {
     third_order_result = D.Sigma;
     D.reset(); // reset the DiagramEvaluator for the next topology
 
-    // Compute third-order contribution using Zhen's code
-    nda::array<dcomplex, 3> TCA_Zhen(r, N, N);
-    TCA_Zhen = 0;
+    // Compute third-order contribution using old code
+    nda::array<dcomplex, 3> TCA_old(r, N, N);
+    TCA_old = 0;
     fb(1) = 0;
     fb(2) = 0;
-    TCA_Zhen += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense,
+    TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense,
                                                F_dags_dense, fb, true);
     fb(1) = 1;
-    TCA_Zhen += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense,
+    TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense,
                                                F_dags_dense, fb, true);
     fb(2) = 1;
-    TCA_Zhen += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense,
+    TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense,
                                                F_dags_dense, fb, true);
     fb(1) = 0;
-    TCA_Zhen += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense,
+    TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense,
                                                F_dags_dense, fb, true);
 
-    std::cout << "max error in block 0: " << nda::max_element(nda::abs(TCA_Zhen(_, range(0, 4), range(0, 4)) - third_order_result.get_block(0))) << std::endl;
-    std::cout << "max error in block 1: " << nda::max_element(nda::abs(TCA_Zhen(_, range(4, 10), range(4, 10)) - third_order_result.get_block(1))) << std::endl;
-    std::cout << "max error in block 2: " << nda::max_element(nda::abs(TCA_Zhen(_, range(10, 11), range(10, 11)) - third_order_result.get_block(2))) << std::endl;
-    std::cout << "max error in block 3: " << nda::max_element(nda::abs(TCA_Zhen(_, range(11, 15), range(11, 15)) - third_order_result.get_block(3))) << std::endl;
-    std::cout << "max error in block 4: " << nda::max_element(nda::abs(TCA_Zhen(_, range(15, 16), range(15, 16)) - third_order_result.get_block(4))) << std::endl;
+    std::cout << "max error in block 0: " << nda::max_element(nda::abs(TCA_old(_, range(0, 4), range(0, 4)) - third_order_result.get_block(0))) << std::endl;
+    std::cout << "max error in block 1: " << nda::max_element(nda::abs(TCA_old(_, range(4, 10), range(4, 10)) - third_order_result.get_block(1))) << std::endl;
+    std::cout << "max error in block 2: " << nda::max_element(nda::abs(TCA_old(_, range(10, 11), range(10, 11)) - third_order_result.get_block(2))) << std::endl;
+    std::cout << "max error in block 3: " << nda::max_element(nda::abs(TCA_old(_, range(11, 15), range(11, 15)) - third_order_result.get_block(3))) << std::endl;
+    std::cout << "max error in block 4: " << nda::max_element(nda::abs(TCA_old(_, range(15, 16), range(15, 16)) - third_order_result.get_block(4))) << std::endl;
     std::cout << std::endl;
   }
 }

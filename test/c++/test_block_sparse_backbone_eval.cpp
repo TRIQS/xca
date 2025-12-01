@@ -363,7 +363,7 @@ TEST(Backbone, OCA_semicircle_bath_aaa) {
   auto OCA_forward  = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
   fb(1)             = 1;
   auto OCA_backward = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
-  auto OCA_Zhen     = nda::make_regular(-OCA_forward - OCA_backward);
+  auto OCA_old      = nda::make_regular(-OCA_forward - OCA_backward);
 
   // generic diagram evaluator
   nda::array<int, 2> topology   = {{0, 2}, {1, 3}};
@@ -373,11 +373,11 @@ TEST(Backbone, OCA_semicircle_bath_aaa) {
   D.eval_diagram_block_sparse(B);
   auto OCA_result = D.Sigma; // get the result from the DiagramEvaluator
 
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(0) - OCA_Zhen(_, range(0, 4), range(0, 4)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(1) - OCA_Zhen(_, range(4, 10), range(4, 10)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(2) - OCA_Zhen(_, range(10, 11), range(10, 11)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(3) - OCA_Zhen(_, range(11, 15), range(11, 15)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(4) - OCA_Zhen(_, range(15, 16), range(15, 16)))), eps);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(0) - OCA_old(_, range(0, 4), range(0, 4)))), eps);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(1) - OCA_old(_, range(4, 10), range(4, 10)))), eps);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(2) - OCA_old(_, range(10, 11), range(10, 11)))), eps);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(3) - OCA_old(_, range(11, 15), range(11, 15)))), eps);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(4) - OCA_old(_, range(15, 16), range(15, 16)))), eps);
 }
 
 TEST(Backbone, spin_flip_fermion_aaa) {
@@ -443,10 +443,10 @@ TEST(Backbone, spin_flip_fermion_aaa) {
   triqs::atom_diag::atom_diag<false> ad(H, fop_set, sym_ops);
 
   // get blocks of Hamiltonian and compute noninteracting Green's function
-  auto dlr_it                   = itops.get_itnodes();
-  auto dlr_it_abs               = cppdlr::rel2abs(dlr_it);
-  auto Gt                       = ad_to_nonint_gf(ad, beta, dlr_it_abs);
-  auto Gt_block_sizes           = Gt.get_block_sizes();
+  auto dlr_it         = itops.get_itnodes();
+  auto dlr_it_abs     = cppdlr::rel2abs(dlr_it);
+  auto Gt             = ad_to_nonint_gf(ad, beta, dlr_it_abs);
+  auto Gt_block_sizes = Gt.get_block_sizes();
 
   // generate creation/annihilation operators in block-sparse storage
   auto [Fq, sym_set_labels] = get_operators(ad, norb, hyb_coeffs, hyb_refl_coeffs);
@@ -582,7 +582,6 @@ TEST(Backbone, spin_flip_fermion_all_sym_aaa) {
 
 TEST(Backbone, solve) {
   // Test the solve function
-
   double beta   = 8.0;
   double Lambda = 10.0 * beta;
   double eps    = 1.0e-6;
@@ -644,5 +643,5 @@ TEST(Backbone, solve) {
   // create atom_diag object
   triqs::atom_diag::atom_diag<false> ad(H, fop_set, sym_ops);
 
-  auto Sigma = compute_self_energy(beta, Lambda, eps, hyb, hyb_poles, hyb_coeffs, ad, nn);
+  auto Sigma = compute_self_energy(beta, Lambda, eps, hyb, hyb_poles, hyb_coeffs, ad, 2);
 }

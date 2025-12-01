@@ -114,14 +114,14 @@ TEST(BlockSparseOCAManual, two_band_discrete_bath_bs) {
   auto OCA_forward  = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
   fb(1)             = 1;
   auto OCA_backward = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
-  auto OCA_Zhen     = nda::make_regular(-OCA_forward - OCA_backward);
+  auto OCA_old      = nda::make_regular(-OCA_forward - OCA_backward);
 
   // check that block-sparse OCA calculation agrees with twoband.py
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(0) - OCA_Zhen(_, range(0, 4), range(0, 4)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(1) - OCA_Zhen(_, range(4, 10), range(4, 10)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(2) - OCA_Zhen(_, range(10, 11), range(10, 11)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(3) - OCA_Zhen(_, range(11, 15), range(11, 15)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(4) - OCA_Zhen(_, range(15, 16), range(15, 16)))), eps);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(0) - OCA_old(_, range(0, 4), range(0, 4)))), eps);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(1) - OCA_old(_, range(4, 10), range(4, 10)))), eps);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(2) - OCA_old(_, range(10, 11), range(10, 11)))), eps);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(3) - OCA_old(_, range(11, 15), range(11, 15)))), eps);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(4) - OCA_old(_, range(15, 16), range(15, 16)))), eps);
 }
 
 TEST(BlockSparseOCAManual, two_band_discrete_bath_bs_vs_dense) {
@@ -211,7 +211,7 @@ TEST(BlockSparseOCAManual, two_band_semicircle_bath_aaa) {
 
   auto OCA_dense_result = OCA_dense(hyb, hyb_coeffs, hyb_refl, hyb_refl_coeffs, hyb_poles, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
 
-  // Zhen's OCA computation
+  // old OCA computation
   nda::vector<double> hyb_poles_reflect = -hyb_poles;
   auto Delta_decomp                     = hyb_decomp(hyb_coeffs, hyb_poles, eps);              //decomposition of Delta(t) using DLR coefficient
   auto Delta_decomp_reflect             = hyb_decomp(hyb_refl_coeffs, hyb_poles_reflect, eps); // decomposition of Delta(-t) using DLR coefficient
@@ -228,20 +228,20 @@ TEST(BlockSparseOCAManual, two_band_semicircle_bath_aaa) {
   auto OCA_forward  = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
   fb(1)             = 1;
   auto OCA_backward = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
-  auto OCA_Zhen     = nda::make_regular(-OCA_forward - OCA_backward);
+  auto OCA_old      = nda::make_regular(-OCA_forward - OCA_backward);
 
-  // check that dense OCA calculation agree with Zhen's calculation
-  ASSERT_LE(nda::max_element(nda::abs(OCA_dense_result - OCA_Zhen)), eps);
+  // check that dense OCA calculation agree with old calculation
+  ASSERT_LE(nda::max_element(nda::abs(OCA_dense_result - OCA_old)), eps);
 
   // block-sparse OCA computation
   auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
   auto OCA_bs_result            = OCA_bs(hyb, hyb_poles, itops, beta, Gt, Fq);
 
-  ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(0) - OCA_Zhen(_, range(0, 4), range(0, 4)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(1) - OCA_Zhen(_, range(4, 10), range(4, 10)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(2) - OCA_Zhen(_, range(10, 11), range(10, 11)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(3) - OCA_Zhen(_, range(11, 15), range(11, 15)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(4) - OCA_Zhen(_, range(15, 16), range(15, 16)))), eps);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(0) - OCA_old(_, range(0, 4), range(0, 4)))), eps);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(1) - OCA_old(_, range(4, 10), range(4, 10)))), eps);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(2) - OCA_old(_, range(10, 11), range(10, 11)))), eps);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(3) - OCA_old(_, range(11, 15), range(11, 15)))), eps);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(4) - OCA_old(_, range(15, 16), range(15, 16)))), eps);
 }
 
 TEST(BlockSparseOCAManual, H5_two_band_discrete_bath_tpz) {

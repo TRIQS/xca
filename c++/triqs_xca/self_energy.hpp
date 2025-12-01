@@ -8,6 +8,8 @@ namespace triqs::atom_diag {
   template <bool C> class atom_diag;
 }
 
+nda::array<dcomplex, 3> aaa_coefs2vals(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> coefs, nda::vector_const_view<double> poles);
+
 /**
  * @brief Solve for the self-energy up to a given order
  * 
@@ -21,6 +23,6 @@ namespace triqs::atom_diag {
  * @param order Perturbation order (1, 2, or 3)
  * @return std::vector<nda::array<dcomplex, 3>> Self-energy blocks
  */
-std::vector<nda::array<dcomplex, 3>> compute_self_energy(double beta, double Lambda, double eps, nda::array<dcomplex, 3> hyb,
-                                                         nda::vector<double> hyb_poles, nda::array<dcomplex, 3> hyb_coeffs,
+std::vector<nda::array<dcomplex, 3>> compute_self_energy(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> hyb,
+                                                         nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
                                                          triqs::atom_diag::atom_diag<false> ad, int order);

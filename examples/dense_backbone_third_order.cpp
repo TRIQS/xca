@@ -232,24 +232,24 @@ int main() {
     third_order_result = D.Sigma;
     D.reset(); // reset the DiagramEvaluator for the next topology
 
-    // Compute third-order contribution using Zhen's code
-    nda::array<dcomplex, 3> TCA_Zhen(r, N, N);
-    TCA_Zhen = 0;
+    // Compute third-order contribution using old code
+    nda::array<dcomplex, 3> TCA_old(r, N, N);
+    TCA_old = 0;
     fb(1) = 0;
     fb(2) = 0;
-    TCA_Zhen += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense,
+    TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense,
                                                F_dags_dense, fb, true);
     fb(1) = 1;
-    TCA_Zhen += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense,
+    TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense,
                                                F_dags_dense, fb, true);
     fb(2) = 1;
-    TCA_Zhen += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense,
+    TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense,
                                                F_dags_dense, fb, true);
     fb(1) = 0;
-    TCA_Zhen += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense,
+    TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense,
                                                F_dags_dense, fb, true);
 
-    std::cout << "max error: " << nda::max_element(nda::abs(TCA_Zhen - third_order_result)) << std::endl;
+    std::cout << "max error: " << nda::max_element(nda::abs(TCA_old - third_order_result)) << std::endl;
     std::cout << std::endl;
   }
 }

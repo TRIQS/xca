@@ -182,7 +182,7 @@ TEST(BlockSparseNCAManual, two_band_discrete_bath_bs_dense) {
   // dense-matrix NCA computation
   auto NCA_dense_result = NCA_dense(Deltat, Deltat_refl, Gt_dense, Fs_dense, F_dags_dense);
 
-  // Zhen's NCA computation
+  // old NCA computation
   nda::vector<double> dlr_rf_reflect = -dlr_rf;
   auto Delta_decomp                  = hyb_decomp(hyb_coeffs, dlr_rf, eps);              //decomposition of Delta(t) using DLR coefficient
   auto Delta_decomp_reflect          = hyb_decomp(hyb_refl_coeffs, dlr_rf_reflect, eps); // decomposition of Delta(-t) using DLR coefficient
@@ -194,7 +194,7 @@ TEST(BlockSparseNCAManual, two_band_discrete_bath_bs_dense) {
   Delta_F_reflect.update_inplace(Delta_decomp_reflect, dlr_it, F_dags_dense, Fs_dense);
   auto fb               = nda::vector<int64_t>(2);
   nda::array<int, 2> D1 = {{0, 1}}; // topology for NCA diagram evaluator
-  auto NCA_Zhen = -Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D1, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
+  auto NCA_old = -Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D1, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
 
   ASSERT_LE(nda::max_element(nda::abs(NCA_result.get_block(0) - NCA_dense_result(_, range(0, 4), range(0, 4)))), 10 * eps);
   ASSERT_LE(nda::max_element(nda::abs(NCA_result.get_block(1) - NCA_dense_result(_, range(4, 10), range(4, 10)))), 10 * eps);
@@ -202,7 +202,7 @@ TEST(BlockSparseNCAManual, two_band_discrete_bath_bs_dense) {
   ASSERT_LE(nda::max_element(nda::abs(NCA_result.get_block(3) - NCA_dense_result(_, range(11, 15), range(11, 15)))), 10 * eps);
   ASSERT_LE(nda::max_element(nda::abs(NCA_result.get_block(4) - NCA_dense_result(_, range(15, 16), range(15, 16)))), 10 * eps);
 
-  ASSERT_LE(nda::max_element(nda::abs(NCA_dense_result - NCA_Zhen)), eps);
+  ASSERT_LE(nda::max_element(nda::abs(NCA_dense_result - NCA_old)), eps);
 }
 
 TEST(BlockSparseNCAManual, two_band_semicircle_bath_dense_aaa) {
@@ -256,7 +256,7 @@ TEST(BlockSparseNCAManual, two_band_semicircle_bath_dense_aaa) {
   hyb_refl_coeffs = hyb_coeffs;
   auto NCA_result = NCA_dense(hyb, hyb_refl, Gt_dense, Fs_dense, F_dags_dense);
 
-  // Zhen's NCA computation
+  // old NCA computation
   nda::vector<double> hyb_poles(p);
   hyb_poles                             = {-2.537191963500981,  1.7111725610238615, -1.514666605887425, 1.04941790134832,
                                            -0.7410379494142222, 0.3763525311836938, -0.1312888711963961};
@@ -273,7 +273,7 @@ TEST(BlockSparseNCAManual, two_band_semicircle_bath_dense_aaa) {
   auto fb               = nda::vector<int64_t>(2);
   fb(1)                 = 0;
   nda::array<int, 2> D1 = {{0, 1}}; // topology for OCA diagram evaluator
-  auto NCA_Zhen         = -Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D1, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
+  auto NCA_old          = -Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D1, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
 
-  ASSERT_LE(nda::max_element(nda::abs(NCA_result - NCA_Zhen)), eps);
+  ASSERT_LE(nda::max_element(nda::abs(NCA_result - NCA_old)), eps);
 }
