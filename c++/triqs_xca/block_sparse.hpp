@@ -5,9 +5,15 @@
 #include <cppdlr/dlr_kernels.hpp>
 #include <nda/blas/tools.hpp>
 #include <nda/declarations.hpp>
+#include <triqs/gfs/gf/targets.hpp>
 #include <vector>
+#include <triqs/gfs.hpp>
+#include <triqs/mesh.hpp>
+#include <triqs/gfs/block/block_gf.hpp>
 
 using namespace nda;
+using namespace triqs;
+using namespace triqs::gfs;
 
 // TODO templates for double/dcomplex
 
@@ -40,18 +46,24 @@ class BlockDiagOpFun {
   friend void h5_read(h5::group g, const std::string &subgroup_name, BlockDiagOpFun &BDOF);
 
   /**
-     * @brief Constructor for BlockDiagOpFun
-     * @param[in] blocks vector of diagonal blocks
-     * @param[in] zero_block_indices if i-th entry is -1, then blocks(i) = 0
-     */
+   * @brief Constructor for BlockDiagOpFun
+   * @param[in] blocks vector of diagonal blocks
+   * @param[in] zero_block_indices if i-th entry is -1, then blocks(i) = 0
+   */
   BlockDiagOpFun(std::vector<nda::array<dcomplex, 3>> &blocks, nda::vector_const_view<int> zero_block_indices);
 
   /**
-     * @brief Constructor for BlockDiagOpFun with blocks of zeros
-     * @param[in] r number of imaginary time nodes
-     * @param[in] block_sizes vector of sizes of diagonal blocks
-     */
+   * @brief Constructor for BlockDiagOpFun with blocks of zeros
+   * @param[in] r number of imaginary time nodes
+   * @param[in] block_sizes vector of sizes of diagonal blocks
+   */
   BlockDiagOpFun(int r, nda::vector_const_view<int> block_sizes);
+
+  /**
+   * @brief Constructor for BlockDiagOpFun from a triqs block_gf<dlr_imtime>
+   * @param[in] bgf block_gf<dlr_imtime>
+   */
+  BlockDiagOpFun(const block_gf<dlr_imtime> &bgf);
 };
 
 /**

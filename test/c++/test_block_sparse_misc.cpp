@@ -2,8 +2,16 @@
 #include <nda/nda.hpp>
 #include <cppdlr/cppdlr.hpp>
 #include "block_sparse_utils.hpp"
+#include <triqs/mesh/dlr_imfreq.hpp>
+#include <triqs/mesh/utils.hpp>
 #include <triqs_xca/block_sparse.hpp>
 #include <triqs_xca/self_energy.hpp>
+#include <triqs/gfs.hpp>
+#include <triqs/mesh.hpp>
+#include <triqs/gfs/block/block_gf.hpp>
+
+using namespace triqs;
+using namespace triqs::gfs;
 
 TEST(BlockSparseMisc, compute_nonint_gf) {
   // DLR parameters
@@ -91,4 +99,30 @@ TEST(BlockSparseMisc, aaa_coefs2vals) {
   double eps    = 1.0e-6;
   auto hyb      = aaa_coefs2vals(beta, Lambda, eps, coefs, poles);
   ASSERT_LE(nda::max_element(nda::abs(hyb - hyb_py)), eps);
+}
+
+TEST(BlockSparseMisc, block_gf_to_BDOF) {
+  double beta = 1;
+  double Lambda = 10 * beta;
+  double eps = 1.0e-6;
+  // generate a DLR imaginary time mesh
+  auto iw_dlr_mesh = mesh::dlr_imfreq(beta, triqs::mesh::Fermion, Lambda, eps);
+  auto tau_dlr_mesh = mesh::dlr_imtime(iw_dlr_mesh);
+
+  auto g = block_gf<dlr_imtime>{{"bl0", "bl1"}, {gf<dlr_imtime>{{tau_dlr_mesh}, {2, 2}}, gf<dlr_imtime>{{tau_dlr_mesh}, {3, 3}}}};
+  // Initialize bl0 (2x2 block)
+  for (auto tau : g[0].mesh()) {
+    g[0][tau] = nda::matrix<dcomplex>{{1e-17, 0}, {0, 1e-17}};
+  }
+  
+  // Initialize bl1 (3x3 block)
+  for (auto tau : g[1].mesh()) {
+    g[1][tau] = nda::matrix<dcomplex>{{2.0 + 0.1 * tau, 0.3, 0.0}, {0.3, 2.5 + 0.1 * tau, 0.4}, {0.0, 0.4, 3.0 + 0.1 * tau}};
+  }
+  auto BDOF = BlockDiagOpFun(g);
+  ASSERT_EQ(BDOF.get_num_block_cols(), 2);
+  ASSERT_EQ(BDOF.get_block_size(0), 2);
+  ASSERT_EQ(BDOF.get_block_size(1), 3);
+  ASSERT_EQ(BDOF.get_zero_block_index(0), -1); // first block is zero
+  ASSERT_EQ(BDOF.get_zero_block_index(1), 0);
 }

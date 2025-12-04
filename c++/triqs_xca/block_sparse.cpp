@@ -15,19 +15,45 @@
 #include <string>
 #include <vector>
 #include <stdexcept>
+#include <triqs/gfs.hpp>
+#include <triqs/mesh.hpp>
+#include <triqs/gfs/block/block_gf.hpp>
 
 using namespace nda;
+using namespace triqs;
+using namespace triqs::gfs;
 
 /////////////// BlockDiagOpFun (BDOF) class ///////////////
 BlockDiagOpFun::BlockDiagOpFun(std::vector<nda::array<dcomplex, 3>> &blocks, nda::vector_const_view<int> zero_block_indices)
    : blocks(blocks), num_block_cols(blocks.size()), zero_block_indices(zero_block_indices) {}
 
 BlockDiagOpFun::BlockDiagOpFun(int r, nda::vector_const_view<int> block_sizes) : num_block_cols(block_sizes.size()) {
-
   std::vector<nda::array<dcomplex, 3>> blocks(num_block_cols);
   zero_block_indices = nda::make_regular(-1 * nda::ones<int>(num_block_cols));
   for (int i = 0; i < num_block_cols; i++) { blocks[i] = nda::zeros<dcomplex>(r, block_sizes[i], block_sizes[i]); }
   this->blocks = blocks;
+}
+
+BlockDiagOpFun::BlockDiagOpFun(const block_gf<dlr_imtime> &bgf) : num_block_cols(bgf.size()) {
+  // TODO set block to just a single zero if the block gf is numerically zero
+  blocks.resize(num_block_cols);
+  zero_block_indices = nda::zeros<int>(num_block_cols);
+  int r = bgf[0].mesh().size();
+
+  for (int i = 0; i < num_block_cols; i++) {
+    auto const &gf = bgf[i];
+    int block_size = gf.target_shape()[0];
+
+    blocks[i] = nda::array<dcomplex, 3>(r, block_size, block_size);
+
+    for (int t = 0; t < r; t++) { blocks[i](t, _, _) = gf(t); }
+
+    if (nda::max_element(nda::abs(blocks[i])) < 1e-16) {
+      zero_block_indices(i) = -1;
+    } else {
+      zero_block_indices(i) = 0;
+    }
+  }
 }
 
 BlockDiagOpFun &BlockDiagOpFun::operator+=(const BlockDiagOpFun &G) {
