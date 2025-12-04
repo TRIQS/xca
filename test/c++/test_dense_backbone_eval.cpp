@@ -31,7 +31,7 @@ TEST(DenseBackbone, one_vertex_and_edge) {
   auto hyb_refl_coeffs = itops.vals2coefs(hyb_refl);
   auto Fset            = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs, hyb_refl_coeffs);
 
-  auto D = DiagramEvaluator(beta, itops, Deltat, Deltat_refl, dlr_rf, Gt_dense, Fset);
+  auto D = DenseDiagramEvaluator(beta, itops, Deltat, Deltat_refl, dlr_rf, Gt_dense, Fset);
   for (int fb1 = 0; fb1 <= 1; fb1++) {
     // initialize backbone
     auto B = Backbone(topology, n);
@@ -50,7 +50,7 @@ TEST(DenseBackbone, one_vertex_and_edge) {
 
     // multiply T by vertex 1
     for (int t = 0; t < r; t++) D.T(t, _, _) = nda::eye<dcomplex>(N);
-    D.multiply_vertex_dense(B, 1);
+    D.multiply_vertex(B, 1);
 
     // do the same multiplication manually
     nda::array<dcomplex, 3> Tact(r, N, N);
@@ -62,7 +62,7 @@ TEST(DenseBackbone, one_vertex_and_edge) {
     ASSERT_LE(nda::max_element(nda::abs(D.T - Tact)), 1e-12);
 
     // check that convolution with function on first edge is correct
-    D.compose_with_edge_dense(B, 1);
+    D.compose_with_edge(B, 1);
     if (fb1 == 1) {
       Tact = itops.convolve(beta, itops.vals2coefs(Gt_dense), itops.vals2coefs(Tact), TIME_ORDERED);
     } else {
@@ -99,10 +99,10 @@ TEST(DenseBackbone, OCA) {
   // initialize Backbone and DiagramEvaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = Backbone(topology, n);
-  auto D                      = DiagramEvaluator(beta, itops, Deltat, hyb_refl, dlr_rf, Gt_dense, Fset);
+  auto D                      = DenseDiagramEvaluator(beta, itops, Deltat, hyb_refl, dlr_rf, Gt_dense, Fset);
 
   // evaluate OCA self-energy contribution
-  D.eval_diagram_dense(B);
+  D.eval_self_energy(B);
   auto OCA_result = D.Sigma;
 
   // compare against manually-computed OCA result
@@ -164,7 +164,7 @@ TEST(DenseBackbone, third_order_manual) {
   nda::vector<int> fb{1, 1, 1}, pole_inds{7, 9};
   B.set_directions(fb);
   B.set_pole_inds(pole_inds, dlr_rf);
-  auto D = DiagramEvaluator(beta, itops, Deltat, Deltat_refl, dlr_rf, Gt_dense, Fset);
+  auto D = DenseDiagramEvaluator(beta, itops, Deltat, Deltat_refl, dlr_rf, Gt_dense, Fset);
 
   // perform the same calculation using the a routine called by eval_diagram_dense()
   nda::array<dcomplex, 3> T(r, N, N), GKt(r, N, N), Tmu(r, N, N), Sigma_generic(r, N, N);
@@ -176,7 +176,7 @@ TEST(DenseBackbone, third_order_manual) {
   int f_ix_start = pow_n_mm1 * (pole_inds(0) + r * pole_inds(1)) + pow_nr_mm1 * (fb(0) + 2 * fb(1) + 4 * fb(2));
   for (int f_ix_off = 0; f_ix_off < pow_n_mm1; f_ix_off++) {
     B.set_flat_index(f_ix_start + f_ix_off, dlr_rf);
-    D.eval_backbone_fixed_indices_dense(B);
+    D.eval_self_energy_fixed_indices(B);
     B.reset_all_inds();
   }
 
@@ -260,8 +260,8 @@ TEST(DenseBackbone, OCA_semicircle_bath_aaa) {
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = Backbone(topology, n);
   auto Fset                   = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs, hyb_refl_coeffs);
-  auto D                      = DiagramEvaluator(beta, itops, hyb, hyb_refl, hyb_poles, Gt_dense, Fset);
-  D.eval_diagram_dense(B);   // evaluate OCA diagram
+  auto D                      = DenseDiagramEvaluator(beta, itops, hyb, hyb_refl, hyb_poles, Gt_dense, Fset);
+  D.eval_self_energy(B);     // evaluate OCA diagram
   auto OCA_result = D.Sigma; // get the result from the DiagramEvaluator
 
   // compare with the dense result

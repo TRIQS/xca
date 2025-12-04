@@ -266,7 +266,7 @@ int main() {
   auto hyb_refl_coeffs          = hyb_coeffs;
   auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
 
-  auto D = DiagramBlockSparseEvaluator(beta, itops, Deltat, hyb_refl, dlr_rf, Gt, Fq); // create DiagramEvaluator object
+  auto D = DiagramEvaluator(beta, itops, Deltat, hyb_refl, dlr_rf, Gt, Fq); // create DiagramEvaluator object
 
   auto Deltadlr                            = itops.vals2coefs(Deltat); //obtain dlr coefficient of Delta(t)
   nda::vector<double> dlr_rf_reflect       = -dlr_rf;
@@ -287,7 +287,7 @@ int main() {
 
     // Compute third-order contribution using DiagramEvaluator
     auto B = Backbone(topologies(i, _, _), n);
-    D.eval_diagram_block_sparse(B);
+    D.eval_self_energy(B);
     third_order_result = D.Sigma;
     D.reset(); // reset the DiagramEvaluator for the next topology
 

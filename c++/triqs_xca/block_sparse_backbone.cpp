@@ -11,9 +11,9 @@
 #include <triqs_xca/block_sparse.hpp>
 #include <triqs_xca/block_sparse_backbone.hpp>
 
-DiagramBlockSparseEvaluator::DiagramBlockSparseEvaluator(double beta, imtime_ops &itops, nda::array_const_view<dcomplex, 3> hyb,
-                                                         nda::array_const_view<dcomplex, 3> hyb_refl, nda::vector_const_view<double> hyb_poles,
-                                                         BlockDiagOpFun &Gt, BlockOpSymQuartet &Fq)
+DiagramEvaluator::DiagramEvaluator(double beta, imtime_ops &itops, nda::array_const_view<dcomplex, 3> hyb,
+                                   nda::array_const_view<dcomplex, 3> hyb_refl, nda::vector_const_view<double> hyb_poles, BlockDiagOpFun &Gt,
+                                   BlockOpSymQuartet &Fq)
    : beta(beta),
      r(itops.rank()),
      n(hyb.extent(1)),
@@ -31,13 +31,25 @@ DiagramBlockSparseEvaluator::DiagramBlockSparseEvaluator(double beta, imtime_ops
 
   // allocate arrays
   T     = nda::zeros<dcomplex>(r, Nmax, Nmax);
+  U     = nda::zeros<dcomplex>(r, Nmax, Nmax);
   GKt   = nda::zeros<dcomplex>(r, Nmax, Nmax);
   Tkaps = nda::zeros<dcomplex>(n, r, Nmax, Nmax);
   Tmu   = nda::zeros<dcomplex>(r, Nmax, Nmax);
 }
 
-void DiagramBlockSparseEvaluator::multiply_vertex_block(Backbone &backbone, int v_ix, nda::vector_const_view<int> ind_path,
-                                                        nda::vector_const_view<int> block_dims) {
+void DiagramEvaluator::reset() {
+  T     = 0;
+  U     = 0;
+  GKt   = 0;
+  Tkaps = 0;
+  Tmu   = 0;
+  for (int i = 0; i < Sigma.get_num_block_cols(); i++) {
+    Sigma.set_block(i, nda::zeros<dcomplex>(r, Sigma.get_block_size(i), Sigma.get_block_size(i)));
+  }
+}
+
+void DiagramEvaluator::multiply_vertex_block(Backbone &backbone, int v_ix, nda::vector_const_view<int> ind_path,
+                                             nda::vector_const_view<int> block_dims) {
   int o_ix = backbone.get_vertex_orb(v_ix); // orbital_index
   // split backbone orbital index into symmetry set index and orbital index within the symmetry set
   // i.e. have mapping between backbone orbital index and symmetry set index
@@ -83,8 +95,8 @@ void DiagramBlockSparseEvaluator::multiply_vertex_block(Backbone &backbone, int 
   }
 }
 
-void DiagramBlockSparseEvaluator::compose_with_edge_block(Backbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
-                                                          nda::vector_const_view<int> block_dims) {
+void DiagramEvaluator::compose_with_edge_block(Backbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
+                                               nda::vector_const_view<int> block_dims) {
 
   int n_col_r                                                            = e_ix < backbone.get_topology(0, 1) ? block_dims(1) : block_dims(0);
   int b_ix                                                               = ind_path(e_ix); // block index for the edge e_ix
@@ -104,8 +116,8 @@ void DiagramBlockSparseEvaluator::compose_with_edge_block(Backbone &backbone, in
                     itops.vals2coefs(T(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r))), TIME_ORDERED);
 }
 
-void DiagramBlockSparseEvaluator::multiply_zero_vertex_block(Backbone &backbone, bool is_forward, int b_ix_0, int p_kap, int p_mu,
-                                                             nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims) {
+void DiagramEvaluator::multiply_zero_vertex_block(Backbone &backbone, bool is_forward, int b_ix_0, int p_kap, int p_mu,
+                                                  nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims) {
 
   int b_ix_mu = ind_path(backbone.get_topology(0, 1) - 1); // block index for F_mu
   if (is_forward) {
@@ -155,7 +167,7 @@ void DiagramBlockSparseEvaluator::multiply_zero_vertex_block(Backbone &backbone,
   }
 }
 
-void DiagramBlockSparseEvaluator::multiply_prefactor(Backbone &backbone, nda::vector_const_view<int> block_dims) {
+void DiagramEvaluator::multiply_prefactor(Backbone &backbone, nda::vector_const_view<int> block_dims) {
   int m = backbone.m;
   // Multiply by prefactor
   for (int m_ix = 0; m_ix < m - 1; m_ix++) {
@@ -169,20 +181,10 @@ void DiagramBlockSparseEvaluator::multiply_prefactor(Backbone &backbone, nda::ve
   }
 }
 
-void DiagramBlockSparseEvaluator::reset() {
-  T     = 0;
-  GKt   = 0;
-  Tkaps = 0;
-  Tmu   = 0;
-  for (int i = 0; i < Sigma.get_num_block_cols(); i++) {
-    Sigma.set_block(i, nda::zeros<dcomplex>(r, Sigma.get_block_size(i), Sigma.get_block_size(i)));
-  }
-}
-
-void DiagramBlockSparseEvaluator::eval_diagram_block_sparse(Backbone &backbone) {
+void DiagramEvaluator::eval_self_energy(Backbone &backbone) {
 
   int m = backbone.m;
-  nda::vector<int> ind_path(2 * m - 1); // tracks block indices of factors for computing a particular block of the self-energy
+  nda::vector<int> ind_path(2 * m - 1);   // tracks block indices of factors for computing a particular block of the self-energy
   nda::vector<int> block_dims(2 * m + 1); // tracks the dimensions of the blocks in these factors
 
   // loop over all flat indices
@@ -268,7 +270,7 @@ void DiagramBlockSparseEvaluator::eval_diagram_block_sparse(Backbone &backbone) 
             if (fork_all_nonzero) {
               // evaluate the diagram with these directions, poles, and orbital indices
               // b_ix is the block index for the first edge
-              eval_backbone_fixed_indices_block_sparse(backbone, b_ix, p_kap, p_mu, ind_path, block_dims);
+              eval_self_energy_fixed_indices(backbone, b_ix, p_kap, p_mu, ind_path, block_dims);
             }
           }
         }
@@ -279,9 +281,8 @@ void DiagramBlockSparseEvaluator::eval_diagram_block_sparse(Backbone &backbone) 
   Sigma.set_zero_block_indices(); // set zero_block_indices according to current blocks
 }
 
-void DiagramBlockSparseEvaluator::eval_backbone_fixed_indices_block_sparse(Backbone &backbone, int b_ix, int p_kap, int p_mu,
-                                                                           nda::vector_const_view<int> ind_path,
-                                                                           nda::vector_const_view<int> block_dims) {
+void DiagramEvaluator::eval_self_energy_fixed_indices(Backbone &backbone, int b_ix, int p_kap, int p_mu, nda::vector_const_view<int> ind_path,
+                                                      nda::vector_const_view<int> block_dims) {
 
   int m = backbone.m;
 
@@ -307,16 +308,8 @@ void DiagramBlockSparseEvaluator::eval_backbone_fixed_indices_block_sparse(Backb
     Sigma.add_block(b_ix, T(_, range(0, block_dims(2 * m)), range(0, block_dims(0))));
 }
 
-CorrelatorDiagramBlockSparseEvaluator::CorrelatorDiagramBlockSparseEvaluator(double beta, imtime_ops &itops, nda::array_const_view<dcomplex, 3> hyb,
-                                                                             nda::array_const_view<dcomplex, 3> hyb_refl,
-                                                                             nda::vector_const_view<double> hyb_poles, BlockDiagOpFun &Gt,
-                                                                             BlockOpSymQuartet &Fq)
-   : DiagramBlockSparseEvaluator(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq) {
-  U = nda::zeros<dcomplex>(r, Nmax, Nmax);
-}
-
-void CorrelatorDiagramBlockSparseEvaluator::multiply_vertex_corr_left_block(Backbone &backbone, int v_ix, nda::vector_const_view<int> ind_path,
-                                                                            nda::vector_const_view<int> block_dims) {
+void DiagramEvaluator::multiply_vertex_corr_block(Backbone &backbone, int v_ix, nda::vector_const_view<int> ind_path,
+                                                  nda::vector_const_view<int> block_dims) {
 
   int o_ix = backbone.get_vertex_orb(v_ix); // orbital_index
   // split backbone orbital index into symmetry set index and orbital index within the symmetry set
@@ -363,8 +356,8 @@ void CorrelatorDiagramBlockSparseEvaluator::multiply_vertex_corr_left_block(Back
   }
 }
 
-void CorrelatorDiagramBlockSparseEvaluator::compose_with_edge_corr_left_block(Backbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
-                                                                              nda::vector_const_view<int> block_dims) {
+void DiagramEvaluator::compose_with_edge_corr_block(Backbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
+                                                    nda::vector_const_view<int> block_dims) {
 
   int n_col_r                                                            = e_ix < backbone.get_topology(0, 1) ? block_dims(1) : block_dims(0);
   int b_ix                                                               = ind_path(e_ix); // block index for the edge e_ix
@@ -384,14 +377,13 @@ void CorrelatorDiagramBlockSparseEvaluator::compose_with_edge_corr_left_block(Ba
                     itops.vals2coefs(U(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r))), TIME_ORDERED);
 }
 
-nda::array<dcomplex, 3> CorrelatorDiagramBlockSparseEvaluator::eval_diagram_block_sparse(Backbone &backbone, std::vector<BlockOp> mu_ops,
-                            std::vector<BlockOp> kap_ops) {
+nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(Backbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops) {
   int m = backbone.m;
-  nda::vector<int> ind_path(2 * m); // tracks block indices of factors for computing a particular block's contribution to the correlator
+  nda::vector<int> ind_path(2 * m);       // tracks block indices of factors for computing a particular block's contribution to the correlator
   nda::vector<int> block_dims(2 * m + 1); // tracks the dimensions of the blocks in these factors
-  int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), m - 1));
+  int f_ix_max                       = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), m - 1));
   nda::array<dcomplex, 3> correlator = nda::zeros<dcomplex>(r, mu_ops.size(), kap_ops.size());
-  nda::array<dcomplex, 3> Tmuop = nda::zeros<dcomplex>(r, Nmax, Nmax);
+  nda::array<dcomplex, 3> Tmuop      = nda::zeros<dcomplex>(r, Nmax, Nmax);
   // loop over all flat indices
   for (int f_ix = 0; f_ix < f_ix_max; ++f_ix) {
     backbone.set_flat_index(f_ix, hyb_poles); // set directions, pole indices, and orbital indices from a single integer index
@@ -403,13 +395,12 @@ nda::array<dcomplex, 3> CorrelatorDiagramBlockSparseEvaluator::eval_diagram_bloc
         --------     --------     --------     --------     --------     --------     --------     --------
     */
   }
-  
+  // TODO: implement the full correlator evaluation by looping over all block indices and accumulating contributions
   return correlator;
 }
 
-void CorrelatorDiagramBlockSparseEvaluator::eval_backbone_fixed_indices_block_sparse(Backbone &backbone, int b_ix, int p_kap, int p_mu,
-                                                                                     nda::vector_const_view<int> ind_path,
-                                                                                     nda::vector_const_view<int> block_dims) {
+void DiagramEvaluator::eval_correlator_fixed_indices(Backbone &backbone, int b_ix, int p_kap, int p_mu, nda::vector_const_view<int> ind_path,
+                                                     nda::vector_const_view<int> block_dims) {
 
   int m = backbone.m;
 
@@ -437,11 +428,11 @@ void CorrelatorDiagramBlockSparseEvaluator::eval_backbone_fixed_indices_block_sp
     }
   }
   for (int v = backbone.get_topology(0, 1) + 1; v < 2 * m - 1; ++v) {
-    multiply_vertex_corr_left_block(backbone, v, ind_path, block_dims);
-    compose_with_edge_corr_left_block(backbone, v, ind_path, block_dims);
+    multiply_vertex_corr_block(backbone, v, ind_path, block_dims);
+    compose_with_edge_corr_block(backbone, v, ind_path, block_dims);
   }
   // multiply by the last vertex
-  multiply_vertex_corr_left_block(backbone, 2 * m - 1, ind_path, block_dims);
+  multiply_vertex_corr_block(backbone, 2 * m - 1, ind_path, block_dims);
   // convolve with last edge
   GKt(_, range(0, block_dims(2 * m)), range(0, block_dims(2 * m))) = Gt.get_block(ind_path(2 * m - 1));
   int bv                                                           = backbone.get_vertex_Ksign(2 * m - 1); // sign on K

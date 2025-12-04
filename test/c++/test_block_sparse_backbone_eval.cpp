@@ -100,17 +100,17 @@ TEST(Backbone, OCA) {
   auto B                      = Backbone(topology, n);
 
   // block-sparse diagram evaluation
-  DiagramBlockSparseEvaluator D(beta, itops, Deltat, hyb_refl, dlr_rf, Gt, Fq);
+  DiagramEvaluator D(beta, itops, Deltat, hyb_refl, dlr_rf, Gt, Fq);
   auto start = std::chrono::high_resolution_clock::now();
-  D.eval_diagram_block_sparse(B);
+  D.eval_self_energy(B);
   auto end                              = std::chrono::high_resolution_clock::now();
   auto OCA_result                       = D.Sigma;
   std::chrono::duration<double> elapsed = end - start;
 
   // dense diagram evaluation
-  DiagramEvaluator D2(beta, itops, Deltat, hyb_refl, dlr_rf, Gt_dense, Fset);
+  DenseDiagramEvaluator D2(beta, itops, Deltat, hyb_refl, dlr_rf, Gt_dense, Fset);
   start = std::chrono::high_resolution_clock::now();
-  D2.eval_diagram_dense(B);
+  D2.eval_self_energy(B);
   end                   = std::chrono::high_resolution_clock::now();
   auto OCA_dense_result = D2.Sigma;
   elapsed               = end - start;
@@ -127,9 +127,9 @@ TEST(Backbone, OCA) {
   auto sym_set_labels_triv = nda::zeros<long>(n);
   auto Fq_triv             = BlockOpSymQuartet({F_sym_triv}, {F_dag_sym_triv}, hyb_coeffs, hyb_refl_coeffs, sym_set_labels_triv);
 
-  DiagramBlockSparseEvaluator D3(beta, itops, Deltat, hyb_refl, dlr_rf, Gt_triv, Fq_triv);
+  DiagramEvaluator D3(beta, itops, Deltat, hyb_refl, dlr_rf, Gt_triv, Fq_triv);
   start = std::chrono::high_resolution_clock::now();
-  D3.eval_diagram_block_sparse(B);
+  D3.eval_self_energy(B);
   end                 = std::chrono::high_resolution_clock::now();
   auto OCA_trivial_bs = D3.Sigma;
   elapsed             = end - start;
@@ -197,9 +197,9 @@ TEST(Backbone, spin_flip_fermion) {
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = Backbone(topology, nn);
-  DiagramBlockSparseEvaluator D(beta, itops, hyb, hyb_refl, dlr_rf, Gt, Fq);
+  DiagramEvaluator D(beta, itops, hyb, hyb_refl, dlr_rf, Gt, Fq);
   auto start = std::chrono::high_resolution_clock::now();
-  D.eval_diagram_block_sparse(B);
+  D.eval_self_energy(B);
   auto end                               = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> duration = end - start;
   auto result                            = D.Sigma;
@@ -209,9 +209,9 @@ TEST(Backbone, spin_flip_fermion) {
   auto Gt_dense = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
   auto Fset     = get_operators_dense(ad, norb, hyb_coeffs, hyb_refl_coeffs);
 
-  DiagramEvaluator D2(beta, itops, hyb, hyb_refl, dlr_rf, Gt_dense, Fset);
+  DenseDiagramEvaluator D2(beta, itops, hyb, hyb_refl, dlr_rf, Gt_dense, Fset);
   start = std::chrono::high_resolution_clock::now();
-  D2.eval_diagram_dense(B);
+  D2.eval_self_energy(B);
   end               = std::chrono::high_resolution_clock::now();
   duration          = end - start;
   auto result_dense = D2.Sigma;
@@ -269,9 +269,9 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = Backbone(topology, nn);
-  DiagramBlockSparseEvaluator D(beta, itops, hyb, hyb_refl, dlr_rf, Gt, Fq);
+  DiagramEvaluator D(beta, itops, hyb, hyb_refl, dlr_rf, Gt, Fq);
   auto start = std::chrono::high_resolution_clock::now();
-  D.eval_diagram_block_sparse(B);
+  D.eval_self_energy(B);
   auto end                               = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> duration = end - start;
   auto result                            = D.Sigma;
@@ -281,9 +281,9 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
   auto Gt_dense = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
   auto Fset     = get_operators_dense(ad, norb, hyb_coeffs, hyb_refl_coeffs);
 
-  DiagramEvaluator D2(beta, itops, hyb, hyb_refl, dlr_rf, Gt_dense, Fset);
+  DenseDiagramEvaluator D2(beta, itops, hyb, hyb_refl, dlr_rf, Gt_dense, Fset);
   start = std::chrono::high_resolution_clock::now();
-  D2.eval_diagram_dense(B);
+  D2.eval_self_energy(B);
   end               = std::chrono::high_resolution_clock::now();
   duration          = end - start;
   auto result_dense = D2.Sigma;
@@ -369,8 +369,8 @@ TEST(Backbone, OCA_semicircle_bath_aaa) {
   nda::array<int, 2> topology   = {{0, 2}, {1, 3}};
   auto B                        = Backbone(topology, n);
   auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
-  auto D                        = DiagramBlockSparseEvaluator(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq);
-  D.eval_diagram_block_sparse(B);
+  auto D                        = DiagramEvaluator(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq);
+  D.eval_self_energy(B);
   auto OCA_result = D.Sigma; // get the result from the DiagramEvaluator
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(0) - OCA_old(_, range(0, 4), range(0, 4)))), eps);
@@ -454,9 +454,9 @@ TEST(Backbone, spin_flip_fermion_aaa) {
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = Backbone(topology, nn);
-  DiagramBlockSparseEvaluator D(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq);
+  DiagramEvaluator D(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq);
   auto start = std::chrono::high_resolution_clock::now();
-  D.eval_diagram_block_sparse(B);
+  D.eval_self_energy(B);
   auto end                               = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> duration = end - start;
   auto result                            = D.Sigma;
@@ -467,9 +467,9 @@ TEST(Backbone, spin_flip_fermion_aaa) {
   auto Fset     = get_operators_dense(ad, norb, hyb_coeffs, hyb_refl_coeffs);
 
   // compare to dense result
-  DiagramEvaluator D2(beta, itops, hyb, hyb_refl, hyb_poles, Gt_dense, Fset);
+  DenseDiagramEvaluator D2(beta, itops, hyb, hyb_refl, hyb_poles, Gt_dense, Fset);
   start = std::chrono::high_resolution_clock::now();
-  D2.eval_diagram_dense(B);
+  D2.eval_self_energy(B);
   end               = std::chrono::high_resolution_clock::now();
   duration          = end - start;
   auto result_dense = D2.Sigma;
@@ -552,9 +552,9 @@ TEST(Backbone, spin_flip_fermion_all_sym_aaa) {
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = Backbone(topology, nn);
-  DiagramBlockSparseEvaluator D(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq);
+  DiagramEvaluator D(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq);
   auto start = std::chrono::high_resolution_clock::now();
-  D.eval_diagram_block_sparse(B);
+  D.eval_self_energy(B);
   auto end                               = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> duration = end - start;
   auto result                            = D.Sigma;
@@ -565,9 +565,9 @@ TEST(Backbone, spin_flip_fermion_all_sym_aaa) {
   auto Fset     = get_operators_dense(ad, norb, hyb_coeffs, hyb_refl_coeffs);
 
   // compare to dense result
-  DiagramEvaluator D2(beta, itops, hyb, hyb_refl, hyb_poles, Gt_dense, Fset);
+  DenseDiagramEvaluator D2(beta, itops, hyb, hyb_refl, hyb_poles, Gt_dense, Fset);
   start = std::chrono::high_resolution_clock::now();
-  D2.eval_diagram_dense(B);
+  D2.eval_self_energy(B);
   end               = std::chrono::high_resolution_clock::now();
   duration          = end - start;
   auto result_dense = D2.Sigma;

@@ -45,10 +45,10 @@ std::vector<nda::array<dcomplex, 3>> compute_self_energy(double beta, double Lam
 
   if (order == 1) { return Sigma_BDOF.get_blocks(); }
 
-  DiagramBlockSparseEvaluator D(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq);
+  DiagramEvaluator D(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq);
   nda::array<int, 2> T_OCA = {{0, 2}, {1, 3}};
   auto B_OCA               = Backbone(T_OCA, norb);
-  D.eval_diagram_block_sparse(B_OCA);
+  D.eval_self_energy(B_OCA);
   Sigma_BDOF += D.Sigma;
 
   if (order == 2) { return Sigma_BDOF.get_blocks(); }
@@ -57,7 +57,7 @@ std::vector<nda::array<dcomplex, 3>> compute_self_energy(double beta, double Lam
   for (int i = 0; i < 4; ++i) {
     D.reset();
     auto B_third = Backbone(T_third(i, _, _), norb);
-    D.eval_diagram_block_sparse(B_third);
+    D.eval_self_energy(B_third);
     if (i == 3) {
       Sigma_BDOF += -1 * D.Sigma;
     } else {

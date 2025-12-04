@@ -32,8 +32,8 @@ TEST(DenseGFBackbone, OCA) {
   // initialize Backbone and DiagramEvaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = CorrelatorBackbone(topology, n);
-  auto C                      = CorrelatorDiagramEvaluator(beta, itops, Deltat, hyb_refl, dlr_rf, Gt_dense, Fset);
-  auto gf                     = C.eval_diagram_dense(B, Fs_dense, F_dags_dense);
+  auto C                      = DenseDiagramEvaluator(beta, itops, Deltat, hyb_refl, dlr_rf, Gt_dense, Fset);
+  auto gf                     = C.eval_correlator(B, Fs_dense, F_dags_dense);
 
   // compare against manually-computed OCA result
   auto OCA_gf_dense_result = OCA_gf_dense(hyb_coeffs, hyb_refl_coeffs, dlr_rf, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
@@ -112,8 +112,8 @@ TEST(DenseBAckbone, OCA_semicircle_bath_aaa) {
   // initialize Backbone and DiagramEvaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = CorrelatorBackbone(topology, n);
-  auto C                      = CorrelatorDiagramEvaluator(beta, itops, hyb, hyb_refl, hyb_poles, Gt_dense, Fset);
-  auto gf                     = C.eval_diagram_dense(B, Fs_dense, F_dags_dense);
+  auto C                      = DenseDiagramEvaluator(beta, itops, hyb, hyb_refl, hyb_poles, Gt_dense, Fset);
+  auto gf                     = C.eval_correlator(B, Fs_dense, F_dags_dense);
 
   // compare against manually-computed OCA result
   auto OCA_dense_gf_result = OCA_gf_dense(hyb_coeffs, hyb_refl_coeffs, hyb_poles, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
