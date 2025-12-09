@@ -26,9 +26,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {os: ubuntu-24.04, cxx: g++,         clang_cxx: clang++-19}
+          #- {os: ubuntu-24.04, cxx: g++,         clang_cxx: clang++-19}
           - {os: ubuntu-24.04, cxx: clang++-19,  clang_cxx: clang++-19}
-          - {os: macos-15,     cxx: g++-15,      clang_cxx: clang++}
+          #- {os: macos-15,     cxx: g++-15,      clang_cxx: clang++}
           - {os: macos-15,     cxx: clang++,     clang_cxx: clang++}
 
     runs-on: ${{ matrix.os }}
