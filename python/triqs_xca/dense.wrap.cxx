@@ -27,23 +27,21 @@ using c2py::operator""_a;
 // ==================== module functions ====================
 
 // NCA_dense
-static auto const fun_0 =
-   c2py::dispatcher_f_kw_t{c2py::cfun([](nda::array_const_view<cppdlr::dcomplex, 3> hyb, nda::array_const_view<cppdlr::dcomplex, 3> hyb_refl,
-                                         nda::array_const_view<cppdlr::dcomplex, 3> Gt, nda::array_const_view<cppdlr::dcomplex, 3> Fs,
-                                         nda::array_const_view<cppdlr::dcomplex, 3> F_dags) { return NCA_dense(hyb, hyb_refl, Gt, Fs, F_dags); },
-                                      "hyb", "hyb_refl", "Gt", "Fs", "F_dags")};
+static auto const fun_0 = c2py::dispatcher_f_kw_t{c2py::cfun(
+   [](nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl, nda::array_const_view<dcomplex, 3> Gt,
+      nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags) { return NCA_dense(hyb, hyb_refl, Gt, Fs, F_dags); },
+   "hyb", "hyb_refl", "Gt", "Fs", "F_dags")};
 
 // OCA_dense
 static auto const fun_1 = c2py::dispatcher_f_kw_t{
-   c2py::cfun([](nda::array_const_view<cppdlr::dcomplex, 3> hyb, cppdlr::imtime_ops itops, double beta, nda::array_const_view<cppdlr::dcomplex, 3> Gt,
-                 nda::array_const_view<cppdlr::dcomplex, 3> Fs,
-                 nda::array_const_view<cppdlr::dcomplex, 3> F_dags) { return OCA_dense(hyb, itops, beta, Gt, Fs, F_dags); },
+   c2py::cfun([](nda::array_const_view<dcomplex, 3> hyb, cppdlr::imtime_ops itops, double beta, nda::array_const_view<dcomplex, 3> Gt,
+                 nda::array_const_view<dcomplex, 3> Fs,
+                 nda::array_const_view<dcomplex, 3> F_dags) { return OCA_dense(hyb, itops, beta, Gt, Fs, F_dags); },
               "hyb", "itops", "beta", "Gt", "Fs", "F_dags"),
    c2py::cfun(
-      [](nda::array_const_view<cppdlr::dcomplex, 3> hyb, nda::array_const_view<cppdlr::dcomplex, 3> hyb_coeffs,
-         nda::array_const_view<cppdlr::dcomplex, 3> hyb_refl, nda::array_const_view<cppdlr::dcomplex, 3> hyb_refl_coeffs,
-         nda::vector_const_view<double> hyb_poles, cppdlr::imtime_ops &itops, double beta, nda::array_const_view<cppdlr::dcomplex, 3> Gt,
-         nda::array_const_view<cppdlr::dcomplex, 3> Fs, nda::array_const_view<cppdlr::dcomplex, 3> F_dags) {
+      [](nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_coeffs, nda::array_const_view<dcomplex, 3> hyb_refl,
+         nda::array_const_view<dcomplex, 3> hyb_refl_coeffs, nda::vector_const_view<double> hyb_poles, cppdlr::imtime_ops &itops, double beta,
+         nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags) {
         return OCA_dense(hyb, hyb_coeffs, hyb_refl, hyb_refl_coeffs, hyb_poles, itops, beta, Gt, Fs, F_dags);
       },
       "hyb", "hyb_coeffs", "hyb_refl", "hyb_refl_coeffs", "hyb_poles", "itops", "beta", "Gt", "Fs", "F_dags")};
@@ -64,11 +62,11 @@ Fs : {par_3}
 F_dags : {par_4}
    vector of creation operators
 )DOC",
-                                      {{c2py::python_typename<nda::array_const_view<cppdlr::dcomplex, 3>>()},
-                                       {c2py::python_typename<nda::array_const_view<cppdlr::dcomplex, 3>>()},
-                                       {c2py::python_typename<nda::array_const_view<cppdlr::dcomplex, 3>>()},
-                                       {c2py::python_typename<nda::array_const_view<cppdlr::dcomplex, 3>>()},
-                                       {c2py::python_typename<nda::array_const_view<cppdlr::dcomplex, 3>>()}});
+                                      {{c2py::python_typename<nda::array_const_view<dcomplex, 3>>()},
+                                       {c2py::python_typename<nda::array_const_view<dcomplex, 3>>()},
+                                       {c2py::python_typename<nda::array_const_view<dcomplex, 3>>()},
+                                       {c2py::python_typename<nda::array_const_view<dcomplex, 3>>()},
+                                       {c2py::python_typename<nda::array_const_view<dcomplex, 3>>()}});
 static const auto doc_d_1 = fun_1.doc(R"DOC(
 [1] Evaluate OCA using dense storage
 
@@ -104,16 +102,16 @@ Returns
 {ret_0}
    OCA term of self-energy
 )DOC",
-                                      {{c2py::python_typename<nda::array_const_view<cppdlr::dcomplex, 3>>()},
+                                      {{c2py::python_typename<nda::array_const_view<dcomplex, 3>>()},
                                        {c2py::python_typename<cppdlr::imtime_ops>(), c2py::python_typename<cppdlr::imtime_ops &>()},
                                        {c2py::python_typename<double>()},
-                                       {c2py::python_typename<nda::array_const_view<cppdlr::dcomplex, 3>>()},
-                                       {c2py::python_typename<nda::array_const_view<cppdlr::dcomplex, 3>>()},
-                                       {c2py::python_typename<nda::array_const_view<cppdlr::dcomplex, 3>>()},
-                                       {c2py::python_typename<nda::array_const_view<cppdlr::dcomplex, 3>>()},
-                                       {c2py::python_typename<nda::array_const_view<cppdlr::dcomplex, 3>>()},
+                                       {c2py::python_typename<nda::array_const_view<dcomplex, 3>>()},
+                                       {c2py::python_typename<nda::array_const_view<dcomplex, 3>>()},
+                                       {c2py::python_typename<nda::array_const_view<dcomplex, 3>>()},
+                                       {c2py::python_typename<nda::array_const_view<dcomplex, 3>>()},
+                                       {c2py::python_typename<nda::array_const_view<dcomplex, 3>>()},
                                        {c2py::python_typename<nda::vector_const_view<double>>()}},
-                                      {c2py::python_typename<nda::array<cppdlr::dcomplex, 3>>()});
+                                      {c2py::python_typename<nda::array<dcomplex, 3>>()});
 //--------------------- module function table  -----------------------------
 
 static PyMethodDef module_methods[] = {

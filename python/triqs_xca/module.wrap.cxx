@@ -27,10 +27,11 @@ using c2py::operator""_a;
 // ==================== module functions ====================
 
 // compute_self_energy
-static auto const fun_0 = c2py::dispatcher_f_kw_t{c2py::cfun(
-   [](double beta, double Lambda, double eps, nda::array<dcomplex, 3> hyb, nda::vector<double> hyb_poles, nda::array<dcomplex, 3> hyb_coeffs,
-      triqs::atom_diag::atom_diag<0> ad, int order) { return compute_self_energy(beta, Lambda, eps, hyb, hyb_poles, hyb_coeffs, ad, order); },
-   "beta", "Lambda", "eps", "hyb", "hyb_poles", "hyb_coeffs", "ad", "order")};
+static auto const fun_0 = c2py::dispatcher_f_kw_t{
+   c2py::cfun([](double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> hyb, nda::vector_const_view<double> hyb_poles,
+                 nda::array_const_view<dcomplex, 3> hyb_coeffs, triqs::atom_diag::atom_diag<0> ad,
+                 int order) { return compute_self_energy(beta, Lambda, eps, hyb, hyb_poles, hyb_coeffs, ad, order); },
+              "beta", "Lambda", "eps", "hyb", "hyb_poles", "hyb_coeffs", "ad", "order")};
 
 static const auto doc_d_0 = fun_0.doc(R"DOC(
 Solve for the self-energy up to a given order
@@ -62,9 +63,9 @@ Returns
                                       {{c2py::python_typename<double>()},
                                        {c2py::python_typename<double>()},
                                        {c2py::python_typename<double>()},
-                                       {c2py::python_typename<nda::array<dcomplex, 3>>()},
-                                       {c2py::python_typename<nda::vector<double>>()},
-                                       {c2py::python_typename<nda::array<dcomplex, 3>>()},
+                                       {c2py::python_typename<nda::array_const_view<dcomplex, 3>>()},
+                                       {c2py::python_typename<nda::vector_const_view<double>>()},
+                                       {c2py::python_typename<nda::array_const_view<dcomplex, 3>>()},
                                        {c2py::python_typename<triqs::atom_diag::atom_diag<0>>()},
                                        {c2py::python_typename<int>()}},
                                       {c2py::python_typename<std::vector<nda::array<dcomplex, 3>>>()});
