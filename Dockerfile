@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
     libomp-19-dev \
     libzstd-dev \
     doxygen \
-    python3-pipx
+    pipx
 
 # Install pyed
 RUN git clone https://github.com/HugoStrand/pyed $SRC/pyed
