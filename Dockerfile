@@ -18,7 +18,7 @@ ENV PYTHONPATH=$SRC/pyed:$PYTHONPATH
 
 # Install cvxpy
 RUN pip install --no-cache-dir --upgrade pip \
- && pip install --no-cache-dir cvxpy
+ && pip install --no-cache-dir --break-system-packages cvxpy
 
 # Install adapol
 RUN git clone https://github.com/flatironinstitute/adapol.git $SRC/adapol --branch main
