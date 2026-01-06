@@ -19,7 +19,7 @@ ENV PYTHONPATH=$SRC/pyed:$PYTHONPATH
 
 # Install adapol
 RUN git clone https://github.com/flatironinstitute/adapol.git $SRC/adapol --branch main
-RUN python3 -m pip install $SRC/adapol
+ENV PYTHONPATH=$SRC/adapol/src:$PYTHONPATH
 
 COPY --chown=build . $SRC/$APPNAME
 RUN mkdir $BUILD/$APPNAME && chown build $BUILD/$APPNAME
