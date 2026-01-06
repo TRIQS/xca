@@ -28,12 +28,13 @@ from mpi4py import MPI as mpi
 
 from pyed.TriqsExactDiagonalization import TriqsExactDiagonalization
 
+from adapol.fit_utils import polefitting
+
 from .pycppdlr import build_dlr_rf
 from .pycppdlr import ImTimeOps
 
 from .impurity import Fastdiagram
 from .dlr_dyson_ppsc import DysonItPPSC
-from .ac_pes import polefitting, kernel
 from .diag import all_connected_pairings
 
 from .ase.utils.timing import Timer, timer
@@ -296,7 +297,7 @@ class Solver(object):
             weights, pol, error = polefitting(
                 Deltaiw_dense, 1.j*dlr_if_dense, delta_iaa, self.tau_i, Deltat, self.tau_f,self.beta,
                 eps=epstol, Np_max=Npmax, Hermitian=Hermitian)
-        
+
             if error < epstol and len(pol)<=len(self.tau_i):
                 if is_root() and verbose:
                     print(f"AdaPol: Hybridization fit accuracy {error:2.2E}, using {len(pol)} poles.")

@@ -10,11 +10,16 @@ RUN apt-get update && apt-get install -y \
     libomp-19-dev \
     libzstd-dev \
     doxygen \
-    python3-h5py
+    python3-h5py \
+    python3-pip
 
 # Install pyed
 RUN git clone https://github.com/HugoStrand/pyed $SRC/pyed
 ENV PYTHONPATH=$SRC/pyed:$PYTHONPATH
+
+# Install adapol
+RUN git clone https://github.com/flatironinstitute/adapol.git $SRC/adapol --branch main
+RUN python3 -m pip install $SRC/adapol
 
 COPY --chown=build . $SRC/$APPNAME
 RUN mkdir $BUILD/$APPNAME && chown build $BUILD/$APPNAME
