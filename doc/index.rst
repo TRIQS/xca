@@ -27,7 +27,7 @@ Citation
 We kindly ask you to cite the following method papers when using triqs_xca in your work
 
 .. [#dlrhyb] `J. Kaye, Z. Huang, H. U.R. Strand, D. Golež, Phys. Rev. X 14, 031034 (2024) <https://doi.org/10.1103/PhysRevX.14.031034>`_
-.. [#xca] `Z. Huang, D. Golež, H. U.R. Strand, J. Kaye, arXiv:2503.19727 (2025) <https://doi.org/10.48550/arXiv.2503.19727>`_
+.. [#xca] `Z. Huang, D. Golež, H. U.R. Strand, J. Kaye, SciPost Phys. 19, 121 (2025) <https://doi.org/10.21468/SciPostPhys.19.5.121>`_
 .. [#cppdlr] `J. Kaye, H. U.R. Strand, N. Wentzell, J. Open Source Softw., 9(100), 6297, (2024) <https://doi.org/10.21105/joss.06297>`_
 .. [#dlr] `J. Kaye, K. Chen, O. Parcollet, Phys. Rev. B 105, 235115 (2021) <https://doi.org/10.1103/PhysRevB.105.235115>`_
 
