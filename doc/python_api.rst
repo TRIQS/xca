@@ -60,15 +60,6 @@ PyCppDLR Module
 Additional Modules
 ------------------
 
-AAA Module
-~~~~~~~~~~
-
-.. autosummary::
-   :toctree: generated
-
-   triqs_xca.aaa.aaa
-   triqs_xca.aaa.aaa_matrix
-
 Utilities
 ~~~~~~~~~
 
@@ -79,5 +70,4 @@ Utilities
    triqs_xca.diag
    triqs_xca.dimer
    triqs_xca.dimer_new
-   triqs_xca.ac_pes
 
