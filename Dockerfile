@@ -17,7 +17,7 @@ RUN git clone https://github.com/HugoStrand/pyed $SRC/pyed
 ENV PYTHONPATH=$SRC/pyed:$PYTHONPATH
 
 # Install cvxpy
-RUN pip install --no-cache-dir --break-system-packages cvxpy
+RUN pip install --no-cache-dir --break-system-packages cvxpy==1.5.4
 
 # Install adapol
 RUN git clone https://github.com/flatironinstitute/adapol.git $SRC/adapol --branch main
