@@ -10,8 +10,7 @@ RUN apt-get update && apt-get install -y \
     libomp-19-dev \
     libzstd-dev \
     doxygen \
-    python3-h5py \
-    python3-pip
+    python3-h5py
 
 # Install pyed
 RUN git clone https://github.com/HugoStrand/pyed $SRC/pyed
