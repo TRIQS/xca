@@ -33,7 +33,7 @@ from mpi4py import MPI
 
 import triqs.utility.mpi as mpi
 
-import h5py
+from h5 import HDFArchive
 
 from triqs.operators import c, c_dag, n
 from triqs.operators.util import N_op
@@ -125,8 +125,7 @@ def test_one_spinful_fermion(verbose=True):
     
     filename = 'nessi_ppsc_one_spinful_fermion.ref.h5'
     print(f'--> Loading: {filename}')
-    with h5py.File(filename, 'r') as fd:
-
+    with HDFArchive(filename, 'r') as fd:
         def read_grp(grp):
             data = Dummy()
             data.imp = Dummy()
@@ -136,12 +135,10 @@ def test_one_spinful_fermion(verbose=True):
             data.g = Dummy()
             data.g.mat = np.array(grp['g_tau'])
             return data
-            
+
         nessi.atom = read_grp(fd['atom'])
         nessi.nca = read_grp(fd['nca'])
         nessi.oca = read_grp(fd['oca'])
-
-    #exit()
     
     if False:
         path = '/Users/hugstr/dev/ppsc/examples/one_spinful_fermion/'

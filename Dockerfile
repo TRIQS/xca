@@ -9,8 +9,7 @@ RUN apt-get update && apt-get install -y \
     libclang-19-dev \
     libomp-19-dev \
     libzstd-dev \
-    doxygen \
-    python3-h5py
+    doxygen
 
 # Install pyed
 RUN git clone https://github.com/HugoStrand/pyed $SRC/pyed
