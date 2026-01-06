@@ -104,7 +104,7 @@ jobs:
       run: |
         brew update
         brew install ccache gcc llvm boost fftw hdf5 open-mpi openblas
-        pip install mako numpy scipy mpi4py
+        pip install mako numpy scipy mpi4py cvxpy
         pip install -r requirements.txt
         echo "PATH=$(brew --prefix llvm)/bin:$(brew --prefix gcc)/bin:$PATH" >> $GITHUB_ENV
         echo "PYTHONPATH=$(brew --prefix llvm)/lib/python3.13/site-packages" >> $GITHUB_ENV
@@ -120,6 +120,11 @@ jobs:
       run: |
         git clone https://github.com/HugoStrand/pyed $HOME/pyed
         echo "PYTHONPATH=$HOME/pyed:$PYTHONPATH" >> $GITHUB_ENV
+
+    - name: Install adapol
+      run: |
+        git clone https://github.com/flatironinstitute/adapol.git $HOME/adapol --branch main
+        echo "PYTHONPATH=$HOME/adapol/src:$PYTHONPATH" >> $GITHUB_ENV
 
     - name: Build & Install TRIQS
       env:
