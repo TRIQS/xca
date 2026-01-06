@@ -10,14 +10,14 @@ RUN apt-get update && apt-get install -y \
     libomp-19-dev \
     libzstd-dev \
     doxygen \
-    pipx
+    python3-pip
 
 # Install pyed
 RUN git clone https://github.com/HugoStrand/pyed $SRC/pyed
 ENV PYTHONPATH=$SRC/pyed:$PYTHONPATH
 
 # Install cvxpy
-RUN pipx install cvxpy
+RUN pip install --no-cache-dir --break-system-packages cvxpy
 
 # Install adapol
 RUN git clone https://github.com/flatironinstitute/adapol.git $SRC/adapol --branch main
