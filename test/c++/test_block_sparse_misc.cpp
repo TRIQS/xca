@@ -102,19 +102,17 @@ TEST(BlockSparseMisc, aaa_coefs2vals) {
 }
 
 TEST(BlockSparseMisc, block_gf_to_BDOF) {
-  double beta = 1;
+  double beta   = 1;
   double Lambda = 10 * beta;
-  double eps = 1.0e-6;
+  double eps    = 1.0e-6;
   // generate a DLR imaginary time mesh
-  auto iw_dlr_mesh = mesh::dlr_imfreq(beta, triqs::mesh::Fermion, Lambda, eps);
+  auto iw_dlr_mesh  = mesh::dlr_imfreq(beta, triqs::mesh::Fermion, Lambda, eps);
   auto tau_dlr_mesh = mesh::dlr_imtime(iw_dlr_mesh);
 
   auto g = block_gf<dlr_imtime>{{"bl0", "bl1"}, {gf<dlr_imtime>{{tau_dlr_mesh}, {2, 2}}, gf<dlr_imtime>{{tau_dlr_mesh}, {3, 3}}}};
   // Initialize bl0 (2x2 block)
-  for (auto tau : g[0].mesh()) {
-    g[0][tau] = nda::matrix<dcomplex>{{1e-17, 0}, {0, 1e-17}};
-  }
-  
+  for (auto tau : g[0].mesh()) { g[0][tau] = nda::matrix<dcomplex>{{1e-17, 0}, {0, 1e-17}}; }
+
   // Initialize bl1 (3x3 block)
   for (auto tau : g[1].mesh()) {
     g[1][tau] = nda::matrix<dcomplex>{{2.0 + 0.1 * tau, 0.3, 0.0}, {0.3, 2.5 + 0.1 * tau, 0.4}, {0.0, 0.4, 3.0 + 0.1 * tau}};

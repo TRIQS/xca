@@ -2,32 +2,60 @@
 #include <cppdlr/dlr_imtime.hpp>
 #include <cppdlr/dlr_kernels.hpp>
 #include <cppdlr/utils.hpp>
-#include <iomanip>
 #include <iostream>
 #include <nda/algorithms.hpp>
 #include <nda/declarations.hpp>
 #include <nda/mapped_functions.hxx>
 #include <nda/nda.hpp>
+#include <triqs/mesh/imtime.hpp>
 #include <triqs_xca/block_sparse.hpp>
 #include <triqs_xca/block_sparse_backbone.hpp>
+#include <triqs_xca/atom_diag_utils.hpp>
 
 DiagramEvaluator::DiagramEvaluator(double beta, imtime_ops &itops, nda::array_const_view<dcomplex, 3> hyb,
                                    nda::array_const_view<dcomplex, 3> hyb_refl, nda::vector_const_view<double> hyb_poles, BlockDiagOpFun &Gt,
                                    BlockOpSymQuartet &Fq)
-   : beta(beta),
+   : itops(itops),
+     Gt(Gt),
+     Fq(Fq),
+     Sigma(itops.rank(), Gt.get_block_sizes()),
+     beta(beta),
      r(itops.rank()),
      n(hyb.extent(1)),
      q(nda::max_element(Fq.sym_set_labels) + 1),
      Nmax(Gt.get_max_block_size()),
-     itops(itops),
      hyb(hyb),
      hyb_refl(hyb_refl),
-     Gt(Gt),
-     Fq(Fq),
+     hyb_poles(hyb_poles) {
+
+  dlr_it = itops.get_itnodes();
+
+  // allocate arrays
+  T     = nda::zeros<dcomplex>(r, Nmax, Nmax);
+  U     = nda::zeros<dcomplex>(r, Nmax, Nmax);
+  GKt   = nda::zeros<dcomplex>(r, Nmax, Nmax);
+  Tkaps = nda::zeros<dcomplex>(n, r, Nmax, Nmax);
+  Tmu   = nda::zeros<dcomplex>(r, Nmax, Nmax);
+}
+
+DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps, nda::vector_const_view<double> hyb_poles,
+                                   nda::array_const_view<dcomplex, 3> hyb_coeffs, block_gf<dlr_imtime> &G_ppsc,
+                                   triqs::atom_diag::atom_diag<false> &ad)
+   : itops(imtime_ops(Lambda, build_dlr_rf(Lambda, eps))),
+     dlr_it(itops.get_itnodes()),
+     Gt(BlockDiagOpFun(G_ppsc)),
+     Fq(std::get<0>(get_operators(ad, hyb_coeffs, hyb_coeffs))),
+     beta(beta),
+     n(hyb_coeffs.extent(1)),
+     q(nda::max_element(Fq.sym_set_labels) + 1),
+     r(itops.rank()),
+     Nmax(Gt.get_max_block_size()),
      hyb_poles(hyb_poles),
      Sigma(itops.rank(), Gt.get_block_sizes()) {
 
-  dlr_it = itops.get_itnodes();
+  // hyb and hyb_refl on DLR imaginary time nodes
+  hyb      = aaa_coefs2vals(beta, Lambda, eps, hyb_coeffs, nda::make_regular(hyb_poles / beta));
+  hyb_refl = hyb; // TODO correctly handle reflection
 
   // allocate arrays
   T     = nda::zeros<dcomplex>(r, Nmax, Nmax);
@@ -180,6 +208,8 @@ void DiagramEvaluator::multiply_prefactor(Backbone &backbone, nda::vector_const_
     }
   }
 }
+
+BlockDiagOpFun &DiagramEvaluator::get_self_energy() { return Sigma; }
 
 void DiagramEvaluator::eval_self_energy(Backbone &backbone) {
 

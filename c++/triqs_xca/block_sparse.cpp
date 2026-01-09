@@ -13,6 +13,7 @@
 #include <nda/print.hpp>
 #include <ostream>
 #include <string>
+#include <triqs/mesh/dlr_imtime.hpp>
 #include <vector>
 #include <stdexcept>
 #include <triqs/gfs.hpp>
@@ -25,20 +26,23 @@ using namespace triqs::gfs;
 
 /////////////// BlockDiagOpFun (BDOF) class ///////////////
 BlockDiagOpFun::BlockDiagOpFun(std::vector<nda::array<dcomplex, 3>> &blocks, nda::vector_const_view<int> zero_block_indices)
-   : blocks(blocks), num_block_cols(blocks.size()), zero_block_indices(zero_block_indices) {}
+   : blocks(blocks), num_block_cols(blocks.size()), zero_block_indices(zero_block_indices) {
+}
 
 BlockDiagOpFun::BlockDiagOpFun(int r, nda::vector_const_view<int> block_sizes) : num_block_cols(block_sizes.size()) {
-  std::vector<nda::array<dcomplex, 3>> blocks(num_block_cols);
+  std::vector<nda::array<dcomplex, 3>> temp_blocks(num_block_cols);
   zero_block_indices = nda::make_regular(-1 * nda::ones<int>(num_block_cols));
-  for (int i = 0; i < num_block_cols; i++) { blocks[i] = nda::zeros<dcomplex>(r, block_sizes[i], block_sizes[i]); }
-  this->blocks = blocks;
+  for (int i = 0; i < num_block_cols; i++) {
+    temp_blocks[i] = nda::zeros<dcomplex>(r, block_sizes[i], block_sizes[i]);
+  }
+  this->blocks = temp_blocks;
 }
 
 BlockDiagOpFun::BlockDiagOpFun(const block_gf<dlr_imtime> &bgf) : num_block_cols(bgf.size()) {
   // TODO set block to just a single zero if the block gf is numerically zero
   blocks.resize(num_block_cols);
   zero_block_indices = nda::zeros<int>(num_block_cols);
-  int r = bgf[0].mesh().size();
+  int r              = bgf[0].mesh().size();
 
   for (int i = 0; i < num_block_cols; i++) {
     auto const &gf = bgf[i];
@@ -707,4 +711,54 @@ BlockDiagOpFun nonint_gf_BDOF(std::vector<nda::array<double, 2>> H_blocks, nda::
   }
 
   return Gt;
+}
+
+nda::array<dcomplex, 3> aaa_coefs2vals(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> coefs,
+                                       nda::vector_const_view<double> poles) {
+  long n1     = coefs.extent(1);
+  long n2     = coefs.extent(2);
+  auto dlr_rf = build_dlr_rf(Lambda, eps);
+  auto itops  = imtime_ops(Lambda, dlr_rf);
+  auto dlr_it = itops.get_itnodes();
+  int r       = itops.rank();
+  int p       = static_cast<int>(poles.size());
+  auto kmat   = build_k_it(dlr_it, nda::make_regular(beta * poles));
+  auto cf_r   = nda::reshape(coefs, p, coefs.size() / p);
+  nda::array<dcomplex, 3> vals(r, n1, n2);
+  reshape(vals, r, n1 * n2) = matmul(kmat, cf_r);
+  return vals;
+}
+
+nda::array<dcomplex, 3> aaa_reflect(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> coefs,
+                                    nda::vector_const_view<double> poles) {
+  auto vals   = aaa_coefs2vals(beta, Lambda, eps, coefs, poles);
+  auto dlr_rf = build_dlr_rf(Lambda, eps);
+  auto itops  = imtime_ops(Lambda, dlr_rf);
+  auto refl   = itops.reflect(vals);
+  // TODO
+  return coefs; // placeholder
+}
+
+block_gf<dlr_imtime> BDOF_to_block_gf(BlockDiagOpFun const &BDOF, double beta, double Lambda, double eps) {
+
+  int r       = BDOF.get_num_time_nodes();
+  auto dlr_rf = build_dlr_rf(Lambda, eps);
+  auto itops  = imtime_ops(Lambda, dlr_rf);
+  auto dlr_it = itops.get_itnodes();
+
+  // triqs gf mesh
+  auto t_mesh = mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda, eps);
+  // create vector of gf
+  std::vector<gf<dlr_imtime>> gf_vec(BDOF.get_num_block_cols());
+
+  for (int i = 0; i < BDOF.get_num_block_cols(); ++i) {
+    if (BDOF.get_zero_block_index(i) == 0) {
+      gf_vec[i]        = gf<dlr_imtime>{t_mesh, {BDOF.get_block(i).extent(1), BDOF.get_block(i).extent(2)}};
+      gf_vec[i].data() = BDOF.get_block(i);
+    } else {
+      // empty block
+      gf_vec[i] = gf<dlr_imtime>{t_mesh, {0, 0}};
+    }
+  }
+  return {gf_vec};
 }

@@ -13,33 +13,15 @@
 using namespace triqs;
 using namespace triqs::atom_diag;
 
-nda::array<dcomplex, 3> aaa_coefs2vals(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> coefs,
-                                       nda::vector_const_view<double> poles) {
-  long n1     = coefs.extent(1);
-  long n2     = coefs.extent(2);
-  auto dlr_rf = build_dlr_rf(Lambda, eps);
-  auto itops  = imtime_ops(Lambda, dlr_rf);
-  auto dlr_it = itops.get_itnodes();
-  int r       = itops.rank();
-  int p       = static_cast<int>(poles.size());
-  auto kmat   = build_k_it(dlr_it, nda::make_regular(beta * poles));
-  auto cf_r   = nda::reshape(coefs, p, coefs.size() / p);
-  nda::array<dcomplex, 3> vals(r, n1, n2);
-  reshape(vals, r, n1 * n2) = matmul(kmat, cf_r);
-  return vals;
-}
-
 std::vector<nda::array<dcomplex, 3>> compute_self_energy(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> hyb,
                                                          nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
                                                          triqs::atom_diag::atom_diag<false> ad, int order) {
   auto dlr_rf               = build_dlr_rf(Lambda, eps);
   auto itops                = imtime_ops(Lambda, dlr_rf);
-  auto dlr_it               = itops.get_itnodes();
-  auto dlr_it_abs           = cppdlr::rel2abs(dlr_it);
-  auto Gt                   = ad_to_nonint_gf(ad, beta, dlr_it_abs);
+  auto Gt                   = ad_to_atom_prop(ad, beta, itops);
   int norb2                 = static_cast<int>(hyb_coeffs.extent(1));
   int norb                  = norb2 / 2;
-  auto [Fq, sym_set_labels] = get_operators(ad, norb, hyb_coeffs, hyb_coeffs);
+  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs, hyb_coeffs);
   auto hyb_refl             = itops.reflect(hyb);
   auto Sigma_BDOF           = NCA_bs(hyb, hyb_refl, Gt, Fq);
 
@@ -49,7 +31,7 @@ std::vector<nda::array<dcomplex, 3>> compute_self_energy(double beta, double Lam
   nda::array<int, 2> T_OCA = {{0, 2}, {1, 3}};
   auto B_OCA               = Backbone(T_OCA, norb);
   D.eval_self_energy(B_OCA);
-  Sigma_BDOF += D.Sigma;
+  Sigma_BDOF += D.get_self_energy();
 
   if (order == 2) { return Sigma_BDOF.get_blocks(); }
 
@@ -59,9 +41,9 @@ std::vector<nda::array<dcomplex, 3>> compute_self_energy(double beta, double Lam
     auto B_third = Backbone(T_third(i, _, _), norb);
     D.eval_self_energy(B_third);
     if (i == 3) {
-      Sigma_BDOF += -1 * D.Sigma;
+      Sigma_BDOF += -1 * D.get_self_energy();
     } else {
-      Sigma_BDOF += D.Sigma;
+      Sigma_BDOF += D.get_self_energy();
     }
   }
 

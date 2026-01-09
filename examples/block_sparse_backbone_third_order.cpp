@@ -288,7 +288,7 @@ int main() {
     // Compute third-order contribution using DiagramEvaluator
     auto B = Backbone(topologies(i, _, _), n);
     D.eval_self_energy(B);
-    third_order_result = D.Sigma;
+    third_order_result = D.get_self_energy();
     D.reset(); // reset the DiagramEvaluator for the next topology
 
     // Compute third-order contribution using old code

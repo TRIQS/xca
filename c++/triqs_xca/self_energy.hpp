@@ -8,8 +8,6 @@ namespace triqs::atom_diag {
   template <bool C> class atom_diag;
 }
 
-nda::array<dcomplex, 3> aaa_coefs2vals(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> coefs, nda::vector_const_view<double> poles);
-
 /**
  * @brief Solve for the self-energy up to a given order
  * 
