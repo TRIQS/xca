@@ -22,7 +22,7 @@ Prerequisites
 
     $ python -c "import pyed.TriqsExactDiagonalization"
 
-.. note:: The `pyed` python module has to be installed manually. Trying to install it using `pip` will not work since there is another python module with the same name (doing something completely different) registered in the PIP package index.
+    .. note:: The `pyed` python module has to be installed manually. Trying to install it using `pip` will not work since there is another python module with the same name (doing something completely different) registered in the PIP package index.
 
 #. The `adapol <https://github.com/flatironinstitute/adapol>`_ package (Adaptive Pole Fitting for Quantum Many-Body Physics) has to be installed on the `main` branch. This can be achieved using a local `pip` install, e.g.::
 
