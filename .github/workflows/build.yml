@@ -90,8 +90,6 @@ jobs:
         python3-pip
         python3-scipy
         python3-ipython
-      run: |
-        pip install cvxpy
 
     - name: Set up virtualenv
       run: |
