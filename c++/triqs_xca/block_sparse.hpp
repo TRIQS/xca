@@ -192,10 +192,8 @@ class DenseFSet {
    * @param[in] Fs annihilation operators
    * @param[in] F_dags creation operators
    * @param[in] hyb_coeffs DLR coefficients of hybridization
-   * @param[in] hyb_refl_coeffs DLR coefficients of reflected hybridization
    */
-  DenseFSet(nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-            nda::array_const_view<dcomplex, 3> hyb_refl_coeffs);
+  DenseFSet(nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags, nda::array_const_view<dcomplex, 3> hyb_coeffs);
 
   std::size_t get_num_orb_inds() const;
 };
@@ -288,11 +286,11 @@ class BlockOpSymQuartet {
    * @brief Constructor for BlockOpSymQuartet
    * @param[in] Fs vector of annihilation operator BOSS
    * @param[in] F_dags vector of creation operator BOSS
-   * @param[in] F_dag_bars vector of vectors of linear combinations of creation operator BOSS 
-   * @param[in] F_bars_refl vector of vectors of linear combinations of annihilation operator BOSS
+   * @param[in] hyb_coeffs DLR coefficients of hybridization
+   * @param[in] sym_set_labels vector of symmetry set labels for each orbital index
    */
   BlockOpSymQuartet(std::vector<BlockOpSymSet> Fs, std::vector<BlockOpSymSet> F_dags, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-                    nda::array_const_view<dcomplex, 3> hyb_refl_coeffs, nda::vector_const_view<long> sym_set_labels);
+                    nda::vector_const_view<long> sym_set_labels);
 };
 
 /**

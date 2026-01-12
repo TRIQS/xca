@@ -115,7 +115,8 @@ void Backbone::set_pole_inds(nda::vector_const_view<int> pole_inds_vec, nda::vec
         prefactor_Kexps(i - 1)  = topology(i, 1) - topology(i, 0) - 1;
       }
     } else { // line i is backward
-      if (hyb_poles(pole_inds(i - 1)) >= 0) {
+      // if (hyb_poles(pole_inds(i - 1)) >= 0) {
+      if (hyb_poles(pole_inds(i - 1)) <= 0) { // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
         // step 4(a)
         // place K^+_l F^dag_pi at the right vertex
         vertices[topology(i, 0)].set_hyb_ind(i - 1);
@@ -231,6 +232,15 @@ int Backbone::get_pole_ind(int i) { return pole_inds(i); }
 int Backbone::get_fb(int i) { return fb(i); }
 int Backbone::get_orb_ind(int i) { return orb_inds(i); }
 int Backbone::get_flat_index() { return f_ix; }
+
+int Backbone::get_vertex_direction(int vertex_idx) {
+  // Find which row of topology contains this vertex and return the corresponding fb value
+  for (int i = 0; i < m; i++) {
+    if (topology(i, 0) == vertex_idx || topology(i, 1) == vertex_idx) { return fb(i); }
+  }
+  // If vertex not found in topology, throw an error
+  throw std::invalid_argument("Vertex index " + std::to_string(vertex_idx) + " not found in topology");
+}
 
 CorrelatorBackbone::CorrelatorBackbone(nda::array<int, 2> topology, int n) : Backbone(topology, n) { fb_ix_max = static_cast<int>(pow(2, m - 1)); }
 

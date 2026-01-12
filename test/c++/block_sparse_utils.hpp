@@ -49,9 +49,7 @@ std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>, nda::array<dcomplex
  * @param[in] Lambda DLR cutoff parameter
  * @param[in] eps DLR epsilon parameter
  * @param[in] hyb_coeffs Hybridization function coefficients
- * @param[in] hyb_refl_coeffs Reflected hybridization function coefficients
  * @return Tuple of non-interacting Green's function as a BDOF, field operators as a BlockOpSymQuartet, and vector of block symmetry labels
  */
 std::tuple<BlockDiagOpFun, BlockOpSymQuartet, nda::vector<int>> two_band_helper(double beta, double Lambda, double eps,
-                                                                                nda::array_const_view<dcomplex, 3> hyb_coeffs,
-                                                                                nda::array_const_view<dcomplex, 3> hyb_refl_coeffs);
+                                                                                nda::array_const_view<dcomplex, 3> hyb_coeffs);

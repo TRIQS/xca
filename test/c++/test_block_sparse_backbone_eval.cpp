@@ -94,8 +94,8 @@ TEST(Backbone, OCA_old) {
   auto hyb_coeffs               = itops.vals2coefs(Deltat); // hybridization DLR coeffs
   auto hyb_refl                 = Deltat;
   auto hyb_refl_coeffs          = hyb_coeffs;
-  auto Fset                     = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs, hyb_refl_coeffs);
-  auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
+  auto Fset                     = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs);
+  auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs);
 
   // set up backbone
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
@@ -128,7 +128,7 @@ TEST(Backbone, OCA_old) {
   std::vector<nda::array<dcomplex, 3>> F_dags_dense_vec{F_dags_dense};
   auto F_dag_sym_triv      = BlockOpSymSet(triv_bi, F_dags_dense_vec);
   auto sym_set_labels_triv = nda::zeros<long>(n);
-  auto Fq_triv             = BlockOpSymQuartet({F_sym_triv}, {F_dag_sym_triv}, hyb_coeffs, hyb_refl_coeffs, sym_set_labels_triv);
+  auto Fq_triv             = BlockOpSymQuartet({F_sym_triv}, {F_dag_sym_triv}, hyb_coeffs, sym_set_labels_triv);
 
   DiagramEvaluator D3(beta, itops, Deltat, hyb_refl, dlr_rf, Gt_triv, Fq_triv);
   start = std::chrono::high_resolution_clock::now();
@@ -195,7 +195,7 @@ TEST(Backbone, spin_flip_fermion) {
   auto Gt_block_sizes           = Gt.get_block_sizes();
 
   // generate creation/annihilation operators in block-sparse storage
-  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs, hyb_refl_coeffs);
+  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
 
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
@@ -210,7 +210,7 @@ TEST(Backbone, spin_flip_fermion) {
   // get dense Gt, field operators
   auto H_mat    = get_full_h_atomic_perm(ad);
   auto Gt_dense = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
-  auto Fset     = get_operators_dense(ad, norb, hyb_coeffs, hyb_refl_coeffs);
+  auto Fset     = get_operators_dense(ad, norb, hyb_coeffs);
 
   DenseDiagramEvaluator D2(beta, itops, hyb, hyb_refl, dlr_rf, Gt_dense, Fset);
   start = std::chrono::high_resolution_clock::now();
@@ -267,7 +267,7 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
   auto Gt_block_sizes           = Gt.get_block_sizes();
 
   // generate creation/annihilation operators in block-sparse storage
-  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs, hyb_refl_coeffs);
+  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
 
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
@@ -282,7 +282,7 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
   // get dense Gt, field operators
   auto H_mat    = get_full_h_atomic_perm(ad);
   auto Gt_dense = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
-  auto Fset     = get_operators_dense(ad, norb, hyb_coeffs, hyb_refl_coeffs);
+  auto Fset     = get_operators_dense(ad, norb, hyb_coeffs);
 
   DenseDiagramEvaluator D2(beta, itops, hyb, hyb_refl, dlr_rf, Gt_dense, Fset);
   start = std::chrono::high_resolution_clock::now();
@@ -371,7 +371,7 @@ TEST(Backbone, OCA_semicircle_bath_aaa) {
   // generic diagram evaluator
   nda::array<int, 2> topology   = {{0, 2}, {1, 3}};
   auto B                        = Backbone(topology, n);
-  auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
+  auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs);
   auto D                        = DiagramEvaluator(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq);
   D.eval_self_energy(B);
   auto OCA_result = D.get_self_energy(); // get the result from the DiagramEvaluator
@@ -452,7 +452,7 @@ TEST(Backbone, spin_flip_fermion_aaa) {
   auto Gt_block_sizes = Gt.get_block_sizes();
 
   // generate creation/annihilation operators in block-sparse storage
-  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs, hyb_refl_coeffs);
+  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
 
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
@@ -467,7 +467,7 @@ TEST(Backbone, spin_flip_fermion_aaa) {
   // get dense Gt, field operators
   auto H_mat    = get_full_h_atomic_perm(ad);
   auto Gt_dense = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
-  auto Fset     = get_operators_dense(ad, norb, hyb_coeffs, hyb_refl_coeffs);
+  auto Fset     = get_operators_dense(ad, norb, hyb_coeffs);
 
   // compare to dense result
   DenseDiagramEvaluator D2(beta, itops, hyb, hyb_refl, hyb_poles, Gt_dense, Fset);
@@ -550,7 +550,7 @@ TEST(Backbone, spin_flip_fermion_all_sym_aaa) {
   auto Gt_block_sizes           = Gt.get_block_sizes();
 
   // generate creation/annihilation operators in block-sparse storage
-  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs, hyb_refl_coeffs);
+  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
 
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
@@ -565,7 +565,7 @@ TEST(Backbone, spin_flip_fermion_all_sym_aaa) {
   // get dense Gt, field operators
   auto H_mat    = get_full_h_atomic_perm(ad);
   auto Gt_dense = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
-  auto Fset     = get_operators_dense(ad, norb, hyb_coeffs, hyb_refl_coeffs);
+  auto Fset     = get_operators_dense(ad, norb, hyb_coeffs);
 
   // compare to dense result
   DenseDiagramEvaluator D2(beta, itops, hyb, hyb_refl, hyb_poles, Gt_dense, Fset);
@@ -688,23 +688,17 @@ TEST(Backbone, OCA) {
   // Construct particle number operator and atom_diag object
   triqs::operators::many_body_operator_real N;
   for (int kap = 0; kap < norb; ++kap) { N += n("up", kap) + n("do", kap); }
-  double mu = (3 * U - 5 * J) / 2 - 1.5; 
+  double mu = (3 * U - 5 * J) / 2 - 1.5;
   H -= mu * N;
   std::vector<triqs::operators::many_body_operator_real> sym_ops = {N};
   triqs::atom_diag::atom_diag<false> ad(H, fop_set, sym_ops);
-  std::cout << "H_atomic " << get_full_h_atomic_perm(ad); 
+  std::cout << "H_atomic " << get_full_h_atomic_perm(ad);
   nda::vector<long> block_sizes(ad.n_subspaces());
   for (int i = 0; i < ad.n_subspaces(); ++i) { block_sizes(i) = ad.get_fock_states(i).size(); }
 
   // compute atomic propagator as a block_gf
   auto G0_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
-  // auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs, hyb_coeffs);
   BlockDiagOpFun G0_bdof(G0_ppsc);
-  // std::cout << "ap 0 = " << G0_bdof.get_block(0)(4, _, _) << std::endl;
-  // std::cout << "ap 1 = " << G0_bdof.get_block(1)(4, _, _) << std::endl;
-  // std::cout << "ap 2 = " << G0_bdof.get_block(2)(4, _, _) << std::endl;
-  // std::cout << "ap 3 = " << G0_bdof.get_block(3)(4, _, _) << std::endl;
-  // std::cout << "ap 4 = " << G0_bdof.get_block(4)(4, _, _) << std::endl;
 
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
@@ -712,23 +706,16 @@ TEST(Backbone, OCA) {
   DiagramEvaluator D(beta, Lambda, eps, dlr_rf, hyb_coeffs, G0_ppsc, ad);
   D.eval_self_energy(B);
   auto OCA_result = D.get_self_energy();
-  // std::cout << "actual Deltat(4) = " << Deltat(4, _, _) << std::endl;
 
   auto hyb_refl                 = Deltat;
   auto hyb_refl_coeffs          = hyb_coeffs;
-  auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
-  // std::cout << "Gt 0 = " << Gt.get_block(0)(4, _, _) << std::endl;
-  // std::cout << "Gt 1 = " << Gt.get_block(1)(4, _, _) << std::endl;
-  // std::cout << "Gt 2 = " << Gt.get_block(2)(4, _, _) << std::endl;
-  // std::cout << "Gt 3 = " << Gt.get_block(3)(4, _, _) << std::endl;
-  // std::cout << "Gt 4 = " << Gt.get_block(4)(4, _, _) << std::endl;
+  auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs);
   DiagramEvaluator D2(beta, itops, Deltat, hyb_refl, dlr_rf, Gt, Fq);
   D2.eval_self_energy(B);
   auto OCA_result_2 = D2.get_self_energy();
   ASSERT_LE(nda::max_element(nda::abs(D.hyb - D2.hyb)), eps);
   ASSERT_LE(nda::max_element(nda::abs(D.hyb_refl - D2.hyb_refl)), eps);
   ASSERT_EQ(D.hyb_poles, D2.hyb_poles);
-  // ASSERT_LE(nda::max_element(nda::abs(D.Gt.get_block(0) - D2.Gt.get_block(0))), eps);
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(0) - OCA_result_2.get_block(0))), 1e-10);
   ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(1) - OCA_result_2.get_block(1))), 1e-10);

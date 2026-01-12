@@ -26,15 +26,12 @@ using namespace triqs::gfs;
 
 /////////////// BlockDiagOpFun (BDOF) class ///////////////
 BlockDiagOpFun::BlockDiagOpFun(std::vector<nda::array<dcomplex, 3>> &blocks, nda::vector_const_view<int> zero_block_indices)
-   : blocks(blocks), num_block_cols(blocks.size()), zero_block_indices(zero_block_indices) {
-}
+   : blocks(blocks), num_block_cols(blocks.size()), zero_block_indices(zero_block_indices) {}
 
 BlockDiagOpFun::BlockDiagOpFun(int r, nda::vector_const_view<int> block_sizes) : num_block_cols(block_sizes.size()) {
   std::vector<nda::array<dcomplex, 3>> temp_blocks(num_block_cols);
   zero_block_indices = nda::make_regular(-1 * nda::ones<int>(num_block_cols));
-  for (int i = 0; i < num_block_cols; i++) {
-    temp_blocks[i] = nda::zeros<dcomplex>(r, block_sizes[i], block_sizes[i]);
-  }
+  for (int i = 0; i < num_block_cols; i++) { temp_blocks[i] = nda::zeros<dcomplex>(r, block_sizes[i], block_sizes[i]); }
   this->blocks = temp_blocks;
 }
 
@@ -341,8 +338,7 @@ int BlockOpFun::get_num_time_nodes() const {
 
 /////////////// DenseFSet class ///////////////
 
-DenseFSet::DenseFSet(nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-                     nda::array_const_view<dcomplex, 3> hyb_refl_coeffs)
+DenseFSet::DenseFSet(nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags, nda::array_const_view<dcomplex, 3> hyb_coeffs)
    : Fs(Fs), F_dags(F_dags) {
 
   int n       = Fs.extent(0);
@@ -354,7 +350,7 @@ DenseFSet::DenseFSet(nda::array_const_view<dcomplex, 3> Fs, nda::array_const_vie
     for (int l = 0; l < p; l++) {
       for (int nu = 0; nu < n; nu++) {
         F_dag_bars(lam, l, _, _) += hyb_coeffs(l, nu, lam) * F_dags(nu, _, _);
-        F_bars_refl(nu, l, _, _) += hyb_refl_coeffs(l, nu, lam) * Fs(lam, _, _);
+        F_bars_refl(nu, l, _, _) += hyb_coeffs(l, nu, lam) * Fs(lam, _, _);
       }
     }
   }
@@ -454,7 +450,7 @@ void BlockOpSymSetBar::add_block(int i, int s, int t, nda::array_const_view<dcom
 ////////////// BlockOpSymQuartet class ///////////////
 
 BlockOpSymQuartet::BlockOpSymQuartet(std::vector<BlockOpSymSet> Fs, std::vector<BlockOpSymSet> F_dags, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-                                     nda::array_const_view<dcomplex, 3> hyb_refl_coeffs, nda::vector_const_view<long> sym_set_labels)
+                                     nda::vector_const_view<long> sym_set_labels)
    : Fs(Fs), F_dags(F_dags), sym_set_labels(sym_set_labels), p(hyb_coeffs.extent(0)) {
 
   // Fs and F_dags are vectors of BOSS
@@ -504,7 +500,7 @@ BlockOpSymQuartet::BlockOpSymQuartet(std::vector<BlockOpSymSet> Fs, std::vector<
             }
             for (int b = 0; b < Fs[p_nu].get_num_block_cols(); b++) {
               if (Fs[p_nu].get_block_index(b) != -1) {
-                F_bars_refl[p_nu].add_block(b, nu, l, nda::make_regular(hyb_refl_coeffs(l, nu_orb, lam_orb) * Fs[p_nu].get_block(b)(lam, _, _)));
+                F_bars_refl[p_nu].add_block(b, nu, l, nda::make_regular(hyb_coeffs(l, nu_orb, lam_orb) * Fs[p_nu].get_block(b)(lam, _, _)));
               }
             }
           }

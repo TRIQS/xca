@@ -44,7 +44,7 @@ DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps, nda::
    : itops(imtime_ops(Lambda, build_dlr_rf(Lambda, eps))),
      dlr_it(itops.get_itnodes()),
      Gt(BlockDiagOpFun(G_ppsc)),
-     Fq(std::get<0>(get_operators(ad, hyb_coeffs, hyb_coeffs))),
+     Fq(std::get<0>(get_operators(ad, hyb_coeffs))),
      beta(beta),
      n(hyb_coeffs.extent(1)),
      q(nda::max_element(Fq.sym_set_labels) + 1),
@@ -116,6 +116,7 @@ void DiagramEvaluator::multiply_vertex_block(Backbone &backbone, int v_ix, nda::
   // K factor
   int bv      = backbone.get_vertex_Ksign(v_ix); // sign on K
   double pole = hyb_poles(l_ix);
+  if (backbone.get_vertex_direction(v_ix) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
   if (bv != 0) {
     for (int t = 0; t < r; t++) {
       T(t, range(0, block_dims(v_ix + 1)), range(0, n_col_r)) = k_it(dlr_it(t), bv * pole) * T(t, range(0, block_dims(v_ix + 1)), range(0, n_col_r));
@@ -131,11 +132,13 @@ void DiagramEvaluator::compose_with_edge_block(Backbone &backbone, int e_ix, nda
   GKt(_, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1))) = Gt.get_block(b_ix);
   int m                                                                  = backbone.m;
   for (int x = 0; x < m - 1; x++) {
-    int be = backbone.get_edge(e_ix, x); // sign on K
+    int be      = backbone.get_edge(e_ix, x); // sign on K
+    double pole = hyb_poles(backbone.get_pole_ind(x));
+    if (backbone.get_fb(x + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR
     if (be != 0) {
       for (int t = 0; t < r; t++) {
         GKt(t, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1))) =
-           k_it(dlr_it(t), be * hyb_poles(backbone.get_pole_ind(x))) * GKt(t, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1)));
+           k_it(dlr_it(t), be * pole) * GKt(t, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1)));
       }
     }
   }
@@ -203,7 +206,8 @@ void DiagramEvaluator::multiply_prefactor(Backbone &backbone, nda::vector_const_
     if (exp != 0) {
       int Ksign = backbone.get_prefactor_Ksign(m_ix);
       double om = hyb_poles(backbone.get_pole_ind(m_ix));
-      double k  = k_it(0, Ksign * om);
+      if (backbone.get_fb(m_ix + 1) == 0) om = -om; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
+      double k = k_it(0, Ksign * om);
       for (int x = 0; x < exp; x++) T(_, range(0, block_dims(2 * m)), range(0, block_dims(0))) /= k;
     }
   }
@@ -379,6 +383,7 @@ void DiagramEvaluator::multiply_vertex_corr_block(Backbone &backbone, int v_ix, 
   // K factor
   int bv      = backbone.get_vertex_Ksign(v_ix); // sign on K
   double pole = hyb_poles(l_ix);
+  if (backbone.get_vertex_direction(v_ix) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
   if (bv != 0) {
     for (int t = 0; t < r; t++) {
       U(t, range(0, block_dims(v_ix + 1)), range(0, n_col_r)) = k_it(dlr_it(t), bv * pole) * U(t, range(0, block_dims(v_ix + 1)), range(0, n_col_r));
@@ -394,11 +399,13 @@ void DiagramEvaluator::compose_with_edge_corr_block(Backbone &backbone, int e_ix
   GKt(_, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1))) = Gt.get_block(b_ix);
   int m                                                                  = backbone.m;
   for (int x = 0; x < m - 1; x++) {
-    int be = backbone.get_edge(e_ix, x); // sign on K
+    int be      = backbone.get_edge(e_ix, x); // sign on K
+    double pole = hyb_poles(backbone.get_pole_ind(x));
+    if (backbone.get_fb(x + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
     if (be != 0) {
       for (int t = 0; t < r; t++) {
         GKt(t, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1))) =
-           k_it(dlr_it(t), be * hyb_poles(backbone.get_pole_ind(x))) * GKt(t, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1)));
+           k_it(dlr_it(t), be * pole) * GKt(t, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1)));
       }
     }
   }
@@ -448,11 +455,13 @@ void DiagramEvaluator::eval_correlator_fixed_indices(Backbone &backbone, int b_i
      Gt.get_block(ind_path(backbone.get_topology(0, 1)));
   int be = 0;
   for (int i = 0; i < m - 1; ++i) {
-    be = backbone.get_edge(backbone.get_topology(0, 1), i);
+    be          = backbone.get_edge(backbone.get_topology(0, 1), i);
+    double pole = hyb_poles(backbone.get_pole_ind(i));
+    if (backbone.get_fb(i + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
     if (be != 0) {
       for (int t = 0; t < r; t++) {
         U(t, range(0, block_dims(backbone.get_topology(0, 1) + 1)), range(0, block_dims(backbone.get_topology(0, 1) + 1))) =
-           k_it(dlr_it(t), be * hyb_poles(backbone.get_pole_ind(i)))
+           k_it(dlr_it(t), be * pole)
            * U(t, range(0, block_dims(backbone.get_topology(0, 1) + 1)), range(0, block_dims(backbone.get_topology(0, 1) + 1)));
       }
     }
@@ -468,6 +477,7 @@ void DiagramEvaluator::eval_correlator_fixed_indices(Backbone &backbone, int b_i
   int bv                                                           = backbone.get_vertex_Ksign(2 * m - 1); // sign on K
   int l_ix                                                         = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(2 * m - 1));
   double pole                                                      = hyb_poles(l_ix);
+  if (backbone.get_vertex_direction(2 * m - 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
   if (bv != 0) {
     for (int t = 0; t < r; t++) {
       GKt(t, range(0, block_dims(2 * m)), range(0, block_dims(2 * m))) =

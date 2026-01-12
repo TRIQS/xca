@@ -21,7 +21,7 @@ std::vector<nda::array<dcomplex, 3>> compute_self_energy(double beta, double Lam
   auto Gt                   = ad_to_atom_prop(ad, beta, itops);
   int norb2                 = static_cast<int>(hyb_coeffs.extent(1));
   int norb                  = norb2 / 2;
-  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs, hyb_coeffs);
+  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
   auto hyb_refl             = itops.reflect(hyb);
   auto Sigma_BDOF           = NCA_bs(hyb, hyb_refl, Gt, Fq);
 

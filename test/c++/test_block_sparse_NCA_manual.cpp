@@ -174,7 +174,7 @@ TEST(BlockSparseNCAManual, two_band_discrete_bath_bs_dense) {
   auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
   auto hyb_coeffs                         = itops.vals2coefs(Deltat);
   auto hyb_refl_coeffs                    = itops.vals2coefs(Deltat_refl);
-  auto [Gt, Fq, sym_set_labels]           = two_band_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
+  auto [Gt, Fq, sym_set_labels]           = two_band_helper(beta, Lambda, eps, hyb_coeffs);
 
   // block-sparse NCA compuation
   auto NCA_result = NCA_bs(Deltat, Deltat_refl, Gt, Fq);

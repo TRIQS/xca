@@ -92,7 +92,7 @@ TEST(BlockSparseOCAManual, two_band_discrete_bath_bs) {
   auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
   auto hyb_coeffs                         = itops.vals2coefs(Deltat);
   auto hyb_refl_coeffs                    = itops.vals2coefs(Deltat_refl);
-  auto [Gt, Fq, sym_set_labels]           = two_band_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
+  auto [Gt, Fq, sym_set_labels]           = two_band_helper(beta, Lambda, eps, hyb_coeffs);
 
   // block-sparse OCA computations
   auto OCA_result = OCA_bs(Deltat, dlr_rf, itops, beta, Gt, Fq);
@@ -139,7 +139,7 @@ TEST(BlockSparseOCAManual, two_band_discrete_bath_bs_vs_dense) {
   auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
   auto hyb_coeffs                         = itops.vals2coefs(Deltat);
   auto hyb_refl_coeffs                    = itops.vals2coefs(Deltat_refl);
-  auto [Gt, Fq, sym_set_labels]           = two_band_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
+  auto [Gt, Fq, sym_set_labels]           = two_band_helper(beta, Lambda, eps, hyb_coeffs);
 
   // dense-matrix OCA computation
   auto OCA_dense_result = OCA_dense(Deltat, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
@@ -234,7 +234,7 @@ TEST(BlockSparseOCAManual, two_band_semicircle_bath_aaa) {
   ASSERT_LE(nda::max_element(nda::abs(OCA_dense_result - OCA_old)), eps);
 
   // block-sparse OCA computation
-  auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
+  auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs);
   auto OCA_bs_result            = OCA_bs(hyb, hyb_poles, itops, beta, Gt, Fq);
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(0) - OCA_old(_, range(0, 4), range(0, 4)))), eps);
@@ -259,7 +259,7 @@ TEST(BlockSparseOCAManual, H5_two_band_discrete_bath_tpz) {
   auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
   auto hyb_coeffs                         = itops.vals2coefs(Deltat);
   auto hyb_refl_coeffs                    = itops.vals2coefs(Deltat_refl);
-  auto [Gt, Fq, sym_set_labels]           = two_band_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
+  auto [Gt, Fq, sym_set_labels]           = two_band_helper(beta, Lambda, eps, hyb_coeffs);
 
   // block-sparse OCA compuation
   auto OCA_result = OCA_bs(Deltat, dlr_rf, itops, beta, Gt, Fq);

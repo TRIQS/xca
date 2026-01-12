@@ -188,8 +188,7 @@ block_gf<dlr_imtime> ad_to_atom_prop(const atom_diag::atom_diag<false> &ad, doub
   return {gf_blocks};
 }
 
-std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const atom_diag::atom_diag<false> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-                                                              nda::array_const_view<dcomplex, 3> hyb_refl_coeffs) {
+std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const atom_diag::atom_diag<false> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
   // Find like rows of c_connection (resp. cdag_connection), which correspond with annihilation (resp. creation) operators that have the same
   // sparsity pattern
   int norb = hyb_coeffs.extent(1) / 2;
@@ -337,12 +336,11 @@ std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const atom_diag::a
     F_sym_vec.emplace_back(F_block_inds(i, _), c_blocks[i]);
     F_dag_sym_vec.emplace_back(F_dag_block_inds(i, _), cdag_blocks[i]);
   }
-  BlockOpSymQuartet Fq(F_sym_vec, F_dag_sym_vec, hyb_coeffs, hyb_refl_coeffs, sym_set_labels);
+  BlockOpSymQuartet Fq(F_sym_vec, F_dag_sym_vec, hyb_coeffs, sym_set_labels);
   return std::make_tuple(Fq, sym_set_labels);
 }
 
-DenseFSet get_operators_dense(const atom_diag::atom_diag<false> &ad, int norb, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-                              nda::array_const_view<dcomplex, 3> hyb_refl_coeffs) {
+DenseFSet get_operators_dense(const atom_diag::atom_diag<false> &ad, int norb, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
   // Get full operator matrices
   nda::array<dcomplex, 3> Fs{2 * norb, int(pow(4, norb)), int(pow(4, norb))};
   nda::array<dcomplex, 3> Fdags{2 * norb, int(pow(4, norb)), int(pow(4, norb))};
@@ -364,5 +362,5 @@ DenseFSet get_operators_dense(const atom_diag::atom_diag<false> &ad, int norb, n
       }
     }
   }
-  return {Fs, Fdags, hyb_coeffs, hyb_refl_coeffs};
+  return {Fs, Fdags, hyb_coeffs};
 }

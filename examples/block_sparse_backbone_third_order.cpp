@@ -178,8 +178,7 @@ std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>, nda::array<dcomplex
 }
 
 std::tuple<BlockDiagOpFun, BlockOpSymQuartet, nda::vector<int>> two_band_helper(double beta, double Lambda, double eps,
-                                                                                nda::array_const_view<dcomplex, 3> hyb_coeffs,
-                                                                                nda::array_const_view<dcomplex, 3> hyb_refl_coeffs) {
+                                                                                nda::array_const_view<dcomplex, 3> hyb_coeffs) {
   auto dlr_rf        = build_dlr_rf(Lambda, eps);
   auto itops         = imtime_ops(Lambda, dlr_rf);
   auto const &dlr_it = itops.get_itnodes();
@@ -234,7 +233,7 @@ std::tuple<BlockDiagOpFun, BlockOpSymQuartet, nda::vector<int>> two_band_helper(
   std::vector<BlockOpSymSet> F_sym_vec{F_BOSS}, F_dag_sym_vec{Fdag_BOSS};
   nda::vector<long> sym_set_labels(4);
   sym_set_labels = 0; // all operators belong to the same symmetry set
-  BlockOpSymQuartet Fq(F_sym_vec, F_dag_sym_vec, hyb_coeffs, hyb_refl_coeffs, sym_set_labels);
+  BlockOpSymQuartet Fq(F_sym_vec, F_dag_sym_vec, hyb_coeffs, sym_set_labels);
 
   return std::make_tuple(Gt, Fq, sym_set_labels);
 }
@@ -260,11 +259,11 @@ int main() {
   auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
   int r              = itops.rank();
 
-  // hybridization and DenseFSet
+  // hybridization
   auto hyb_coeffs               = itops.vals2coefs(Deltat); // hybridization DLR coeffs
   auto hyb_refl                 = Deltat;
   auto hyb_refl_coeffs          = hyb_coeffs;
-  auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
+  auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs);
 
   auto D = DiagramEvaluator(beta, itops, Deltat, hyb_refl, dlr_rf, Gt, Fq); // create DiagramEvaluator object
 
@@ -279,7 +278,7 @@ int main() {
   Delta_F.update_inplace(Delta_decomp, dlr_it, Fs_dense, F_dags_dense);
   Delta_F_reflect.update_inplace(Delta_decomp_reflect, dlr_it, F_dags_dense, Fs_dense);
   auto fb = nda::vector<int64_t>(3);
-  fb(0)    = 0;
+  fb(0)   = 0;
 
   BlockDiagOpFun third_order_result(r, Gt.get_block_sizes());
   for (int i = 0; i < 4; ++i) {
@@ -294,25 +293,30 @@ int main() {
     // Compute third-order contribution using old code
     nda::array<dcomplex, 3> TCA_old(r, N, N);
     TCA_old = 0;
-    fb(1) = 0;
-    fb(2) = 0;
-    TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense,
-                                               F_dags_dense, fb, true);
+    fb(1)   = 0;
+    fb(2)   = 0;
+    TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense,
+                                  fb, true);
     fb(1) = 1;
-    TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense,
-                                               F_dags_dense, fb, true);
+    TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense,
+                                  fb, true);
     fb(2) = 1;
-    TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense,
-                                               F_dags_dense, fb, true);
+    TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense,
+                                  fb, true);
     fb(1) = 0;
-    TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense,
-                                               F_dags_dense, fb, true);
+    TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense,
+                                  fb, true);
 
-    std::cout << "max error in block 0: " << nda::max_element(nda::abs(TCA_old(_, range(0, 4), range(0, 4)) - third_order_result.get_block(0))) << std::endl;
-    std::cout << "max error in block 1: " << nda::max_element(nda::abs(TCA_old(_, range(4, 10), range(4, 10)) - third_order_result.get_block(1))) << std::endl;
-    std::cout << "max error in block 2: " << nda::max_element(nda::abs(TCA_old(_, range(10, 11), range(10, 11)) - third_order_result.get_block(2))) << std::endl;
-    std::cout << "max error in block 3: " << nda::max_element(nda::abs(TCA_old(_, range(11, 15), range(11, 15)) - third_order_result.get_block(3))) << std::endl;
-    std::cout << "max error in block 4: " << nda::max_element(nda::abs(TCA_old(_, range(15, 16), range(15, 16)) - third_order_result.get_block(4))) << std::endl;
+    std::cout << "max error in block 0: " << nda::max_element(nda::abs(TCA_old(_, range(0, 4), range(0, 4)) - third_order_result.get_block(0)))
+              << std::endl;
+    std::cout << "max error in block 1: " << nda::max_element(nda::abs(TCA_old(_, range(4, 10), range(4, 10)) - third_order_result.get_block(1)))
+              << std::endl;
+    std::cout << "max error in block 2: " << nda::max_element(nda::abs(TCA_old(_, range(10, 11), range(10, 11)) - third_order_result.get_block(2)))
+              << std::endl;
+    std::cout << "max error in block 3: " << nda::max_element(nda::abs(TCA_old(_, range(11, 15), range(11, 15)) - third_order_result.get_block(3)))
+              << std::endl;
+    std::cout << "max error in block 4: " << nda::max_element(nda::abs(TCA_old(_, range(15, 16), range(15, 16)) - third_order_result.get_block(4)))
+              << std::endl;
     std::cout << std::endl;
   }
 }

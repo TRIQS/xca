@@ -27,7 +27,7 @@ TEST(DenseGFBackbone, OCA) {
   auto hyb_coeffs      = itops.vals2coefs(Deltat); // hybridization DLR coeffs
   auto hyb_refl        = Deltat;
   auto hyb_refl_coeffs = hyb_coeffs;
-  auto Fset            = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs, hyb_refl_coeffs);
+  auto Fset            = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs);
 
   // initialize Backbone and DiagramEvaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
@@ -107,7 +107,7 @@ TEST(DenseBAckbone, OCA_semicircle_bath_aaa) {
   hyb_poles = hyb_poles * beta;
 
   // compute Fbars and Fdagbars and store in Fset
-  auto Fset            = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs, hyb_refl_coeffs);
+  auto Fset            = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs);
 
   // initialize Backbone and DiagramEvaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};

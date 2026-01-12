@@ -221,8 +221,7 @@ std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>, nda::array<dcomplex
 }
 
 std::tuple<BlockDiagOpFun, BlockOpSymQuartet, nda::vector<int>> two_band_helper(double beta, double Lambda, double eps,
-                                                                                nda::array_const_view<dcomplex, 3> hyb_coeffs,
-                                                                                nda::array_const_view<dcomplex, 3> hyb_refl_coeffs) {
+                                                                                nda::array_const_view<dcomplex, 3> hyb_coeffs) {
   auto dlr_rf        = build_dlr_rf(Lambda, eps);
   auto itops         = imtime_ops(Lambda, dlr_rf);
   auto const &dlr_it = itops.get_itnodes();
@@ -277,7 +276,7 @@ std::tuple<BlockDiagOpFun, BlockOpSymQuartet, nda::vector<int>> two_band_helper(
   std::vector<BlockOpSymSet> F_sym_vec{F_BOSS}, F_dag_sym_vec{Fdag_BOSS};
   nda::vector<long> sym_set_labels(4);
   sym_set_labels = 0; // all operators belong to the same symmetry set
-  BlockOpSymQuartet Fq(F_sym_vec, F_dag_sym_vec, hyb_coeffs, hyb_refl_coeffs, sym_set_labels);
+  BlockOpSymQuartet Fq(F_sym_vec, F_dag_sym_vec, hyb_coeffs, sym_set_labels);
 
   return std::make_tuple(Gt, Fq, sym_set_labels);
 }

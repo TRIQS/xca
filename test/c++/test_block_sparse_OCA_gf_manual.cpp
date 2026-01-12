@@ -325,7 +325,7 @@ TEST(BSOCAGF, single_exponential) {
   BlockOpSymSet Fdagset(bi, Fdags_vec);
   std::vector<BlockOpSymSet> Fset_vec{Fset}, Fdagset_vec{Fdagset};
   nda::vector<long> sym_set_labels{0};
-  BlockOpSymQuartet Fq(Fset_vec, Fdagset_vec, hyb_coeffs, hyb_refl_coeffs, sym_set_labels);
+  BlockOpSymQuartet Fq(Fset_vec, Fdagset_vec, hyb_coeffs, sym_set_labels);
 
   auto OCA_gf = OCA_gf_bs(dlr_rf, itops, beta, Gt, Fq);
 
@@ -356,7 +356,7 @@ TEST(BSOCAGF, two_band_discrete_bath_bs) {
 
   auto hyb_coeffs               = itops.vals2coefs(Deltat);
   auto hyb_refl_coeffs          = itops.vals2coefs(Deltat_refl);
-  auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs, hyb_refl_coeffs);
+  auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs);
 
   auto OCA_gf_result       = OCA_gf_bs(dlr_rf, itops, beta, Gt, Fq);
   auto OCA_gf_dense_result = OCA_gf_dense(hyb_coeffs, hyb_refl_coeffs, dlr_rf, itops, beta, Gt_dense, Fs_dense, F_dags_dense);

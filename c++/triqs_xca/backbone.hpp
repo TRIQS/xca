@@ -88,7 +88,7 @@ class Backbone {
   protected:
   nda::array<int, 2> topology;
   nda::vector<int> fb; // directions of the hybridization lines, 0 for backward, 1 for forward
-  int f_ix;                   // flat index
+  int f_ix;            // flat index
 
   public:
   virtual void set_directions(int fb_ix); // set directions from a single integer index in [[0, 2^m-1]]
@@ -100,8 +100,9 @@ class Backbone {
   void set_orb_inds(nda::vector_const_view<int> orb_inds_vec);
   void set_orb_inds(int o_ix); // set orbital indices from a single integer index in [[0, n^(m-1)-1]]
   void reset_orb_inds();
-  virtual void set_flat_index(int flat_ix,
-                      nda::vector_const_view<double> hyb_poles); // set directions, pole indices, and orbital indices from a single integer index.
+  virtual void
+  set_flat_index(int flat_ix,
+                 nda::vector_const_view<double> hyb_poles); // set directions, pole indices, and orbital indices from a single integer index.
   // In terms of fb_ix, p_ix, and o_ix, f_ix = o_ix + n^(m-1) * p_ix + (n * r)^(m-1) * fb_ix, where r is the number of hybridization indices.
   void reset_all_inds();
 
@@ -127,6 +128,7 @@ class Backbone {
   int get_fb(int i);
   int get_orb_ind(int i);
   int get_flat_index();
+  int get_vertex_direction(int vertex_idx);
 
   /**
    * @brief Constructor for Backbone
@@ -157,8 +159,9 @@ class CorrelatorBackbone : public Backbone {
   public:
   void set_directions(int fb_ix) override; // one fewer hybridization edge - use only the first m-1 element of the edges array
   void set_directions(nda::vector_const_view<int> fb) override;
-  void set_flat_index(int flat_ix,
-                      nda::vector_const_view<double> hyb_poles) override; // set directions, pole indices, and orbital indices from a single integer index.
+  void
+  set_flat_index(int flat_ix,
+                 nda::vector_const_view<double> hyb_poles) override; // set directions, pole indices, and orbital indices from a single integer index.
 
   /**
    * @brief Constructor for CorrelatorBackbone

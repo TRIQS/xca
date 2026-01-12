@@ -448,7 +448,7 @@ TEST(AtomDiagUtils, operators) {
   auto hyb_refl_coeffs = itops.vals2coefs(Deltat_refl);
 
   // Get creation and annihilation operators
-  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs, hyb_refl_coeffs);
+  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
 
   // TODO through equality check for Fq
   // std::cout << Fq.F_bars_refl[1] << std::endl;

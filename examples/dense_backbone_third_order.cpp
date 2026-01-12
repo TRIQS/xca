@@ -204,7 +204,7 @@ int main() {
   auto hyb_coeffs      = itops.vals2coefs(Deltat);       // hybridization DLR coeffs
   auto hyb_refl        = Deltat;
   auto hyb_refl_coeffs = hyb_coeffs;
-  auto Fset            = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs, hyb_refl_coeffs);
+  auto Fset            = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs);
 
   auto D = DenseDiagramEvaluator(beta, itops, Deltat, hyb_refl, dlr_rf, Gt_dense, Fset);
 
