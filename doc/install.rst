@@ -18,17 +18,16 @@ Prerequisites
    
    We are currently depending on the `unstable` development version of TRIQS (that will be released as version 4.0 in the end of 2025). However, for a smoother installation experience we provide tested branches with the naming pattern `triqs/DEV_PPSC_*` (as of writing `triqs/DEV_PPSC_20250912`) that trail the `triqs/unstable` branch with fixed versions of all subpackages (e.g. `itertools`, `mpi`, `h5`, `nda`, etc.). Long story short. **Please install TRIQS on the latest `triqs/DEV_PPSC_*` branch.**
 
-#. The `pyed <https://github.com/HugoStrand/pyed>`_ package (PYED: Exact diagonalization for finite quantum systems) has to be available in the python environment. This can be tested by running::
-
-    $ python -c "import pyed.TriqsExactDiagonalization"
-
-    .. note:: The `pyed` python module has to be installed manually. Trying to install it using `pip` will not work since there is another python module with the same name (doing something completely different) registered in the PIP package index.
-
 #. The `adapol <https://github.com/flatironinstitute/adapol>`_ package (Adaptive Pole Fitting for Quantum Many-Body Physics) has to be installed on the `main` branch. This can be achieved using a local `pip` install, e.g.::
 
     $ git clone git@github.com:flatironinstitute/adapol.git --branch main
     $ python -m pip install -e ./adapol
 
+#. The `pyed <https://github.com/HugoStrand/pyed>`_ package (PYED: Exact diagonalization for finite quantum systems) has to be available in the python environment. This can be tested by running::
+
+    $ python -c "import pyed.TriqsExactDiagonalization"
+
+.. note:: The `pyed` python module has to be installed manually. Trying to install it using `pip` will not work since there is another python module with the same name (doing something completely different) registered in the PIP package index.
 
 Installation steps
 ------------------
