@@ -16,6 +16,9 @@ RUN apt-get update && apt-get install -y \
 RUN git clone https://github.com/HugoStrand/pyed $SRC/pyed
 ENV PYTHONPATH=$SRC/pyed:$PYTHONPATH
 
+# Install cvxpy
+RUN pip install --no-cache-dir --break-system-packages cvxpy==1.5.4
+
 # Install adapol
 ADD https://api.github.com/repos/flatironinstitute/adapol/git/refs/heads/main adapol_version.json
 RUN git clone https://github.com/flatironinstitute/adapol.git $SRC/adapol --branch main
