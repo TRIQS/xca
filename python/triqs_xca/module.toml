@@ -17,7 +17,7 @@ namespaces = ""
 #    if reject_names and reject_names matches Qname : skip X
 #    else keep X.
 #
-match_names = "compute_self_energy" 
+match_names = "DiagramEvaluator" 
 reject_names = ""
 
 # Only keep elements declared in files matching the pattern

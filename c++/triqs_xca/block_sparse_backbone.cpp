@@ -12,13 +12,14 @@
 #include <triqs_xca/block_sparse_backbone.hpp>
 #include <triqs_xca/atom_diag_utils.hpp>
 
-DiagramEvaluator::DiagramEvaluator(double beta, imtime_ops &itops, nda::array_const_view<dcomplex, 3> hyb,
+DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> hyb,
                                    nda::array_const_view<dcomplex, 3> hyb_refl, nda::vector_const_view<double> hyb_poles, BlockDiagOpFun &Gt,
                                    BlockOpSymQuartet &Fq)
-   : itops(itops),
+   : itops(imtime_ops(Lambda, build_dlr_rf(Lambda, eps))),
      Gt(Gt),
      Fq(Fq),
      Sigma(itops.rank(), Gt.get_block_sizes()),
+     tau_mesh(mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda / beta, eps)),
      beta(beta),
      r(itops.rank()),
      n(hyb.extent(1)),
@@ -45,6 +46,7 @@ DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps, nda::
      dlr_it(itops.get_itnodes()),
      Gt(BlockDiagOpFun(G_ppsc)),
      Fq(std::get<0>(get_operators(ad, hyb_coeffs))),
+     tau_mesh(mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda / beta, eps)),
      beta(beta),
      n(hyb_coeffs.extent(1)),
      q(nda::max_element(Fq.sym_set_labels) + 1),
@@ -186,7 +188,7 @@ void DiagramEvaluator::multiply_zero_vertex_block(Backbone &backbone, bool is_fo
       for (int kap = 0; kap < Fq.sym_set_sizes(p_kap); kap++) {
         for (int t = 0; t < r; t++) {
           Tmu(t, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(0))) -=
-             hyb_refl(t, Fq.sym_set_to_orb(p_mu, mu), Fq.sym_set_to_orb(p_kap, kap))
+             hyb(t, Fq.sym_set_to_orb(p_mu, mu), Fq.sym_set_to_orb(p_kap, kap))
              * Tkaps(kap, t, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(0)));
         }
       }
@@ -212,6 +214,8 @@ void DiagramEvaluator::multiply_prefactor(Backbone &backbone, nda::vector_const_
     }
   }
 }
+
+// ========== Self-energy routines ==========
 
 BlockDiagOpFun &DiagramEvaluator::get_self_energy() { return Sigma; }
 
@@ -341,6 +345,24 @@ void DiagramEvaluator::eval_self_energy_fixed_indices(Backbone &backbone, int b_
   if (nda::max_element(nda::abs(T(_, range(0, block_dims(2 * m)), range(0, block_dims(0))))) > 1e-16)
     Sigma.add_block(b_ix, T(_, range(0, block_dims(2 * m)), range(0, block_dims(0))));
 }
+
+block_gf<dlr_imtime> DiagramEvaluator::compute_self_energy(nda::array<int, 2> topology) {
+  int n = hyb.extent(1);
+  Backbone backbone(topology, n);
+  eval_self_energy(backbone);
+  BlockDiagOpFun Sigma = get_self_energy();
+  std::vector<gf<dlr_imtime>> Sigma_blocks(Sigma.get_num_block_cols());
+  for (int i = 0; i < Sigma.get_num_block_cols(); ++i) {
+    if (Sigma.get_zero_block_index(i) == -1) {
+      Sigma_blocks[i] = gf<dlr_imtime>(tau_mesh); // zero block
+    } else {
+      Sigma_blocks[i] = gf<dlr_imtime>(tau_mesh, Sigma.get_block(i));
+    }
+  }
+  return {Sigma_blocks};
+}
+
+// ========== Correlator routines ==========
 
 void DiagramEvaluator::multiply_vertex_corr_block(Backbone &backbone, int v_ix, nda::vector_const_view<int> ind_path,
                                                   nda::vector_const_view<int> block_dims) {

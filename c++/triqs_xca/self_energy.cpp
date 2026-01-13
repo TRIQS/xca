@@ -13,9 +13,9 @@
 using namespace triqs;
 using namespace triqs::atom_diag;
 
-std::vector<nda::array<dcomplex, 3>> compute_self_energy(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> hyb,
-                                                         nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-                                                         triqs::atom_diag::atom_diag<false> ad, int order) {
+std::vector<nda::array<dcomplex, 3>> compute_self_energy_old(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> hyb,
+                                                             nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
+                                                             triqs::atom_diag::atom_diag<false> ad, int order) {
   auto dlr_rf               = build_dlr_rf(Lambda, eps);
   auto itops                = imtime_ops(Lambda, dlr_rf);
   auto Gt                   = ad_to_atom_prop(ad, beta, itops);
@@ -27,11 +27,11 @@ std::vector<nda::array<dcomplex, 3>> compute_self_energy(double beta, double Lam
 
   if (order == 1) { return Sigma_BDOF.get_blocks(); }
 
-  DiagramEvaluator D(beta, itops, hyb, hyb_refl, hyb_poles, Gt, Fq);
+  DiagramEvaluator D(beta, Lambda, eps, hyb, hyb_refl, hyb_poles, Gt, Fq);
   nda::array<int, 2> T_OCA = {{0, 2}, {1, 3}};
   auto B_OCA               = Backbone(T_OCA, norb);
-  D.eval_self_energy(B_OCA);
-  Sigma_BDOF += D.get_self_energy();
+  auto Sigma_gf = D.compute_self_energy(T_OCA);
+  Sigma_BDOF += BlockDiagOpFun(Sigma_gf);
 
   if (order == 2) { return Sigma_BDOF.get_blocks(); }
 
@@ -39,11 +39,11 @@ std::vector<nda::array<dcomplex, 3>> compute_self_energy(double beta, double Lam
   for (int i = 0; i < 4; ++i) {
     D.reset();
     auto B_third = Backbone(T_third(i, _, _), norb);
-    D.eval_self_energy(B_third);
+    auto Sigma_third_gf = D.compute_self_energy(T_third(i, _, _));
     if (i == 3) {
-      Sigma_BDOF += -1 * D.get_self_energy();
+      Sigma_BDOF += -1 * BlockDiagOpFun(Sigma_third_gf);
     } else {
-      Sigma_BDOF += D.get_self_energy();
+      Sigma_BDOF += BlockDiagOpFun(Sigma_third_gf);
     }
   }
 

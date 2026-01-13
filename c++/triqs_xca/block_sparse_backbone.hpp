@@ -23,6 +23,35 @@ class DiagramEvaluator {
   BlockDiagOpFun Gt;          // Green's function at imaginary time nodes
   BlockOpSymQuartet Fq;       // BlockOpSymQuartet (field operators with and without bars)
   BlockDiagOpFun Sigma;       // array for storing self-energy contribution (final result)
+  mesh::dlr_imtime tau_mesh;  // imaginary time mesh
+
+  // routines for any diagram
+  void multiply_vertex_block(Backbone &backbone, int v_ix, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
+  // for block b_ix, multiply by a single vertex, v_ix, in a backbone diagram
+  void compose_with_edge_block(Backbone &backbone, int e_ix, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
+  // for block b_ix, convolve with a single edge, e_ix, in a backbone diagram
+  void multiply_prefactor(Backbone &backbone, nda::vector_const_view<int> block_dims); // multiply by the prefactor associated with the backbone
+
+  // routines for self-energy diagrams
+  void multiply_zero_vertex_block(Backbone &backbone, bool is_forward, int b_ix_0, int p_kap, int p_mu, nda::vector_const_view<int> ind_path,
+                                  nda::vector_const_view<int> block_dims); // multiply by the zero vertex and the vertex connected to zero
+  BlockDiagOpFun &get_self_energy();                                       // get the self-energy result
+  void eval_self_energy(Backbone &backbone);                               // evaluate a diagram of a given order and topology in block-sparse storage
+  void eval_self_energy_fixed_indices(
+     Backbone &backbone, int b_ix, int p_kap, int p_mu, nda::vector_const_view<int> ind_path,
+     nda::vector_const_view<int>
+        block_dims); // evaluate a diagram with fixed orbital indices, poles, and line directions in dense storage, including prefactor
+
+  // routines for correlator diagrams
+  void multiply_vertex_corr_block(Backbone &backbone, int v_ix, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
+  // multiply_vertex_block on the left side of a correlator diagram
+  void compose_with_edge_corr_block(Backbone &backbone, int e_ix, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
+  // compose_with_edge_block on the left side of a correlator diagram
+  nda::array<dcomplex, 3> eval_correlator(Backbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops);
+  // evaluate a diagram of a given order and topology in block-sparse storage
+  void eval_correlator_fixed_indices(Backbone &backbone, int b_ix, int p_kap, int p_mu, nda::vector_const_view<int> ind_path,
+                                     nda::vector_const_view<int> block_dims);
+  // evaluate a diagram with fixed orbital indices, poles, and line directions in dense storage, including prefactor
 
   public:
   double beta;                      // inverse temperature
@@ -41,32 +70,9 @@ class DiagramEvaluator {
 
   // routines for any diagram
   void reset(); // reset all arrays to zero
-  void multiply_vertex_block(Backbone &backbone, int v_ix, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
-  // for block b_ix, multiply by a single vertex, v_ix, in a backbone diagram
-  void compose_with_edge_block(Backbone &backbone, int e_ix, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
-  // for block b_ix, convolve with a single edge, e_ix, in a backbone diagram
-  void multiply_prefactor(Backbone &backbone, nda::vector_const_view<int> block_dims); // multiply by the prefactor associated with the backbone
-  BlockDiagOpFun &get_self_energy();                                                   // get the self-energy result
 
   // routines for self-energy diagrams
-  void multiply_zero_vertex_block(Backbone &backbone, bool is_forward, int b_ix_0, int p_kap, int p_mu, nda::vector_const_view<int> ind_path,
-                                  nda::vector_const_view<int> block_dims); // multiply by the zero vertex and the vertex connected to zero
-  void eval_self_energy(Backbone &backbone);                               // evaluate a diagram of a given order and topology in block-sparse storage
-  void eval_self_energy_fixed_indices(
-     Backbone &backbone, int b_ix, int p_kap, int p_mu, nda::vector_const_view<int> ind_path,
-     nda::vector_const_view<int>
-        block_dims); // evaluate a diagram with fixed orbital indices, poles, and line directions in dense storage, including prefactor
-
-  // routines for correlator diagrams
-  void multiply_vertex_corr_block(Backbone &backbone, int v_ix, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
-  // multiply_vertex_block on the left side of a correlator diagram
-  void compose_with_edge_corr_block(Backbone &backbone, int e_ix, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
-  // compose_with_edge_block on the left side of a correlator diagram
-  nda::array<dcomplex, 3> eval_correlator(Backbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops);
-  // evaluate a diagram of a given order and topology in block-sparse storage
-  void eval_correlator_fixed_indices(Backbone &backbone, int b_ix, int p_kap, int p_mu, nda::vector_const_view<int> ind_path,
-                                     nda::vector_const_view<int> block_dims);
-  // evaluate a diagram with fixed orbital indices, poles, and line directions in dense storage, including prefactor
+  block_gf<dlr_imtime> compute_self_energy(nda::array<int, 2> topology); // compute self-energy for given topology
 
   /**
    * @brief Constructor for DiagramEvaluator
@@ -84,13 +90,14 @@ class DiagramEvaluator {
   /**
    * @brief Old constructor for DiagramEvaluator
    * @param[in] beta inverse temperature
-   * @param[in] itops DLR imaginary time object
+   * @param[in] Lambda DLR imaginary time cutoff
+   * @param[in] eps DLR imaginary time accuracy
    * @param[in] hyb hybridization function at imaginary time nodes
    * @param[in] hyb_refl hybridization function at (beta - tau) nodes
    * @param[in] Gt Green's function at imaginary time nodes
    * @param[in] Fset BlockOpSymQuartet (cre/ann operators with and without bars)
    */
-  DiagramEvaluator(double beta, imtime_ops &itops, nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl,
+  DiagramEvaluator(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl,
                    nda::vector_const_view<double> hyb_poles, BlockDiagOpFun &Gt, BlockOpSymQuartet &Fq);
 
   virtual ~DiagramEvaluator() = default;
