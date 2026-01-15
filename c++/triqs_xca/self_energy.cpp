@@ -13,7 +13,7 @@
 using namespace triqs;
 using namespace triqs::atom_diag;
 
-std::vector<nda::array<dcomplex, 3>> compute_self_energy_old(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> hyb,
+std::vector<nda::array<dcomplex, 3>> compute_self_energy(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> hyb,
                                                              nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
                                                              triqs::atom_diag::atom_diag<false> ad, int order) {
   auto dlr_rf               = build_dlr_rf(Lambda, eps);

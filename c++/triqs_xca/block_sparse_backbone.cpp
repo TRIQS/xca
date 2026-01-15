@@ -40,8 +40,8 @@ DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps, nda::
 }
 
 DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps, nda::vector_const_view<double> hyb_poles,
-                                   nda::array_const_view<dcomplex, 3> hyb_coeffs, block_gf<dlr_imtime> &G_ppsc,
-                                   triqs::atom_diag::atom_diag<false> &ad)
+                                   nda::array_const_view<dcomplex, 3> hyb_coeffs, block_gf_view<dlr_imtime> G_ppsc,
+                                   triqs::atom_diag::atom_diag<false> const &ad)
    : itops(imtime_ops(Lambda, build_dlr_rf(Lambda, eps))),
      dlr_it(itops.get_itnodes()),
      Gt(BlockDiagOpFun(G_ppsc)),

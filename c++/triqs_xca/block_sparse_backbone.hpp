@@ -7,6 +7,12 @@
 #include <nda/nda.hpp>
 #include <triqs_xca/backbone.hpp>
 
+#ifdef __clang__
+#define C2PY_IGNORE __attribute__((annotate("c2py_ignore")))
+#else
+#define C2PY_IGNORE
+#endif
+
 using namespace nda;
 
 /**
@@ -84,8 +90,9 @@ class DiagramEvaluator {
    * @param[in] G_ppsc pseudo-particle Green's function at imaginary time nodes
    * @param[in] ad atom_diag object with Hamiltonian and field operators
    */
-  DiagramEvaluator(double beta, double Lambda, double eps, nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-                   block_gf<dlr_imtime> &G_ppsc, triqs::atom_diag::atom_diag<false> &ad);
+  DiagramEvaluator(double beta, double Lambda, double eps, nda::vector_const_view<double> hyb_poles,
+                   nda::array_const_view<dcomplex, 3> hyb_coeffs, block_gf_view<dlr_imtime> G_ppsc,
+                   triqs::atom_diag::atom_diag<false> const &ad);
 
   /**
    * @brief Old constructor for DiagramEvaluator
@@ -97,8 +104,9 @@ class DiagramEvaluator {
    * @param[in] Gt Green's function at imaginary time nodes
    * @param[in] Fset BlockOpSymQuartet (cre/ann operators with and without bars)
    */
-  DiagramEvaluator(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl,
-                   nda::vector_const_view<double> hyb_poles, BlockDiagOpFun &Gt, BlockOpSymQuartet &Fq);
+  C2PY_IGNORE DiagramEvaluator(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> hyb,
+                               nda::array_const_view<dcomplex, 3> hyb_refl, nda::vector_const_view<double> hyb_poles, BlockDiagOpFun &Gt,
+                               BlockOpSymQuartet &Fq);
 
   virtual ~DiagramEvaluator() = default;
 };
