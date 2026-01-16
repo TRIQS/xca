@@ -661,3 +661,64 @@ TEST(Backbone, OCA_gf_construct) {
   ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(3) - OCA_result_2.get_block(3))), 1e-10);
   ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(4) - OCA_result_2.get_block(4))), 1e-10);
 }
+
+TEST(Backbone, manual_loop) {
+  double beta   = 2.0;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-4;
+
+  // DLR generation
+  auto dlr_rf = build_dlr_rf(Lambda, eps);
+  auto itops  = imtime_ops(Lambda, dlr_rf);
+
+  // hybridization
+  auto [Deltat, Deltat_reflect]           = discrete_bath_helper(beta, Lambda, eps);
+  auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
+  auto hyb_coeffs                         = itops.vals2coefs(Deltat); // hybridization DLR coeffs
+
+  // set up Kanamori Hamiltonian
+  triqs::operators::many_body_operator_real H;
+  fundamental_operator_set fop_set;
+  int norb = 2;
+  double U = 2.0;
+  for (int i = 0; i < norb; i++) {
+    H += U * n("up", i) * n("do", i);
+    fop_set.insert("do", i);
+  }
+  double J  = 0.2;
+  double Up = U - 2.0 * J;
+  H += (Up - J) * (n("up", 0) * n("up", 1) + n("do", 0) * n("do", 1));
+  H += Up * (n("up", 0) * n("do", 1) + n("do", 0) * n("up", 1));
+  for (int k = 0; k < norb; ++k) {
+    for (int l = 0; l < norb; ++l) {
+      if (k != l) {
+        H += J * (c_dag("up", k) * c_dag("do", k) * c("do", l) * c("up", l) + c_dag("up", k) * c_dag("do", l) * c("do", k) * c("up", l));
+      }
+    }
+  }
+  for (int i = 0; i < norb; i++) { fop_set.insert("up", i); }
+
+  // Construct particle number operator and atom_diag object
+  triqs::operators::many_body_operator_real N;
+  for (int kap = 0; kap < norb; ++kap) { N += n("up", kap) + n("do", kap); }
+  double mu = (3 * U - 5 * J) / 2 - 1.5;
+  H -= mu * N;
+  std::vector<triqs::operators::many_body_operator_real> sym_ops = {N};
+  triqs::atom_diag::atom_diag<false> ad(H, fop_set, sym_ops);
+  nda::vector<long> block_sizes(ad.n_subspaces());
+  for (int i = 0; i < ad.n_subspaces(); ++i) { block_sizes(i) = ad.get_fock_states(i).size(); }
+
+  // compute atomic propagator as a block_gf
+  auto G0_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
+  BlockDiagOpFun G0_bdof(G0_ppsc);
+
+  // set up backbone and diagram evaluator
+  nda::array<int, 2> topology = {{0, 2}, {1, 3}};
+  DiagramEvaluator D(beta, Lambda, eps, dlr_rf, hyb_coeffs, G0_ppsc, ad);
+  auto OCA_result = D.compute_self_energy(topology); // evaluate self-energy using built-in loop
+
+  for (int f = 0; f < D.get_num_backbones(topology); ++f) {
+    OCA_result -= D.compute_self_energy(topology, f); // subtract off self-energy evaluation using manual loop
+  }
+  for (int i = 0; i < G0_bdof.get_num_block_cols(); ++i) { ASSERT_LE(nda::max_element(nda::abs(OCA_result[i].data())), 1e-10); }
+}

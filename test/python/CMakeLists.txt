@@ -18,6 +18,7 @@ set(all_tests
   triqs_solver
   one_spinful_fermion
   analytic_diagrams
+  block_sparse_api
   )
 
 foreach(test ${all_tests})

@@ -42,7 +42,9 @@ class DiagramEvaluator {
   void multiply_zero_vertex_block(Backbone &backbone, bool is_forward, int b_ix_0, int p_kap, int p_mu, nda::vector_const_view<int> ind_path,
                                   nda::vector_const_view<int> block_dims); // multiply by the zero vertex and the vertex connected to zero
   BlockDiagOpFun &get_self_energy();                                       // get the self-energy result
-  void eval_self_energy(Backbone &backbone);                               // evaluate a diagram of a given order and topology in block-sparse storage
+  void find_path_self_energy(Backbone &backbone, int f_ix, nda::vector_view<int> ind_path, nda::vector_view<int> block_dims);
+  void eval_self_energy(Backbone &backbone, int f_ix); // evaluate a particular backbone diagram
+  void eval_self_energy(Backbone &backbone);           // evaluate a diagram of a given order and topology in block-sparse storage
   void eval_self_energy_fixed_indices(
      Backbone &backbone, int b_ix, int p_kap, int p_mu, nda::vector_const_view<int> ind_path,
      nda::vector_const_view<int>
@@ -75,10 +77,12 @@ class DiagramEvaluator {
   nda::array<dcomplex, 3> Tmu;      // intermediate storage array
 
   // routines for any diagram
-  void reset(); // reset all arrays to zero
+  void reset();                                       // reset all arrays to zero
+  int get_num_backbones(nda::array<int, 2> topology); // get number of backbones for given topology
 
   // routines for self-energy diagrams
-  block_gf<dlr_imtime> compute_self_energy(nda::array<int, 2> topology); // compute self-energy for given topology
+  block_gf<dlr_imtime> compute_self_energy(nda::array<int, 2> topology);           // compute self-energy for given topology
+  block_gf<dlr_imtime> compute_self_energy(nda::array<int, 2> topology, int f_ix); // compute self-energy for given topology and flat index
 
   /**
    * @brief Constructor for DiagramEvaluator
@@ -90,9 +94,8 @@ class DiagramEvaluator {
    * @param[in] G_ppsc pseudo-particle Green's function at imaginary time nodes
    * @param[in] ad atom_diag object with Hamiltonian and field operators
    */
-  DiagramEvaluator(double beta, double Lambda, double eps, nda::vector_const_view<double> hyb_poles,
-                   nda::array_const_view<dcomplex, 3> hyb_coeffs, block_gf_view<dlr_imtime> G_ppsc,
-                   triqs::atom_diag::atom_diag<false> const &ad);
+  DiagramEvaluator(double beta, double Lambda, double eps, nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
+                   block_gf_view<dlr_imtime> G_ppsc, triqs::atom_diag::atom_diag<false> const &ad);
 
   /**
    * @brief Old constructor for DiagramEvaluator

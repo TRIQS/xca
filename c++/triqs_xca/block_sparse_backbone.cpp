@@ -7,6 +7,7 @@
 #include <nda/declarations.hpp>
 #include <nda/mapped_functions.hxx>
 #include <nda/nda.hpp>
+#include <triqs/mesh/dlr_imtime.hpp>
 #include <triqs/mesh/imtime.hpp>
 #include <triqs_xca/block_sparse.hpp>
 #include <triqs_xca/block_sparse_backbone.hpp>
@@ -76,6 +77,11 @@ void DiagramEvaluator::reset() {
   for (int i = 0; i < Sigma.get_num_block_cols(); i++) {
     Sigma.set_block(i, nda::zeros<dcomplex>(r, Sigma.get_block_size(i), Sigma.get_block_size(i)));
   }
+}
+
+int DiagramEvaluator::get_num_backbones(nda::array<int, 2> topology) {
+  Backbone backbone(topology, n);
+  return static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), backbone.m - 1));
 }
 
 void DiagramEvaluator::multiply_vertex_block(Backbone &backbone, int v_ix, nda::vector_const_view<int> ind_path,
@@ -219,103 +225,119 @@ void DiagramEvaluator::multiply_prefactor(Backbone &backbone, nda::vector_const_
 
 BlockDiagOpFun &DiagramEvaluator::get_self_energy() { return Sigma; }
 
-void DiagramEvaluator::eval_self_energy(Backbone &backbone) {
+void DiagramEvaluator::find_path_self_energy(Backbone &backbone, int f_ix, nda::vector_view<int> ind_path, nda::vector_view<int> block_dims) {
+  int m = backbone.m;
+  backbone.set_flat_index(f_ix, hyb_poles); // set directions, pole indices, and orbital indices from a single integer index
+  /*  Example of block_dims for m = 2 (OCA): each number is an index of block_dims, and each square represents a block of a matrix 
+          3            3            2            2            1            1            0
+      --------     --------     --------     --------     --------     --------     --------
+    4 |   F  |   3 |   G  |   3 |   F  |   2 |   G  |   2 |   F  |   1 |   G  |   1 |   F  |
+      |      |     |      |     |      |     |      |     |      |     |      |     |      |
+      --------     --------     --------     --------     --------     --------     --------
+  */
+  // ind_path can diverge at the vertex connected to vertex 0
+  for (int b_ix = 0; b_ix < Gt.get_num_block_cols(); b_ix++) { // loop over blocks of self-energy
+    for (int p_kap = 0; p_kap < q; p_kap++) {                  // loop over symmetry sets on the zero vertex
+      bool path_all_nonzero = true;
+      int w = 0, ip = 0; // w loops over the vertices and edges, ip is the current block index
 
+      if (backbone.has_vertex_dag(0)) { // if line is connected to zero is backward
+        ip = Fq.F_dags[p_kap].get_block_index(b_ix);
+        if (ip != -1) {
+          block_dims(0) = Fq.F_dags[p_kap].get_block_size(b_ix, 1);
+          block_dims(1) = Fq.F_dags[p_kap].get_block_size(b_ix, 0);
+        } else {
+          path_all_nonzero = false;
+        }
+      } else {
+        ip = Fq.Fs[p_kap].get_block_index(b_ix);
+        if (ip != -1) {
+          block_dims(0) = Fq.Fs[p_kap].get_block_size(b_ix, 1);
+          block_dims(1) = Fq.Fs[p_kap].get_block_size(b_ix, 0);
+        } else {
+          path_all_nonzero = false;
+        }
+      }
+      // traverse factors in two halves
+      // first half: before vertex connected to zero
+      while (w < backbone.get_topology(0, 1) && path_all_nonzero) { // only continue if we have not hit a zero block
+        if (w != 0) {
+          ip = (backbone.has_vertex_dag(w)) ? Fq.F_dags[Fq.sym_set_labels(backbone.get_orb_ind(w))].get_block_index(ip) :
+                                              Fq.Fs[Fq.sym_set_labels(backbone.get_orb_ind(w))].get_block_index(ip); // update block index
+        }
+        if (ip == -1 || (w < 2 * m - 1 && Gt.get_zero_block_index(ip) == -1)) { // check if we hit a zero block in F or Gt
+          path_all_nonzero = false;
+        } else {                                      // inner 'if' block unnecessary in first half
+          ind_path(w) = ip;                           // store the block index for the current vertex/edge, unless we are at the last vertex
+          if (w != backbone.get_topology(0, 1) - 1) { // if so, then orb_ind = -1, because w is the vertex connected to zero
+            block_dims(w + 2) = (backbone.has_vertex_dag(w + 1)) ? Fq.F_dags[Fq.sym_set_labels(backbone.get_orb_ind(w + 1))].get_block_size(ip, 0) :
+                                                                   Fq.Fs[Fq.sym_set_labels(backbone.get_orb_ind(w + 1))].get_block_size(ip, 0);
+          }
+        }
+        w += 1;
+      }
+
+      int ip1 = ip;
+      // second half
+      if (path_all_nonzero) {
+        for (int p_mu = 0; p_mu < q; p_mu++) {
+          bool fork_all_nonzero = true;
+          w                     = backbone.get_topology(0, 1); // reset w to the vertex connected to vertex 0
+          // save block_dims(backbone.get_topology(0, 1) + 1)
+          block_dims(w + 1) = (backbone.has_vertex_dag(w)) ? Fq.F_dags[p_mu].get_block_size(ip1, 0) : Fq.Fs[p_mu].get_block_size(ip1, 0);
+          ip                = (backbone.has_vertex_dag(w)) ? Fq.F_dags[p_mu].get_block_index(ip1) :
+                                                             Fq.Fs[p_mu].get_block_index(ip1); // update block index for the vertex connected to zero
+          while (w < 2 * m && fork_all_nonzero) {
+            if (w != backbone.get_topology(0, 1)) {
+              ip = (backbone.has_vertex_dag(w)) ? Fq.F_dags[Fq.sym_set_labels(backbone.get_orb_ind(w))].get_block_index(ip) :
+                                                  Fq.Fs[Fq.sym_set_labels(backbone.get_orb_ind(w))].get_block_index(ip); // update block index
+            }
+            if (ip == -1 || (w < 2 * m - 1 && Gt.get_zero_block_index(ip) == -1)) { // check if we hit a zero block in F or Gt
+              fork_all_nonzero = false;
+            } else {
+              if (w < 2 * m - 1) {      // only store the block index if we are not at the last vertex
+                ind_path(w)       = ip; // store the block index for the current vertex/edge
+                block_dims(w + 2) = (backbone.has_vertex_dag(w + 1)) ?
+                   Fq.F_dags[Fq.sym_set_labels(backbone.get_orb_ind(w + 1))].get_block_size(ip, 0) :
+                   Fq.Fs[Fq.sym_set_labels(backbone.get_orb_ind(w + 1))].get_block_size(ip, 0);
+              }
+            }
+            w += 1;
+          }
+          if (fork_all_nonzero) {
+            // evaluate the diagram with these directions, poles, and orbital indices
+            // b_ix is the block index for the first edge
+            eval_self_energy_fixed_indices(backbone, b_ix, p_kap, p_mu, ind_path, block_dims);
+          }
+        }
+      }
+    }
+  }
+  backbone.reset_all_inds(); // reset directions, pole indices, and orbital indices for the next iteration
+}
+
+void DiagramEvaluator::eval_self_energy(Backbone &backbone, int f_ix) {
+  int m = backbone.m;
+  int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), m - 1));
+  if (f_ix < 0 || f_ix >= f_ix_max) {
+    throw std::runtime_error("DiagramEvaluator::eval_self_energy: f_ix out of range");
+  }
+
+  nda::vector<int> ind_path(2 * m - 1);   // tracks block indices of factors for computing a particular block of the self-energy
+  nda::vector<int> block_dims(2 * m + 1); // tracks the dimensions of the blocks in these factors
+
+  find_path_self_energy(backbone, f_ix, ind_path, block_dims);
+  Sigma.set_zero_block_indices(); // set zero_block_indices according to current blocks
+}
+
+void DiagramEvaluator::eval_self_energy(Backbone &backbone) {
   int m = backbone.m;
   nda::vector<int> ind_path(2 * m - 1);   // tracks block indices of factors for computing a particular block of the self-energy
   nda::vector<int> block_dims(2 * m + 1); // tracks the dimensions of the blocks in these factors
 
   // loop over all flat indices
   int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), m - 1));
-  for (int f_ix = 0; f_ix < f_ix_max; f_ix++) {
-    backbone.set_flat_index(f_ix, hyb_poles); // set directions, pole indices, and orbital indices from a single integer index
-    /*  Example of block_dims for m = 2 (OCA): each number is an index of block_dims, and each square represents a block of a matrix 
-            3            3            2            2            1            1            0
-        --------     --------     --------     --------     --------     --------     --------
-      4 |   F  |   3 |   G  |   3 |   F  |   2 |   G  |   2 |   F  |   1 |   G  |   1 |   F  |
-        |      |     |      |     |      |     |      |     |      |     |      |     |      |
-        --------     --------     --------     --------     --------     --------     --------
-    */
-    // ind_path can diverge at the vertex connected to vertex 0
-    for (int b_ix = 0; b_ix < Gt.get_num_block_cols(); b_ix++) { // loop over blocks of self-energy
-      for (int p_kap = 0; p_kap < q; p_kap++) {                  // loop over symmetry sets on the zero vertex
-        bool path_all_nonzero = true;
-        int w = 0, ip = 0; // w loops over the vertices and edges, ip is the current block index
-
-        if (backbone.has_vertex_dag(0)) { // if line is connected to zero is backward
-          ip = Fq.F_dags[p_kap].get_block_index(b_ix);
-          if (ip != -1) {
-            block_dims(0) = Fq.F_dags[p_kap].get_block_size(b_ix, 1);
-            block_dims(1) = Fq.F_dags[p_kap].get_block_size(b_ix, 0);
-          } else {
-            path_all_nonzero = false;
-          }
-        } else {
-          ip = Fq.Fs[p_kap].get_block_index(b_ix);
-          if (ip != -1) {
-            block_dims(0) = Fq.Fs[p_kap].get_block_size(b_ix, 1);
-            block_dims(1) = Fq.Fs[p_kap].get_block_size(b_ix, 0);
-          } else {
-            path_all_nonzero = false;
-          }
-        }
-        // traverse factors in two halves
-        // first half: before vertex connected to zero
-        while (w < backbone.get_topology(0, 1) && path_all_nonzero) { // only continue if we have not hit a zero block
-          if (w != 0) {
-            ip = (backbone.has_vertex_dag(w)) ? Fq.F_dags[Fq.sym_set_labels(backbone.get_orb_ind(w))].get_block_index(ip) :
-                                                Fq.Fs[Fq.sym_set_labels(backbone.get_orb_ind(w))].get_block_index(ip); // update block index
-          }
-          if (ip == -1 || (w < 2 * m - 1 && Gt.get_zero_block_index(ip) == -1)) { // check if we hit a zero block in F or Gt
-            path_all_nonzero = false;
-          } else {                                      // inner 'if' block unnecessary in first half
-            ind_path(w) = ip;                           // store the block index for the current vertex/edge, unless we are at the last vertex
-            if (w != backbone.get_topology(0, 1) - 1) { // if so, then orb_ind = -1, because w is the vertex connected to zero
-              block_dims(w + 2) = (backbone.has_vertex_dag(w + 1)) ? Fq.F_dags[Fq.sym_set_labels(backbone.get_orb_ind(w + 1))].get_block_size(ip, 0) :
-                                                                     Fq.Fs[Fq.sym_set_labels(backbone.get_orb_ind(w + 1))].get_block_size(ip, 0);
-            }
-          }
-          w += 1;
-        }
-
-        int ip1 = ip;
-        // second half
-        if (path_all_nonzero) {
-          for (int p_mu = 0; p_mu < q; p_mu++) {
-            bool fork_all_nonzero = true;
-            w                     = backbone.get_topology(0, 1); // reset w to the vertex connected to vertex 0
-            // save block_dims(backbone.get_topology(0, 1) + 1)
-            block_dims(w + 1) = (backbone.has_vertex_dag(w)) ? Fq.F_dags[p_mu].get_block_size(ip1, 0) : Fq.Fs[p_mu].get_block_size(ip1, 0);
-            ip                = (backbone.has_vertex_dag(w)) ? Fq.F_dags[p_mu].get_block_index(ip1) :
-                                                               Fq.Fs[p_mu].get_block_index(ip1); // update block index for the vertex connected to zero
-            while (w < 2 * m && fork_all_nonzero) {
-              if (w != backbone.get_topology(0, 1)) {
-                ip = (backbone.has_vertex_dag(w)) ? Fq.F_dags[Fq.sym_set_labels(backbone.get_orb_ind(w))].get_block_index(ip) :
-                                                    Fq.Fs[Fq.sym_set_labels(backbone.get_orb_ind(w))].get_block_index(ip); // update block index
-              }
-              if (ip == -1 || (w < 2 * m - 1 && Gt.get_zero_block_index(ip) == -1)) { // check if we hit a zero block in F or Gt
-                fork_all_nonzero = false;
-              } else {
-                if (w < 2 * m - 1) {      // only store the block index if we are not at the last vertex
-                  ind_path(w)       = ip; // store the block index for the current vertex/edge
-                  block_dims(w + 2) = (backbone.has_vertex_dag(w + 1)) ?
-                     Fq.F_dags[Fq.sym_set_labels(backbone.get_orb_ind(w + 1))].get_block_size(ip, 0) :
-                     Fq.Fs[Fq.sym_set_labels(backbone.get_orb_ind(w + 1))].get_block_size(ip, 0);
-                }
-              }
-              w += 1;
-            }
-            if (fork_all_nonzero) {
-              // evaluate the diagram with these directions, poles, and orbital indices
-              // b_ix is the block index for the first edge
-              eval_self_energy_fixed_indices(backbone, b_ix, p_kap, p_mu, ind_path, block_dims);
-            }
-          }
-        }
-      }
-    }
-    backbone.reset_all_inds(); // reset directions, pole indices, and orbital indices for the next iteration
-  }
+  for (int f_ix = 0; f_ix < f_ix_max; f_ix++) { find_path_self_energy(backbone, f_ix, ind_path, block_dims); }
   Sigma.set_zero_block_indices(); // set zero_block_indices according to current blocks
 }
 
@@ -347,19 +369,35 @@ void DiagramEvaluator::eval_self_energy_fixed_indices(Backbone &backbone, int b_
 }
 
 block_gf<dlr_imtime> DiagramEvaluator::compute_self_energy(nda::array<int, 2> topology) {
-  int n = hyb.extent(1);
   Backbone backbone(topology, n);
   eval_self_energy(backbone);
-  BlockDiagOpFun Sigma = get_self_energy();
-  std::vector<gf<dlr_imtime>> Sigma_blocks(Sigma.get_num_block_cols());
-  for (int i = 0; i < Sigma.get_num_block_cols(); ++i) {
-    if (Sigma.get_zero_block_index(i) == -1) {
-      Sigma_blocks[i] = gf<dlr_imtime>(tau_mesh); // zero block
+  BlockDiagOpFun sig = get_self_energy();
+  std::vector<gf<dlr_imtime>> sig_blocks(sig.get_num_block_cols());
+  for (int i = 0; i < sig.get_num_block_cols(); ++i) {
+    if (sig.get_zero_block_index(i) == -1) {
+      sig_blocks[i] = gf<dlr_imtime>(tau_mesh, 0 * Gt.get_block(i)); // zero block
     } else {
-      Sigma_blocks[i] = gf<dlr_imtime>(tau_mesh, Sigma.get_block(i));
+      sig_blocks[i] = gf<dlr_imtime>(tau_mesh, sig.get_block(i));
     }
   }
-  return {Sigma_blocks};
+  reset();
+  return {sig_blocks};
+}
+
+block_gf<dlr_imtime> DiagramEvaluator::compute_self_energy(nda::array<int, 2> topology, int f_ix) {
+  Backbone backbone(topology, n);
+  eval_self_energy(backbone, f_ix);
+  BlockDiagOpFun sig = get_self_energy();
+  std::vector<gf<dlr_imtime>> sig_blocks(sig.get_num_block_cols());
+  for (int i = 0; i < sig.get_num_block_cols(); ++i) {
+    if (sig.get_zero_block_index(i) == -1) {
+      sig_blocks[i] = gf<dlr_imtime>(tau_mesh, 0 * Gt.get_block(i)); // zero block
+    } else {
+      sig_blocks[i] = gf<dlr_imtime>(tau_mesh, sig.get_block(i));
+    }
+  }
+  reset();
+  return {sig_blocks};
 }
 
 // ========== Correlator routines ==========
