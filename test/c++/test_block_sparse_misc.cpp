@@ -5,7 +5,6 @@
 #include <triqs/mesh/dlr_imfreq.hpp>
 #include <triqs/mesh/utils.hpp>
 #include <triqs_xca/block_sparse.hpp>
-#include <triqs_xca/self_energy.hpp>
 #include <triqs/gfs.hpp>
 #include <triqs/mesh.hpp>
 #include <triqs/gfs/block/block_gf.hpp>

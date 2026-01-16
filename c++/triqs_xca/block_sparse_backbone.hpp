@@ -78,12 +78,11 @@ class DiagramEvaluator {
 
   // routines for any diagram
   void reset();                                       // reset all arrays to zero
-  int get_num_backbones(nda::array<int, 2> topology); // get number of backbones for given topology
+  int get_num_backbones(nda::array_const_view<int, 2> topology); // get number of backbones for given topology
 
   // routines for self-energy diagrams
-  block_gf<dlr_imtime> compute_self_energy(nda::array<int, 2> topology);           // compute self-energy for given topology
-  block_gf<dlr_imtime> compute_self_energy(nda::array<int, 2> topology, int f_ix); // compute self-energy for given topology and flat index
-
+  block_gf<dlr_imtime> compute_self_energy(nda::array_const_view<int, 2> topology);           // compute self-energy for given topology
+  block_gf<dlr_imtime> compute_self_energy(nda::array_const_view<int, 2> topology, int f_ix); // compute self-energy for given topology and flat index
   /**
    * @brief Constructor for DiagramEvaluator
    * @param[in] beta inverse temperature

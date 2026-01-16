@@ -79,7 +79,7 @@ void DiagramEvaluator::reset() {
   }
 }
 
-int DiagramEvaluator::get_num_backbones(nda::array<int, 2> topology) {
+int DiagramEvaluator::get_num_backbones(nda::array_const_view<int, 2> topology) {
   Backbone backbone(topology, n);
   return static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), backbone.m - 1));
 }
@@ -368,7 +368,7 @@ void DiagramEvaluator::eval_self_energy_fixed_indices(Backbone &backbone, int b_
     Sigma.add_block(b_ix, T(_, range(0, block_dims(2 * m)), range(0, block_dims(0))));
 }
 
-block_gf<dlr_imtime> DiagramEvaluator::compute_self_energy(nda::array<int, 2> topology) {
+block_gf<dlr_imtime> DiagramEvaluator::compute_self_energy(nda::array_const_view<int, 2> topology) {
   Backbone backbone(topology, n);
   eval_self_energy(backbone);
   BlockDiagOpFun sig = get_self_energy();
@@ -384,7 +384,7 @@ block_gf<dlr_imtime> DiagramEvaluator::compute_self_energy(nda::array<int, 2> to
   return {sig_blocks};
 }
 
-block_gf<dlr_imtime> DiagramEvaluator::compute_self_energy(nda::array<int, 2> topology, int f_ix) {
+block_gf<dlr_imtime> DiagramEvaluator::compute_self_energy(nda::array_const_view<int, 2> topology, int f_ix) {
   Backbone backbone(topology, n);
   eval_self_energy(backbone, f_ix);
   BlockDiagOpFun sig = get_self_energy();
