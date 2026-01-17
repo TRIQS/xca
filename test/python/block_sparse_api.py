@@ -105,7 +105,7 @@ func, fitting_error, pol, weight = anacont(Delta, Z, tol=eps)
 
 d = DiagramEvaluator(beta, lamb, eps, pol, weight, G_ppsc, ad)
 
-topology = np.array([[0, 2], [1, 3]])
+topology = np.array([[0, 2], [1, 3]], dtype=np.int32)
 
 # Serial diagram evaluation
 Sigma_ppsc_ser = d.compute_self_energy(topology)
