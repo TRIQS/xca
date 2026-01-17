@@ -1,5 +1,4 @@
-import matplotlib.pyplot as plt
-from triqs.operators import c, c_dag, n
+from triqs.operators import n
 from triqs.operators.util.hamiltonians import h_int_kanamori, make_operator_real
 from triqs.atom_diag import *
 import numpy as np
@@ -106,7 +105,7 @@ func, fitting_error, pol, weight = anacont(Delta, Z, tol=eps)
 
 d = DiagramEvaluator(beta, lamb, eps, pol, weight, G_ppsc, ad)
 
-topology = [[0, 2], [1, 3]]
+topology = np.array([[0, 2], [1, 3]])
 
 # Serial diagram evaluation
 Sigma_ppsc_ser = d.compute_self_energy(topology)
