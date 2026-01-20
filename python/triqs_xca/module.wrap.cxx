@@ -62,13 +62,14 @@ ad : {par_6}
                                                                     {c2py::python_typename<const triqs::atom_diag::atom_diag<0> &>()}});
 // compute_self_energy
 static auto const fun_0 = c2py::dispatcher_f_kw_t{
-   c2py::cmethod([](DiagramEvaluator &self, nda::array<int, 2> topology) { return self.compute_self_energy(topology); }, "self", "topology"),
-   c2py::cmethod([](DiagramEvaluator &self, nda::array<int, 2> topology, int f_ix) { return self.compute_self_energy(topology, f_ix); }, "self",
-                 "topology", "f_ix")};
+   c2py::cmethod([](DiagramEvaluator &self, nda::array_const_view<int, 2> topology) { return self.compute_self_energy(topology); }, "self",
+                 "topology"),
+   c2py::cmethod([](DiagramEvaluator &self, nda::array_const_view<int, 2> topology, int f_ix) { return self.compute_self_energy(topology, f_ix); },
+                 "self", "topology", "f_ix")};
 
 // get_num_backbones
-static auto const fun_1 = c2py::dispatcher_f_kw_t{
-   c2py::cmethod([](DiagramEvaluator &self, nda::array<int, 2> topology) { return self.get_num_backbones(topology); }, "self", "topology")};
+static auto const fun_1 = c2py::dispatcher_f_kw_t{c2py::cmethod(
+   [](DiagramEvaluator &self, nda::array_const_view<int, 2> topology) { return self.get_num_backbones(topology); }, "self", "topology")};
 
 // reset
 static auto const fun_2 = c2py::dispatcher_f_kw_t{c2py::cmethod([](DiagramEvaluator &self) { return self.reset(); }, "self")};
