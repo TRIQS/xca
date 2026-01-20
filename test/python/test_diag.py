@@ -21,6 +21,7 @@
 
 """ Diagram generator tests """
 
+from mpi4py import MPI
 
 from triqs_xca.diag import is_crossing, is_connected
 from triqs_xca.diag import pop_pair, flatten_pairing_to_list

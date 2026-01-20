@@ -19,6 +19,8 @@
 #
 ################################################################################
 
+from mpi4py import MPI
+
 from triqs_xca.solver import Solver
 
 from triqs.operators import c, c_dag
