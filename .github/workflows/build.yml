@@ -91,10 +91,10 @@ jobs:
         python3-scipy
         python3-ipython
 
-    - name: Install ubuntu cvxpy dependency using pip
-      if: ${{ contains(matrix.os, 'ubuntu') }}
-      run: |
-        pip install cvxpy
+    #- name: Install ubuntu cvxpy dependency using pip
+    #  if: ${{ contains(matrix.os, 'ubuntu') }}
+    #  run: |
+    #    pip install cvxpy
 
     - name: Set up virtualenv
       run: |
