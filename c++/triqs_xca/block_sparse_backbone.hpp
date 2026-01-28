@@ -51,14 +51,17 @@ class DiagramEvaluator {
         block_dims); // evaluate a diagram with fixed orbital indices, poles, and line directions in dense storage, including prefactor
 
   // routines for correlator diagrams
-  void multiply_vertex_corr_block(Backbone &backbone, int v_ix, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
+  void multiply_vertex_corr_block(CorrelatorBackbone &backbone, int v_ix, nda::vector_const_view<int> ind_path,
+                                  nda::vector_const_view<int> block_dims);
   // multiply_vertex_block on the left side of a correlator diagram
-  void compose_with_edge_corr_block(Backbone &backbone, int e_ix, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
+  void compose_with_edge_corr_block(CorrelatorBackbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
+                                    nda::vector_const_view<int> block_dims);
   // compose_with_edge_block on the left side of a correlator diagram
-  nda::array<dcomplex, 3> eval_correlator(Backbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops);
+  void find_path_correlator(CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops, int f_ix,
+                            nda::vector_view<int> ind_path, nda::vector_view<int> block_dims, nda::array_view<dcomplex, 3> Tmuop,
+                            nda::array_view<dcomplex, 3> correlator);
   // evaluate a diagram of a given order and topology in block-sparse storage
-  void eval_correlator_fixed_indices(Backbone &backbone, int b_ix, int p_kap, int p_mu, nda::vector_const_view<int> ind_path,
-                                     nda::vector_const_view<int> block_dims);
+  void eval_correlator_fixed_indices(CorrelatorBackbone &backbone, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
   // evaluate a diagram with fixed orbital indices, poles, and line directions in dense storage, including prefactor
 
   public:
@@ -77,12 +80,16 @@ class DiagramEvaluator {
   nda::array<dcomplex, 3> Tmu;      // intermediate storage array
 
   // routines for any diagram
-  void reset();                                       // reset all arrays to zero
+  void reset();                                                  // reset all arrays to zero
   int get_num_backbones(nda::array_const_view<int, 2> topology); // get number of backbones for given topology
 
   // routines for self-energy diagrams
   block_gf<dlr_imtime> compute_self_energy(nda::array_const_view<int, 2> topology);           // compute self-energy for given topology
   block_gf<dlr_imtime> compute_self_energy(nda::array_const_view<int, 2> topology, int f_ix); // compute self-energy for given topology and flat index
+
+  // routines for correlator diagrams
+  C2PY_IGNORE nda::array<dcomplex, 3> eval_correlator(CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops);
+
   /**
    * @brief Constructor for DiagramEvaluator
    * @param[in] beta inverse temperature

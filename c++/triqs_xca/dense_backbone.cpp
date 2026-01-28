@@ -64,7 +64,7 @@ void DenseDiagramEvaluator::compose_with_edge(Backbone &backbone, int e_ix) {
   GKt   = Gt;
   int m = backbone.m;
   for (int x = 0; x < m - 1; x++) {
-    int be = backbone.get_edge(e_ix, x); // sign on K
+    int be      = backbone.get_edge(e_ix, x); // sign on K
     double pole = hyb_poles(backbone.get_pole_ind(x));
     if (backbone.get_fb(x + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
     if (be != 0) {
@@ -82,7 +82,7 @@ void DenseDiagramEvaluator::multiply_prefactor(Backbone &backbone) {
     if (exp != 0) {
       int Ksign = backbone.get_prefactor_Ksign(m_ix);     // sign on K for this hybridization index
       double om = hyb_poles(backbone.get_pole_ind(m_ix)); // DLR frequency for this value of this hybridization index
-      if (backbone.get_fb(m_ix + 1) == 0) om = -om; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
+      if (backbone.get_fb(m_ix + 1) == 0) om = -om;       // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
       for (int q = 0; q < exp; q++) T /= k_it(0, Ksign * om);
     }
   }
@@ -123,7 +123,7 @@ void DenseDiagramEvaluator::eval_self_energy(Backbone &backbone) {
   int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), m - 1));
   for (int f_ix = 0; f_ix < f_ix_max; f_ix++) {
     backbone.set_flat_index(f_ix, hyb_poles); // set directions, pole indices, and orbital indices from a single integer index
-    eval_self_energy_fixed_indices(backbone);    // evaluate the diagram with these directions, poles, and orbital indices
+    eval_self_energy_fixed_indices(backbone); // evaluate the diagram with these directions, poles, and orbital indices
     backbone.reset_all_inds();                // reset directions, pole indices, and orbital indices for the next iteration
   }
 }
@@ -193,7 +193,7 @@ void DenseDiagramEvaluator::compose_with_edge_corr(Backbone &backbone, int e_ix)
   GKt   = Gt;
   int m = backbone.m;
   for (int x = 0; x < m - 1; x++) {
-    int be = backbone.get_edge(e_ix, x); // sign on K
+    int be      = backbone.get_edge(e_ix, x); // sign on K
     double pole = hyb_poles(backbone.get_pole_ind(x));
     if (backbone.get_fb(x + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
     if (be != 0) {
@@ -242,7 +242,7 @@ void DenseDiagramEvaluator::eval_correlator_fixed_indices(CorrelatorBackbone &ba
   // compute U, which is the edge immediately to the left of the vertex connected to 0
   int be = 0;
   for (int i = 0; i < m - 1; ++i) {
-    be = backbone.get_edge(backbone.get_topology(0, 1), i);
+    be          = backbone.get_edge(backbone.get_topology(0, 1), i);
     double pole = hyb_poles(backbone.get_pole_ind(i));
     if (backbone.get_fb(i + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
     if (be != 0) {

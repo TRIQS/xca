@@ -138,6 +138,8 @@ TEST(Backbone, OCA_BDOF_construct) {
   auto OCA_trivial_bs = BlockDiagOpFun(OCA_trivial_bs_gf);
   elapsed             = end - start;
 
+  std::cout << "OCA_result.get_block(0)(5, _, _) = \n" << OCA_result.get_block(0)(5, _, _) << "\n";
+  std::cout << "OCA_dense_result(5, range(0,4), range(0,4)) = \n" << OCA_dense_result(5, range(0, 4), range(0, 4)) << "\n";
   ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(0) - OCA_dense_result(_, range(0, 4), range(0, 4)))), eps);
   ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(1) - OCA_dense_result(_, range(4, 10), range(4, 10)))), eps);
   ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(2) - OCA_dense_result(_, range(10, 11), range(10, 11)))), eps);
