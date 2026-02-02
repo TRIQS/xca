@@ -265,7 +265,7 @@ TEST(BlockSparseOCAManual, H5_two_band_discrete_bath_tpz) {
 
   int n_quad = 100;
   // load precomputed reference data
-  h5::file tpz_file("/home/paco/feynman/xca/test/c++/h5/tpz100.ref.h5", 'r');
+  h5::file tpz_file("h5/tpz100.ref.h5", 'r');
   nda::array<dcomplex, 3> OCA_tpz_result(101, 16, 16);
   h5::read(tpz_file, "OCA_tpz_result", OCA_tpz_result);
 
