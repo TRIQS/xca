@@ -91,8 +91,8 @@ std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> discrete_bath_spin_
   auto Jt_refl = nda::array<dcomplex, 3>(r, 1, 1);
   for (int i = 0; i <= 1; i++) {
     for (int u = 0; u < r; u++) {
-      Jt(u, 0, 0) += k_it(dlr_it_abs(u), e(i), beta);
-      Jt_refl(u, 0, 0) += k_it(-dlr_it_abs(u), e(i), beta);
+      Jt(u, 0, 0) += k_it(dlr_it(u), e(i), beta);
+      Jt_refl(u, 0, 0) += k_it(-dlr_it(u), e(i), beta);
     }
   }
 

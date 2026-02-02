@@ -99,7 +99,6 @@ constexpr auto doc_member_8  = R"DOC()DOC";
 constexpr auto doc_member_9  = R"DOC()DOC";
 constexpr auto doc_member_10 = R"DOC()DOC";
 constexpr auto doc_member_11 = R"DOC()DOC";
-constexpr auto doc_member_12 = R"DOC()DOC";
 
 // ----- Method table ----
 
@@ -111,13 +110,12 @@ constinit PyGetSetDef c2py::tp_getset<DiagramEvaluator>[] = {
    c2py::getsetdef_from_member<&DiagramEvaluator::q, DiagramEvaluator>("q", doc_member_3),
    c2py::getsetdef_from_member<&DiagramEvaluator::Nmax, DiagramEvaluator>("Nmax", doc_member_4),
    c2py::getsetdef_from_member<&DiagramEvaluator::hyb, DiagramEvaluator>("hyb", doc_member_5),
-   c2py::getsetdef_from_member<&DiagramEvaluator::hyb_refl, DiagramEvaluator>("hyb_refl", doc_member_6),
-   c2py::getsetdef_from_member<&DiagramEvaluator::hyb_poles, DiagramEvaluator>("hyb_poles", doc_member_7),
-   c2py::getsetdef_from_member<&DiagramEvaluator::T, DiagramEvaluator>("T", doc_member_8),
-   c2py::getsetdef_from_member<&DiagramEvaluator::U, DiagramEvaluator>("U", doc_member_9),
-   c2py::getsetdef_from_member<&DiagramEvaluator::GKt, DiagramEvaluator>("GKt", doc_member_10),
-   c2py::getsetdef_from_member<&DiagramEvaluator::Tkaps, DiagramEvaluator>("Tkaps", doc_member_11),
-   c2py::getsetdef_from_member<&DiagramEvaluator::Tmu, DiagramEvaluator>("Tmu", doc_member_12),
+   c2py::getsetdef_from_member<&DiagramEvaluator::hyb_poles, DiagramEvaluator>("hyb_poles", doc_member_6),
+   c2py::getsetdef_from_member<&DiagramEvaluator::T, DiagramEvaluator>("T", doc_member_7),
+   c2py::getsetdef_from_member<&DiagramEvaluator::U, DiagramEvaluator>("U", doc_member_8),
+   c2py::getsetdef_from_member<&DiagramEvaluator::GKt, DiagramEvaluator>("GKt", doc_member_9),
+   c2py::getsetdef_from_member<&DiagramEvaluator::Tkaps, DiagramEvaluator>("Tkaps", doc_member_10),
+   c2py::getsetdef_from_member<&DiagramEvaluator::Tmu, DiagramEvaluator>("Tmu", doc_member_11),
 
    {nullptr, nullptr, nullptr, nullptr, nullptr}};
 

@@ -65,19 +65,18 @@ class DiagramEvaluator {
   // evaluate a diagram with fixed orbital indices, poles, and line directions in dense storage, including prefactor
 
   public:
-  double beta;                      // inverse temperature
-  int r;                            // rank of the DLR imaginary time object
-  int n;                            // number of orbitals
-  int q;                            // number of symmetry sets
-  int Nmax;                         // maximum block size in the Green's function
-  nda::array<dcomplex, 3> hyb;      // hybridization function at imaginary time nodes
-  nda::array<dcomplex, 3> hyb_refl; // hybridization function at (beta - tau) nodes
-  nda::vector<double> hyb_poles;    // hybridization poles
-  nda::array<dcomplex, 3> T;        // array for storing intermediate result
-  nda::array<dcomplex, 3> U;        // array for storing intermediate result (tau-beta side of correlator diagram)
-  nda::array<dcomplex, 3> GKt;      // array for storing result of edge computation
-  nda::array<dcomplex, 4> Tkaps;    // intermediate storage array
-  nda::array<dcomplex, 3> Tmu;      // intermediate storage array
+  double beta;                   // inverse temperature
+  int r;                         // rank of the DLR imaginary time object
+  int n;                         // number of orbitals
+  int q;                         // number of symmetry sets
+  int Nmax;                      // maximum block size in the Green's function
+  nda::array<dcomplex, 3> hyb;   // hybridization function at imaginary time nodes
+  nda::vector<double> hyb_poles; // hybridization poles
+  nda::array<dcomplex, 3> T;     // array for storing intermediate result
+  nda::array<dcomplex, 3> U;     // array for storing intermediate result (tau-beta side of correlator diagram)
+  nda::array<dcomplex, 3> GKt;   // array for storing result of edge computation
+  nda::array<dcomplex, 4> Tkaps; // intermediate storage array
+  nda::array<dcomplex, 3> Tmu;   // intermediate storage array
 
   // routines for any diagram
   void reset();                                                  // reset all arrays to zero
@@ -109,13 +108,11 @@ class DiagramEvaluator {
    * @param[in] Lambda DLR imaginary time cutoff
    * @param[in] eps DLR imaginary time accuracy
    * @param[in] hyb hybridization function at imaginary time nodes
-   * @param[in] hyb_refl hybridization function at (beta - tau) nodes
    * @param[in] Gt Green's function at imaginary time nodes
    * @param[in] Fset BlockOpSymQuartet (cre/ann operators with and without bars)
    */
   C2PY_IGNORE DiagramEvaluator(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> hyb,
-                               nda::array_const_view<dcomplex, 3> hyb_refl, nda::vector_const_view<double> hyb_poles, BlockDiagOpFun &Gt,
-                               BlockOpSymQuartet &Fq);
+                               nda::vector_const_view<double> hyb_poles, BlockDiagOpFun &Gt, BlockOpSymQuartet &Fq);
 
   virtual ~DiagramEvaluator() = default;
 };

@@ -26,7 +26,7 @@ TEST(BSGFBackbone, OCA_BDOF_construct) {
 
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = CorrelatorBackbone(topology, n);
-  DiagramEvaluator D(beta, Lambda, eps, Deltat, Deltat_refl, dlr_rf, Gt, Fq);
+  DiagramEvaluator D(beta, Lambda, eps, Deltat, nda::make_regular(dlr_rf / beta), Gt, Fq);
   // for now, convert Fq.Fs and Fq.F_dags to vectors of BlockOp
   std::vector<BlockOp> mu_ops, kap_ops;
   for (int i = 0; i < Fq.Fs[0].get_size_sym_set(); ++i) {

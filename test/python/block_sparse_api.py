@@ -324,5 +324,5 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
 if __name__ == '__main__':
 
     test_oca_diagram_cf_block_sparse_and_dense(beta=1.0, verbose=False)
-    test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False) # Breaks in sigma cf
+    test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False)
      

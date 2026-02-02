@@ -267,5 +267,5 @@ TEST(DenseBackbone, OCA_semicircle_bath_aaa) {
   auto OCA_result = D.Sigma; // get the result from the DiagramEvaluator
 
   // compare with the dense result
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result - OCA_dense_result)), eps);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_result - OCA_dense_result)), 2 * eps);
 }

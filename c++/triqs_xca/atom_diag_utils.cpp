@@ -140,19 +140,15 @@ std::vector<nda::array<T, 3>> H_to_atom_prop_blocks(std::vector<nda::array<doubl
     }
   }
 
-  auto eta_0 = nda::log(tr_exp_minusbetaH) / beta;
+  auto eta_0      = nda::log(tr_exp_minusbetaH) / beta;
+  auto dlr_it     = itops.get_itnodes();
+  auto dlr_it_abs = cppdlr::rel2abs(dlr_it);
   std::vector<nda::array<T, 3>> ap_blocks(H_block_inds.size());
   for (int i = 0; i < H_block_inds.size(); ++i) {
     ap_blocks[i] = nda::array<T, 3>(r, H_blocks[i].extent(0), H_blocks[i].extent(1));
     auto Gt_temp = nda::make_regular(0 * H_blocks[i]);
     for (int t = 0; t < r; t++) {
-      if (itops.get_itnodes(t) > 0) {
-        for (int j = 0; j < H_blocks[i].extent(0); j++) { Gt_temp(j, j) = -exp(-beta * itops.get_itnodes(t) * (H_evals[i](j) + eta_0)); }
-      } else {
-        for (int j = 0; j < H_blocks[i].extent(0); j++) {
-          Gt_temp(j, j) = -exp(-beta * itops.get_itnodes(t) * (H_evals[i](j) + eta_0)) * exp(-beta * (H_evals[i](j) + eta_0));
-        }
-      }
+      for (int j = 0; j < H_blocks[i].extent(0); j++) { Gt_temp(j, j) = -exp(-beta * dlr_it_abs(t) * (H_evals[i](j) + eta_0)); }
       ap_blocks[i](t, _, _) = matmul(H_evecs[i], matmul(Gt_temp, nda::transpose(H_evecs[i])));
     }
   }

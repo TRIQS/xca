@@ -261,11 +261,9 @@ int main() {
 
   // hybridization
   auto hyb_coeffs               = itops.vals2coefs(Deltat); // hybridization DLR coeffs
-  auto hyb_refl                 = Deltat;
-  auto hyb_refl_coeffs          = hyb_coeffs;
   auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs);
 
-  auto D = DiagramEvaluator(beta, Lambda, eps, Deltat, hyb_refl, dlr_rf, Gt, Fq); // create DiagramEvaluator object
+  auto D = DiagramEvaluator(beta, Lambda, eps, Deltat, nda::make_regular(dlr_rf / beta), Gt, Fq); // create DiagramEvaluator object
 
   auto Deltadlr                            = itops.vals2coefs(Deltat); //obtain dlr coefficient of Delta(t)
   nda::vector<double> dlr_rf_reflect       = -dlr_rf;
@@ -285,9 +283,9 @@ int main() {
     std::cout << "Evaluating topology " << i << std::endl;
 
     // Compute third-order contribution using DiagramEvaluator
-    auto B = Backbone(topologies(i, _, _), n);
+    auto B              = Backbone(topologies(i, _, _), n);
     auto Sigma_third_gf = D.compute_self_energy(topologies(i, _, _));
-    third_order_result = BlockDiagOpFun(Sigma_third_gf);
+    third_order_result  = BlockDiagOpFun(Sigma_third_gf);
     D.reset(); // reset the DiagramEvaluator for the next topology
 
     // Compute third-order contribution using old code
@@ -300,7 +298,7 @@ int main() {
     fb(1) = 1;
     TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense,
                                   fb, true);
-    fb(2) = 1;
+    fb(1) = 1;
     TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense,
                                   fb, true);
     fb(1) = 0;
@@ -309,6 +307,8 @@ int main() {
 
     std::cout << "max error in block 0: " << nda::max_element(nda::abs(TCA_old(_, range(0, 4), range(0, 4)) - third_order_result.get_block(0)))
               << std::endl;
+    std::cout << "TCA_old block 0:\n" << TCA_old(5, range(0, 4), range(0, 4)) << std::endl;
+    std::cout << "third_order_result block 0:\n" << third_order_result.get_block(0)(5, range(0, 4), range(0, 4)) << std::endl;
     std::cout << "max error in block 1: " << nda::max_element(nda::abs(TCA_old(_, range(4, 10), range(4, 10)) - third_order_result.get_block(1)))
               << std::endl;
     std::cout << "max error in block 2: " << nda::max_element(nda::abs(TCA_old(_, range(10, 11), range(10, 11)) - third_order_result.get_block(2)))

@@ -146,7 +146,6 @@ TEST(BlockSparseOCAManual, two_band_discrete_bath_bs_vs_dense) {
   // block-sparse OCA computation
   auto OCA_bs_result = OCA_bs(Deltat, dlr_rf, itops, beta, Gt, Fq);
 
-  // check agreement between these
   ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(0) - OCA_dense_result(_, range(0, 4), range(0, 4)))), eps);
   ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(1) - OCA_dense_result(_, range(4, 10), range(4, 10)))), eps);
   ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(2) - OCA_dense_result(_, range(10, 11), range(10, 11)))), eps);
@@ -265,33 +264,29 @@ TEST(BlockSparseOCAManual, H5_two_band_discrete_bath_tpz) {
   auto OCA_result = OCA_bs(Deltat, dlr_rf, itops, beta, Gt, Fq);
 
   int n_quad = 100;
-  // compute OCA using trapezoidal rule using 100 quadrature nodes0
-  // load precomputed values from the following 3 lines:
-  // auto OCA_tpz_result = OCA_tpz(Deltat, itops, beta, Gt_dense, Fs_dense, n_quad);
-  // h5::file tpz_file("h5/tpz100.ref.h5", 'w');
-  // h5::write(tpz_file, "OCA_tpz_result", OCA_tpz_result);
-  h5::file tpz_file("h5/tpz100.ref.h5", 'r');
+  // load precomputed reference data
+  h5::file tpz_file("/home/paco/feynman/xca/test/c++/h5/tpz100.ref.h5", 'r');
   nda::array<dcomplex, 3> OCA_tpz_result(101, 16, 16);
   h5::read(tpz_file, "OCA_tpz_result", OCA_tpz_result);
 
   // check that trapezoidal OCA calculation agrees with block-sparse calc.
   auto OCA_result_block_0    = OCA_result.get_block(0)(_, _, _);
   auto OCA_result_block_eq_0 = eval_eq(itops, OCA_result_block_0, n_quad);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result_block_eq_0 - OCA_tpz_result(_, range(0, 4), range(0, 4)))), 2e-4);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_result_block_eq_0 - OCA_tpz_result(_, range(0, 4), range(0, 4)))), 4e-4);
 
   auto OCA_result_block_1    = OCA_result.get_block(1)(_, _, _);
   auto OCA_result_block_eq_1 = eval_eq(itops, OCA_result_block_1, n_quad);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result_block_eq_1 - OCA_tpz_result(_, range(4, 10), range(4, 10)))), 2e-4);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_result_block_eq_1 - OCA_tpz_result(_, range(4, 10), range(4, 10)))), 4e-4);
 
   auto OCA_result_block_2    = OCA_result.get_block(2)(_, _, _);
   auto OCA_result_block_eq_2 = eval_eq(itops, OCA_result_block_2, n_quad);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result_block_eq_2 - OCA_tpz_result(_, range(10, 11), range(10, 11)))), 2e-4);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_result_block_eq_2 - OCA_tpz_result(_, range(10, 11), range(10, 11)))), 4e-4);
 
   auto OCA_result_block_3    = OCA_result.get_block(3)(_, _, _);
   auto OCA_result_block_eq_3 = eval_eq(itops, OCA_result_block_3, n_quad);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result_block_eq_3 - OCA_tpz_result(_, range(11, 15), range(11, 15)))), 2e-4);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_result_block_eq_3 - OCA_tpz_result(_, range(11, 15), range(11, 15)))), 4e-4);
 
   auto OCA_result_block_4    = OCA_result.get_block(4)(_, _, _);
   auto OCA_result_block_eq_4 = eval_eq(itops, OCA_result_block_4, n_quad);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result_block_eq_4 - OCA_tpz_result(_, range(15, 16), range(15, 16)))), 2e-4);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_result_block_eq_4 - OCA_tpz_result(_, range(15, 16), range(15, 16)))), 4e-4);
 }

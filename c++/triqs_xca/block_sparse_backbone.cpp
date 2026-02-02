@@ -14,8 +14,7 @@
 #include <triqs_xca/atom_diag_utils.hpp>
 
 DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> hyb,
-                                   nda::array_const_view<dcomplex, 3> hyb_refl, nda::vector_const_view<double> hyb_poles, BlockDiagOpFun &Gt,
-                                   BlockOpSymQuartet &Fq)
+                                   nda::vector_const_view<double> hyb_poles, BlockDiagOpFun &Gt, BlockOpSymQuartet &Fq)
    : itops(imtime_ops(Lambda, build_dlr_rf(Lambda, eps))),
      Gt(Gt),
      Fq(Fq),
@@ -27,8 +26,7 @@ DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps, nda::
      q(nda::max_element(Fq.sym_set_labels) + 1),
      Nmax(Gt.get_max_block_size()),
      hyb(hyb),
-     hyb_refl(hyb_refl),
-     hyb_poles(hyb_poles) {
+     hyb_poles(beta * hyb_poles) {
 
   dlr_it = itops.get_itnodes();
 
@@ -54,11 +52,10 @@ DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps, nda::
      n(hyb_coeffs.extent(1)),
      q(nda::max_element(Fq.sym_set_labels) + 1),
      Nmax(Gt.get_max_block_size()),
-     hyb_poles(hyb_poles) {
+     hyb_poles(beta * hyb_poles) {
 
-  // hyb and hyb_refl on DLR imaginary time nodes
-  hyb      = aaa_coefs2vals(beta, Lambda, eps, hyb_coeffs, nda::make_regular(hyb_poles / beta));
-  hyb_refl = hyb; // TODO correctly handle reflection
+  // hyb on DLR imaginary time nodes
+  hyb = aaa_coefs2vals(beta, Lambda, eps, hyb_coeffs, hyb_poles);
 
   // allocate arrays
   T     = nda::zeros<dcomplex>(r, Nmax, Nmax);
@@ -347,7 +344,7 @@ void DiagramEvaluator::eval_self_energy_fixed_indices(Backbone &backbone, int b_
   int diag_order_sign = (m % 2 == 0) ? -1 : 1;
   if (backbone.get_fb(0) == 0) diag_order_sign *= -1;
   T(_, range(0, block_dims(2 * m)), range(0, block_dims(0))) *= diag_order_sign * backbone.prefactor_sign;
-  // TODO: temporary fix: have backward pass consider sparsity of hybridization function (hyb, hyb_refl) during zero vertex
+  // TODO: temporary fix: have backward pass consider sparsity of hybridization function (hyb) during zero vertex
   if (nda::max_element(nda::abs(T(_, range(0, block_dims(2 * m)), range(0, block_dims(0))))) > 1e-16)
     Sigma.add_block(b_ix, T(_, range(0, block_dims(2 * m)), range(0, block_dims(0))));
 }

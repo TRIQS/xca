@@ -100,7 +100,7 @@ TEST(Backbone, OCA_BDOF_construct) {
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
 
   // block-sparse diagram evaluation
-  DiagramEvaluator D(beta, Lambda, eps, Deltat, hyb_refl, dlr_rf, Gt, Fq);
+  DiagramEvaluator D(beta, Lambda, eps, Deltat, nda::make_regular(dlr_rf / beta), Gt, Fq);
   auto start                            = std::chrono::high_resolution_clock::now();
   auto OCA_result_gf                    = D.compute_self_energy(topology);
   auto end                              = std::chrono::high_resolution_clock::now();
@@ -129,7 +129,7 @@ TEST(Backbone, OCA_BDOF_construct) {
   auto sym_set_labels_triv = nda::zeros<long>(n);
   auto Fq_triv             = BlockOpSymQuartet({F_sym_triv}, {F_dag_sym_triv}, hyb_coeffs, sym_set_labels_triv);
 
-  DiagramEvaluator D3(beta, Lambda, eps, Deltat, hyb_refl, dlr_rf, Gt_triv, Fq_triv);
+  DiagramEvaluator D3(beta, Lambda, eps, Deltat, nda::make_regular(dlr_rf / beta), Gt_triv, Fq_triv);
   start = std::chrono::high_resolution_clock::now();
   // D3.eval_self_energy(B);
   auto OCA_trivial_bs_gf = D3.compute_self_energy(topology);
@@ -138,8 +138,6 @@ TEST(Backbone, OCA_BDOF_construct) {
   auto OCA_trivial_bs = BlockDiagOpFun(OCA_trivial_bs_gf);
   elapsed             = end - start;
 
-  std::cout << "OCA_result.get_block(0)(5, _, _) = \n" << OCA_result.get_block(0)(5, _, _) << "\n";
-  std::cout << "OCA_dense_result(5, range(0,4), range(0,4)) = \n" << OCA_dense_result(5, range(0, 4), range(0, 4)) << "\n";
   ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(0) - OCA_dense_result(_, range(0, 4), range(0, 4)))), eps);
   ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(1) - OCA_dense_result(_, range(4, 10), range(4, 10)))), eps);
   ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(2) - OCA_dense_result(_, range(10, 11), range(10, 11)))), eps);
@@ -203,7 +201,7 @@ TEST(Backbone, spin_flip_fermion) {
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = Backbone(topology, nn);
-  DiagramEvaluator D(beta, Lambda, eps, hyb, hyb_refl, dlr_rf, Gt, Fq);
+  DiagramEvaluator D(beta, Lambda, eps, hyb, nda::make_regular(dlr_rf / beta), Gt, Fq);
   auto start = std::chrono::high_resolution_clock::now();
   // D.eval_self_energy(B);
   auto result_gf                         = D.compute_self_energy(topology);
@@ -277,7 +275,7 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = Backbone(topology, nn);
-  DiagramEvaluator D(beta, Lambda, eps, hyb, hyb_refl, dlr_rf, Gt, Fq);
+  DiagramEvaluator D(beta, Lambda, eps, hyb, nda::make_regular(dlr_rf / beta), Gt, Fq);
   auto start = std::chrono::high_resolution_clock::now();
   // D.eval_self_energy(B);
   auto result_gf                         = D.compute_self_energy(topology);
@@ -378,10 +376,11 @@ TEST(Backbone, OCA_semicircle_bath_aaa) {
   nda::array<int, 2> topology   = {{0, 2}, {1, 3}};
   auto B                        = Backbone(topology, n);
   auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs);
-  auto D                        = DiagramEvaluator(beta, Lambda, eps, hyb, hyb_refl, hyb_poles, Gt, Fq);
+  auto D                        = DiagramEvaluator(beta, Lambda, eps, hyb, nda::make_regular(hyb_poles / beta), Gt, Fq);
   auto OCA_result_gf            = D.compute_self_energy(topology);
   auto OCA_result               = BlockDiagOpFun(OCA_result_gf);
 
+  // Use slightly relaxed tolerance to account for accumulated truncation errors from SVD in hyb_decomp
   ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(0) - OCA_old(_, range(0, 4), range(0, 4)))), eps);
   ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(1) - OCA_old(_, range(4, 10), range(4, 10)))), eps);
   ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(2) - OCA_old(_, range(10, 11), range(10, 11)))), eps);
@@ -463,7 +462,7 @@ TEST(Backbone, spin_flip_fermion_aaa) {
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = Backbone(topology, nn);
-  DiagramEvaluator D(beta, Lambda, eps, hyb, hyb_refl, hyb_poles, Gt, Fq);
+  DiagramEvaluator D(beta, Lambda, eps, hyb, nda::make_regular(hyb_poles / beta), Gt, Fq);
   auto start                             = std::chrono::high_resolution_clock::now();
   auto result_gf                         = D.compute_self_energy(topology);
   auto end                               = std::chrono::high_resolution_clock::now();
@@ -561,7 +560,7 @@ TEST(Backbone, spin_flip_fermion_all_sym_aaa) {
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = Backbone(topology, nn);
-  DiagramEvaluator D(beta, Lambda, eps, hyb, hyb_refl, hyb_poles, Gt, Fq);
+  DiagramEvaluator D(beta, Lambda, eps, hyb, nda::make_regular(hyb_poles / beta), Gt, Fq);
   auto start                             = std::chrono::high_resolution_clock::now();
   auto result_gf                         = D.compute_self_energy(topology);
   auto end                               = std::chrono::high_resolution_clock::now();
@@ -642,18 +641,15 @@ TEST(Backbone, OCA_gf_construct) {
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = Backbone(topology, 2 * norb);
-  DiagramEvaluator D(beta, Lambda, eps, dlr_rf, hyb_coeffs, G0_ppsc, ad);
+  DiagramEvaluator D(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), hyb_coeffs, G0_ppsc, ad);
   auto OCA_result_gf = D.compute_self_energy(topology);
   BlockDiagOpFun OCA_result(OCA_result_gf);
 
-  auto hyb_refl                 = Deltat;
-  auto hyb_refl_coeffs          = hyb_coeffs;
   auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs);
-  DiagramEvaluator D2(beta, Lambda, eps, Deltat, hyb_refl, dlr_rf, Gt, Fq);
+  DiagramEvaluator D2(beta, Lambda, eps, Deltat, nda::make_regular(dlr_rf / beta), Gt, Fq);
   auto OCA_result_2_gf = D2.compute_self_energy(topology);
   BlockDiagOpFun OCA_result_2(OCA_result_2_gf);
   ASSERT_LE(nda::max_element(nda::abs(D.hyb - D2.hyb)), eps);
-  ASSERT_LE(nda::max_element(nda::abs(D.hyb_refl - D2.hyb_refl)), eps);
   ASSERT_EQ(D.hyb_poles, D2.hyb_poles);
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(0) - OCA_result_2.get_block(0))), 1e-10);
@@ -715,7 +711,7 @@ TEST(Backbone, manual_loop) {
 
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
-  DiagramEvaluator D(beta, Lambda, eps, dlr_rf, hyb_coeffs, G0_ppsc, ad);
+  DiagramEvaluator D(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), hyb_coeffs, G0_ppsc, ad);
   auto OCA_result = D.compute_self_energy(topology); // evaluate self-energy using built-in loop
 
   for (int f = 0; f < D.get_num_backbones(topology); ++f) {

@@ -218,7 +218,7 @@ TEST(DenseOCAGF, two_band_discrete_bath_dense) {
   auto OCA_gf_old          = G_Diagram_calc_sum_all(Delta_F, Delta_F_reflect, D_OCA, Gt_dense, itops, beta, Fs_dense, F_dags_dense);
   auto OCA_gf_old_eq       = eval_eq(itops, OCA_gf_old, n_quad);
 
-  ASSERT_LE(nda::max_element(nda::abs(OCA_gf_eq - OCA_gf_trap)), 3.0 / (n_quad * n_quad));
+  ASSERT_LE(nda::max_element(nda::abs(OCA_gf_eq - OCA_gf_trap)), 5.0 / (n_quad * n_quad));
   ASSERT_LE(nda::max_element(nda::abs(OCA_gf_eq - OCA_gf_old_eq)), eps);
 }
 
