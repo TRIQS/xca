@@ -21,8 +21,6 @@
 
 import numpy as np
 
-from mpi4py import MPI
-
 from triqs_xca.pycppdlr import build_dlr_rf
 from triqs_xca.pycppdlr import ImTimeOps
 from triqs_xca.impurity import Fastdiagram

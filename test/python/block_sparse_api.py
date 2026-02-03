@@ -1,12 +1,11 @@
 
 
-from mpi4py import MPI
-
 from itertools import product
 
 import numpy as np
 from scipy.integrate import quad
 
+import triqs.utility.mpi as mpi
 from triqs.gf import Gf, MeshDLRImTime, BlockGf
 from triqs.operators import n
 from triqs.operators.util.hamiltonians import h_int_kanamori, make_operator_real

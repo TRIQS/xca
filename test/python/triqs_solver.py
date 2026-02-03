@@ -24,8 +24,7 @@
 
 import numpy as np
 
-from mpi4py import MPI
-
+import triqs.utility.mpi as mpi
 from triqs.gf import make_gf_dlr_imtime, make_gf_dlr_imfreq, inverse, iOmega_n
 from triqs.operators import c, c_dag
 

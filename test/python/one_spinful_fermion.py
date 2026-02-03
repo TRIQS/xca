@@ -29,8 +29,6 @@ in the zeroth, first, and second order (atomic, NCA, and OCA) expansion order.
 
 import numpy as np
 
-from mpi4py import MPI
-
 import triqs.utility.mpi as mpi
 
 from h5 import HDFArchive

@@ -1,7 +1,6 @@
 """ Author: Hugo U. R. Strand (2025) """
 
 import numpy as np
-from mpi4py import MPI
 
 from triqs.operators import c, c_dag
 
