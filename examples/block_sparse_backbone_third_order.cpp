@@ -1,9 +1,12 @@
+#include "triqs_xca/dense_backbone.hpp"
 #include <chrono>
 #include <nda/nda.hpp>
 #include <cppdlr/cppdlr.hpp>
 #include <triqs_xca/block_sparse.hpp>
 #include <triqs_xca/block_sparse_manual.hpp>
 #include <triqs_xca/block_sparse_backbone.hpp>
+// temporary include
+#include <triqs_xca/dense_backbone.hpp>
 
 using namespace nda;
 using namespace cppdlr;
@@ -256,7 +259,6 @@ int main() {
   auto dlr_rf        = build_dlr_rf(Lambda, eps);
   auto itops         = imtime_ops(Lambda, dlr_rf);
   auto const &dlr_it = itops.get_itnodes();
-  auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
   int r              = itops.rank();
 
   // hybridization
@@ -264,6 +266,10 @@ int main() {
   auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs);
 
   auto D = DiagramEvaluator(beta, Lambda, eps, Deltat, nda::make_regular(dlr_rf / beta), Gt, Fq); // create DiagramEvaluator object
+
+  // temporary dense calculation
+  auto Fset = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs);
+  auto DD = DenseDiagramEvaluator(beta, itops, Deltat, Deltat, dlr_rf, Gt_dense, Fset);
 
   auto Deltadlr                            = itops.vals2coefs(Deltat); //obtain dlr coefficient of Delta(t)
   nda::vector<double> dlr_rf_reflect       = -dlr_rf;
@@ -283,10 +289,15 @@ int main() {
     std::cout << "Evaluating topology " << i << std::endl;
 
     // Compute third-order contribution using DiagramEvaluator
-    auto B              = Backbone(topologies(i, _, _), n);
     auto Sigma_third_gf = D.compute_self_energy(topologies(i, _, _));
     third_order_result  = BlockDiagOpFun(Sigma_third_gf);
     D.reset(); // reset the DiagramEvaluator for the next topology
+
+    // temp for verification
+    auto BB = Backbone(topologies(i, _, _), n);
+    DD.eval_self_energy(BB);
+    auto dense_result = DD.Sigma;
+    DD.reset();
 
     // Compute third-order contribution using old code
     nda::array<dcomplex, 3> TCA_old(r, N, N);
@@ -298,7 +309,7 @@ int main() {
     fb(1) = 1;
     TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense,
                                   fb, true);
-    fb(1) = 1;
+    fb(2) = 1;
     TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense,
                                   fb, true);
     fb(1) = 0;
@@ -309,6 +320,7 @@ int main() {
               << std::endl;
     std::cout << "TCA_old block 0:\n" << TCA_old(5, range(0, 4), range(0, 4)) << std::endl;
     std::cout << "third_order_result block 0:\n" << third_order_result.get_block(0)(5, range(0, 4), range(0, 4)) << std::endl;
+    std::cout << "dense result block 0:\n" << dense_result(5, range(0, 4), range(0, 4)) << std::endl;
     std::cout << "max error in block 1: " << nda::max_element(nda::abs(TCA_old(_, range(4, 10), range(4, 10)) - third_order_result.get_block(1)))
               << std::endl;
     std::cout << "max error in block 2: " << nda::max_element(nda::abs(TCA_old(_, range(10, 11), range(10, 11)) - third_order_result.get_block(2)))
