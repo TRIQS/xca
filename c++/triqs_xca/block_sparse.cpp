@@ -73,10 +73,10 @@ BlockDiagOpFun &BlockDiagOpFun::operator+=(const BlockDiagOpFun &G) {
   return *this;
 }
 
-void BlockDiagOpFun::set_blocks(std::vector<nda::array<dcomplex, 3>> &blocks) {
+void BlockDiagOpFun::set_blocks(std::vector<nda::array<dcomplex, 3>> &new_blocks) {
 
-  this->blocks       = blocks;
-  num_block_cols     = blocks.size();
+  this->blocks       = new_blocks;
+  num_block_cols     = new_blocks.size();
   zero_block_indices = nda::zeros<int>(num_block_cols);
 }
 
@@ -151,15 +151,15 @@ BlockOp::BlockOp(nda::vector<int> &block_indices, std::vector<nda::array<dcomple
 BlockOp::BlockOp(nda::vector_const_view<int> block_indices, nda::array_const_view<int, 2> block_sizes)
    : block_indices(block_indices), num_block_cols(block_indices.size()) {
 
-  std::vector<nda::array<dcomplex, 2>> blocks(num_block_cols);
+  std::vector<nda::array<dcomplex, 2>> temp_blocks(num_block_cols);
   for (int i = 0; i < num_block_cols; i++) {
     if (block_indices(i) != -1) {
-      blocks[i] = nda::zeros<dcomplex>(block_sizes(i, 0), block_sizes(i, 1));
+      temp_blocks[i] = nda::zeros<dcomplex>(block_sizes(i, 0), block_sizes(i, 1));
     } else {
-      blocks[i] = nda::zeros<dcomplex>(1, 1);
+      temp_blocks[i] = nda::zeros<dcomplex>(1, 1);
     }
   }
-  this->blocks = blocks;
+  this->blocks = temp_blocks;
 }
 
 BlockOp &BlockOp::operator+=(const BlockOp &F) {
@@ -172,18 +172,18 @@ BlockOp &BlockOp::operator+=(const BlockOp &F) {
   return *this;
 }
 
-void BlockOp::set_block_indices(nda::vector<int> &block_indices) {
+void BlockOp::set_block_indices(nda::vector<int> &new_block_indices) {
 
-  this->block_indices = block_indices;
-  num_block_cols      = block_indices.size();
+  this->block_indices = new_block_indices;
+  num_block_cols      = new_block_indices.size();
 }
 
 void BlockOp::set_block_index(int i, int block_index) { block_indices(i) = block_index; }
 
-void BlockOp::set_blocks(std::vector<nda::array<dcomplex, 2>> &blocks) {
+void BlockOp::set_blocks(std::vector<nda::array<dcomplex, 2>> &new_blocks) {
 
-  this->blocks   = blocks;
-  num_block_cols = blocks.size();
+  this->blocks   = new_blocks;
+  num_block_cols = new_blocks.size();
 }
 
 void BlockOp::set_block(int i, nda::array_const_view<dcomplex, 2> block) { blocks[i] = block; }
@@ -246,29 +246,29 @@ BlockOp3D::BlockOp3D(nda::vector_const_view<int> block_indices, std::vector<nda:
 BlockOp3D::BlockOp3D(int r, nda::vector_const_view<int> block_indices, nda::array_const_view<int, 2> block_sizes)
    : block_indices(block_indices), num_block_cols(block_indices.size()) {
 
-  std::vector<nda::array<dcomplex, 3>> blocks(num_block_cols);
+  std::vector<nda::array<dcomplex, 3>> temp_blocks(num_block_cols);
   for (int i = 0; i < num_block_cols; i++) {
     if (block_indices(i) != -1) {
-      blocks[i] = nda::zeros<dcomplex>(r, block_sizes(i, 0), block_sizes(i, 1));
+      temp_blocks[i] = nda::zeros<dcomplex>(r, block_sizes(i, 0), block_sizes(i, 1));
     } else {
-      blocks[i] = nda::zeros<dcomplex>(1, 1, 1);
+      temp_blocks[i] = nda::zeros<dcomplex>(1, 1, 1);
     }
   }
-  this->blocks = blocks;
+  this->blocks = temp_blocks;
 }
 
-void BlockOp3D::set_block_indices(nda::vector<int> &block_indices) {
+void BlockOp3D::set_block_indices(nda::vector<int> &new_block_indices) {
 
-  this->block_indices = block_indices;
-  num_block_cols      = block_indices.size();
+  this->block_indices = new_block_indices;
+  num_block_cols      = new_block_indices.size();
 }
 
 void BlockOp3D::set_block_index(int i, int block_index) { block_indices(i) = block_index; }
 
-void BlockOp3D::set_blocks(std::vector<nda::array<dcomplex, 3>> &blocks) {
+void BlockOp3D::set_blocks(std::vector<nda::array<dcomplex, 3>> &new_blocks) {
 
-  this->blocks   = blocks;
-  num_block_cols = blocks.size();
+  this->blocks   = new_blocks;
+  num_block_cols = new_blocks.size();
 }
 
 void BlockOp3D::set_block(int i, nda::array_const_view<dcomplex, 3> block) { blocks[i] = block; }
@@ -381,26 +381,26 @@ BlockOpSymSetBar::BlockOpSymSetBar(nda::vector_const_view<int> block_indices, st
 BlockOpSymSetBar::BlockOpSymSetBar(int q, int r, nda::vector_const_view<int> block_indices, nda::array_const_view<int, 2> block_sizes)
    : block_indices(block_indices), num_block_cols(block_indices.size()) {
 
-  std::vector<nda::array<dcomplex, 4>> blocks(num_block_cols);
+  std::vector<nda::array<dcomplex, 4>> temp_blocks(num_block_cols);
   for (int i = 0; i < num_block_cols; i++) {
     if (block_indices(i) != -1) {
-      blocks[i] = nda::zeros<dcomplex>(q, r, block_sizes(i, 0), block_sizes(i, 1));
+      temp_blocks[i] = nda::zeros<dcomplex>(q, r, block_sizes(i, 0), block_sizes(i, 1));
     } else {
-      blocks[i] = nda::zeros<dcomplex>(q, r, 1, 1);
+      temp_blocks[i] = nda::zeros<dcomplex>(q, r, 1, 1);
     }
   }
-  this->blocks = blocks;
+  this->blocks = temp_blocks;
 }
 
-void BlockOpSymSetBar::set_block_indices(nda::vector<int> &block_indices) {
+void BlockOpSymSetBar::set_block_indices(nda::vector<int> &new_block_indices) {
 
-  this->block_indices = block_indices;
-  num_block_cols      = block_indices.size();
+  this->block_indices = new_block_indices;
+  num_block_cols      = new_block_indices.size();
 }
 
 void BlockOpSymSetBar::set_block_index(int i, int block_index) { block_indices(i) = block_index; }
 
-void BlockOpSymSetBar::set_blocks(std::vector<nda::array<dcomplex, 4>> &blocks) { this->blocks = blocks; }
+void BlockOpSymSetBar::set_blocks(std::vector<nda::array<dcomplex, 4>> &new_blocks) { this->blocks = new_blocks; }
 
 void BlockOpSymSetBar::set_block(int i, nda::array_const_view<dcomplex, 4> block) { blocks[i] = block; }
 
@@ -461,15 +461,14 @@ BlockOpSymQuartet::BlockOpSymQuartet(std::vector<BlockOpSymSet> Fs, std::vector<
   if (k != F_dags.size()) { throw std::invalid_argument("Fs and F_dags must have the same number of entries"); }
 
   // initialize F_dag_bars and F_bars_refl
-  int p = hyb_coeffs.extent(0);
-  std::vector<BlockOpSymSetBar> F_dag_bars, F_bars_refl;
+  p                                  = hyb_coeffs.extent(0);
   nda::vector<int> block_indices_dag = F_dags[0].get_block_indices();
   nda::vector<int> block_indices_f   = Fs[0].get_block_indices();
   for (int i = 0; i < k; i++) {
     block_indices_dag = F_dags[i].get_block_indices();
     block_indices_f   = Fs[i].get_block_indices();
-    F_dag_bars.emplace_back(F_dags[i].get_size_sym_set(), p, block_indices_dag, F_dags[i].get_block_sizes());
-    F_bars_refl.emplace_back(Fs[i].get_size_sym_set(), p, block_indices_f, Fs[i].get_block_sizes());
+    this->F_dag_bars.emplace_back(F_dags[i].get_size_sym_set(), p, block_indices_dag, F_dags[i].get_block_sizes());
+    this->F_bars_refl.emplace_back(Fs[i].get_size_sym_set(), p, block_indices_f, Fs[i].get_block_sizes());
   }
 
   // calculate symmetry set indices
@@ -508,8 +507,6 @@ BlockOpSymQuartet::BlockOpSymQuartet(std::vector<BlockOpSymSet> Fs, std::vector<
       }
     }
   }
-  this->F_dag_bars  = F_dag_bars;
-  this->F_bars_refl = F_bars_refl;
 }
 
 /////////////// Utilities and operator overrides ///////////////
@@ -736,11 +733,8 @@ nda::array<dcomplex, 3> aaa_reflect(double beta, double Lambda, double eps, nda:
 }
 
 block_gf<dlr_imtime> BDOF_to_block_gf(BlockDiagOpFun const &BDOF, double beta, double Lambda, double eps) {
-
-  int r       = BDOF.get_num_time_nodes();
   auto dlr_rf = build_dlr_rf(Lambda, eps);
   auto itops  = imtime_ops(Lambda, dlr_rf);
-  auto dlr_it = itops.get_itnodes();
 
   // triqs gf mesh
   auto t_mesh = mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda, eps);

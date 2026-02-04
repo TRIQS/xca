@@ -29,7 +29,7 @@ class BlockDiagOpFun {
 
   public:
   BlockDiagOpFun &operator+=(const BlockDiagOpFun &G);
-  void set_blocks(std::vector<nda::array<dcomplex, 3>> &blocks);
+  void set_blocks(std::vector<nda::array<dcomplex, 3>> &new_blocks);
   void set_block(int i, nda::array_const_view<dcomplex, 3> block);
   void set_zero_block_indices(); // set zero_block_indices according to current blocks
   const std::vector<nda::array<dcomplex, 3>> &get_blocks() const;
@@ -78,9 +78,9 @@ class BlockOp {
 
   public:
   BlockOp &operator+=(const BlockOp &F);
-  void set_block_indices(nda::vector<int> &block_indices);
+  void set_block_indices(nda::vector<int> &new_block_indices);
   void set_block_index(int i, int block_index);
-  void set_blocks(std::vector<nda::array<dcomplex, 2>> &blocks);
+  void set_blocks(std::vector<nda::array<dcomplex, 2>> &new_blocks);
   void set_block(int i, nda::array_const_view<dcomplex, 2> block);
   nda::vector_const_view<int> get_block_indices() const;
   int get_block_index(int i) const;
@@ -120,9 +120,9 @@ class BlockOp3D {
   nda::array<dcomplex, 3> zero;
 
   public:
-  void set_block_indices(nda::vector<int> &block_indices);
+  void set_block_indices(nda::vector<int> &new_block_indices);
   void set_block_index(int i, int block_index);
-  void set_blocks(std::vector<nda::array<dcomplex, 3>> &blocks);
+  void set_blocks(std::vector<nda::array<dcomplex, 3>> &new_blocks);
   void set_block(int i, nda::array_const_view<dcomplex, 3> block);
   nda::vector_const_view<int> get_block_indices() const;
   int get_block_index(int i) const;
@@ -234,9 +234,9 @@ class BlockOpSymSetBar {
   int num_block_cols;
 
   public:
-  void set_block_indices(nda::vector<int> &block_indices);
+  void set_block_indices(nda::vector<int> &new_block_indices);
   void set_block_index(int i, int block_index);
-  void set_blocks(std::vector<nda::array<dcomplex, 4>> &blocks);
+  void set_blocks(std::vector<nda::array<dcomplex, 4>> &new_blocks);
   void set_block(int i, nda::array_const_view<dcomplex, 4> block);
   nda::vector_const_view<int> get_block_indices() const;
   int get_block_index(int i) const;

@@ -138,7 +138,7 @@ void DiagramEvaluator::compose_with_edge_block(Backbone &backbone, int e_ix, nda
                     itops.vals2coefs(T(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r))), TIME_ORDERED);
 }
 
-void DiagramEvaluator::multiply_prefactor(Backbone &backbone, nda::vector_const_view<int> block_dims) {
+void DiagramEvaluator::multiply_prefactor(Backbone &backbone) {
   int m = backbone.m;
   // Multiply by prefactor
   for (int m_ix = 0; m_ix < m - 1; m_ix++) {
@@ -340,7 +340,7 @@ void DiagramEvaluator::eval_self_energy_fixed_indices(Backbone &backbone, int b_
     multiply_vertex_block(backbone, v, ind_path, block_dims);
   }
 
-  multiply_prefactor(backbone, block_dims);
+  multiply_prefactor(backbone);
   int diag_order_sign = (m % 2 == 0) ? -1 : 1;
   if (backbone.get_fb(0) == 0) diag_order_sign *= -1;
   T(_, range(0, block_dims(2 * m)), range(0, block_dims(0))) *= diag_order_sign * backbone.prefactor_sign;
@@ -616,7 +616,7 @@ void DiagramEvaluator::eval_correlator_fixed_indices(CorrelatorBackbone &backbon
                     itops.vals2coefs(U(_, range(0, block_dims(2 * m)), range(0, block_dims(backbone.get_topology(0, 1) + 1)))), TIME_ORDERED);
   U = itops.reflect(U);
 
-  multiply_prefactor(backbone, block_dims);
+  multiply_prefactor(backbone);
   int diag_order_sign = (m % 2 == 1) ? -1 : 1;
   // if (backbone.get_fb(0) == 0) diag_order_sign *= -1;
   T(_, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(1))) *= diag_order_sign * backbone.prefactor_sign;

@@ -36,7 +36,7 @@ class DiagramEvaluator {
   // for block b_ix, multiply by a single vertex, v_ix, in a backbone diagram
   void compose_with_edge_block(Backbone &backbone, int e_ix, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
   // for block b_ix, convolve with a single edge, e_ix, in a backbone diagram
-  void multiply_prefactor(Backbone &backbone, nda::vector_const_view<int> block_dims); // multiply by the prefactor associated with the backbone
+  void multiply_prefactor(Backbone &backbone);
 
   // routines for self-energy diagrams
   void multiply_zero_vertex_block(Backbone &backbone, bool is_forward, int b_ix_0, int p_kap, int p_mu, nda::vector_const_view<int> ind_path,
