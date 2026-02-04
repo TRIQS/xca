@@ -173,7 +173,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     Sigma_ppsc_ser = d.compute_self_energy(topology)
 
     # Parallel diagram evaluation
-    N = d.get_num_backbones(topology)
+    N = d.get_num_self_energy_backbones(topology)
 
     par_blocks = []
     for b in range(ad.n_subspaces):
