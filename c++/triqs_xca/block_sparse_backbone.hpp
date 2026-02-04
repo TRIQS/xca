@@ -80,14 +80,21 @@ class DiagramEvaluator {
 
   // routines for any diagram
   void reset();                                                  // reset all arrays to zero
-  int get_num_backbones(nda::array_const_view<int, 2> topology); // get number of backbones for given topology
 
   // routines for self-energy diagrams
+  int get_num_self_energy_backbones(nda::array_const_view<int, 2> topology); // get number of backbones for given topology
   block_gf<dlr_imtime> compute_self_energy(nda::array_const_view<int, 2> topology);           // compute self-energy for given topology
   block_gf<dlr_imtime> compute_self_energy(nda::array_const_view<int, 2> topology, int f_ix); // compute self-energy for given topology and flat index
 
   // routines for correlator diagrams
+  int get_num_single_ptcle_gf_backbones(nda::array_const_view<int, 2> topology); // get number of backbones for given topology
   C2PY_IGNORE nda::array<dcomplex, 3> eval_correlator(CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops);
+  C2PY_IGNORE nda::array<dcomplex, 3> eval_correlator(CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops,
+                                                      int f_ix);
+  nda::array<dcomplex, 3> compute_single_ptcle_gf(nda::array_const_view<int, 2> topology);
+  // compute single particle Green's function for given topology
+  nda::array<dcomplex, 3> compute_single_ptcle_gf(nda::array_const_view<int, 2> topology, int f_ix);
+  // compute single particle Green's function for given topology and flat index
 
   /**
    * @brief Constructor for DiagramEvaluator

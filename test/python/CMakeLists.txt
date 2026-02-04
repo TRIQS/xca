@@ -19,6 +19,7 @@ set(all_tests
   one_spinful_fermion
   analytic_diagrams
   block_sparse_api
+  block_sparse_gf_api
   )
 
 foreach(test ${all_tests})

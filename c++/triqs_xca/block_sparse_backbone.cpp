@@ -563,6 +563,17 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &ba
   return correlator;
 }
 
+nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops, int f_ix) {
+  int m = backbone.m;
+  nda::vector<int> ind_path(2 * m);       // tracks block indices of factors for computing a particular block's contribution to the correlator
+  nda::vector<int> block_dims(2 * m + 1); // tracks the dimensions of the blocks in these factors
+  nda::array<dcomplex, 3> correlator = nda::zeros<dcomplex>(r, mu_ops.size(), kap_ops.size());
+  nda::array<dcomplex, 3> Tmuop      = nda::zeros<dcomplex>(r, Nmax, Nmax);
+  // loop over all flat indices
+  find_path_correlator(backbone, mu_ops, kap_ops, f_ix, ind_path, block_dims, Tmuop, correlator);
+  return correlator;
+}
+
 void DiagramEvaluator::eval_correlator_fixed_indices(CorrelatorBackbone &backbone, nda::vector_const_view<int> ind_path,
                                                      nda::vector_const_view<int> block_dims) {
 
@@ -635,7 +646,7 @@ void DiagramEvaluator::reset() {
   }
 }
 
-int DiagramEvaluator::get_num_backbones(nda::array_const_view<int, 2> topology) {
+int DiagramEvaluator::get_num_self_energy_backbones(nda::array_const_view<int, 2> topology) {
   Backbone backbone(topology, n);
   return static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), backbone.m - 1));
 }
@@ -654,4 +665,81 @@ block_gf<dlr_imtime> DiagramEvaluator::compute_self_energy(nda::array_const_view
   }
   reset();
   return {sig_blocks};
+}
+
+int DiagramEvaluator::get_num_single_ptcle_gf_backbones(nda::array_const_view<int, 2> topology) {
+  CorrelatorBackbone backbone(topology, n);
+  return static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), backbone.m - 1));
+}
+
+nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(nda::array_const_view<int, 2> topology) {
+  CorrelatorBackbone backbone(topology, n);
+  std::vector<BlockOp> mu_ops, kap_ops;
+  for (auto &F : Fq.Fs) {
+    for (int i = 0; i < F.get_size_sym_set(); ++i) {
+      std::vector<nda::array<dcomplex, 2>> mu_blocks;
+      for (int j = 0; j < F.get_num_block_cols(); ++j) {
+        if (F.get_block_index(j) != -1) {
+          mu_blocks.emplace_back(F.get_block(j)(i, _, _));
+        } else {
+          mu_blocks.emplace_back(nda::zeros<dcomplex>(1, 1));
+        }
+      }
+      nda::vector<int> block_indices = F.get_block_indices()(_);
+      BlockOp mu_op(block_indices, mu_blocks);
+      mu_ops.push_back(mu_op);
+    }
+  }
+  for (auto &F_dag : Fq.F_dags) {
+    for (int i = 0; i < F_dag.get_size_sym_set(); ++i) {
+      std::vector<nda::array<dcomplex, 2>> kap_blocks;
+      for (int j = 0; j < F_dag.get_num_block_cols(); ++j) {
+        if (F_dag.get_block_index(j) != -1) {
+          kap_blocks.emplace_back(F_dag.get_block(j)(i, _, _));
+        } else {
+          kap_blocks.emplace_back(nda::zeros<dcomplex>(1, 1));
+        }
+      }
+      nda::vector<int> block_indices = F_dag.get_block_indices()(_);
+      BlockOp kap_op(block_indices, kap_blocks);
+      kap_ops.push_back(kap_op);
+    }
+  }
+  return eval_correlator(backbone, mu_ops, kap_ops);
+}
+
+nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(nda::array_const_view<int, 2> topology, int f_ix) {
+  CorrelatorBackbone backbone(topology, n);
+  std::vector<BlockOp> mu_ops, kap_ops;
+  for (auto &F : Fq.Fs) {
+    for (int i = 0; i < F.get_size_sym_set(); ++i) {
+      std::vector<nda::array<dcomplex, 2>> mu_blocks;
+      for (int j = 0; j < F.get_num_block_cols(); ++j) {
+        if (F.get_block_index(j) != -1) {
+          mu_blocks.emplace_back(F.get_block(j)(i, _, _));
+        } else {
+          mu_blocks.emplace_back(nda::zeros<dcomplex>(1, 1));
+        }
+      }
+      nda::vector<int> block_indices = F.get_block_indices()(_);
+      BlockOp mu_op(block_indices, mu_blocks);
+      mu_ops.push_back(mu_op);
+    }
+  }
+  for (auto &F_dag : Fq.F_dags) {
+    for (int i = 0; i < F_dag.get_size_sym_set(); ++i) {
+      std::vector<nda::array<dcomplex, 2>> kap_blocks;
+      for (int j = 0; j < F_dag.get_num_block_cols(); ++j) {
+        if (F_dag.get_block_index(j) != -1) {
+          kap_blocks.emplace_back(F_dag.get_block(j)(i, _, _));
+        } else {
+          kap_blocks.emplace_back(nda::zeros<dcomplex>(1, 1));
+        }
+      }
+      nda::vector<int> block_indices = F_dag.get_block_indices()(_);
+      BlockOp kap_op(block_indices, kap_blocks);
+      kap_ops.push_back(kap_op);
+    }
+  }
+  return eval_correlator(backbone, mu_ops, kap_ops, f_ix);
 }

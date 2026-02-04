@@ -1,6 +1,7 @@
 #include <cppdlr/utils.hpp>
 #include <gtest/gtest.h>
 #include "triqs_xca/strong_cpl.hpp"
+#include <nda/algorithms.hpp>
 #include <triqs_xca/block_sparse.hpp>
 #include <triqs/atom_diag/gf.hpp>
 #include "block_sparse_utils.hpp"
@@ -317,8 +318,12 @@ TEST(Backbone, OCA_semicircle_bath_aaa) {
   auto dlr_it = itops.get_itnodes();
   Delta_F.update_inplace(Delta_decomp, dlr_it, Fs_dense, F_dags_dense); // Compression of Delta(t) and F, F_dag matrices
   Delta_F_reflect.update_inplace(Delta_decomp_reflect, dlr_it, F_dags_dense, Fs_dense);
-  nda::array<int, 2> D2 = {{0, 2}, {1, 3}}; // topology for OCA diagram evaluator
-  auto OCA_gf_old       = G_Diagram_calc_sum_all(Delta_F, Delta_F_reflect, D2, Gt_dense, itops, beta, Fs_dense, F_dags_dense);
+  nda::array<int, 2> D2                 = {{0, 2}, {1, 3}}; // topology for OCA diagram evaluator
+  auto start                            = std::chrono::high_resolution_clock::now();
+  auto OCA_gf_old                       = G_Diagram_calc_sum_all(Delta_F, Delta_F_reflect, D2, Gt_dense, itops, beta, Fs_dense, F_dags_dense);
+  auto end                              = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed = end - start;
+  std::cout << "Old dense OCA correlator evaluation took " << elapsed.count() << " seconds\n";
 
   // generic diagram evaluator
   nda::array<int, 2> topology   = {{0, 2}, {1, 3}};
@@ -349,7 +354,83 @@ TEST(Backbone, OCA_semicircle_bath_aaa) {
   }
 
   auto D      = DiagramEvaluator(beta, Lambda, eps, hyb, nda::make_regular(hyb_poles / beta), Gt, Fq);
+  start       = std::chrono::high_resolution_clock::now();
   auto OCA_gf = D.eval_correlator(B, mu_ops, kap_ops);
+  end         = std::chrono::high_resolution_clock::now();
+
+  elapsed     = end - start;
+  std::cout << "OCA correlator evaluation took " << elapsed.count() << " seconds\n";
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_gf - OCA_gf_old)), eps);
+}
+
+TEST(Backbone, OCA_py_constructors) {
+  double beta   = 2.0;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-4;
+
+  // DLR generation
+  auto dlr_rf = build_dlr_rf(Lambda, eps);
+  auto itops  = imtime_ops(Lambda, dlr_rf);
+
+  // hybridization
+  auto [Deltat, Deltat_reflect]           = discrete_bath_helper(beta, Lambda, eps);
+  auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
+  auto hyb_coeffs                         = itops.vals2coefs(Deltat); // hybridization DLR coeffs
+
+  // set up Kanamori Hamiltonian
+  triqs::operators::many_body_operator_real H;
+  fundamental_operator_set fop_set;
+  int norb = 2;
+  double U = 2.0;
+  for (int i = 0; i < norb; i++) {
+    H += U * n("up", i) * n("do", i);
+    fop_set.insert("do", i);
+  }
+  double J  = 0.2;
+  double Up = U - 2.0 * J;
+  H += (Up - J) * (n("up", 0) * n("up", 1) + n("do", 0) * n("do", 1));
+  H += Up * (n("up", 0) * n("do", 1) + n("do", 0) * n("up", 1));
+  for (int k = 0; k < norb; ++k) {
+    for (int l = 0; l < norb; ++l) {
+      if (k != l) {
+        H += J * (c_dag("up", k) * c_dag("do", k) * c("do", l) * c("up", l) + c_dag("up", k) * c_dag("do", l) * c("do", k) * c("up", l));
+      }
+    }
+  }
+  for (int i = 0; i < norb; i++) { fop_set.insert("up", i); }
+
+  // Construct particle number operator and atom_diag object
+  triqs::operators::many_body_operator_real N;
+  for (int kap = 0; kap < norb; ++kap) { N += n("up", kap) + n("do", kap); }
+  double mu = (3 * U - 5 * J) / 2 - 1.5;
+  H -= mu * N;
+  std::vector<triqs::operators::many_body_operator_real> sym_ops = {N};
+  triqs::atom_diag::atom_diag<false> ad(H, fop_set, sym_ops);
+  nda::vector<long> block_sizes(ad.n_subspaces());
+  for (int i = 0; i < ad.n_subspaces(); ++i) { block_sizes(i) = ad.get_fock_states(i).size(); }
+
+  // compute atomic propagator as a block_gf
+  auto G0_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
+  BlockDiagOpFun G0_bdof(G0_ppsc);
+
+  // set up backbone and diagram evaluator
+  nda::array<int, 2> topology = {{0, 2}, {1, 3}};
+  DiagramEvaluator D(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), hyb_coeffs, G0_ppsc, ad);
+  auto OCA_gf = D.compute_single_ptcle_gf(topology);
+
+  // compare against constructing Gt, Fq manually
+  auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs);
+  DiagramEvaluator D2(beta, Lambda, eps, Deltat, nda::make_regular(dlr_rf / beta), Gt, Fq);
+  auto OCA_gf_2 = D2.compute_single_ptcle_gf(topology);
+
+  // compare against single index gf evaluator
+  DiagramEvaluator D3(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), hyb_coeffs, G0_ppsc, ad);
+  auto OCA_gf_3 = nda::make_regular(0 * OCA_gf);
+  for (int f = 0; f < D.get_num_single_ptcle_gf_backbones(topology); ++f) { OCA_gf_3 += D3.compute_single_ptcle_gf(topology, f); }
+
+  ASSERT_LE(nda::max_element(nda::abs(D.hyb - D2.hyb)), eps);
+  ASSERT_EQ(D.hyb_poles, D2.hyb_poles);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_gf - OCA_gf_2)), 1.0e-10);
+  ASSERT_LE(nda::max_element(nda::abs(OCA_gf - OCA_gf_3)), 1.0e-10);
 }

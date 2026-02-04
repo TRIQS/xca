@@ -639,11 +639,11 @@ TEST(Backbone, OCA_gf_construct) {
 
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
-  auto B                      = Backbone(topology, 2 * norb);
   DiagramEvaluator D(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), hyb_coeffs, G0_ppsc, ad);
   auto OCA_result_gf = D.compute_self_energy(topology);
   BlockDiagOpFun OCA_result(OCA_result_gf);
 
+  // compare against constructing Gt, Fq manually
   auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs);
   DiagramEvaluator D2(beta, Lambda, eps, Deltat, nda::make_regular(dlr_rf / beta), Gt, Fq);
   auto OCA_result_2_gf = D2.compute_self_energy(topology);
@@ -713,7 +713,7 @@ TEST(Backbone, manual_loop) {
   DiagramEvaluator D(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), hyb_coeffs, G0_ppsc, ad);
   auto OCA_result = D.compute_self_energy(topology); // evaluate self-energy using built-in loop
 
-  for (int f = 0; f < D.get_num_backbones(topology); ++f) {
+  for (int f = 0; f < D.get_num_self_energy_backbones(topology); ++f) {
     OCA_result -= D.compute_self_energy(topology, f); // subtract off self-energy evaluation using manual loop
   }
   for (int i = 0; i < G0_bdof.get_num_block_cols(); ++i) { ASSERT_LE(nda::max_element(nda::abs(OCA_result[i].data())), 1e-10); }
