@@ -380,7 +380,6 @@ TEST(Backbone, OCA_semicircle_bath_aaa) {
   auto OCA_result_gf            = D.compute_self_energy(topology);
   auto OCA_result               = BlockDiagOpFun(OCA_result_gf);
 
-  // Use slightly relaxed tolerance to account for accumulated truncation errors from SVD in hyb_decomp
   ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(0) - OCA_old(_, range(0, 4), range(0, 4)))), eps);
   ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(1) - OCA_old(_, range(4, 10), range(4, 10)))), eps);
   ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(2) - OCA_old(_, range(10, 11), range(10, 11)))), eps);

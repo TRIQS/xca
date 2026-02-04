@@ -501,12 +501,12 @@ void DiagramEvaluator::find_path_correlator(CorrelatorBackbone &backbone, std::v
           }
           ++w;
         }
-        if (f_ix == 3 && kap == 2 && b_ix == 1) {}
         int ip_vct0 = ip;
 
         // now consider mu_ops[mu]
         if (path_all_nonzero) {
           for (int mu = 0; mu < mu_ops.size(); ++mu) {
+            path_all_nonzero  = true; // reset for each mu
             const auto &mu_op = mu_ops[mu];
             ip_old            = ip_vct0;
             ip                = mu_op.get_block_index(ip_vct0);
@@ -514,8 +514,7 @@ void DiagramEvaluator::find_path_correlator(CorrelatorBackbone &backbone, std::v
               path_all_nonzero = false;
             } else {
               block_dims(vct0 + 1) = mu_op.get_block_size(ip_old, 0);
-              // replace m!!!!
-              ind_path(vct0) = ip;
+              ind_path(vct0)       = ip;
 
               // traverse factors on left-hand side of diagram
               w = vct0 + 1; // reset w to the vertex connected to vertex 0
@@ -532,10 +531,9 @@ void DiagramEvaluator::find_path_correlator(CorrelatorBackbone &backbone, std::v
                 }
                 ++w;
               }
-              if (path_all_nonzero) {
+              if (path_all_nonzero && b_ix == ind_path(2 * m - 1)) {
                 // evaluate the diagram with these directions, poles, and orbital indices
                 // b_ix is the block index for the first edge
-                // DOUBLE-CHECK ALL INDEXING
                 eval_correlator_fixed_indices(backbone, ind_path, block_dims);
                 for (int t = 0; t < r; ++t) {
                   Tmuop(t, range(0, block_dims(2 * m)), range(0, block_dims(1))) =

@@ -5,8 +5,6 @@
 #include <triqs_xca/block_sparse.hpp>
 #include <triqs_xca/block_sparse_manual.hpp>
 #include <triqs_xca/block_sparse_backbone.hpp>
-// temporary include
-#include <triqs_xca/dense_backbone.hpp>
 
 using namespace nda;
 using namespace cppdlr;
@@ -267,10 +265,6 @@ int main() {
 
   auto D = DiagramEvaluator(beta, Lambda, eps, Deltat, nda::make_regular(dlr_rf / beta), Gt, Fq); // create DiagramEvaluator object
 
-  // temporary dense calculation
-  auto Fset = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs);
-  auto DD = DenseDiagramEvaluator(beta, itops, Deltat, Deltat, dlr_rf, Gt_dense, Fset);
-
   auto Deltadlr                            = itops.vals2coefs(Deltat); //obtain dlr coefficient of Delta(t)
   nda::vector<double> dlr_rf_reflect       = -dlr_rf;
   nda::array<dcomplex, 3> Deltadlr_reflect = Deltadlr * 1.0;
@@ -293,12 +287,6 @@ int main() {
     third_order_result  = BlockDiagOpFun(Sigma_third_gf);
     D.reset(); // reset the DiagramEvaluator for the next topology
 
-    // temp for verification
-    auto BB = Backbone(topologies(i, _, _), n);
-    DD.eval_self_energy(BB);
-    auto dense_result = DD.Sigma;
-    DD.reset();
-
     // Compute third-order contribution using old code
     nda::array<dcomplex, 3> TCA_old(r, N, N);
     TCA_old = 0;
@@ -318,9 +306,6 @@ int main() {
 
     std::cout << "max error in block 0: " << nda::max_element(nda::abs(TCA_old(_, range(0, 4), range(0, 4)) - third_order_result.get_block(0)))
               << std::endl;
-    std::cout << "TCA_old block 0:\n" << TCA_old(5, range(0, 4), range(0, 4)) << std::endl;
-    std::cout << "third_order_result block 0:\n" << third_order_result.get_block(0)(5, range(0, 4), range(0, 4)) << std::endl;
-    std::cout << "dense result block 0:\n" << dense_result(5, range(0, 4), range(0, 4)) << std::endl;
     std::cout << "max error in block 1: " << nda::max_element(nda::abs(TCA_old(_, range(4, 10), range(4, 10)) - third_order_result.get_block(1)))
               << std::endl;
     std::cout << "max error in block 2: " << nda::max_element(nda::abs(TCA_old(_, range(10, 11), range(10, 11)) - third_order_result.get_block(2)))
