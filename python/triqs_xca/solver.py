@@ -81,14 +81,9 @@ def Sigma_calc_loop(fd, G_iaa, max_order, verbose=True):
             print(f"PPSC: Sigma order = {ord}, n_diags = {n_diags}", flush=True)
 
         for sign, diag in all_connected_pairings(ord):
-
             #if is_root() and verbose: print(sign, diag)
+            Sigma_t += pow(-1,ord)* sign * Sigma_calc_topology(fd, G_iaa, diag)
             
-            diag_vec = np.vstack([ np.array(pair, dtype=np.int32) for pair in diag ])
-            diag_idx_vec = np.arange(n_diags, dtype=np.int32)
-            diag_idx_vec = scatter_array_over_ranks(diag_idx_vec)
-            Sigma_t += pow(-1,ord)* sign * fd.Sigma_calc_group(G_iaa, diag_vec, diag_idx_vec)
-
     mpi.COMM_WORLD.Allreduce(mpi.IN_PLACE, Sigma_t)
 
     if is_root() and verbose:
@@ -97,6 +92,17 @@ def Sigma_calc_loop(fd, G_iaa, max_order, verbose=True):
         print(f"PPSC: Sigma time {elapsed_time:2.2E}s.")
 
     return Sigma_t
+
+
+def Sigma_calc_topology(fd, G_iaa, topology):
+
+    order = len(topology)
+    n_diags = fd.number_of_diagrams(order)
+
+    diag_vec = np.vstack([ np.array(pair, dtype=np.int32) for pair in topology ])
+    diag_idx_vec = np.arange(n_diags, dtype=np.int32)
+    diag_idx_vec = scatter_array_over_ranks(diag_idx_vec)
+    return fd.Sigma_calc_group(G_iaa, diag_vec, diag_idx_vec)
 
 
 def G_calc_loop(fd, G_iaa, max_order, n_g, verbose=True):
@@ -661,6 +667,12 @@ class Solver(object):
         return Sigma_iaa
 
     
+    @timer('Pseudo-particle self-energy fix topology')
+    def calc_Sigma_topology(self, topology):
+        Sigma_iaa = Sigma_calc_topology(self.fd, self.G_iaa, topology)
+        return Sigma_iaa
+
+
     @timer("Single particle Green's function")
     def calc_spgf(self, max_order, verbose=True):
         
