@@ -119,14 +119,9 @@ def G_calc_loop(fd, G_iaa, max_order, n_g, verbose=True):
             print(f"PPSC: SPGF order = {ord}, n_diags = {n_diags}", flush=True)
             
         for sign, diag in all_connected_pairings(ord):
-
             #if is_root(): print(sign, diag)
-                
-            diag_vec = np.vstack([ np.array(pair, dtype=np.int32) for pair in diag ])
-            diag_idx_vec = np.arange(n_diags, dtype=np.int32)
-            diag_idx_vec = scatter_array_over_ranks(diag_idx_vec)
-            g_iaa += pow(-1,ord)* sign * fd.G_calc_group(G_iaa, diag_vec, diag_idx_vec)
-
+            g_iaa += pow(-1,ord)* sign * G_calc_topology(fd, G_iaa, diag)
+            
     mpi.COMM_WORLD.Allreduce(mpi.IN_PLACE, g_iaa) 
 
     if is_root() and verbose:
@@ -135,6 +130,18 @@ def G_calc_loop(fd, G_iaa, max_order, n_g, verbose=True):
         print(f"PPSC: SPGF time {elapsed_time:2.2E}s.")
         
     return g_iaa
+
+
+def G_calc_topology(fd, G_iaa, topology):
+
+    order = len(topology)
+    n_diags = fd.number_of_diagrams(order)
+
+    diag_vec = np.vstack([ np.array(pair, dtype=np.int32) for pair in topology ])
+    diag_idx_vec = np.arange(n_diags, dtype=np.int32)
+    diag_idx_vec = scatter_array_over_ranks(diag_idx_vec)
+
+    return fd.G_calc_group(G_iaa, diag_vec, diag_idx_vec)
 
 
 def eval_dlr_freq(G_xaa, z, beta, dlr_rf):
@@ -682,7 +689,13 @@ class Solver(object):
         self.g_iaa = g_iaa
         
         return g_iaa
-        
+
+
+    @timer("Single particle Green's function fix topology")
+    def calc_spgf_toplogy(self, topology):
+        g_iaa = G_calc_topology(self.fd, self.G_iaa, topology)
+        return g_iaa
+
 
     #@timer('mb dens mat')
     def get_many_body_density_matrix(self):

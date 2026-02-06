@@ -134,10 +134,12 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     Sigma_ppsc_loop = BSS.pseudo_particle_self_energy_topology_loop(topology)
     Sigma_ppsc_loop_dense = pseudo_particle_block_gf_to_dense(Sigma_ppsc_loop, BSS.ad)
 
-    
+    spgf = BSS.single_particle_greens_function_topology(topology)
+    spgf_loop = BSS.single_particle_greens_function_topology_loop(topology)
+
+
     # -- Dense solver
 
-    
     S = TriqsSolver(beta=beta, gf_struct=[['up', 2], ['dn', 2]], eps=eps, w_max=w_max)
 
     S.Delta_tau['up'] << Delta_tau
@@ -147,6 +149,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     
     Sigma_iaa = pow(-1, order) * sign * S.S.calc_Sigma_topology(topology)
 
+    spgf_iaa = S.S.calc_spgf_toplogy(topology)
     
     # -- Compare block-sparse and dense results
     
@@ -156,6 +159,8 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     Sigma_diff = np.max(np.abs(Sigma_ppsc_dense.data - Sigma_iaa))
     print(f'Sigma_diff = {Sigma_diff:2.2E}')
 
+    spgf_diff = np.max(np.abs(spgf.data - spgf_iaa))
+    print(f'spgf_diff = {spgf_diff:2.2E}')
     
     # -- Vizualize
 
@@ -231,9 +236,13 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     np.testing.assert_array_almost_equal(H_mat, S.S.H_mat)
     
     np.testing.assert_array_almost_equal(G_ppsc_dense.data, S.S.G0_iaa)
+
     np.testing.assert_array_almost_equal(Sigma_ppsc_dense.data, Sigma_iaa)
     np.testing.assert_array_almost_equal(Sigma_ppsc_loop_dense.data, Sigma_ppsc_dense.data)
-        
+
+    np.testing.assert_array_almost_equal(spgf.data, spgf_iaa)
+    np.testing.assert_array_almost_equal(spgf_loop.data, spgf.data)
+    
         
 if __name__ == '__main__':
 

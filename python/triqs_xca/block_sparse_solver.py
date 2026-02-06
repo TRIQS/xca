@@ -64,6 +64,7 @@ class BlockSparseSolver(object):
 
 
     def pseudo_particle_self_energy(self):
+        self.Sigma = self.get_zero_pseudo_particle_propagator()
         for order in range(1, self.max_order+1):
             self.Sigma += self.pseudo_particle_self_energy_order(order)
 
@@ -92,12 +93,46 @@ class BlockSparseSolver(object):
         return Sigma
     
 
-    def calc_spgf(self):
-        pass
-
-
     def get_zero_pseudo_particle_propagator(self):
         return zero_pseudo_particle_propagator(self.ad, self.mesh_tau)
+
+
+    def get_zero_single_particle_greens_function(self):
+        spgf = Gf(mesh=self.mesh_tau, target_shape=[len(self.fundamental_operators)]*2)
+        spgf.data[:] = 0.
+        return spgf
+
+
+    def single_particle_greens_function(self):
+        self.spgf = self.get_zero_single_particle_greens_function()
+        for order in range(1, self.max_order+1):
+            self.spgf += self.single_particle_greens_function_order(order)
+
+
+    def single_particle_greens_function_order(self, order):
+        spgf = self.get_zero_single_particle_greens_function()
+
+        for n in range(self.d.get_num_self_energy_backbones(topology)):
+            spgf += self.single_particle_greens_function_topology(topology)
+
+        return spgf
+
+
+    def single_particle_greens_function_topology(self, topology):
+        spgf = self.get_zero_single_particle_greens_function()
+        spgf.data[:] = self.d.compute_single_ptcle_gf(topology)
+        return spgf
+
+
+    def single_particle_greens_function_topology_loop(self, topology):
+        spgf = self.get_zero_single_particle_greens_function()
+
+        for n in range(self.d.get_num_single_ptcle_gf_backbones(topology)):
+            spgf.data[:] += self.d.compute_single_ptcle_gf(topology, n)
+
+        return spgf
+
+
 
 
 def logo():
