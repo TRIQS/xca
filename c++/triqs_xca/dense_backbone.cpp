@@ -239,35 +239,37 @@ void DenseDiagramEvaluator::eval_correlator_fixed_indices(CorrelatorBackbone &ba
   // evaluate the second sequence of backbone products and convolutions from tau to beta, using a change of variables to perform convolutions. the
   // result is another N x N matrix-valued function of tau.
   U = Gt; // U stores the result moving right to left
-  // compute U, which is the edge immediately to the left of the vertex connected to 0
-  int be = 0;
-  for (int i = 0; i < m - 1; ++i) {
-    be          = backbone.get_edge(backbone.get_topology(0, 1), i);
-    double pole = hyb_poles(backbone.get_pole_ind(i));
-    if (backbone.get_fb(i + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
-    if (be != 0) {
-      for (int t = 0; t < r; t++) { U(t, _, _) = k_it(dlr_it(t), be * pole) * U(t, _, _); }
+  if (m > 1) { // only do this for second-order and higher
+    // compute U, which is the edge immediately to the left of the vertex connected to 0
+    int be = 0;
+    for (int i = 0; i < m - 1; ++i) {
+      be          = backbone.get_edge(backbone.get_topology(0, 1), i);
+      double pole = hyb_poles(backbone.get_pole_ind(i));
+      if (backbone.get_fb(i + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
+      if (be != 0) {
+        for (int t = 0; t < r; t++) { U(t, _, _) = k_it(dlr_it(t), be * pole) * U(t, _, _); }
+      }
     }
+    for (int v = backbone.get_topology(0, 1) + 1; v < 2 * m - 1; ++v) { // loop from the special vertex to before the last vertex
+      multiply_vertex_corr(backbone, v);
+      compose_with_edge_corr(backbone, v);
+    }
+    // multiply by the last vertex
+    multiply_vertex_corr(backbone, 2 * m - 1);
+    // convolve with last edge
+    GKt         = Gt;
+    int bv      = backbone.get_vertex_Ksign(2 * m - 1); // sign on K
+    int l_ix    = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(2 * m - 1));
+    double pole = hyb_poles(l_ix);
+    if (backbone.get_vertex_direction(2 * m - 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
+    if (bv != 0) {
+      for (int t = 0; t < r; t++) { GKt(t, _, _) = k_it(dlr_it(t), -bv * pole) * GKt(t, _, _); }
+    }
+    U = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(U), TIME_ORDERED);
   }
-  for (int v = backbone.get_topology(0, 1) + 1; v < 2 * m - 1; ++v) { // loop from the special vertex to before the last vertex
-    multiply_vertex_corr(backbone, v);
-    compose_with_edge_corr(backbone, v);
-  }
-  // multiply by the last vertex
-  multiply_vertex_corr(backbone, 2 * m - 1);
-  // convolve with last edge
-  GKt         = Gt;
-  int bv      = backbone.get_vertex_Ksign(2 * m - 1); // sign on K
-  int l_ix    = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(2 * m - 1));
-  double pole = hyb_poles(l_ix);
-  if (backbone.get_vertex_direction(2 * m - 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
-  if (bv != 0) {
-    for (int t = 0; t < r; t++) { GKt(t, _, _) = k_it(dlr_it(t), -bv * pole) * GKt(t, _, _); }
-  }
-  U = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(U), TIME_ORDERED);
   U = itops.reflect(U);
 
   multiply_prefactor(backbone);
-  int diag_order_sign = (m % 2 == 1) ? -1 : 1;
+  int diag_order_sign = 1; // (m % 2 == 1) ? -1 : 1;
   T *= diag_order_sign * backbone.prefactor_sign;
 }

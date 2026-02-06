@@ -563,7 +563,8 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &ba
   return correlator;
 }
 
-nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops, int f_ix) {
+nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops,
+                                                          int f_ix) {
   int m = backbone.m;
   nda::vector<int> ind_path(2 * m);       // tracks block indices of factors for computing a particular block's contribution to the correlator
   nda::vector<int> block_dims(2 * m + 1); // tracks the dimensions of the blocks in these factors
@@ -591,44 +592,46 @@ void DiagramEvaluator::eval_correlator_fixed_indices(CorrelatorBackbone &backbon
   // result is another N x N matrix-valued function of tau.
   U(_, range(0, block_dims(backbone.get_topology(0, 1) + 1)), range(0, block_dims(backbone.get_topology(0, 1) + 1))) =
      Gt.get_block(ind_path(backbone.get_topology(0, 1)));
-  int be = 0;
-  for (int i = 0; i < m - 1; ++i) {
-    be          = backbone.get_edge(backbone.get_topology(0, 1), i);
-    double pole = hyb_poles(backbone.get_pole_ind(i));
-    if (backbone.get_fb(i + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
-    if (be != 0) {
-      for (int t = 0; t < r; t++) {
-        U(t, range(0, block_dims(backbone.get_topology(0, 1) + 1)), range(0, block_dims(backbone.get_topology(0, 1) + 1))) =
-           k_it(dlr_it(t), be * pole)
-           * U(t, range(0, block_dims(backbone.get_topology(0, 1) + 1)), range(0, block_dims(backbone.get_topology(0, 1) + 1)));
+  if (m > 1) { // only do this for second-order and higher
+    int be = 0;
+    for (int i = 0; i < m - 1; ++i) {
+      be          = backbone.get_edge(backbone.get_topology(0, 1), i);
+      double pole = hyb_poles(backbone.get_pole_ind(i));
+      if (backbone.get_fb(i + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
+      if (be != 0) {
+        for (int t = 0; t < r; t++) {
+          U(t, range(0, block_dims(backbone.get_topology(0, 1) + 1)), range(0, block_dims(backbone.get_topology(0, 1) + 1))) =
+            k_it(dlr_it(t), be * pole)
+            * U(t, range(0, block_dims(backbone.get_topology(0, 1) + 1)), range(0, block_dims(backbone.get_topology(0, 1) + 1)));
+        }
       }
     }
-  }
-  for (int v = backbone.get_topology(0, 1) + 1; v < 2 * m - 1; ++v) {
-    multiply_vertex_corr_block(backbone, v, ind_path, block_dims);
-    compose_with_edge_corr_block(backbone, v, ind_path, block_dims);
-  }
-  // multiply by the last vertex
-  multiply_vertex_corr_block(backbone, 2 * m - 1, ind_path, block_dims);
-  // convolve with last edge
-  GKt(_, range(0, block_dims(2 * m)), range(0, block_dims(2 * m))) = Gt.get_block(ind_path(2 * m - 1));
-  int bv                                                           = backbone.get_vertex_Ksign(2 * m - 1); // sign on K
-  int l_ix                                                         = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(2 * m - 1));
-  double pole                                                      = hyb_poles(l_ix);
-  if (backbone.get_vertex_direction(2 * m - 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
-  if (bv != 0) {
-    for (int t = 0; t < r; t++) {
-      GKt(t, range(0, block_dims(2 * m)), range(0, block_dims(2 * m))) =
-         k_it(dlr_it(t), -bv * pole) * GKt(t, range(0, block_dims(2 * m)), range(0, block_dims(2 * m)));
+    for (int v = backbone.get_topology(0, 1) + 1; v < 2 * m - 1; ++v) {
+      multiply_vertex_corr_block(backbone, v, ind_path, block_dims);
+      compose_with_edge_corr_block(backbone, v, ind_path, block_dims);
     }
+    // multiply by the last vertex
+    multiply_vertex_corr_block(backbone, 2 * m - 1, ind_path, block_dims);
+    // convolve with last edge
+    GKt(_, range(0, block_dims(2 * m)), range(0, block_dims(2 * m))) = Gt.get_block(ind_path(2 * m - 1));
+    int bv                                                           = backbone.get_vertex_Ksign(2 * m - 1); // sign on K
+    int l_ix                                                         = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(2 * m - 1));
+    double pole                                                      = hyb_poles(l_ix);
+    if (backbone.get_vertex_direction(2 * m - 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
+    if (bv != 0) {
+      for (int t = 0; t < r; t++) {
+        GKt(t, range(0, block_dims(2 * m)), range(0, block_dims(2 * m))) =
+          k_it(dlr_it(t), -bv * pole) * GKt(t, range(0, block_dims(2 * m)), range(0, block_dims(2 * m)));
+      }
+    }
+    U(_, range(0, block_dims(2 * m)), range(0, block_dims(backbone.get_topology(0, 1) + 1))) =
+      itops.convolve(beta, itops.vals2coefs(GKt(_, range(0, block_dims(2 * m)), range(0, block_dims(2 * m)))),
+                      itops.vals2coefs(U(_, range(0, block_dims(2 * m)), range(0, block_dims(backbone.get_topology(0, 1) + 1)))), TIME_ORDERED);
   }
-  U(_, range(0, block_dims(2 * m)), range(0, block_dims(backbone.get_topology(0, 1) + 1))) =
-     itops.convolve(beta, itops.vals2coefs(GKt(_, range(0, block_dims(2 * m)), range(0, block_dims(2 * m)))),
-                    itops.vals2coefs(U(_, range(0, block_dims(2 * m)), range(0, block_dims(backbone.get_topology(0, 1) + 1)))), TIME_ORDERED);
   U = itops.reflect(U);
 
   multiply_prefactor(backbone);
-  int diag_order_sign = (m % 2 == 1) ? -1 : 1;
+  int diag_order_sign = 1; // (m % 2 == 1) ? -1 : 1;
   // if (backbone.get_fb(0) == 0) diag_order_sign *= -1;
   T(_, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(1))) *= diag_order_sign * backbone.prefactor_sign;
 }

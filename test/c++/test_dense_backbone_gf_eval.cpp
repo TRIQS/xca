@@ -7,6 +7,50 @@
 #include <triqs_xca/backbone.hpp>
 #include <triqs_xca/dense_backbone.hpp>
 
+TEST(DenseGFBackbone, NCA) {
+  double beta   = 2.0;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-6;
+
+  // load Green's functions, field operators
+  auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
+  auto [Deltat, Deltat_refl]              = discrete_bath_helper(beta, Lambda, eps);
+
+  // DLR generation
+  auto dlr_rf        = build_dlr_rf(Lambda, eps);
+  auto itops         = imtime_ops(Lambda, dlr_rf);
+  auto const &dlr_it = itops.get_itnodes();
+  auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
+  auto Gt_refl_dense = itops.reflect(Gt_dense);
+
+  // compute Fbars and Fdagbars and store in Fset
+  auto hyb_coeffs      = itops.vals2coefs(Deltat); // hybridization DLR coeffs
+  auto hyb_refl_coeffs = itops.vals2coefs(Deltat_refl);
+  auto Fset            = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs);
+
+  // initialize Backbone and DiagramEvaluator
+  nda::array<int, 2> topology = {{0, 1}};
+  int n                       = 4;
+  auto B                      = CorrelatorBackbone(topology, 4);
+  auto C                      = DenseDiagramEvaluator(beta, itops, Deltat, Deltat_refl, dlr_rf, Gt_dense, Fset);
+  auto gf                     = C.eval_correlator(B, Fs_dense, F_dags_dense);
+
+  // compare against manually-computed NCA result
+  auto NCA_gf_dense_result = NCA_gf_dense(Gt_dense, Gt_refl_dense, Fs_dense, F_dags_dense);
+  ASSERT_LE(nda::max_element(nda::abs(gf - NCA_gf_dense_result)), eps);
+
+  // compare against old code
+  nda::vector<double> dlr_rf_reflect = -dlr_rf;
+  auto decomp                        = hyb_decomp(hyb_coeffs, dlr_rf, eps);
+  auto decomp_reflect                = hyb_decomp(hyb_refl_coeffs, dlr_rf_reflect, eps);
+  hyb_F Delta_F(16, itops.rank(), n), Delta_F_reflect(16, itops.rank(), n);
+  Delta_F.update_inplace(decomp, dlr_it, Fs_dense, F_dags_dense);
+  Delta_F_reflect.update_inplace(decomp_reflect, dlr_it, F_dags_dense, Fs_dense);
+  nda::vector<int> fb = {1};
+  auto NCA_gf_old     = G_Diagram_calc_sum_all(Delta_F, Delta_F_reflect, topology, Gt_dense, itops, beta, Fs_dense, F_dags_dense);
+  ASSERT_LE(nda::max_element(nda::abs(gf - NCA_gf_old)), eps);
+}
+
 TEST(DenseGFBackbone, OCA) {
   int n         = 4;
   double beta   = 2.0;
@@ -41,13 +85,13 @@ TEST(DenseGFBackbone, OCA) {
 
   // compare against old code
   nda::vector<double> dlr_rf_reflect = -dlr_rf;
-  auto decomp = hyb_decomp(hyb_coeffs, dlr_rf, eps);
-  auto decomp_reflect = hyb_decomp(hyb_refl_coeffs, dlr_rf_reflect, eps);
+  auto decomp                        = hyb_decomp(hyb_coeffs, dlr_rf, eps);
+  auto decomp_reflect                = hyb_decomp(hyb_refl_coeffs, dlr_rf_reflect, eps);
   hyb_F Delta_F(16, itops.rank(), n), Delta_F_reflect(16, itops.rank(), n);
   Delta_F.update_inplace(decomp, dlr_it, Fs_dense, F_dags_dense);
   Delta_F_reflect.update_inplace(decomp_reflect, dlr_it, F_dags_dense, Fs_dense);
   nda::vector<int> fb = {1, 0};
-  auto OCA_gf_old = G_Diagram_calc_sum_all(Delta_F, Delta_F_reflect, topology, Gt_dense, itops, beta, Fs_dense, F_dags_dense);
+  auto OCA_gf_old     = G_Diagram_calc_sum_all(Delta_F, Delta_F_reflect, topology, Gt_dense, itops, beta, Fs_dense, F_dags_dense);
   ASSERT_LE(nda::max_element(nda::abs(gf - OCA_gf_old)), eps);
 }
 
@@ -107,7 +151,7 @@ TEST(DenseBAckbone, OCA_semicircle_bath_aaa) {
   hyb_poles = hyb_poles * beta;
 
   // compute Fbars and Fdagbars and store in Fset
-  auto Fset            = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs);
+  auto Fset = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs);
 
   // initialize Backbone and DiagramEvaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
@@ -121,12 +165,12 @@ TEST(DenseBAckbone, OCA_semicircle_bath_aaa) {
 
   // compare against old code
   nda::vector<double> hyb_poles_reflect = -hyb_poles;
-  auto decomp = hyb_decomp(hyb_coeffs, hyb_poles, eps);
-  auto decomp_reflect = hyb_decomp(hyb_refl_coeffs, hyb_poles_reflect, eps);
+  auto decomp                           = hyb_decomp(hyb_coeffs, hyb_poles, eps);
+  auto decomp_reflect                   = hyb_decomp(hyb_refl_coeffs, hyb_poles_reflect, eps);
   hyb_F Delta_F(16, p, n), Delta_F_reflect(16, p, n);
   Delta_F.update_inplace(decomp, dlr_it, Fs_dense, F_dags_dense);
   Delta_F_reflect.update_inplace(decomp_reflect, dlr_it, F_dags_dense, Fs_dense);
   nda::vector<int> fb = {1, 0};
-  auto OCA_gf_old = G_Diagram_calc_sum_all(Delta_F, Delta_F_reflect, topology, Gt_dense, itops, beta, Fs_dense, F_dags_dense);
+  auto OCA_gf_old     = G_Diagram_calc_sum_all(Delta_F, Delta_F_reflect, topology, Gt_dense, itops, beta, Fs_dense, F_dags_dense);
   ASSERT_LE(nda::max_element(nda::abs(gf - OCA_gf_old)), eps);
 }

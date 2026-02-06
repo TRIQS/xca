@@ -116,4 +116,13 @@ spgf_par = 0 * spgf_ser
 for n in range(N):
     spgf_par += d.compute_single_ptcle_gf(topology, n)
 
+# Test NCA as well
+topo_NCA = np.array([[0, 1]], dtype=np.int32)
+spgf_ser_NCA = d.compute_single_ptcle_gf(topo_NCA)
+spgf_par_NCA = 0 * spgf_ser_NCA
+N_NCA = d.get_num_single_ptcle_gf_backbones(topo_NCA)
+for n in range(N_NCA):
+    spgf_par_NCA += d.compute_single_ptcle_gf(topo_NCA, n)
+
 assert np.allclose(spgf_ser, spgf_par, atol=1e-10)
+assert np.allclose(spgf_ser_NCA, spgf_par_NCA, atol=1e-10)
