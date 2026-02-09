@@ -8,6 +8,8 @@ from triqs.atom_diag import AtomDiag
 
 from adapol import anacont as adapol_anacont
 
+from .diag import all_connected_pairings
+
 from . import DiagramEvaluator
 
 
@@ -63,17 +65,20 @@ class BlockSparseSolver(object):
         return self.G
 
 
-    def pseudo_particle_self_energy(self):
+    def pseudo_particle_self_energy(self, max_order):
         self.Sigma = self.get_zero_pseudo_particle_propagator()
-        for order in range(1, self.max_order+1):
+        for order in range(1, max_order+1):
             self.Sigma += self.pseudo_particle_self_energy_order(order)
 
+        return self.Sigma
             
     def pseudo_particle_self_energy_order(self, order):
 
         Sigma = self.get_zero_pseudo_particle_propagator()
         
         for sign, topology in all_connected_pairings(order):
+            print(f'topology = {topology}')
+            topology = np.array(topology, dtype=np.int32)
             Sigma +=  pow(-1, order) * sign * self.pseudo_particle_self_energy_topology(topology)
             
         return Sigma
@@ -103,17 +108,28 @@ class BlockSparseSolver(object):
         return spgf
 
 
-    def single_particle_greens_function(self):
+    def single_particle_greens_function(self, max_order):
+        print('--> single_particle_greens_function')
+        print(f'max_order = {max_order}')
         self.spgf = self.get_zero_single_particle_greens_function()
-        for order in range(1, self.max_order+1):
+        print(self.spgf)
+
+        for order in range(1, max_order+1):
             self.spgf += self.single_particle_greens_function_order(order)
+        
+        return self.spgf
 
 
     def single_particle_greens_function_order(self, order):
+        print('--> single_particle_greens_function_order')
+        print(f'order = {order}')
+
         spgf = self.get_zero_single_particle_greens_function()
 
-        for n in range(self.d.get_num_self_energy_backbones(topology)):
-            spgf += self.single_particle_greens_function_topology(topology)
+        for sign, topology in all_connected_pairings(order):
+            print(f'topology = {topology}')
+            topology = np.array(topology, dtype=np.int32)
+            spgf += pow(-1, order) * sign * self.single_particle_greens_function_topology(topology)
 
         return spgf
 
