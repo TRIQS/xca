@@ -185,6 +185,7 @@ block_gf<dlr_imtime> ad_to_atom_prop(const atom_diag::atom_diag<false> &ad, doub
 }
 
 std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const atom_diag::atom_diag<false> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
+
   // Find like rows of c_connection (resp. cdag_connection), which correspond with annihilation (resp. creation) operators that have the same
   // sparsity pattern
   int n = hyb_coeffs.extent(1);
