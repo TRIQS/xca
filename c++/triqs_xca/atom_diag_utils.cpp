@@ -187,20 +187,20 @@ block_gf<dlr_imtime> ad_to_atom_prop(const atom_diag::atom_diag<false> &ad, doub
 std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const atom_diag::atom_diag<false> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
   // Find like rows of c_connection (resp. cdag_connection), which correspond with annihilation (resp. creation) operators that have the same
   // sparsity pattern
-  int norb = hyb_coeffs.extent(1) / 2;
-  nda::vector<long> sym_set_labels(2 * norb);
+  int n = hyb_coeffs.extent(1);
+  nda::vector<long> sym_set_labels(n);
   sym_set_labels = 0;
   int counter    = 1;
   for (int s = 0; s < ad.n_subspaces(); ++s) { // fill each entry of sym_sets
     int oidx0       = 1;
     bool found_oidx = false;
-    for (int i = 0; i < 2 * norb; ++i) {
+    for (int i = 0; i < n; ++i) {
       if (not found_oidx and sym_set_labels(i) != i) {
         oidx0      = i;
         found_oidx = true;
       }
     }
-    for (int oidx = oidx0; oidx < 2 * norb; ++oidx) { // loop through columns
+    for (int oidx = oidx0; oidx < n; ++oidx) { // loop through columns
       bool found_pair = false;
       for (int oidx2 = 0; oidx2 < oidx; ++oidx2) { // loop through previous rows and see if any match
         try {
@@ -223,7 +223,7 @@ std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const atom_diag::a
 
   // First pass: count how many operators belong to each symmetry group
   std::vector<int> ops_per_group(num_sym_sets, 0);
-  for (int oidx = 0; oidx < 2 * norb; ++oidx) { ops_per_group[sym_set_labels[oidx]]++; }
+  for (int oidx = 0; oidx < n; ++oidx) { ops_per_group[sym_set_labels[oidx]]++; }
 
   // Initialize operator blocks grouped by symmetry with proper dimensions
   std::vector<std::vector<nda::array<dcomplex, 3>>> c_blocks(num_sym_sets);
@@ -241,7 +241,7 @@ std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const atom_diag::a
       int dim_cdag_final = 0, dim_cdag_initial = 0;
 
       // Find a representative operator from this symmetry group to get dimensions
-      for (int oidx = 0; oidx < 2 * norb; ++oidx) {
+      for (int oidx = 0; oidx < n; ++oidx) {
         if (sym_set_labels[oidx] == gidx) {
           if (cidx == -1) {
             cidx = ad.c_connection(oidx, sidx);
@@ -270,7 +270,7 @@ std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const atom_diag::a
   // Second pass: fill the arrays
   std::vector<int> op_count_per_group(num_sym_sets, 0);
 
-  for (int oidx = 0; oidx < 2 * norb; ++oidx) {
+  for (int oidx = 0; oidx < n; ++oidx) {
     int gidx            = sym_set_labels[oidx];
     int op_idx_in_group = op_count_per_group[gidx];
 
@@ -310,16 +310,16 @@ std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const atom_diag::a
   // Fill in BlockOpSymSet objects
   nda::array<int, 2> F_block_inds     = nda::zeros<int>(num_sym_sets, ad.n_subspaces()),
                      F_dag_block_inds = nda::zeros<int>(num_sym_sets, ad.n_subspaces());
-  auto filled_F_block_inds            = nda::zeros<int>(norb);
-  for (int i = 0; i < norb; i++) {
+  auto filled_F_block_inds            = nda::zeros<int>(n);
+  for (int i = 0; i < n; i++) {
     long label = sym_set_labels(i);
     if (filled_F_block_inds(label) == 0) {
       for (int j = 0; j < ad.n_subspaces(); ++j) { F_block_inds(label, j) = ad.c_connection(i, j); }
       filled_F_block_inds(label) = 1;
     }
   }
-  auto filled_F_dag_block_inds = nda::zeros<int>(norb);
-  for (int i = 0; i < norb; i++) {
+  auto filled_F_dag_block_inds = nda::zeros<int>(n);
+  for (int i = 0; i < n; i++) {
     long label = sym_set_labels(i);
     if (filled_F_dag_block_inds(label) == 0) {
       for (int j = 0; j < ad.n_subspaces(); ++j) { F_dag_block_inds(label, j) = ad.cdag_connection(i, j); }
