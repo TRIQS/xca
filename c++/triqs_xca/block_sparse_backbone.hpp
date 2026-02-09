@@ -57,12 +57,6 @@ class DiagramEvaluator {
   void compose_with_edge_corr_block(CorrelatorBackbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
                                     nda::vector_const_view<int> block_dims);
   // compose_with_edge_block on the left side of a correlator diagram
-  void find_path_correlator(CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops, int f_ix,
-                            nda::vector_view<int> ind_path, nda::vector_view<int> block_dims, nda::array_view<dcomplex, 3> Tmuop,
-                            nda::array_view<dcomplex, 3> correlator);
-  // evaluate a diagram of a given order and topology in block-sparse storage
-  void eval_correlator_fixed_indices(CorrelatorBackbone &backbone, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
-  // evaluate a diagram with fixed orbital indices, poles, and line directions in dense storage, including prefactor
 
   public:
   double beta;                   // inverse temperature

@@ -66,8 +66,6 @@ TEST(BSGFBackbone, NCA) {
   auto Fset                               = DenseFSet(Fs_dense, F_dags_dense, itops.vals2coefs(Deltat));
   auto C                                  = DenseDiagramEvaluator(beta, itops, Deltat, Deltat_refl, dlr_rf, Gt_dense, Fset);
   auto NCA_result_gf_dense                = C.eval_correlator(B, Fs_dense, F_dags_dense);
-  std::cout << "bs slice = " << NCA_result_gf(5, _, _) << "\n";
-  std::cout << "dense slice = " << NCA_result_gf_dense(5, _, _) << "\n";
 
   ASSERT_LE(nda::max_element(nda::abs(NCA_result_gf - NCA_result_gf_dense)), 1.0e-15);
 }

@@ -132,6 +132,7 @@ class BlockOp3D {
   nda::array<int, 2> get_block_sizes() const;
   nda::vector<int> get_block_size(int i) const;
   int get_block_size(int block_ind, int dim) const;
+  void print_slice(int t) const;
 
   /**
    * @brief Constructor for BlockOpFun 

@@ -322,6 +322,17 @@ int BlockOp3D::get_block_size(int block_ind, int dim) const {
   }
 }
 
+void BlockOp3D::print_slice(int t) const {
+  for (int i = 0; i < num_block_cols; i++) {
+    std::cout << "Block " << i << " at slice " << t << ":\n";
+    if (block_indices(i) != -1) {
+      std::cout << blocks[i](t, _, _) << "\n";
+    } else {
+      std::cout << "Zero block\n";
+    }
+  }
+}
+
 /////////////// BlockOpFun (BOF) class ///////////////
 
 BlockOpFun::BlockOpFun(nda::vector_const_view<int> block_indices, std::vector<nda::array<dcomplex, 3>> &blocks) : BlockOp3D{block_indices, blocks} {}
