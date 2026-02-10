@@ -58,6 +58,9 @@ class DiagramEvaluator {
                                     nda::vector_const_view<int> block_dims);
   // compose_with_edge_block on the left side of a correlator diagram
 
+  std::vector<BlockOp> setup_mu_ops_for_single_ptcle_gf();
+  std::vector<BlockOp> setup_kap_ops_for_single_ptcle_gf();
+  
   public:
   double beta;                   // inverse temperature
   int r;                         // rank of the DLR imaginary time object
