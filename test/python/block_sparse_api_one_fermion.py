@@ -61,7 +61,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     a = -1.0
     b = +1.0
     r0 = 0.5
-    mu = 4.0
+    mu = 0.0
 
     eps = 1e-12
     lamb = 20.0 * beta
@@ -81,22 +81,28 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
 
     print(H)
     print(N_op)
-
     
     # -- Hybridization function and adapol fit
 
-    N = 55
-    Z = 1j *(np.linspace(-N, N, N + 1)) * np.pi / beta
-    Delta = make_Delta_with_cont_spec_mat(Z, semicircular, a=a, b=b, eps=eps)
-    Np = 4 # unused?
-    func, fitting_error, pol, weight = anacont(Delta, Z, tol=eps)
+    if True:
+        N = 55
+        Z = 1j *(np.linspace(-N, N, N + 1)) * np.pi / beta
+        #Delta = make_Delta_with_cont_spec_mat(Z, semicircular, a=a, b=b, eps=eps)
+        Delta = (1./Z).reshape(len(Z), 1, 1)
+        Np = 4 # unused?
+        func, fitting_error, pol, weight = anacont(Delta, Z, tol=eps)
+    else:
+        pol = np.array([0.])
+        weight = np.array([[[1.]]], dtype=complex)
 
     from triqs.gf import MeshDLRImFreq
 
     mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=lamb/beta, eps=eps)
     Delta_w = Gf(mesh=mesh_w, target_shape=[1]*2)
     iwn = np.array([ complex(x) for x in mesh_w ])
-    Delta_w.data[:] = make_Delta_with_cont_spec_mat(iwn, semicircular, a=a, b=b, eps=eps)
+
+    #Delta_w.data[:] = make_Delta_with_cont_spec_mat(iwn, semicircular, a=a, b=b, eps=eps)
+    Delta_w.data[:, 0, 0] = 1./iwn
 
     from triqs.gf import make_gf_dlr_imtime, make_gf_dlr
 
@@ -156,7 +162,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
 
     results = dict()
     
-    for order in [1, 2]:
+    for order in [1, 2, 3]:
         print(f'order = {order}')
         
         for sign, topology in all_connected_pairings(order):
@@ -220,13 +226,13 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
         from triqs.plot.mpl_interface import oplot, plt, oplotr, oploti
 
         plt.figure(figsize=(6, 8))
-        subp = [3, 1, 1]
+        subp = [4, 1, 1]
 
         plt.subplot(*subp); subp[-1] += 1
 
         oplot(G_BSS, label=None)
         
-        for i,j in product(range(16), repeat=2):
+        for i,j in product(range(G_S.shape[-1]), repeat=2):
             plt.plot(S.S.tau_i, G_S[:, i, j].real, '+-')
 
         plt.plot([], [], 'x', color='gray', label='Block-sparse (PR)')
@@ -236,9 +242,13 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
         plt.ylabel(r'$G_0(\tau)$')
 
         # -- Hybridization function
+        plt.subplot(*subp); subp[-1] += 1
+        oplot(Delta_tau)
+        plt.xlabel(r'$\tau$')
+        plt.ylabel(r'$\Delta(\tau)$]')
         
         plt.subplot(*subp); subp[-1] += 1
-        for i,j in product(range(4), repeat=2):
+        for i,j in product(range(Delta.shape[-1]), repeat=2):
             if not (Delta[:, i, j].real == 0.).all():
                 plt.plot(Z.imag, Delta[:, i, j].real, label=f'i,j = {i},{j}')
         plt.legend()
@@ -246,7 +256,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
         plt.ylabel(r'Re[$\Delta(i\omega_n)$]')
 
         plt.subplot(*subp); subp[-1] += 1
-        for i,j in product(range(4), repeat=2):
+        for i,j in product(range(Delta.shape[-1]), repeat=2):
             if not (Delta[:, i, j].imag == 0.).all():
                 plt.plot(Z.imag, Delta[:, i, j].imag, label=f'i,j = {i},{j}')
         plt.legend()
@@ -258,6 +268,10 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
         
         plt.figure(figsize=(14, 12))
         subp = [6, 4, 1]
+        #subp = [34, 4, 1]
+
+        print(len(results))
+        #exit()
 
         for topology, t in results.items():
             
@@ -314,22 +328,85 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
 
         plt.tight_layout()
         plt.savefig('figure_xca_top_cf.pdf')
+
+        # -- Analysis of 3rd order topolgy
+        
+        
+        topology = ((0, 3), (1, 4), (2, 5))
+        t = results[topology]
+
+        # -- Analytic soltuion
+
+        a = np.log(2) / beta
+
+        G_anal = - np.exp(-a * t.tau)
+        Sigma_anal = 0.5**3 * np.exp(-a * t.tau) * t.tau**4 / (2*3*4)
+        spgf_anal = 0.5**2 * np.exp(-a * beta) * (beta**2 - 2*beta*t.tau + t.tau**2) * t.tau**2 / 4
+
+        spgf_BS_ref = -0.5**2 * np.exp(-a * beta) * (beta - t.tau) * t.tau**2 / 2 # -- Found in BS code
+        
+        plt.figure(figsize=(6, 9))
+        subp = [3, 1, 1]
+
+        i, j = (0, 0)
+        #for i,j in [(0, 0)]:
+        plt.subplot(*subp); subp[-1] += 1
+        plt.title(f'Contributions from topology {topology}')
+
+        plt.plot(S.S.tau_i, G_S[:, i, j].real, '+', label='ZH numeric')
+        plt.plot(S.S.tau_i, G_BSS.data[:, i, j].real, '+', label='BS numeric')
+        plt.plot(t.tau, G_anal, '-', label='analytic')
+        
+        plt.legend()
+        plt.xlabel(r'$\tau$')
+        plt.ylabel(r'$G(\tau)$')        
+
+        #oplot(t.spgf_BSS, label=None)
+        for i,j in [(0, 0)]:
+        #for i,j in product(range(t.spgf_S.shape[-1]), repeat=2):
+            plt.subplot(*subp); subp[-1] += 1
+            plt.plot(t.tau, t.spgf_S[:, i, j].real, '+', label='ZH numeric')
+            #plt.plot(t.tau, t.spgf_S[:, i, j].imag, '+-')
+            plt.plot(t.tau, t.spgf_BSS.data[:, i, j].real, 'x', label='BS numeric')
+            plt.plot(t.tau, spgf_anal, '-', label='analytic')
+            plt.plot(t.tau, spgf_BS_ref, '--', label='expression matching BS numeric')
+            plt.xlabel(r'$\tau$')
+            plt.ylabel(r'$g(\tau)$')
+            plt.legend()
+
+        for i,j in [(0, 0)]:
+        #for i,j in product(range(t.Sigma_S.shape[-1]), repeat=2):
+            plt.subplot(*subp); subp[-1] += 1
+            plt.plot(t.tau, t.Sigma_S[:, i, j].real, '+', label='ZH numeric')
+            plt.plot(t.tau, t.Sigma_BSS.data[:, i, j].real, 'x', label='BS numeric')
+            #plt.plot(t.tau, t.Sigma_BSS[0][:, i, j].real, 'x')
+            #plt.plot(t.tau, t.Sigma_S[:, i, j].imag, '+')
+            plt.plot(t.tau, Sigma_anal, '-', label='analytic')
+            
+            plt.xlabel(r'$\tau$')
+            plt.ylabel(r'$\Sigma(\tau)$')
+            plt.legend()
+            
+        plt.tight_layout()
+        plt.savefig('figure_xca_one_fermion_3rd_order_topology_analytic_cf.pdf')
+
         plt.show()
 
+    if not verbose:
 
-    H_mat = hamiltonian_matrix(BSS.ad)    
-    np.testing.assert_array_almost_equal(H_mat, S.S.H_mat)
-    
-    np.testing.assert_array_almost_equal(G_BSS.data, G_S)
+        H_mat = hamiltonian_matrix(BSS.ad)    
+        np.testing.assert_array_almost_equal(H_mat, S.S.H_mat)
 
-    for topology, t in results.items():
-        print(f'topology = {t.topology}')
-        np.testing.assert_array_almost_equal(t.Sigma_BSS.data, d.Sigma_S)
-        np.testing.assert_array_almost_equal(t.spgf_BSS.data, d.spgf_S)
+        np.testing.assert_array_almost_equal(G_BSS.data, G_S)
+
+        for topology, t in results.items():
+            print(f'topology = {t.topology}')
+            np.testing.assert_array_almost_equal(t.Sigma_BSS.data, d.Sigma_S)
+            np.testing.assert_array_almost_equal(t.spgf_BSS.data, d.spgf_S)
 
 
 if __name__ == '__main__':
 
     test_oca_diagram_cf_block_sparse_and_dense(beta=1.0, verbose=True)
-    #test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False)
+    #test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=True)
      
