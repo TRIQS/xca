@@ -78,6 +78,7 @@ void DiagramEvaluator::multiply_vertex_block(Backbone &backbone, int v_ix, nda::
   int n_col_r = v_ix < backbone.get_topology(0, 1) ? block_dims(1) : block_dims(0);
   int b_ix    = ind_path(v_ix - 1); // block index for the vertex v_ix
 
+  /*
   if (backbone.has_vertex_bar(v_ix)) {   // F has bar
     if (backbone.has_vertex_dag(v_ix)) { // F has dagger
       for (int t = 0; t < r; t++) {
@@ -113,11 +114,45 @@ void DiagramEvaluator::multiply_vertex_block(Backbone &backbone, int v_ix, nda::
       T(t, range(0, block_dims(v_ix + 1)), range(0, n_col_r)) = k_it(dlr_it(t), bv * pole) * T(t, range(0, block_dims(v_ix + 1)), range(0, n_col_r));
     }
   }
+  */
+
+  // Get the current operator matrix F using the flags and indices of the vertex with index v_ix
+  
+  bool has_bar = backbone.has_vertex_bar(v_ix);
+  bool has_dag = backbone.has_vertex_dag(v_ix);
+
+  auto F_selector = [&]() {
+    if (has_bar) return has_dag ? Fq.F_dag_bars [q_ix].get_block(b_ix)(qo_ix, l_ix, _, _) :
+	                          Fq.F_bars_refl[q_ix].get_block(b_ix)(qo_ix, l_ix, _, _);
+    else         return has_dag ? Fq.F_dags[q_ix].get_block(b_ix)(qo_ix, _, _) :
+                                  Fq.Fs    [q_ix].get_block(b_ix)(qo_ix, _, _);
+  };
+
+  nda::array_const_view<dcomplex, 2> F{F_selector()};
+
+  // Get views on temporary storage for input and output
+  
+  nda::array_view<dcomplex, 3> T_v  = T(_, range(0, block_dims(v_ix)),     range(0, n_col_r));
+  nda::array_view<dcomplex, 3> T_vp = T(_, range(0, block_dims(v_ix + 1)), range(0, n_col_r));
+
+  // Multiply with the operator matrix F from the left
+
+  if (has_bar && !has_dag) T_v *= -1.; // Using F_bar_refl requires an extra sign ?
+  for (int t = 0; t < r; t++) T_vp(t, _, _) = matmul(F, T_v(t, _, _));
+  
+  // Multiply with scalar K(\tau) factor of the pole with index l_ix
+
+  int Ksign = backbone.get_vertex_Ksign(v_ix); // sign on K
+  if (Ksign != 0) {
+    if (backbone.get_vertex_direction(v_ix) == 0) Ksign *= -1; // For bwd dir pole -> -pole
+    for (int t = 0; t < r; t++) T_vp(t, _, _) *= k_it(dlr_it(t), Ksign * hyb_poles(l_ix));
+  }
+  
 }
 
 void DiagramEvaluator::compose_with_edge_block(Backbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
                                                nda::vector_const_view<int> block_dims) {
-
+  /*
   int n_col_r                                                            = e_ix < backbone.get_topology(0, 1) ? block_dims(1) : block_dims(0);
   int b_ix                                                               = ind_path(e_ix); // block index for the edge e_ix
   GKt(_, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1))) = Gt.get_block(b_ix);
@@ -136,9 +171,30 @@ void DiagramEvaluator::compose_with_edge_block(Backbone &backbone, int e_ix, nda
   T(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r)) =
      itops.convolve(beta, itops.vals2coefs(GKt(_, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1)))),
                     itops.vals2coefs(T(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r))), TIME_ORDERED);
+  */
+
+  int m = backbone.m;
+  int b_ix = ind_path(e_ix); // block index for the edge e_ix
+  int n_col_r = e_ix < backbone.get_topology(0, 1) ? block_dims(1) : block_dims(0);
+
+  nda::array_view<dcomplex, 3> GKt_ep = GKt(_, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1)));
+  
+  GKt_ep = Gt.get_block(b_ix);
+
+  for (int x = 0; x < m - 1; x++) {
+    int Ksign = backbone.get_edge(e_ix, x); // sign on K
+    if (Ksign != 0) {
+      if (backbone.get_fb(x + 1) == 0) Ksign *= -1; // For bwd dir pole -> -pole
+      for (int t = 0; t < r; t++) GKt_ep(t, _, _) *= k_it(dlr_it(t), Ksign * hyb_poles(backbone.get_pole_ind(x)));
+    }
+  }
+  
+  nda::array_view<dcomplex, 3> T_ep = T(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r));
+  T_ep = itops.convolve(beta, itops.vals2coefs(GKt_ep), itops.vals2coefs(T_ep), TIME_ORDERED);
 }
 
 void DiagramEvaluator::multiply_prefactor(Backbone &backbone) {
+  /*
   int m = backbone.m;
   // Multiply by prefactor
   for (int m_ix = 0; m_ix < m - 1; m_ix++) {
@@ -148,7 +204,19 @@ void DiagramEvaluator::multiply_prefactor(Backbone &backbone) {
       double om = hyb_poles(backbone.get_pole_ind(m_ix));
       if (backbone.get_fb(m_ix + 1) == 0) om = -om; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
       double k = k_it(0, Ksign * om);
-      for (int x = 0; x < exp; x++) T /= k;
+      //for (int x = 0; x < exp; x++) T /= k;
+      T /= std::pow(k, exp);
+    }
+  }
+  */
+  // Apply total prefactor comprised of inverse powers of the kernel evaluated at tau=0 and the current hybridization poles 
+  int m = backbone.m;
+  for (int m_ix = 0; m_ix < m - 1; m_ix++) {
+    int exp = backbone.get_prefactor_Kexp(m_ix);
+    if (exp != 0) {
+      int Ksign = backbone.get_prefactor_Ksign(m_ix);
+      if (backbone.get_fb(m_ix + 1) == 0) Ksign *= -1; // For bwd dir pole -> -pole
+      T *= std::pow(k_it(0, Ksign * hyb_poles(backbone.get_pole_ind(m_ix))), -exp);
     }
   }
 }
@@ -158,6 +226,7 @@ void DiagramEvaluator::multiply_prefactor(Backbone &backbone) {
 void DiagramEvaluator::multiply_zero_vertex_block(Backbone &backbone, bool is_forward, int b_ix_0, int p_kap, int p_mu,
                                                   nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims) {
 
+  /*
   int b_ix_mu = ind_path(backbone.get_topology(0, 1) - 1); // block index for F_mu
   if (is_forward) {
     for (int kap = 0; kap < Fq.sym_set_sizes(p_kap); kap++) {
@@ -203,6 +272,43 @@ void DiagramEvaluator::multiply_zero_vertex_block(Backbone &backbone, bool is_fo
            matmul(Fq.Fs[p_mu].get_block(b_ix_mu)(mu, _, _), Tmu(t, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(0))));
       }
     }
+  }
+  */
+  
+  int b_ix_mu = ind_path(backbone.get_topology(0, 1) - 1); // block index for F_mu
+
+  int v_ix = backbone.get_topology(0, 1);
+
+  nda::array_view<dcomplex, 3> T_v  = T(_, range(0, block_dims(v_ix)),     range(0, block_dims(1)));
+  nda::array_view<dcomplex, 3> T_vp = T(_, range(0, block_dims(v_ix + 1)), range(0, block_dims(0)));
+
+  nda::array_view<dcomplex, 4> Tkaps_v = Tkaps(_, _, range(0, block_dims(v_ix)), range(0, block_dims(0)));
+  nda::array_view<dcomplex, 3> Tmu_v   = Tmu  (_,    range(0, block_dims(v_ix)), range(0, block_dims(0)));
+  
+  auto F_selector = [&](bool is_forward, int b_ix_ix, int p_ix, int ix) {
+    return is_forward ? Fq.Fs    [p_ix].get_block(b_ix_ix)(ix, _, _) :
+                        Fq.F_dags[p_ix].get_block(b_ix_ix)(ix, _, _); };
+
+  // Apply F_kap operator at tau = 0 from the right
+  for (int kap = 0; kap < Fq.sym_set_sizes(p_kap); kap++) {
+    auto F_kap = F_selector(is_forward, b_ix_0, p_kap, kap);
+    for (int t = 0; t < r; t++) Tkaps_v(kap, t, _, _) = matmul(T_v(t, _, _), F_kap);
+  }
+  
+  T_vp = 0; // With intermediate result now in Tkaps, reuse T for final result 
+  int hyb_sign = is_forward ? +1. : -1.;
+
+  for (int mu = 0; mu < Fq.sym_set_sizes(p_mu); mu++) {
+    Tmu_v = 0;
+    // Multiply with hybridization function
+    for (int kap = 0; kap < Fq.sym_set_sizes(p_kap); kap++) {
+      nda::array_const_view<dcomplex, 1> hyb_oo = hyb(_, Fq.sym_set_to_orb(p_mu, mu), Fq.sym_set_to_orb(p_kap, kap));
+      for (int t = 0; t < r; t++)
+	Tmu_v(t, _, _) += hyb_sign * hyb_oo(t) * Tkaps_v(kap, t, _, _);
+    }
+    // Apply F_mu operator from the left at vertex connected to tau = 0 
+    auto F_mu = F_selector(!is_forward, b_ix_mu, p_mu, mu);
+    for (int t = 0; t < r; t++) T_vp(t, _, _) += matmul(F_mu, Tmu_v(t, _, _));
   }
 }
 
