@@ -423,8 +423,8 @@ void DiagramEvaluator::multiply_vertex_corr_block(CorrelatorBackbone &backbone, 
 void DiagramEvaluator::compose_with_edge_corr_block(CorrelatorBackbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
                                                     nda::vector_const_view<int> block_dims) {
 
-  int n_col_r                                                            = e_ix < backbone.get_topology(0, 1) ? block_dims(1) : block_dims(0);
-  int b_ix                                                               = ind_path(e_ix); // block index for the edge e_ix
+  int n_col_r = block_dims(backbone.get_topology(0, 1) + 1); // e_ix < backbone.get_topology(0, 1) ? block_dims(1) : block_dims(0);
+  int b_ix    = ind_path(e_ix);                              // block index for the edge e_ix
   GKt(_, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1))) = Gt.get_block(b_ix);
   int m                                                                  = backbone.m;
   for (int x = 0; x < m - 1; x++) {
@@ -438,6 +438,7 @@ void DiagramEvaluator::compose_with_edge_corr_block(CorrelatorBackbone &backbone
       }
     }
   }
+  std::cout << "GKt = " << GKt(_, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1))) << std::endl;
   U(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r)) =
      itops.convolve(beta, itops.vals2coefs(GKt(_, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1)))),
                     itops.vals2coefs(U(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r))), TIME_ORDERED);
@@ -461,6 +462,8 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &ba
   int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), m - 1));
   for (int f_ix = 0; f_ix < f_ix_max; ++f_ix) {
     backbone.set_flat_index(f_ix, hyb_poles); // set directions, pole indices, and orbital indices from a single integer index
+    std::cout << "Evaluating correlator with f_ix = " << f_ix << " / " << f_ix_max << std::endl;
+    std::cout << backbone << std::endl;
     /*  Example of block_dims for m = 2 (OCA): each number is an index of block_dims, and each square represents a block of a matrix 
             4            3            3            2            2            1            1            0
         --------     --------     --------     --------     --------     --------     --------     --------
@@ -468,7 +471,6 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &ba
         |      |     |      |     |      |     |      |     |      |     |      |     |      |     |      |
         --------     --------     --------     --------     --------     --------     --------     --------
     */
-    // ind_path can diverge at the vertex connected to vertex 0
 
     bool path_all_nonzero = true;
     int w = 1, ip = 0, ip_old = 0; // w loops over the vertices and edges, ip is the current block index
@@ -506,6 +508,13 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &ba
         T(_, range(0, block_dims(vct0)), range(0, block_dims(1))) *= backbone.prefactor_sign; // include sign from diag order and prefactor
         right[ind_path(0)] = T(_, range(0, block_dims(vct0)), range(0, block_dims(1)));
         right_inds(b_ix)   = ind_path(vct0 - 1);
+      }
+    }
+    std::cout << "right-hand side\n";
+    for (int i = 0; i < right.size(); ++i) {
+      if (right_inds(i) != -1) {
+        std::cout << "block index: " << right_inds(i) << "\n";
+        std::cout << right[i] << "\n";
       }
     }
 
@@ -546,12 +555,20 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &ba
               }
             }
           }
+          std::cout << "Starting U: \n";
+          std::cout << U(_, range(0, block_dims(vct0 + 1)), range(0, block_dims(vct0 + 1))) << "\n";
           for (int v = vct0 + 1; v < 2 * m - 1; ++v) {
             multiply_vertex_corr_block(backbone, v, ind_path, block_dims);
+            std::cout << "After vertex " << v << ", U: \n";
+            std::cout << U(_, range(0, block_dims(v + 1)), range(0, block_dims(vct0 + 1))) << "\n";
             compose_with_edge_corr_block(backbone, v, ind_path, block_dims);
+            std::cout << "After edge " << v << ", U: \n";
+            std::cout << U(_, range(0, block_dims(v + 1)), range(0, block_dims(vct0 + 1))) << "\n";
           }
           // multiply by the last vertex
           multiply_vertex_corr_block(backbone, 2 * m - 1, ind_path, block_dims);
+          std::cout << "After last vertex, before final convolution, U: \n";
+          std::cout << U(_, range(0, block_dims(2 * m)), range(0, block_dims(vct0 + 1))) << "\n";
           // convolve with last edge
           GKt(_, range(0, block_dims(2 * m)), range(0, block_dims(2 * m))) = Gt.get_block(ind_path(2 * m - 1));
           int bv                                                           = backbone.get_vertex_Ksign(2 * m - 1); // sign on K
@@ -567,10 +584,21 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &ba
           U(_, range(0, block_dims(2 * m)), range(0, block_dims(vct0 + 1))) =
              itops.convolve(beta, itops.vals2coefs(GKt(_, range(0, block_dims(2 * m)), range(0, block_dims(2 * m)))),
                             itops.vals2coefs(U(_, range(0, block_dims(2 * m)), range(0, block_dims(vct0 + 1)))), TIME_ORDERED);
+          std::cout << "After final convolution, U: \n";
+          std::cout << U(_, range(0, block_dims(2 * m)), range(0, block_dims(vct0 + 1))) << "\n";
         }
-        U                    = itops.reflect(U);
+        U = itops.reflect(U);
+        std::cout << "After reflection, U: \n";
+        std::cout << U(_, range(0, block_dims(2 * m)), range(0, block_dims(vct0 + 1))) << "\n";
         left[ind_path(vct0)] = U(_, range(0, block_dims(2 * m)), range(0, block_dims(vct0 + 1)));
         left_inds(b_ix)      = ind_path(2 * m - 1);
+      }
+    }
+    std::cout << "left-hand side\n";
+    for (int i = 0; i < left.size(); ++i) {
+      if (left_inds(i) != -1) {
+        std::cout << "block index: " << left_inds(i) << "\n";
+        std::cout << left[i] << "\n";
       }
     }
 
@@ -834,6 +862,13 @@ block_gf<dlr_imtime> DiagramEvaluator::compute_self_energy(nda::array_const_view
   return {sig_blocks};
 }
 
+void DiagramEvaluator::print_self_energy_backbone(nda::array_const_view<int, 2> topology, int f_ix) {
+  Backbone backbone(topology, n);
+  backbone.set_flat_index(f_ix, hyb_poles);
+  std::cout << "Self-energy backbone for f_ix = " << f_ix << ":\n";
+  std::cout << backbone << std::endl;
+}
+
 int DiagramEvaluator::get_num_single_ptcle_gf_backbones(nda::array_const_view<int, 2> topology) {
   CorrelatorBackbone backbone(topology, n);
   return static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), backbone.m - 1));
@@ -909,4 +944,11 @@ nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(nda::array_con
     }
   }
   return eval_correlator(backbone, mu_ops, kap_ops, f_ix);
+}
+
+void DiagramEvaluator::print_single_ptcle_gf_backbone(nda::array_const_view<int, 2> topology, int f_ix) {
+  CorrelatorBackbone backbone(topology, n);
+  backbone.set_flat_index(f_ix, hyb_poles);
+  std::cout << "Single-particle Green's function backbone for f_ix = " << f_ix << ":\n";
+  std::cout << backbone << std::endl;
 }

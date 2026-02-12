@@ -489,3 +489,56 @@ TEST(Backbone, OCA_py_constructors) {
   ASSERT_LE(nda::max_element(nda::abs(OCA_gf - OCA_gf_2)), 1.0e-10);
   ASSERT_LE(nda::max_element(nda::abs(OCA_gf - OCA_gf_3)), 1.0e-10);
 }
+
+TEST(Backbone, one_fermion_third_order) {
+  double beta = 2.0;
+  double Lambda = 10.0 * beta;
+  double eps = 1.0e-10;
+
+  // DLR generation
+  auto dlr_rf = build_dlr_rf(Lambda, eps);
+  auto itops = imtime_ops(Lambda, dlr_rf);
+  int r = itops.rank();
+
+  // trivial hybridization, Delta = -1/2
+  nda::array<dcomplex, 3> hyb(r, 1, 1);
+  hyb = -0.5;
+  int p = 1;
+  int norb = 1;
+  nda::array<dcomplex, 3> hyb_coeffs(p, norb, norb);
+  hyb_coeffs = 1.0;
+  nda::vector<double> hyb_poles(p);
+  hyb_poles = 0.0;
+  
+  // trivial atomic Hamiltonian, H = 0
+  triqs::operators::many_body_operator_real H;
+  double mu = 0.0;
+  triqs::operators::many_body_operator_real N;
+  N = n("0", 0);
+  H = -mu * N;
+  fundamental_operator_set fop_set;
+  fop_set.insert("0", 0);
+  triqs::atom_diag::atom_diag<false> ad(H, fop_set);
+  auto G0_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
+  BlockDiagOpFun G0_bdof(G0_ppsc);
+  auto dlr_it = itops.get_itnodes();
+  auto G0_ana = nda::zeros<double>(r);
+  for (int i = 0; i < r; ++i) {
+    double t = rel2abs(dlr_it(i));
+    G0_ana(i) = -exp(-t * std::numbers::ln2);
+  }
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    ASSERT_LE(nda::max_element(nda::abs(G0_bdof.get_block(b)(_, 0, 0) - G0_ana)), eps);
+  }
+
+  // set up backbone and diagram evaluator
+  nda::array<int, 2> topology = {{0, 3}, {1, 4}, {2, 5}};
+  DiagramEvaluator D(beta, Lambda, eps, hyb_poles, hyb_coeffs, G0_ppsc, ad);
+  auto third_order_gf = D.compute_single_ptcle_gf(topology);
+  auto third_order_gf_ana = nda::zeros<double>(r);
+  for (int i = 0; i < r; ++i) {
+    double t = rel2abs(dlr_it(i));
+    third_order_gf_ana(i) = (1.0 - t) * (1.0 - t) * t * t / 2.0;
+  }
+  ASSERT_LE(nda::max_element(nda::abs(third_order_gf(_, 0, 0) - third_order_gf_ana)), eps);
+}

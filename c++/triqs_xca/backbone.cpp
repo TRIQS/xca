@@ -441,16 +441,7 @@ std::ostream &operator<<(std::ostream &os, CorrelatorBackbone &B) {
       v_str_tmp += "l";
       for (int j = 0; j < B.get_vertex_hyb_ind(i); j++) v_str_tmp += "`";
     }
-    // hybridization
-    /*
-    if (i == B.get_topology(0, 1)) {
-      v_str_tmp += " Delta_{";
-      if (B.has_vertex_dag(i) == 1)
-        v_str_tmp += "0," + std::to_string(i) + "} ";
-      else
-        v_str_tmp += std::to_string(i) + ",0}";
-    } else
-     */
+
     v_str_tmp += " ";
     int vlen0 = v_str_tmp.size();
     for (int j = vlen0; j < diag_str_cent - 2; j++) v_str_tmp = " " + v_str_tmp;
