@@ -87,8 +87,8 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     if True:
         N = 55
         Z = 1j *(np.linspace(-N, N, N + 1)) * np.pi / beta
-        #Delta = make_Delta_with_cont_spec_mat(Z, semicircular, a=a, b=b, eps=eps)
-        Delta = (1./Z).reshape(len(Z), 1, 1)
+        Delta = make_Delta_with_cont_spec_mat(Z, semicircular, a=a, b=b, eps=eps)
+        #Delta = (1./Z).reshape(len(Z), 1, 1)
         Np = 4 # unused?
         func, fitting_error, pol, weight = anacont(Delta, Z, tol=eps)
     else:
@@ -101,8 +101,8 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     Delta_w = Gf(mesh=mesh_w, target_shape=[1]*2)
     iwn = np.array([ complex(x) for x in mesh_w ])
 
-    #Delta_w.data[:] = make_Delta_with_cont_spec_mat(iwn, semicircular, a=a, b=b, eps=eps)
-    Delta_w.data[:, 0, 0] = 1./iwn
+    Delta_w.data[:] = make_Delta_with_cont_spec_mat(iwn, semicircular, a=a, b=b, eps=eps)
+    #Delta_w.data[:, 0, 0] = 1./iwn
 
     from triqs.gf import make_gf_dlr_imtime, make_gf_dlr
 
@@ -331,64 +331,64 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
 
         # -- Analysis of 3rd order topolgy
         
-        
-        topology = ((0, 3), (1, 4), (2, 5))
-        t = results[topology]
+        if False:
+            topology = ((0, 3), (1, 4), (2, 5))
+            t = results[topology]
 
-        # -- Analytic soltuion
+            # -- Analytic soltuion
 
-        a = np.log(2) / beta
+            a = np.log(2) / beta
 
-        G_anal = - np.exp(-a * t.tau)
-        Sigma_anal = 0.5**3 * np.exp(-a * t.tau) * t.tau**4 / (2*3*4)
-        spgf_anal = 0.5**2 * np.exp(-a * beta) * (beta**2 - 2*beta*t.tau + t.tau**2) * t.tau**2 / 4
+            G_anal = - np.exp(-a * t.tau)
+            Sigma_anal = 0.5**3 * np.exp(-a * t.tau) * t.tau**4 / (2*3*4)
+            spgf_anal = 0.5**2 * np.exp(-a * beta) * (beta**2 - 2*beta*t.tau + t.tau**2) * t.tau**2 / 4
 
-        spgf_BS_ref = -0.5**2 * np.exp(-a * beta) * (beta - t.tau) * t.tau**2 / 2 # -- Found in BS code
-        
-        plt.figure(figsize=(6, 9))
-        subp = [3, 1, 1]
+            spgf_BS_ref = -0.5**2 * np.exp(-a * beta) * (beta - t.tau) * t.tau**2 / 2 # -- Found in BS code
 
-        i, j = (0, 0)
-        #for i,j in [(0, 0)]:
-        plt.subplot(*subp); subp[-1] += 1
-        plt.title(f'Contributions from topology {topology}')
+            plt.figure(figsize=(6, 9))
+            subp = [3, 1, 1]
 
-        plt.plot(S.S.tau_i, G_S[:, i, j].real, '+', label='ZH numeric')
-        plt.plot(S.S.tau_i, G_BSS.data[:, i, j].real, '+', label='BS numeric')
-        plt.plot(t.tau, G_anal, '-', label='analytic')
-        
-        plt.legend()
-        plt.xlabel(r'$\tau$')
-        plt.ylabel(r'$G(\tau)$')        
-
-        #oplot(t.spgf_BSS, label=None)
-        for i,j in [(0, 0)]:
-        #for i,j in product(range(t.spgf_S.shape[-1]), repeat=2):
+            i, j = (0, 0)
+            #for i,j in [(0, 0)]:
             plt.subplot(*subp); subp[-1] += 1
-            plt.plot(t.tau, t.spgf_S[:, i, j].real, '+', label='ZH numeric')
-            #plt.plot(t.tau, t.spgf_S[:, i, j].imag, '+-')
-            plt.plot(t.tau, t.spgf_BSS.data[:, i, j].real, 'x', label='BS numeric')
-            plt.plot(t.tau, spgf_anal, '-', label='analytic')
-            plt.plot(t.tau, spgf_BS_ref, '--', label='expression matching BS numeric')
-            plt.xlabel(r'$\tau$')
-            plt.ylabel(r'$g(\tau)$')
-            plt.legend()
+            plt.title(f'Contributions from topology {topology}')
 
-        for i,j in [(0, 0)]:
-        #for i,j in product(range(t.Sigma_S.shape[-1]), repeat=2):
-            plt.subplot(*subp); subp[-1] += 1
-            plt.plot(t.tau, t.Sigma_S[:, i, j].real, '+', label='ZH numeric')
-            plt.plot(t.tau, t.Sigma_BSS.data[:, i, j].real, 'x', label='BS numeric')
-            #plt.plot(t.tau, t.Sigma_BSS[0][:, i, j].real, 'x')
-            #plt.plot(t.tau, t.Sigma_S[:, i, j].imag, '+')
-            plt.plot(t.tau, Sigma_anal, '-', label='analytic')
-            
-            plt.xlabel(r'$\tau$')
-            plt.ylabel(r'$\Sigma(\tau)$')
+            plt.plot(S.S.tau_i, G_S[:, i, j].real, '+', label='ZH numeric')
+            plt.plot(S.S.tau_i, G_BSS.data[:, i, j].real, '+', label='BS numeric')
+            plt.plot(t.tau, G_anal, '-', label='analytic')
+
             plt.legend()
-            
-        plt.tight_layout()
-        plt.savefig('figure_xca_one_fermion_3rd_order_topology_analytic_cf.pdf')
+            plt.xlabel(r'$\tau$')
+            plt.ylabel(r'$G(\tau)$')        
+
+            #oplot(t.spgf_BSS, label=None)
+            for i,j in [(0, 0)]:
+            #for i,j in product(range(t.spgf_S.shape[-1]), repeat=2):
+                plt.subplot(*subp); subp[-1] += 1
+                plt.plot(t.tau, t.spgf_S[:, i, j].real, '+', label='ZH numeric')
+                #plt.plot(t.tau, t.spgf_S[:, i, j].imag, '+-')
+                plt.plot(t.tau, t.spgf_BSS.data[:, i, j].real, 'x', label='BS numeric')
+                plt.plot(t.tau, spgf_anal, '-', label='analytic')
+                plt.plot(t.tau, spgf_BS_ref, '--', label='expression matching BS numeric')
+                plt.xlabel(r'$\tau$')
+                plt.ylabel(r'$g(\tau)$')
+                plt.legend()
+
+            for i,j in [(0, 0)]:
+            #for i,j in product(range(t.Sigma_S.shape[-1]), repeat=2):
+                plt.subplot(*subp); subp[-1] += 1
+                plt.plot(t.tau, t.Sigma_S[:, i, j].real, '+', label='ZH numeric')
+                plt.plot(t.tau, t.Sigma_BSS.data[:, i, j].real, 'x', label='BS numeric')
+                #plt.plot(t.tau, t.Sigma_BSS[0][:, i, j].real, 'x')
+                #plt.plot(t.tau, t.Sigma_S[:, i, j].imag, '+')
+                plt.plot(t.tau, Sigma_anal, '-', label='analytic')
+
+                plt.xlabel(r'$\tau$')
+                plt.ylabel(r'$\Sigma(\tau)$')
+                plt.legend()
+
+            plt.tight_layout()
+            plt.savefig('figure_xca_one_fermion_3rd_order_topology_analytic_cf.pdf')
 
         plt.show()
 
@@ -401,12 +401,12 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
 
         for topology, t in results.items():
             print(f'topology = {t.topology}')
-            np.testing.assert_array_almost_equal(t.Sigma_BSS.data, d.Sigma_S)
-            np.testing.assert_array_almost_equal(t.spgf_BSS.data, d.spgf_S)
+            np.testing.assert_array_almost_equal(t.Sigma_BSS.data, t.Sigma_S)
+            np.testing.assert_array_almost_equal(t.spgf_BSS.data, t.spgf_S)
 
 
 if __name__ == '__main__':
 
-    test_oca_diagram_cf_block_sparse_and_dense(beta=1.0, verbose=True)
-    #test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=True)
+    #test_oca_diagram_cf_block_sparse_and_dense(beta=1.0, verbose=True)
+    test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=True)
      
