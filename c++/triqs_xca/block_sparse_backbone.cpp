@@ -529,7 +529,7 @@ void DiagramEvaluator::multiply_vertex_corr_block(CorrelatorBackbone &backbone, 
 void DiagramEvaluator::compose_with_edge_corr_block(CorrelatorBackbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
                                                     nda::vector_const_view<int> block_dims) {
 
-  int n_col_r                                                            = e_ix < backbone.get_topology(0, 1) ? block_dims(1) : block_dims(0);
+  int n_col_r                                                            = block_dims(backbone.get_topology(0, 1) + 1);
   int b_ix                                                               = ind_path(e_ix); // block index for the edge e_ix
   GKt(_, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1))) = Gt.get_block(b_ix);
   int m                                                                  = backbone.m;
