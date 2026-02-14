@@ -185,7 +185,8 @@ void DiagramEvaluator::compose_with_edge_block(Backbone &backbone, int e_ix, nda
     int Ksign = backbone.get_edge(e_ix, x); // sign on K
     if (Ksign != 0) {
       if (backbone.get_fb(x + 1) == 0) Ksign *= -1; // For bwd dir pole -> -pole
-      for (int t = 0; t < r; t++) GKt_ep(t, _, _) *= k_it(dlr_it(t), Ksign * hyb_poles(backbone.get_pole_ind(x)));
+      for (int t = 0; t < r; t++)
+	GKt_ep(t, _, _) *= k_it(dlr_it(t), Ksign * hyb_poles(backbone.get_pole_ind(x)));
     }
   }
   
@@ -308,7 +309,8 @@ void DiagramEvaluator::multiply_zero_vertex_block(Backbone &backbone, bool is_fo
     }
     // Apply F_mu operator from the left at vertex connected to tau = 0 
     auto F_mu = F_selector(!is_forward, b_ix_mu, p_mu, mu);
-    for (int t = 0; t < r; t++) T_vp(t, _, _) += matmul(F_mu, Tmu_v(t, _, _));
+    for (int t = 0; t < r; t++)
+      T_vp(t, _, _) += matmul(F_mu, Tmu_v(t, _, _));
   }
 }
 
@@ -325,6 +327,8 @@ void DiagramEvaluator::find_path_self_energy(Backbone &backbone, int f_ix, nda::
       --------     --------     --------     --------     --------     --------     --------
   */
   // ind_path can diverge at the vertex connected to vertex 0
+
+  /*
   for (int b_ix = 0; b_ix < Gt.get_num_block_cols(); b_ix++) { // loop over blocks of self-energy
     for (int p_kap = 0; p_kap < q; p_kap++) {                  // loop over symmetry sets on the zero vertex
       bool path_all_nonzero = true;
@@ -403,6 +407,80 @@ void DiagramEvaluator::find_path_self_energy(Backbone &backbone, int f_ix, nda::
     }
   }
   backbone.reset_all_inds(); // reset directions, pole indices, and orbital indices for the next iteration
+  */
+
+  int w1 = backbone.get_topology(0, 1); // vertex connected to zero
+
+  auto F_selector_p_ix = [&](int w, int p_ix) { return backbone.has_vertex_dag(w) ? Fq.F_dags[p_ix] : Fq.Fs[p_ix];};
+  auto F_selector = [&](int w) { return F_selector_p_ix(w, Fq.sym_set_labels(backbone.get_orb_ind(w))); };
+
+  bool incomplete_path;
+  auto is_path_incomplete = [&](int w, int ip) { return (ip == -1 || (w < 2 * m - 1 && Gt.get_zero_block_index(ip) == -1)); };
+  
+  for (int b_ix = 0; b_ix < Gt.get_num_block_cols(); b_ix++) { // loop over blocks of self-energy
+    for (int p_kap = 0; p_kap < q; p_kap++) {                  // loop over symmetry sets on the zero vertex
+
+      // traverse factors in two halves
+      // -----------------------------------------------------------------------------------
+      // first half: all vertices before vertex connected to zero
+
+      // ind_path setup 1
+
+      int ip = -1; // running block index
+      
+      for(int w = 0; w < w1; w++) {
+	ip = (w == 0) ? F_selector_p_ix(w, p_kap).get_block_index(b_ix) : F_selector(w).get_block_index(ip);
+	incomplete_path = is_path_incomplete(w, ip);
+	if (incomplete_path) break;
+	ind_path(w) = ip;
+      }
+
+      if (incomplete_path) continue;
+
+      // block_dims setup 1
+      
+      block_dims(0) = F_selector_p_ix(0, p_kap).get_block_size(b_ix, 1);
+      block_dims(1) = F_selector_p_ix(0, p_kap).get_block_size(b_ix, 0);
+
+      for(int w = 0; w < w1 - 1; w++) {
+	block_dims(w + 2) = F_selector(w + 1).get_block_size(ind_path(w), 0);
+      }
+      
+      // -----------------------------------------------------------------------------------
+      // second half: vertex connected to zero and above
+      
+      for (int p_mu = 0; p_mu < q; p_mu++) { // loop over symmetry sets on the vertex connected to vertex 0?
+
+	// ind_path setup 2
+	
+	ip = ind_path(w1 - 1);
+
+	for(int w = w1; w < 2*m; w++) {
+	  ip = (w == w1) ? F_selector_p_ix(w, p_mu).get_block_index(ip) : F_selector(w).get_block_index(ip);
+	  incomplete_path = is_path_incomplete(w, ip);
+	  if (incomplete_path) break;
+	  if( w < 2 * m - 1) ind_path(w) = ip;
+	}
+
+	if (incomplete_path) continue;
+
+	// block_dims setup 2
+	
+	block_dims(w1 + 1) = F_selector_p_ix(w1, p_mu).get_block_size(ind_path(w1 - 1), 0);
+	
+	for(int w = w1; w < 2*m - 1; w++) {
+	  block_dims(w + 2) = F_selector(w + 1).get_block_size(ind_path(w), 0);
+	}
+
+	// evaluate the diagram with these directions, poles, and orbital indices
+	// b_ix is the block index for the first edge
+	eval_self_energy_fixed_indices(backbone, b_ix, p_kap, p_mu, ind_path, block_dims);
+
+      }
+    }
+  }
+  backbone.reset_all_inds(); // reset directions, pole indices, and orbital indices for the next iteration
+
 }
 
 void DiagramEvaluator::eval_self_energy(Backbone &backbone, int f_ix) {
