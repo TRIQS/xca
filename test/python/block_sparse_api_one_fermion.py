@@ -1,4 +1,23 @@
+""" Analytic test of diagrammatics for a single Fermion
+(and comparison to Z. Huang's code)
 
+Using a hybridization function with a single pole $\omega$
+
+..math::
+    \Delta(\tau) = K(\tau, \omega)
+
+and degenerate atomic states giving a pseudo particle Green's function
+that is proportional to the identity with a single exponential decay
+
+..math:: 
+    G(\tau) = - 2^{-\tau / \beta}
+
+with $G(\beta) = -1/2$.
+
+In this case it is possible to derive analytic expressions for the self energy
+and single particle Green's function diagrams, see separate notebook in the examples folder.
+
+"""
 
 from itertools import product
 
@@ -18,6 +37,70 @@ from triqs_xca.triqs_solver import TriqsSolver
 from triqs_xca.block_sparse_solver import BlockSparseSolver
 
 from triqs_xca.block_sparse_solver import hamiltonian_matrix, pseudo_particle_block_gf_to_dense
+
+
+def get_analytic_solution():
+
+    """ For details see separate notebook in the examples folder """
+
+    import sympy as sp
+
+    class Dummuy():
+        def __init__(self): pass
+
+    d = Dummy()
+
+    t, t1, t2, t3, t4 = sp.symbols(r'\tau \tau_1 \tau_2 \tau_3 \tau_4', positive=True)
+    b, w = sp.symbols(r'\beta \omega', nonzero=True)
+    K = lambda t, w : -sp.exp(-w*t)/(1 + sp.exp(-b*w))
+
+    # -- ppgf
+    
+    G = -sp.exp(-sp.ln(2) / b * t).simplify()
+    d.Gfunc = sp.lambdify([t, b], G)
+
+    # -- 1st order Sigma
+    
+    Sigma_01_00 = K(t, -w) * G
+    Sigma_01_11 = K(t, w) * G 
+
+    d.Sfunc_01_00 = sp.lambdify([t, b, w], Sigma_01_00)
+    d.Sfunc_01_11 = sp.lambdify([t, b, w], Sigma_01_11)
+
+    # -- 3rd order Sigma
+
+    I4 = sp.integrate(sp.exp(+w*t4), (t4, 0, t3))
+    I3 = sp.integrate(sp.exp(-w*t3) * I4, (t3, 0, t2)) 
+    I2 = sp.integrate(sp.exp(+w*t2) * I3, (t2, 0, t1)).simplify()
+    I1 = sp.integrate(sp.exp(-w*t1) * I2, (t1, 0, t))
+
+    Sigma_031425_00 = G * K(0, -w)**2 * K(0, w) * sp.exp(w*t) * I1
+    Sigma_031425_00 = Sigma_031425_00.simplify()
+
+    d.Sfunc_031425_00 = sp.lambdify([t, b, w], Sigma_031425_00)
+
+    I4 = sp.integrate(sp.exp(-w*t4), (t4, 0, t3))
+    I3 = sp.integrate(sp.exp(+w*t3) * I4, (t3, 0, t2)) 
+    I2 = sp.integrate(sp.exp(-w*t2) * I3, (t2, 0, t1)).simplify()
+    I1 = sp.integrate(sp.exp(+w*t1) * I2, (t1, 0, t))
+
+    Sigma_031425_11 = G * K(0, w)**2 * K(0, -w) * sp.exp(-w*t) * I1
+    Sigma_031425_11 = Sigma_031425_11.simplify()
+
+    d.Sfunc_031425_11 = sp.lambdify([t, b, w], Sigma_031425_11)
+
+    # -- 3rd order spgf
+
+    IL = sp.integrate(sp.exp(w*(t1 - t2)), (t2, t, t1), (t1, t, b))
+    IR = sp.integrate(sp.exp(w*(-t3 + t4)), (t4, 0, t3), (t3, 0, t))
+    
+    spgf_031425 = K(0, w) * K(0, -w) * IL * IR / 2
+    spgf_031425 = spgf_031425.simplify()
+
+    d.spgf_func_031425 = sp.lambdify([t, b, w], spgf_031425)
+    
+    return d
+
 
 
 class Dummy():
@@ -62,9 +145,12 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     b = +1.0
     r0 = 0.5
     mu = 0.0
-
+    e1 = 0.8
+    
     eps = 1e-12
-    lamb = 20.0 * beta
+    #lamb = 20.0 * beta
+    lamb = 200.0 * beta
+    
     w_max = lamb / beta
 
     # -- Local Hamiltonian
@@ -87,10 +173,13 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     if True:
         N = 55
         Z = 1j *(np.linspace(-N, N, N + 1)) * np.pi / beta
-        Delta = make_Delta_with_cont_spec_mat(Z, semicircular, a=a, b=b, eps=eps)
+        #Delta = make_Delta_with_cont_spec_mat(Z, semicircular, a=a, b=b, eps=eps)
         #Delta = (1./Z).reshape(len(Z), 1, 1)
+        Delta = (1./(Z - e1)).reshape(len(Z), 1, 1)
         Np = 4 # unused?
         func, fitting_error, pol, weight = anacont(Delta, Z, tol=eps)
+        print(f'pol = {pol}')
+        print(f'weight = {weight}')
     else:
         pol = np.array([0.])
         weight = np.array([[[1.]]], dtype=complex)
@@ -101,8 +190,9 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     Delta_w = Gf(mesh=mesh_w, target_shape=[1]*2)
     iwn = np.array([ complex(x) for x in mesh_w ])
 
-    Delta_w.data[:] = make_Delta_with_cont_spec_mat(iwn, semicircular, a=a, b=b, eps=eps)
+    #Delta_w.data[:] = make_Delta_with_cont_spec_mat(iwn, semicircular, a=a, b=b, eps=eps)
     #Delta_w.data[:, 0, 0] = 1./iwn
+    Delta_w.data[:, 0, 0] = 1./(iwn - e1)
 
     from triqs.gf import make_gf_dlr_imtime, make_gf_dlr
 
@@ -329,59 +419,147 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
         plt.tight_layout()
         plt.savefig('figure_xca_top_cf.pdf')
 
-        # -- Analysis of 3rd order topolgy
-        
-        if False:
-            topology = ((0, 3), (1, 4), (2, 5))
+        # -- Analysis of 1st order topolgy
+
+        if True:
+            topology = ((0, 1),)
             t = results[topology]
 
             # -- Analytic soltuion
 
-            a = np.log(2) / beta
+            ana = get_analytic_solution()
+            G_anal = ana.Gfunc(t.tau, beta)
+            Sigma_anal_00 = ana.Sfunc_01_00(t.tau, beta, e1)
+            Sigma_anal_11 = ana.Sfunc_01_11(t.tau, beta, e1)
 
-            G_anal = - np.exp(-a * t.tau)
-            Sigma_anal = 0.5**3 * np.exp(-a * t.tau) * t.tau**4 / (2*3*4)
-            spgf_anal = 0.5**2 * np.exp(-a * beta) * (beta**2 - 2*beta*t.tau + t.tau**2) * t.tau**2 / 4
+            if False:
+                a = np.log(2) / beta
+                def K(tau, omega): return -np.exp(-omega * tau) / (1 + np.exp(-beta * omega))
+                G_anal = - np.exp(-a * t.tau)
+                Sigma_anal1 = np.exp(-a * t.tau) * -K(t.tau, e1)
+                Sigma_anal2 = np.exp(-a * t.tau) * -K(beta - t.tau, e1)
 
-            spgf_BS_ref = -0.5**2 * np.exp(-a * beta) * (beta - t.tau) * t.tau**2 / 2 # -- Found in BS code
+                #spgf_anal = 0.5**2 * np.exp(-a * beta) * (beta**2 - 2*beta*t.tau + t.tau**2) * t.tau**2 / 4
+                #spgf_BS_ref = -0.5**2 * np.exp(-a * beta) * (beta - t.tau) * t.tau**2 / 2 # -- Found in BS code
 
-            plt.figure(figsize=(6, 9))
-            subp = [3, 1, 1]
+            plt.figure(figsize=(6, 6))
+            subp = [2, 2, 1]
 
-            i, j = (0, 0)
-            #for i,j in [(0, 0)]:
-            plt.subplot(*subp); subp[-1] += 1
-            plt.title(f'Contributions from topology {topology}')
-
-            plt.plot(S.S.tau_i, G_S[:, i, j].real, '+', label='ZH numeric')
-            plt.plot(S.S.tau_i, G_BSS.data[:, i, j].real, '+', label='BS numeric')
-            plt.plot(t.tau, G_anal, '-', label='analytic')
-
-            plt.legend()
-            plt.xlabel(r'$\tau$')
-            plt.ylabel(r'$G(\tau)$')        
-
-            #oplot(t.spgf_BSS, label=None)
+            #i, j = (0, 0)
+            #for i,j in [(0, 0), (1, 1)]:
             for i,j in [(0, 0)]:
-            #for i,j in product(range(t.spgf_S.shape[-1]), repeat=2):
                 plt.subplot(*subp); subp[-1] += 1
-                plt.plot(t.tau, t.spgf_S[:, i, j].real, '+', label='ZH numeric')
-                #plt.plot(t.tau, t.spgf_S[:, i, j].imag, '+-')
-                plt.plot(t.tau, t.spgf_BSS.data[:, i, j].real, 'x', label='BS numeric')
-                plt.plot(t.tau, spgf_anal, '-', label='analytic')
-                plt.plot(t.tau, spgf_BS_ref, '--', label='expression matching BS numeric')
+                if i == 0 : plt.title(f'topology {topology}')
+
+                plt.plot(S.S.tau_i, G_S[:, i, j].real, '+', label='ZH numeric')
+                plt.plot(S.S.tau_i, G_BSS.data[:, i, j].real, '+', label='BS numeric')
+                plt.plot(t.tau, G_anal, '-', label='analytic')
+
+                plt.legend()
                 plt.xlabel(r'$\tau$')
-                plt.ylabel(r'$g(\tau)$')
+                plt.ylabel(r'$G(\tau)$')        
+
+            plt.subplot(*subp); subp[-1] += 1
+            if False:
+                #oplot(t.spgf_BSS, label=None)
+                for i,j in [(0, 0)]:
+                #for i,j in product(range(t.spgf_S.shape[-1]), repeat=2):
+                    plt.subplot(*subp); subp[-1] += 1
+                    plt.plot(t.tau, t.spgf_S[:, i, j].real, '+', label='ZH numeric')
+                    #plt.plot(t.tau, t.spgf_S[:, i, j].imag, '+-')
+                    plt.plot(t.tau, t.spgf_BSS.data[:, i, j].real, 'x', label='BS numeric')
+                    #plt.plot(t.tau, spgf_anal, '-', label='analytic')
+                    #plt.plot(t.tau, spgf_BS_ref, '--', label='expression matching BS numeric')
+                    plt.xlabel(r'$\tau$')
+                    plt.ylabel(r'$g(\tau)$')
+                    plt.legend()
+
+            for i,j in [(0, 0), (1, 1)]:
+                plt.subplot(*subp); subp[-1] += 1
+            #for i,j in product(range(t.Sigma_S.shape[-1]), repeat=2):
+                plt.plot(t.tau, t.Sigma_S[:, i, j].real, '+', label='ZH numeric')
+                plt.plot(t.tau, t.Sigma_BSS.data[:, i, j].real, 'x', label='BS numeric')
+                #plt.plot(t.tau, t.Sigma_BSS[0][:, i, j].real, 'x')
+                #plt.plot(t.tau, t.Sigma_S[:, i, j].imag, '+')
+                if i == 0:
+                    plt.plot(t.tau, Sigma_anal_00, '-', label='analytic')
+                else:
+                    plt.plot(t.tau, Sigma_anal_11, '-', label='analytic')
+
+                plt.xlabel(r'$\tau$')
+                plt.ylabel(r'$\Sigma_{' + f'{i},{j}' + r'}(\tau)$')
                 plt.legend()
 
+            plt.tight_layout()
+            plt.savefig('figure_xca_one_fermion_1st_order_topology_analytic_cf.pdf')
+        
+
+        # -- Analysis of 3rd order topolgy
+        
+        if True:
+            topology = ((0, 3), (1, 4), (2, 5))
+            t = results[topology]
+
+            # -- Analytic soltuion
+            
+            ana = get_analytic_solution()
+            G_anal = ana.Gfunc(t.tau, beta)
+
+            Sigma_anal_00 = ana.Sfunc_031425_00(t.tau, beta, e1)
+            Sigma_anal_11 = ana.Sfunc_031425_11(t.tau, beta, e1)
+
+            spgf_anal = ana.spgf_func_031425(t.tau, beta, e1)
+            
+            #a = np.log(2) / beta
+            #G_anal = - np.exp(-a * t.tau)
+
+            #Sigma_anal = 0.5**3 * np.exp(-a * t.tau) * t.tau**4 / (2*3*4)
+            
+            #spgf_anal = 0.5**2 * np.exp(-a * beta) * (beta**2 - 2*beta*t.tau + t.tau**2) * t.tau**2 / 4
+            #spgf_BS_ref = -0.5**2 * np.exp(-a * beta) * (beta - t.tau) * t.tau**2 / 2 # -- Found in BS code
+
+            plt.figure(figsize=(6, 6))
+            subp = [2, 2, 1]
+
+            #i, j = (0, 0)
+            #for i,j in [(0, 0), (1, 1)]:
             for i,j in [(0, 0)]:
+                plt.subplot(*subp); subp[-1] += 1
+                if i == 0 : plt.title(f'topology {topology}')
+
+                plt.plot(S.S.tau_i, G_S[:, i, j].real, '+', label='ZH numeric')
+                plt.plot(S.S.tau_i, G_BSS.data[:, i, j].real, '+', label='BS numeric')
+                plt.plot(t.tau, G_anal, '-', label='analytic')
+
+                plt.legend()
+                plt.xlabel(r'$\tau$')
+                plt.ylabel(r'$G(\tau)$')        
+
+            if True:
+                #oplot(t.spgf_BSS, label=None)
+                for i,j in [(0, 0)]:
+                #for i,j in product(range(t.spgf_S.shape[-1]), repeat=2):
+                    plt.subplot(*subp); subp[-1] += 1
+                    plt.plot(t.tau, t.spgf_S[:, i, j].real, '+', label='ZH numeric')
+                    #plt.plot(t.tau, t.spgf_S[:, i, j].imag, '+-')
+                    plt.plot(t.tau, t.spgf_BSS.data[:, i, j].real, 'x', label='BS numeric')
+                    plt.plot(t.tau, spgf_anal, '-', label='analytic')
+                    #plt.plot(t.tau, spgf_BS_ref, '--', label='expression matching BS numeric')
+                    plt.xlabel(r'$\tau$')
+                    plt.ylabel(r'$g(\tau)$')
+                    plt.legend()
+
+            for i,j in [(0, 0), (1, 1)]:
             #for i,j in product(range(t.Sigma_S.shape[-1]), repeat=2):
                 plt.subplot(*subp); subp[-1] += 1
                 plt.plot(t.tau, t.Sigma_S[:, i, j].real, '+', label='ZH numeric')
                 plt.plot(t.tau, t.Sigma_BSS.data[:, i, j].real, 'x', label='BS numeric')
                 #plt.plot(t.tau, t.Sigma_BSS[0][:, i, j].real, 'x')
                 #plt.plot(t.tau, t.Sigma_S[:, i, j].imag, '+')
-                plt.plot(t.tau, Sigma_anal, '-', label='analytic')
+                if i == 0:
+                    plt.plot(t.tau, Sigma_anal_00, '-', label='analytic')
+                else:
+                    plt.plot(t.tau, Sigma_anal_11, '-', label='analytic')
 
                 plt.xlabel(r'$\tau$')
                 plt.ylabel(r'$\Sigma(\tau)$')
