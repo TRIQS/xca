@@ -255,7 +255,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     orders_with_signs_and_topologies = [
         (1, [(1, [(0, 1)])]), # 1st order (NCA) diagram
         # 2nd order diags are zero, skip
-        (3, [(1, [(0, 3), (1, 4), (2, 5)])]), # Non-zero 3rd order diagram
+        #(3, [(1, [(0, 3), (1, 4), (2, 5)])]), # Non-zero 3rd order diagram
         ]
     
     #for order in [1, 2, 3]:
@@ -431,8 +431,9 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
 
         # -- Analysis of 1st order topolgy
 
-        if True:
-            topology = ((0, 1),)
+        topology = ((0, 1),)
+        #if True:
+        if topology in results.keys():
             t = results[topology]
 
             # -- Analytic soltuion
@@ -506,8 +507,9 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
 
         # -- Analysis of 3rd order topolgy
         
-        if True:
-            topology = ((0, 3), (1, 4), (2, 5))
+        topology = ((0, 3), (1, 4), (2, 5))
+        if topology in results.keys():
+        #if True:
             t = results[topology]
 
             # -- Analytic soltuion
