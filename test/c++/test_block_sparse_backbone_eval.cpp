@@ -225,7 +225,7 @@ TEST(Backbone, spin_flip_fermion) {
   int s0 = 0, s1 = 0;
   for (int i = 0; i < Gt_block_sizes.size(); i++) {
     s1 += Gt_block_sizes[i];
-    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), 1e-10);
+    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), eps);
     s0 = s1;
   }
 }
@@ -298,7 +298,7 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
   int s0 = 0, s1 = 0;
   for (int i = 0; i < Gt_block_sizes.size(); i++) {
     s1 += Gt_block_sizes[i];
-    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), 1e-10);
+    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), eps);
     s0 = s1;
   }
 }
@@ -484,7 +484,7 @@ TEST(Backbone, spin_flip_fermion_aaa) {
   int s0 = 0, s1 = 0;
   for (int i = 0; i < Gt_block_sizes.size(); i++) {
     s1 += Gt_block_sizes[i];
-    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), 1e-10);
+    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), eps);
     s0 = s1;
   }
 }
@@ -582,7 +582,7 @@ TEST(Backbone, spin_flip_fermion_all_sym_aaa) {
   int s0 = 0, s1 = 0;
   for (int i = 0; i < Gt_block_sizes.size(); i++) {
     s1 += Gt_block_sizes[i];
-    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), 1e-10);
+    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), eps);
     s0 = s1;
   }
 }
