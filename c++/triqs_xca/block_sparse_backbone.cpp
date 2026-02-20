@@ -29,6 +29,7 @@ DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps, nda::
      hyb_poles(beta * hyb_poles) {
 
   dlr_it = itops.get_itnodes();
+  hyb_reflect = itops.reflect(hyb);
 
   // allocate arrays
   T     = nda::zeros<dcomplex>(r, Nmax, Nmax);
@@ -56,6 +57,7 @@ DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps, nda::
 
   // hyb on DLR imaginary time nodes
   hyb = aaa_coefs2vals(beta, Lambda, eps, hyb_coeffs, hyb_poles);
+  hyb_reflect = itops.reflect(hyb);
 
   // allocate arrays
   T     = nda::zeros<dcomplex>(r, Nmax, Nmax);
@@ -192,10 +194,12 @@ void DiagramEvaluator::multiply_zero_vertex_block(Backbone &backbone, bool is_fo
     for (int mu = 0; mu < Fq.sym_set_sizes(p_mu); mu++) {
       Tmu = 0;
       for (int kap = 0; kap < Fq.sym_set_sizes(p_kap); kap++) {
+        nda::array_const_view<dcomplex, 1> hyb_oo = is_forward ?
+          hyb        (_, Fq.sym_set_to_orb(p_mu, mu), Fq.sym_set_to_orb(p_kap, kap)) :
+          hyb_reflect(_, Fq.sym_set_to_orb(p_mu, mu), Fq.sym_set_to_orb(p_kap, kap));
         for (int t = 0; t < r; t++) {
           Tmu(t, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(0))) -=
-             hyb(t, Fq.sym_set_to_orb(p_mu, mu), Fq.sym_set_to_orb(p_kap, kap))
-             * Tkaps(kap, t, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(0)));
+            hyb_oo(t) * Tkaps(kap, t, range(0, block_dims(backbone.get_topology(0, 1))), range(0, block_dims(0)));
         }
       }
       for (int t = 0; t < r; t++) {

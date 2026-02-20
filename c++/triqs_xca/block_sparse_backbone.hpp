@@ -65,6 +65,7 @@ class DiagramEvaluator {
   int q;                         // number of symmetry sets
   int Nmax;                      // maximum block size in the Green's function
   nda::array<dcomplex, 3> hyb;   // hybridization function at imaginary time nodes
+  nda::array<dcomplex, 3> hyb_reflect; // hybridization function at imaginary time nodes (reversed)
   nda::vector<double> hyb_poles; // hybridization poles
   nda::array<dcomplex, 3> T;     // array for storing intermediate result
   nda::array<dcomplex, 3> U;     // array for storing intermediate result (tau-beta side of correlator diagram)
