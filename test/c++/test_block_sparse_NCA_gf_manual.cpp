@@ -181,8 +181,8 @@ TEST(BSNCAGF, matrices) {
   Fs_block_2(1, 0, 0) = -1;
 
   F_dags_block_0(0, 0, 0) = 1;
-  F_dags_block_1(0, 1, 0) = 1;
-  F_dags_block_0(1, 0, 1) = 1;
+  F_dags_block_1(0, 0, 1) = 1;
+  F_dags_block_0(1, 1, 0) = 1;
   F_dags_block_1(1, 0, 0) = -1;
 
   nda::array<dcomplex, 3> zero_block({1, 1, 1});
