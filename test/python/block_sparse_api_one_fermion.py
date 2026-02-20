@@ -145,7 +145,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     b = +1.0
     r0 = 0.5
     mu = 0.0
-    e1 = 0.8
+    e1 = -0.8
     
     eps = 1e-12
     #lamb = 20.0 * beta
@@ -255,7 +255,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     orders_with_signs_and_topologies = [
         (1, [(1, [(0, 1)])]), # 1st order (NCA) diagram
         # 2nd order diags are zero, skip
-        #(3, [(1, [(0, 3), (1, 4), (2, 5)])]), # Non-zero 3rd order diagram
+        (3, [(1, [(0, 3), (1, 4), (2, 5)])]), # Non-zero 3rd order diagram
         ]
     
     #for order in [1, 2, 3]:
