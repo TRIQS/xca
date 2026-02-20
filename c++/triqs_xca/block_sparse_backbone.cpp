@@ -109,7 +109,7 @@ void DiagramEvaluator::multiply_vertex_block(Backbone &backbone, int v_ix, nda::
   // K factor
   int bv      = backbone.get_vertex_Ksign(v_ix); // sign on K
   double pole = hyb_poles(l_ix);
-  if (backbone.get_vertex_direction(v_ix) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
+  //if (backbone.get_vertex_direction(v_ix) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES // BUG? Already accounted for by bv = Ksign?
   if (bv != 0) {
     for (int t = 0; t < r; t++) {
       T(t, range(0, block_dims(v_ix + 1)), range(0, n_col_r)) = k_it(dlr_it(t), bv * pole) * T(t, range(0, block_dims(v_ix + 1)), range(0, n_col_r));
@@ -127,7 +127,7 @@ void DiagramEvaluator::compose_with_edge_block(Backbone &backbone, int e_ix, nda
   for (int x = 0; x < m - 1; x++) {
     int be      = backbone.get_edge(e_ix, x); // sign on K
     double pole = hyb_poles(backbone.get_pole_ind(x));
-    if (backbone.get_fb(x + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR
+    //if (backbone.get_fb(x + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR  // BUG? Already accounted for by bv = Ksign?
     if (be != 0) {
       for (int t = 0; t < r; t++) {
         GKt(t, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1))) =
@@ -148,7 +148,7 @@ void DiagramEvaluator::multiply_prefactor(Backbone &backbone) {
     if (exp != 0) {
       int Ksign = backbone.get_prefactor_Ksign(m_ix);
       double om = hyb_poles(backbone.get_pole_ind(m_ix));
-      if (backbone.get_fb(m_ix + 1) == 0) om = -om; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
+      //if (backbone.get_fb(m_ix + 1) == 0) om = -om; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES  // BUG? Already accounted for by bv = Ksign?
       double k = k_it(0, Ksign * om);
       for (int x = 0; x < exp; x++) T /= k;
     }
