@@ -251,12 +251,19 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     from triqs_xca.diag import all_connected_pairings
 
     results = dict()
+
+    orders_with_signs_and_topologies = [
+        (1, [(1, [(0, 1)])]), # 1st order (NCA) diagram
+        # 2nd order diags are zero, skip
+        (3, [(1, [(0, 3), (1, 4), (2, 5)])]), # Non-zero 3rd order diagram
+        ]
     
-    for order in [1, 2, 3]:
-        print(f'order = {order}')
-        
-        for sign, topology in all_connected_pairings(order):
-            
+    #for order in [1, 2, 3]:
+    #    print(f'order = {order}')
+    #    for sign, topology in all_connected_pairings(order):
+    for order, signs_and_topologies in orders_with_signs_and_topologies:
+        print(f'signs_and_topologies = {signs_and_topologies}')
+        for sign, topology in signs_and_topologies:
             print(f'  topology = {topology}')
 
             d = Dummy()
@@ -275,8 +282,8 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
 
             t2 = time.time()
 
-            d.Sigma_BSS = pseudo_particle_block_gf_to_dense(
-                BSS.pseudo_particle_self_energy_topology(topology), BSS.ad)
+            d.Sigma_BSS_block = BSS.pseudo_particle_self_energy_topology(topology)
+            d.Sigma_BSS = pseudo_particle_block_gf_to_dense(d.Sigma_BSS_block, BSS.ad)
 
             #d.Sigma_BSS.data[:] *= sign # FIXME! Different sign convention?!?
             d.Sigma_BSS.data[:] *= -pow(-1, d.order) # FIXME! Different sign convention?!?
@@ -356,8 +363,9 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
         plt.tight_layout()        
 
         
-        plt.figure(figsize=(14, 12))
-        subp = [6, 4, 1]
+        plt.figure(figsize=(14, 6))
+        subp = [2, 4, 1]
+        #subp = [6, 4, 1]
         #subp = [34, 4, 1]
 
         print(len(results))
@@ -369,8 +377,10 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
 
             plt.subplot(*subp); subp[-1] += 1
 
+            #oplotr(t.Sigma_BSS_block, label=None)
             oplot(t.Sigma_BSS, label=None)
             for i,j in product(range(t.Sigma_S.shape[-1]), repeat=2):
+            #for i,j in [(0,0), (1,1)]:
                 plt.plot(t.tau, t.Sigma_S[:, i, j].real, '+-')
 
             plt.plot([], [], 'x', color='gray', label='Block-sparse (PR)')

@@ -540,6 +540,9 @@ void DiagramEvaluator::eval_self_energy_fixed_indices(Backbone &backbone, int b_
 
 block_gf<dlr_imtime> DiagramEvaluator::compute_self_energy(nda::array_const_view<int, 2> topology) {
   Backbone backbone(topology, n);
+  std::cout << "--> DiagramEvaluator::compute_self_energy\n";
+  std::cout << "topology = " << topology << "\n";
+  std::cout << "backbone =\n" << backbone << "\n";
   eval_self_energy(backbone);
   BlockDiagOpFun sig = get_self_energy();
   std::vector<gf<dlr_imtime>> sig_blocks(sig.get_num_block_cols());
@@ -559,6 +562,14 @@ block_gf<dlr_imtime> DiagramEvaluator::compute_self_energy(nda::array_const_view
 void DiagramEvaluator::multiply_vertex_corr_block(CorrelatorBackbone &backbone, int v_ix, nda::vector_const_view<int> ind_path,
                                                   nda::vector_const_view<int> block_dims) {
 
+  /*
+   * This method is almost identical to DiagramEvaluator::multiply_vertex_block apart from
+   *
+   * - n_col_r
+   * - using U for temporary storage (instead of T), and
+   * - skipping the K-factor on the last vertex.
+   */
+  
   int o_ix = backbone.get_vertex_orb(v_ix); // orbital_index
   // split backbone orbital index into symmetry set index and orbital index within the symmetry set
   // i.e. have mapping between backbone orbital index and symmetry set index
@@ -668,10 +679,18 @@ void DiagramEvaluator::compose_with_edge_corr_block(CorrelatorBackbone &backbone
      itops.convolve(beta, itops.vals2coefs(GKt(_, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1)))),
                     itops.vals2coefs(U(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r))), TIME_ORDERED);
   */
+
+  /*
+   * This routine is almost identical to DiagramEvaluator::compose_with_edge_block
+   *
+   * apart from
+   * - the n_col_r index, and
+   * - using U for temporary storage (instead of T)
+   */
   
   int m = backbone.m;
   int b_ix = ind_path(e_ix); // block index for the edge e_ix
-  int n_col_r = block_dims(backbone.get_topology(0, 1) + 1);
+  int n_col_r = block_dims(backbone.get_topology(0, 1) + 1); // Different n_col_r behavour c.f. compose_with_edge_block(...)
 
   nda::array_view<dcomplex, 3> GKt_ep = GKt(_, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1)));
 
@@ -688,6 +707,7 @@ void DiagramEvaluator::compose_with_edge_corr_block(CorrelatorBackbone &backbone
 
   nda::array_view<dcomplex, 3> U_ep = U(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r));
   U_ep = itops.convolve(beta, itops.vals2coefs(GKt_ep), itops.vals2coefs(U_ep), TIME_ORDERED);
+  //U_ep = itops.reflect(U_ep);
 }
 
 nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops) {
@@ -914,8 +934,8 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &ba
     if (path_all_nonzero) {
       T(_, range(0, block_dims(1)), range(0, block_dims(1))) = Gt.get_block(ind_path(0));
       for (int v = 1; v < vct0; v++) {
-        multiply_vertex_block(backbone, v, ind_path, block_dims);
-        compose_with_edge_block(backbone, v, ind_path, block_dims);
+        multiply_vertex_block(backbone, v, ind_path, block_dims);   // NB! using the same routines as for the self-energy assigning to T internally
+        compose_with_edge_block(backbone, v, ind_path, block_dims); // NB! using the same routines as for the self-energy assigning to T internally
       }
       multiply_prefactor(backbone);
       T(_, range(0, block_dims(vct0)), range(0, block_dims(1))) *= backbone.prefactor_sign; // include sign from diag order and prefactor
@@ -963,11 +983,11 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &ba
           }
         }
         for (int v = vct0 + 1; v < 2 * m - 1; ++v) {
-          multiply_vertex_corr_block(backbone, v, ind_path, block_dims);
-          compose_with_edge_corr_block(backbone, v, ind_path, block_dims);
+          multiply_vertex_corr_block(backbone, v, ind_path, block_dims); // NB! using the "corr" routines assigning to U internally
+          compose_with_edge_corr_block(backbone, v, ind_path, block_dims); // NB! using the "corr" routines assigning to U internally
         }
         // multiply by the last vertex
-        multiply_vertex_corr_block(backbone, 2 * m - 1, ind_path, block_dims);
+        multiply_vertex_corr_block(backbone, 2 * m - 1, ind_path, block_dims); // NB! using the "corr" routines assigning to U internally
 
         // convolve with last edge
 
@@ -982,11 +1002,11 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &ba
             GKt(t, range(0, block_dims(2 * m)), range(0, block_dims(2 * m))) *= k_it(dlr_it(t), -bv * pole);
           }
         }
+	
         U(_, range(0, block_dims(2 * m)), range(0, block_dims(vct0 + 1))) =
            itops.convolve(beta, itops.vals2coefs(GKt(_, range(0, block_dims(2 * m)), range(0, block_dims(2 * m)))),
                           itops.vals2coefs(U(_, range(0, block_dims(2 * m)), range(0, block_dims(vct0 + 1)))), TIME_ORDERED);
-      }
-      
+      }      
       U                    = itops.reflect(U);
       left[ind_path(vct0)] = U(_, range(0, block_dims(2 * m)), range(0, block_dims(vct0 + 1)));
       left_inds(b_ix)      = ind_path(2 * m - 1);
