@@ -338,10 +338,6 @@ std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const atom_diag::a
 }
 
 DenseFSet get_operators_dense(const atom_diag::atom_diag<false> &ad, int norb, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
-  // Get full operator matrices
-  nda::array<dcomplex, 3> Fs{2 * norb, int(pow(4, norb)), int(pow(4, norb))};
-  nda::array<dcomplex, 3> Fdags{2 * norb, int(pow(4, norb)), int(pow(4, norb))};
-
   // get Fock state ordering
   std::vector<unsigned long> H_perm;
   for (int s = 0; s < ad.n_subspaces(); ++s) {
@@ -349,7 +345,11 @@ DenseFSet get_operators_dense(const atom_diag::atom_diag<false> &ad, int norb, n
     for (auto state : fock_states) { H_perm.push_back(state); }
   }
 
-  for (int oidx = 0; oidx < 2 * norb; ++oidx) {
+  // Get full operator matrices
+  nda::array<dcomplex, 3> Fs{hyb_coeffs.extent(1), H_perm.size(), H_perm.size()};
+  nda::array<dcomplex, 3> Fdags{hyb_coeffs.extent(1), H_perm.size(), H_perm.size()};
+
+  for (int oidx = 0; oidx < hyb_coeffs.extent(1); ++oidx) {
     auto c_full    = get_full_operator_matrix(ad, oidx, false);
     auto cdag_full = get_full_operator_matrix(ad, oidx, true);
     for (int i = 0; i < H_perm.size(); ++i) {

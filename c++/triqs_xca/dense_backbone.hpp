@@ -70,6 +70,7 @@ class DenseDiagramEvaluator {
    * @param[in] itops DLR imaginary time object
    * @param[in] hyb hybridization function at imaginary time nodes
    * @param[in] hyb_refl hybridization function at (beta - tau) nodes
+   * @param[in] hyb_poles hybridization poles
    * @param[in] Gt Green's function at imaginary time nodes
    * @param[in] Fset DenseFSet (cre/ann operators with and without bars)
    */

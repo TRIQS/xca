@@ -86,7 +86,6 @@ TEST(BSGFBackbone, OCA_BDOF_construct) {
 
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = CorrelatorBackbone(topology, n);
-  std::cout << "dlr_rf = " << dlr_rf << std::endl;
   DiagramEvaluator D(beta, Lambda, eps, Deltat, nda::make_regular(dlr_rf / beta), Gt, Fq);
   // for now, convert Fq.Fs and Fq.F_dags to vectors of BlockOp
   std::vector<BlockOp> mu_ops, kap_ops;
@@ -590,9 +589,9 @@ TEST(Backbone, one_fermion_third_order_hyb_one_pole) {
   auto third_order_gf_ana = nda::zeros<double>(r);
   double om               = hyb_poles(0);
   for (int i = 0; i < r; ++i) {
-    double t = rel2abs(dlr_it(i)); // t = tau / beta
-    third_order_gf_ana(i) =
-       (t + (exp(-om * t) - 1.0) / om) * (t - beta + (exp(om * (beta - t)) - 1.0) / om) / (2 * om * om * (1 + exp(-beta * om)) * (exp(beta * om) + 1));
+    double t              = rel2abs(dlr_it(i)); // t = tau / beta
+    third_order_gf_ana(i) = (t + (exp(-om * t) - 1.0) / om) * (t - beta + (exp(om * (beta - t)) - 1.0) / om)
+       / (2 * om * om * (1 + exp(-beta * om)) * (exp(beta * om) + 1));
   }
 
   ASSERT_LE(nda::max_element(nda::abs(third_order_gf(_, 0, 0) - third_order_gf_ana)), eps);
