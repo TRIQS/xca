@@ -131,7 +131,7 @@ def make_Delta_with_cont_spec_mat( Z, rho, a=-1.0, b=1.0, eps=1e-12):
     return Delta[:, None, None] * T[None, :, :]
 
 
-def test_oca_diagram_cf_block_sparse_and_dense(e1=0.8, beta=2.0, verbose=False):
+def test_oca_diagram_cf_block_sparse_and_dense(e1=0.8, beta=2.0, conserved_operators='none', verbose=False):
 
     print('='*72)
     print('='*72)
@@ -166,6 +166,13 @@ def test_oca_diagram_cf_block_sparse_and_dense(e1=0.8, beta=2.0, verbose=False):
 
     print(H)
     print(N_op)
+
+    conserved_operators = dict(
+        none=[],
+        total_density=[N_op],
+        )[conserved_operators]
+    
+    print(f'conserved_operators = {conserved_operators}')    
     
     # -- Hybridization function and adapol fit
 
@@ -175,6 +182,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(e1=0.8, beta=2.0, verbose=False):
         #Delta = make_Delta_with_cont_spec_mat(Z, semicircular, a=a, b=b, eps=eps)
         #Delta = (1./Z).reshape(len(Z), 1, 1)
         Delta = (1./(Z - e1)).reshape(len(Z), 1, 1)
+        #Delta = (1./(Z - e1) + 1./(Z - e2)).reshape(len(Z), 1, 1)
         Np = 4 # unused?
         func, fitting_error, pol, weight = anacont(Delta, Z, tol=eps)
         print(f'pol = {pol}')
@@ -192,6 +200,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(e1=0.8, beta=2.0, verbose=False):
     #Delta_w.data[:] = make_Delta_with_cont_spec_mat(iwn, semicircular, a=a, b=b, eps=eps)
     #Delta_w.data[:, 0, 0] = 1./iwn
     Delta_w.data[:, 0, 0] = 1./(iwn - e1)
+    #Delta_w.data[:, 0, 0] = 1./(iwn - e1) + 1./(iwn - e2)
 
     from triqs.gf import make_gf_dlr_imtime, make_gf_dlr
 
@@ -209,16 +218,6 @@ def test_oca_diagram_cf_block_sparse_and_dense(e1=0.8, beta=2.0, verbose=False):
 
     
     # -- Block sparse solver
-
-    # This works
-    
-    from triqs.atom_diag import AtomDiag
-    ad = AtomDiag(H, fops, [N_op])
-    #ad = AtomDiag(H, fops)
-    print(ad)
-    #exit()
-
-    # But calling DiagramEvaluator with the same settings breaks!
     
     BSS = BlockSparseSolver(
         H, fops, beta, w_max, eps,
@@ -596,7 +595,12 @@ def test_oca_diagram_cf_block_sparse_and_dense(e1=0.8, beta=2.0, verbose=False):
 
 if __name__ == '__main__':
 
-    #test_oca_diagram_cf_block_sparse_and_dense(beta=1.0, verbose=True)
-    test_oca_diagram_cf_block_sparse_and_dense(e1=+0.8, beta=2.0, verbose=False)
-    test_oca_diagram_cf_block_sparse_and_dense(e1=-0.8, beta=2.0, verbose=False)
-     
+    ops = [
+        'none',
+        'total_density', 
+        ]
+    
+    for op in ops:
+        for e1 in [+0.8, -0.8]:
+        #for e1 in [+0.8]:
+            test_oca_diagram_cf_block_sparse_and_dense(e1=e1, beta=2.0, conserved_operators=op, verbose=False)

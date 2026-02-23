@@ -20,6 +20,7 @@ set(all_tests
   analytic_diagrams
   block_sparse_api
   block_sparse_api_one_fermion
+  block_sparse_api_two_fermions
   bug_bs_one_fermion
   )
 
