@@ -191,32 +191,26 @@ std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const atom_diag::a
   int n = hyb_coeffs.extent(1);
   nda::vector<long> sym_set_labels(n);
   sym_set_labels = 0;
-  int counter    = 1;
-  for (int s = 0; s < ad.n_subspaces(); ++s) { // fill each entry of sym_sets
-    int oidx0       = 1;
-    bool found_oidx = false;
-    for (int i = 0; i < n; ++i) {
-      if (not found_oidx and sym_set_labels(i) != i) {
-        oidx0      = i;
-        found_oidx = true;
+  int counter    = 0;
+  for (int oidx = 0; oidx < n; ++oidx) { // fill each entry of sym_set_labels
+    bool found_match = false;
+    for (int oidx2 = 0; oidx2 < oidx; ++oidx2) { // compare full c_connection row against all previous operators
+      bool same = true;
+      for (int s = 0; s < ad.n_subspaces(); ++s) {
+        if (ad.c_connection(oidx, s) != ad.c_connection(oidx2, s)) {
+          same = false;
+          break;
+        }
+      }
+      if (same) {
+        sym_set_labels(oidx) = sym_set_labels(oidx2);
+        found_match          = true;
+        break;
       }
     }
-    for (int oidx = oidx0; oidx < n; ++oidx) { // loop through columns
-      bool found_pair = false;
-      for (int oidx2 = 0; oidx2 < oidx; ++oidx2) { // loop through previous rows and see if any match
-        try {
-          long x = ad.c_connection(oidx, s);
-          long y = ad.c_connection(oidx2, s);
-          if (not found_pair and x == y) { // found a matching row
-            sym_set_labels(oidx) = sym_set_labels(oidx2);
-            found_pair           = true;
-          }
-        } catch (const std::exception &e) { std::cout << "Failed at oidx=" << oidx << ", s=" << s << ": " << e.what() << std::endl; }
-      }
-      if (not found_pair) { // no matching rows found, so create new group
-        sym_set_labels(oidx) = counter;
-        counter              = counter + 1;
-      }
+    if (not found_match) { // no matching operator found, so create new group
+      sym_set_labels(oidx) = counter;
+      counter              = counter + 1;
     }
   }
   std::set<int> unique_groups(sym_set_labels.begin(), sym_set_labels.end());

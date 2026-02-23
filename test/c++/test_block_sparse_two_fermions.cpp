@@ -35,8 +35,8 @@ TEST(two_fermions, one_hyb_pole) {
   fop_set.insert("1", 0);
 
   // conserved operators
-  std::vector<triqs::operators::many_body_operator_real> sym_ops = {Nop};
-  // std::vector<triqs::operators::many_body_operator_real> sym_ops = {N0, N1};
+  // std::vector<triqs::operators::many_body_operator_real> sym_ops = {Nop};
+  std::vector<triqs::operators::many_body_operator_real> sym_ops = {N0, N1};
 
   // atom_diag object
   triqs::atom_diag::atom_diag<false> ad(H, fop_set, sym_ops);
