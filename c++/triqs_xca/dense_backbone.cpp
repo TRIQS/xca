@@ -189,6 +189,53 @@ void DenseDiagramEvaluator::multiply_vertex_corr(Backbone &backbone, int v_ix) {
   }
 }
 
+void DenseDiagramEvaluator::multiply_vertex_corr_reverse(Backbone &backbone, int v_ix) {
+
+  int o_ix = backbone.get_vertex_orb(v_ix); // orbital index
+  int l_ix = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(v_ix));
+
+  // backbone.get_vertex_hyb_ind(v_ix) = i, where i is the # of primes on l
+  // l_ix = value of l with i primes
+
+  /*
+  if (backbone.has_vertex_bar(v_ix)) {   // F has bar
+    if (backbone.has_vertex_dag(v_ix)) { // F has dagger
+      for (int t = 0; t < r; t++) U(t, _, _) = matmul(Fset.F_dag_bars(o_ix, l_ix, _, _), U(t, _, _));
+    } else {
+      for (int t = 0; t < r; t++) U(t, _, _) = -matmul(Fset.F_bars_refl(o_ix, l_ix, _, _), U(t, _, _));
+    }
+  } else {
+    if (backbone.has_vertex_dag(v_ix)) { // F has dagger
+      for (int t = 0; t < r; t++) U(t, _, _) = matmul(Fset.F_dags(o_ix, _, _), U(t, _, _));
+    } else {
+      for (int t = 0; t < r; t++) U(t, _, _) = matmul(Fset.Fs(o_ix, _, _), U(t, _, _));
+    }
+  }
+  */
+
+  bool has_bar = backbone.has_vertex_bar(v_ix);
+  bool has_dag = backbone.has_vertex_dag(v_ix);
+
+  auto F_selector = [&]() {
+    if (has_bar) return has_dag ? Fset.F_dag_bars (o_ix, l_ix, _, _) :
+	                          Fset.F_bars_refl(o_ix, l_ix, _, _);
+    else         return has_dag ? Fset.F_dags(o_ix, _, _) :
+                                  Fset.Fs    (o_ix, _, _);
+  };
+
+  nda::array_const_view<dcomplex, 2> F = F_selector();
+
+  if (has_bar && !has_dag) U *= -1.; // Using F_bar_refl requires an extra sign ?
+  for (int t = 0; t < r; t++) U(t, _, _) = matmul(U(t, _, _), F);
+  
+  // K factor
+  int Ksign = backbone.get_vertex_Ksign(v_ix); // sign on K
+  if (Ksign != 0) {
+    for (int t = 0; t < r; t++)
+      U(t, _, _) *= k_it(dlr_it(t), -Ksign * hyb_poles(l_ix));
+  }
+}
+
 void DenseDiagramEvaluator::compose_with_edge_corr(Backbone &backbone, int e_ix) {
   GKt   = Gt;
   int m = backbone.m;
@@ -201,6 +248,20 @@ void DenseDiagramEvaluator::compose_with_edge_corr(Backbone &backbone, int e_ix)
     }
   }
   U = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(U), TIME_ORDERED);
+}
+
+void DenseDiagramEvaluator::compose_with_edge_corr_reverse(Backbone &backbone, int e_ix) {
+  GKt   = Gt;
+  int m = backbone.m;
+  for (int x = 0; x < m - 1; x++) {
+    int Ksign = backbone.get_edge(e_ix, x); // sign on K
+    if (Ksign != 0) {
+      double pole = hyb_poles(backbone.get_pole_ind(x));
+      for (int t = 0; t < r; t++)
+	GKt(t, _, _) *= k_it(dlr_it(t), Ksign * pole);
+    }
+  }
+  U = itops.convolve(beta, itops.vals2coefs(U), itops.vals2coefs(GKt), TIME_ORDERED);
 }
 
 nda::array<dcomplex, 3> DenseDiagramEvaluator::eval_correlator(CorrelatorBackbone &backbone, nda::array<dcomplex, 3> mu_ops,
@@ -239,6 +300,8 @@ void DenseDiagramEvaluator::eval_correlator_fixed_indices(CorrelatorBackbone &ba
   // evaluate the second sequence of backbone products and convolutions from tau to beta, using a change of variables to perform convolutions. the
   // result is another N x N matrix-valued function of tau.
   U = Gt; // U stores the result moving right to left
+
+  /*
   if (m > 1) { // only do this for second-order and higher
     // compute U, which is the edge immediately to the left of the vertex connected to 0
     int be = 0;
@@ -267,6 +330,13 @@ void DenseDiagramEvaluator::eval_correlator_fixed_indices(CorrelatorBackbone &ba
     }
     U = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(U), TIME_ORDERED);
   }
+  */
+
+  for (int v = 2*m - 1; v > backbone.get_topology(0, 1); v--) {
+    multiply_vertex_corr_reverse(backbone, v);
+    compose_with_edge_corr_reverse(backbone, v - 1);
+  }
+  
   U = itops.reflect(U);
 
   multiply_prefactor(backbone);
