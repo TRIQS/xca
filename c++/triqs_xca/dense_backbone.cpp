@@ -54,7 +54,7 @@ void DenseDiagramEvaluator::multiply_vertex(Backbone &backbone, int v_ix) {
   // K factor
   int bv      = backbone.get_vertex_Ksign(v_ix); // sign on K
   double pole = hyb_poles(l_ix);
-  if (backbone.get_vertex_direction(v_ix) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
+  // if (backbone.get_vertex_direction(v_ix) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
   if (bv != 0) {
     for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), bv * pole) * T(t, _, _); }
   }
@@ -66,7 +66,7 @@ void DenseDiagramEvaluator::compose_with_edge(Backbone &backbone, int e_ix) {
   for (int x = 0; x < m - 1; x++) {
     int be      = backbone.get_edge(e_ix, x); // sign on K
     double pole = hyb_poles(backbone.get_pole_ind(x));
-    if (backbone.get_fb(x + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
+    // if (backbone.get_fb(x + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
     if (be != 0) {
       for (int t = 0; t < r; t++) { GKt(t, _, _) = k_it(dlr_it(t), be * pole) * GKt(t, _, _); }
     }
@@ -82,7 +82,7 @@ void DenseDiagramEvaluator::multiply_prefactor(Backbone &backbone) {
     if (exp != 0) {
       int Ksign = backbone.get_prefactor_Ksign(m_ix);     // sign on K for this hybridization index
       double om = hyb_poles(backbone.get_pole_ind(m_ix)); // DLR frequency for this value of this hybridization index
-      if (backbone.get_fb(m_ix + 1) == 0) om = -om;       // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
+      // if (backbone.get_fb(m_ix + 1) == 0) om = -om;       // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
       for (int q = 0; q < exp; q++) T /= k_it(0, Ksign * om);
     }
   }
@@ -182,7 +182,7 @@ void DenseDiagramEvaluator::multiply_vertex_corr(Backbone &backbone, int v_ix) {
   if (v_ix != 2 * backbone.m - 1) {
     int bv      = backbone.get_vertex_Ksign(v_ix); // sign on K
     double pole = hyb_poles(l_ix);
-    if (backbone.get_vertex_direction(v_ix) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
+    // if (backbone.get_vertex_direction(v_ix) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
     if (bv != 0) {
       for (int t = 0; t < r; t++) { U(t, _, _) = k_it(dlr_it(t), bv * pole) * U(t, _, _); }
     }
@@ -195,7 +195,7 @@ void DenseDiagramEvaluator::compose_with_edge_corr(Backbone &backbone, int e_ix)
   for (int x = 0; x < m - 1; x++) {
     int be      = backbone.get_edge(e_ix, x); // sign on K
     double pole = hyb_poles(backbone.get_pole_ind(x));
-    if (backbone.get_fb(x + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
+    // if (backbone.get_fb(x + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
     if (be != 0) {
       for (int t = 0; t < r; t++) { GKt(t, _, _) = k_it(dlr_it(t), be * pole) * GKt(t, _, _); }
     }
@@ -245,7 +245,7 @@ void DenseDiagramEvaluator::eval_correlator_fixed_indices(CorrelatorBackbone &ba
     for (int i = 0; i < m - 1; ++i) {
       be          = backbone.get_edge(backbone.get_topology(0, 1), i);
       double pole = hyb_poles(backbone.get_pole_ind(i));
-      if (backbone.get_fb(i + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
+      // if (backbone.get_fb(i + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
       if (be != 0) {
         for (int t = 0; t < r; t++) { U(t, _, _) = k_it(dlr_it(t), be * pole) * U(t, _, _); }
       }
@@ -261,7 +261,7 @@ void DenseDiagramEvaluator::eval_correlator_fixed_indices(CorrelatorBackbone &ba
     int bv      = backbone.get_vertex_Ksign(2 * m - 1); // sign on K
     int l_ix    = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(2 * m - 1));
     double pole = hyb_poles(l_ix);
-    if (backbone.get_vertex_direction(2 * m - 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
+    // if (backbone.get_vertex_direction(2 * m - 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
     if (bv != 0) {
       for (int t = 0; t < r; t++) { GKt(t, _, _) = k_it(dlr_it(t), -bv * pole) * GKt(t, _, _); }
     }
