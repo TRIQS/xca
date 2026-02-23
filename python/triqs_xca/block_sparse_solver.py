@@ -28,6 +28,7 @@ class BlockSparseSolver(object):
         self.mesh_tau = MeshDLRImTime(beta=self.beta, statistic='Fermion', w_max=self.w_max, eps=self.eps)
 
         self.ad = AtomDiag(self.H_loc, self.fundamental_operators, self.conserved_operators)
+        print_atom_diag_info(self.ad)
 
         self.G0 = atomic_pseudo_particle_greens_function(self.ad, self.beta, self.mesh_tau)
         self.G = self.G0.copy()
@@ -222,6 +223,29 @@ def atomic_pseudo_particle_greens_function(ad, beta, mesh_tau):
     G_tau = BlockGf(block_list=G_tau_blocks)
 
     return G_tau
+
+
+def print_atom_diag_info(ad):
+
+    print(r"""   _____    __                   ________   .___    _____     ________
+  /  _  \ _/  |_  ____    _____  \______ \  |   |  /  _  \   /  _____/
+ /  /_\  \\   __\/  _ \  /     \  |    |  \ |   | /  /_\  \ /   \  ___
+/    |    \|  | (  <_> )|  Y Y  \ |    `   \|   |/    |    \\    \_\  \
+\____|__  /|__|  \____/ |__|_|  //_______  /|___|\____|__  / \______  /
+        \/                    \/         \/              \/         \/  """)
+
+    print(ad)
+    print(f'full_hilbert_space_dim = {ad.full_hilbert_space_dim}')
+    print(f'n_subspaces = {ad.n_subspaces}')
+    print(f'get_subspace_dims = {ad.get_subspace_dims()}')
+    print(f'fops = {ad.fops}')
+    print(f'quantum_numbers = {ad.quantum_numbers}')
+    print(f'fock_states = {ad.fock_states}')
+    print(f'unitary_matrics = {ad.unitary_matrices}')
+    print(f'gs_energy = {ad.gs_energy}')
+    print(f'energies = {ad.energies}')
+    print(f'energies + gs_energy = {[ e + ad.gs_energy for e in ad.energies]}')
+    print('-'*72)
 
 
 def pseudo_particle_block_gf_to_dense(block_gf, ad):
