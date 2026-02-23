@@ -70,27 +70,29 @@ class DiagramEvaluator {
   std::vector<BlockOp> setup_kap_ops_for_single_ptcle_gf();
   
   public:
-  double beta;                   // inverse temperature
-  int r;                         // rank of the DLR imaginary time object
-  int n;                         // number of orbitals
-  int q;                         // number of symmetry sets
-  int Nmax;                      // maximum block size in the Green's function
-  nda::array<dcomplex, 3> hyb;   // hybridization function at imaginary time nodes
+  double beta;                         // inverse temperature
+  int r;                               // rank of the DLR imaginary time object
+  int n;                               // number of orbitals
+  int q;                               // number of symmetry sets
+  int Nmax;                            // maximum block size in the Green's function
+  nda::array<dcomplex, 3> hyb;         // hybridization function at imaginary time nodes
   nda::array<dcomplex, 3> hyb_reflect; // hybridization function at imaginary time nodes (reversed)
-  nda::vector<double> hyb_poles; // hybridization poles
-  nda::array<dcomplex, 3> T;     // array for storing intermediate result
-  nda::array<dcomplex, 3> U;     // array for storing intermediate result (tau-beta side of correlator diagram)
-  nda::array<dcomplex, 3> GKt;   // array for storing result of edge computation
-  nda::array<dcomplex, 4> Tkaps; // intermediate storage array
-  nda::array<dcomplex, 3> Tmu;   // intermediate storage array
+  nda::vector<double> hyb_poles;       // hybridization poles
+  nda::array<dcomplex, 3> T;           // array for storing intermediate result
+  nda::array<dcomplex, 3> U;           // array for storing intermediate result (tau-beta side of correlator diagram)
+  nda::array<dcomplex, 3> GKt;         // array for storing result of edge computation
+  nda::array<dcomplex, 4> Tkaps;       // intermediate storage array
+  nda::array<dcomplex, 3> Tmu;         // intermediate storage array
 
   // routines for any diagram
-  void reset();                                                  // reset all arrays to zero
+  void reset(); // reset all arrays to zero
 
   // routines for self-energy diagrams
-  int get_num_self_energy_backbones(nda::array_const_view<int, 2> topology); // get number of backbones for given topology
+  int get_num_self_energy_backbones(nda::array_const_view<int, 2> topology);                  // get number of backbones for given topology
   block_gf<dlr_imtime> compute_self_energy(nda::array_const_view<int, 2> topology);           // compute self-energy for given topology
   block_gf<dlr_imtime> compute_self_energy(nda::array_const_view<int, 2> topology, int f_ix); // compute self-energy for given topology and flat index
+  void print_self_energy_backbone(nda::array_const_view<int, 2> topology,
+                                  int f_ix); // print the backbone corresponding to a given flat index for debugging
 
   // routines for correlator diagrams
   int get_num_single_ptcle_gf_backbones(nda::array_const_view<int, 2> topology); // get number of backbones for given topology
@@ -101,6 +103,8 @@ class DiagramEvaluator {
   // compute single particle Green's function for given topology
   nda::array<dcomplex, 3> compute_single_ptcle_gf(nda::array_const_view<int, 2> topology, int f_ix);
   // compute single particle Green's function for given topology and flat index
+  void print_single_ptcle_gf_backbone(nda::array_const_view<int, 2> topology,
+                                      int f_ix); // print the backbone corresponding to a given flat index for debugging
 
   /**
    * @brief Constructor for DiagramEvaluator

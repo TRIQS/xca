@@ -84,14 +84,26 @@ static auto const fun_3 = c2py::dispatcher_f_kw_t{
    c2py::cmethod([](DiagramEvaluator &self, nda::array_const_view<int, 2> topology) { return self.get_num_single_ptcle_gf_backbones(topology); },
                  "self", "topology")};
 
+// print_self_energy_backbone
+static auto const fun_4 = c2py::dispatcher_f_kw_t{c2py::cmethod(
+   [](DiagramEvaluator &self, nda::array_const_view<int, 2> topology, int f_ix) { return self.print_self_energy_backbone(topology, f_ix); }, "self",
+   "topology", "f_ix")};
+
+// print_single_ptcle_gf_backbone
+static auto const fun_5 = c2py::dispatcher_f_kw_t{c2py::cmethod(
+   [](DiagramEvaluator &self, nda::array_const_view<int, 2> topology, int f_ix) { return self.print_single_ptcle_gf_backbone(topology, f_ix); },
+   "self", "topology", "f_ix")};
+
 // reset
-static auto const fun_4 = c2py::dispatcher_f_kw_t{c2py::cmethod([](DiagramEvaluator &self) { return self.reset(); }, "self")};
+static auto const fun_6 = c2py::dispatcher_f_kw_t{c2py::cmethod([](DiagramEvaluator &self) { return self.reset(); }, "self")};
 
 static const auto doc_d_0 = fun_0.doc(R"DOC()DOC");
 static const auto doc_d_1 = fun_1.doc(R"DOC()DOC");
 static const auto doc_d_2 = fun_2.doc(R"DOC()DOC");
 static const auto doc_d_3 = fun_3.doc(R"DOC()DOC");
 static const auto doc_d_4 = fun_4.doc(R"DOC()DOC");
+static const auto doc_d_5 = fun_5.doc(R"DOC()DOC");
+static const auto doc_d_6 = fun_6.doc(R"DOC()DOC");
 
 // ----- Method table ----
 template <>
@@ -100,7 +112,9 @@ PyMethodDef c2py::tp_methods<DiagramEvaluator>[] = {
    {"compute_single_ptcle_gf", (PyCFunction)c2py::pyfkw<fun_1>, METH_VARARGS | METH_KEYWORDS, doc_d_1.c_str()},
    {"get_num_self_energy_backbones", (PyCFunction)c2py::pyfkw<fun_2>, METH_VARARGS | METH_KEYWORDS, doc_d_2.c_str()},
    {"get_num_single_ptcle_gf_backbones", (PyCFunction)c2py::pyfkw<fun_3>, METH_VARARGS | METH_KEYWORDS, doc_d_3.c_str()},
-   {"reset", (PyCFunction)c2py::pyfkw<fun_4>, METH_VARARGS | METH_KEYWORDS, doc_d_4.c_str()},
+   {"print_self_energy_backbone", (PyCFunction)c2py::pyfkw<fun_4>, METH_VARARGS | METH_KEYWORDS, doc_d_4.c_str()},
+   {"print_single_ptcle_gf_backbone", (PyCFunction)c2py::pyfkw<fun_5>, METH_VARARGS | METH_KEYWORDS, doc_d_5.c_str()},
+   {"reset", (PyCFunction)c2py::pyfkw<fun_6>, METH_VARARGS | METH_KEYWORDS, doc_d_6.c_str()},
    {nullptr, nullptr, 0, nullptr} // Sentinel
 };
 

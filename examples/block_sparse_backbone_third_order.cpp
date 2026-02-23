@@ -1,4 +1,5 @@
 #include "triqs_xca/dense_backbone.hpp"
+#include "triqs_xca/strong_cpl.hpp"
 #include <chrono>
 #include <nda/nda.hpp>
 #include <cppdlr/cppdlr.hpp>
@@ -278,42 +279,54 @@ int main() {
   auto fb = nda::vector<int64_t>(3);
   fb(0)   = 0;
 
-  BlockDiagOpFun third_order_result(r, Gt.get_block_sizes());
+  BlockDiagOpFun third_order_se(r, Gt.get_block_sizes());
   for (int i = 0; i < 4; ++i) {
     std::cout << "Evaluating topology " << i << std::endl;
 
     // Compute third-order contribution using DiagramEvaluator
     auto Sigma_third_gf = D.compute_self_energy(topologies(i, _, _));
-    third_order_result  = BlockDiagOpFun(Sigma_third_gf);
+    third_order_se  = BlockDiagOpFun(Sigma_third_gf);
     D.reset(); // reset the DiagramEvaluator for the next topology
 
     // Compute third-order contribution using old code
-    nda::array<dcomplex, 3> TCA_old(r, N, N);
-    TCA_old = 0;
+    nda::array<dcomplex, 3> se_old(r, N, N);
+    se_old = 0;
     fb(1)   = 0;
     fb(2)   = 0;
-    TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense,
+    se_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense,
                                   fb, true);
     fb(1) = 1;
-    TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense,
+    se_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense,
                                   fb, true);
     fb(2) = 1;
-    TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense,
+    se_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense,
                                   fb, true);
     fb(1) = 0;
-    TCA_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense,
+    se_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense,
                                   fb, true);
 
-    std::cout << "max error in block 0: " << nda::max_element(nda::abs(TCA_old(_, range(0, 4), range(0, 4)) - third_order_result.get_block(0)))
+    std::cout << "max error in block 0: " << nda::max_element(nda::abs(se_old(_, range(0, 4), range(0, 4)) - third_order_se.get_block(0)))
               << std::endl;
-    std::cout << "max error in block 1: " << nda::max_element(nda::abs(TCA_old(_, range(4, 10), range(4, 10)) - third_order_result.get_block(1)))
+    std::cout << "max error in block 1: " << nda::max_element(nda::abs(se_old(_, range(4, 10), range(4, 10)) - third_order_se.get_block(1)))
               << std::endl;
-    std::cout << "max error in block 2: " << nda::max_element(nda::abs(TCA_old(_, range(10, 11), range(10, 11)) - third_order_result.get_block(2)))
+    std::cout << "max error in block 2: " << nda::max_element(nda::abs(se_old(_, range(10, 11), range(10, 11)) - third_order_se.get_block(2)))
               << std::endl;
-    std::cout << "max error in block 3: " << nda::max_element(nda::abs(TCA_old(_, range(11, 15), range(11, 15)) - third_order_result.get_block(3)))
+    std::cout << "max error in block 3: " << nda::max_element(nda::abs(se_old(_, range(11, 15), range(11, 15)) - third_order_se.get_block(3)))
               << std::endl;
-    std::cout << "max error in block 4: " << nda::max_element(nda::abs(TCA_old(_, range(15, 16), range(15, 16)) - third_order_result.get_block(4)))
+    std::cout << "max error in block 4: " << nda::max_element(nda::abs(se_old(_, range(15, 16), range(15, 16)) - third_order_se.get_block(4)))
               << std::endl;
     std::cout << std::endl;
   }
+
+  // same comparison for single-particle Green's function
+  auto third_order_spgf = nda::zeros<dcomplex>(r, n, n);
+  for (int i = 0; i < 4; ++i) {
+    std::cout << "Evaluating topology " << i << " for single-particle Green's function" << std::endl;
+    third_order_spgf = D.compute_single_ptcle_gf(topologies(i, _, _));
+    D.reset();
+    // compute single-particle Green's function using old code
+    auto spgf_old = G_Diagram_calc_sum_all(Delta_F, Delta_F_reflect, topologies(i, _, _), Gt_dense, itops, beta, Fs_dense, F_dags_dense);
+    std::cout << "max error: " << nda::max_element(nda::abs(spgf_old - third_order_spgf)) << std::endl;
+  }
+
 }
