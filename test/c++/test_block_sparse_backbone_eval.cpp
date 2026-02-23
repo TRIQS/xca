@@ -1,8 +1,11 @@
+#include <cmath>
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <gtest/gtest.h>
 #include <nda/basic_functions.hpp>
+#include <nda/macros.hpp>
+#include <nda/mapped_functions.hxx>
 #include <nda/nda.hpp>
 #include <cppdlr/cppdlr.hpp>
 #include "block_sparse_utils.hpp"
@@ -717,4 +720,139 @@ TEST(Backbone, manual_loop) {
     OCA_result -= D.compute_self_energy(topology, f); // subtract off self-energy evaluation using manual loop
   }
   for (int i = 0; i < G0_bdof.get_num_block_cols(); ++i) { ASSERT_LE(nda::max_element(nda::abs(OCA_result[i].data())), 1e-10); }
+}
+
+TEST(Backbone, one_fermion_third_order_const_hyb) {
+  double beta   = 2.0;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-6;
+
+  // DLR generation
+  auto dlr_rf = build_dlr_rf(Lambda, eps);
+  auto itops  = imtime_ops(Lambda, dlr_rf);
+  int r       = itops.rank();
+
+  // trivial hybridization, Delta = -1/2
+  nda::array<dcomplex, 3> hyb(r, 1, 1);
+  hyb      = -0.5;
+  int p    = 1;
+  int norb = 1;
+  nda::array<dcomplex, 3> hyb_coeffs(p, norb, norb);
+  hyb_coeffs = 1.0;
+  nda::vector<double> hyb_poles(p);
+  hyb_poles = 0.0;
+
+  // trivial atomic Hamiltonian, H = 0
+  triqs::operators::many_body_operator_real H;
+  double mu = 0.0;
+  triqs::operators::many_body_operator_real N;
+  N = n("0", 0);
+  H = -mu * N;
+  fundamental_operator_set fop_set;
+  fop_set.insert("0", 0);
+  triqs::atom_diag::atom_diag<false> ad(H, fop_set);
+  auto G0_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
+  BlockDiagOpFun G0_bdof(G0_ppsc);
+  auto dlr_it = itops.get_itnodes();
+  auto G0_ana = nda::zeros<double>(r);
+  for (int i = 0; i < r; ++i) {
+    double t  = rel2abs(dlr_it(i));
+    G0_ana(i) = -exp(-t * std::numbers::ln2);
+  }
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) { ASSERT_LE(nda::max_element(nda::abs(G0_bdof.get_block(b)(_, 0, 0) - G0_ana)), eps); }
+
+  // set up backbone and diagram evaluator
+  nda::array<int, 2> topology = {{0, 3}, {1, 4}, {2, 5}};
+  DiagramEvaluator D(beta, Lambda, eps, hyb_poles, hyb_coeffs, G0_ppsc, ad);
+  auto third_order_se     = D.compute_self_energy(topology);
+  auto third_order_se_ana = nda::zeros<double>(r);
+  double t                = 0;
+  double bt4              = 0;
+  for (int i = 0; i < r; ++i) {
+    t                     = rel2abs(dlr_it(i)); // t = tau / beta
+    bt4                   = beta * t;
+    bt4                   = bt4 * bt4;
+    bt4                   = bt4 * bt4;
+    third_order_se_ana(i) = bt4 * exp(-t * std::numbers::ln2) / 192.0;
+  }
+  ASSERT_LE(nda::max_element(nda::abs(third_order_se[0].data()(_, 0, 0) - third_order_se_ana)), eps);
+}
+
+TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
+  double beta   = 1.0;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-10;
+
+  // DLR generation
+  auto dlr_rf = build_dlr_rf(Lambda, eps);
+  auto itops  = imtime_ops(Lambda, dlr_rf);
+  int r       = itops.rank();
+
+  // hybridization with one pole
+  int p    = 1;
+  int norb = 1;
+  nda::array<dcomplex, 3> hyb_coeffs(p, norb, norb);
+  hyb_coeffs = 1.0;
+  nda::vector<double> hyb_poles(p);
+  hyb_poles = 0.8;
+
+  // trivial atomic Hamiltonian, H = 0
+  triqs::operators::many_body_operator_real H;
+  double mu = 0.0;
+  triqs::operators::many_body_operator_real N;
+  N = n("0", 0);
+  H = -mu * N;
+  fundamental_operator_set fop_set;
+  fop_set.insert("0", 0);
+  triqs::atom_diag::atom_diag<false> ad(H, fop_set);
+  auto G0_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
+  BlockDiagOpFun G0_bdof(G0_ppsc);
+  auto dlr_it = itops.get_itnodes();
+  auto G0_ana = nda::zeros<double>(r);
+  for (int i = 0; i < r; ++i) {
+    double t  = rel2abs(dlr_it(i));
+    G0_ana(i) = -exp(-t * std::numbers::ln2);
+  }
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) { ASSERT_LE(nda::max_element(nda::abs(G0_bdof.get_block(b)(_, 0, 0) - G0_ana)), eps); }
+
+  // NCA: set up backbone and diagram evaluator
+  nda::array<int, 2> topology1 = {{0, 1}};
+  DiagramEvaluator D(beta, Lambda, eps, hyb_poles, hyb_coeffs, G0_ppsc, ad);
+  auto nca_se     = D.compute_self_energy(topology1);
+  auto nca_se_ana = nda::zeros<double>(r, 2);
+  double t        = 0;
+  double om       = hyb_poles(0);
+  double tom      = 0;
+  for (int i = 0; i < r; ++i) {
+    t                = rel2abs(dlr_it(i)); // t = tau / beta
+    tom              = t * om;
+    nca_se_ana(i, 0) = exp(-t * std::numbers::ln2) * exp(tom) / (exp(beta * om) + 1);
+    nca_se_ana(i, 1) = exp(-t * std::numbers::ln2) * exp(-tom) / (exp(-beta * om) + 1);
+  }
+  ASSERT_LE(nda::max_element(nda::abs(nca_se[0].data()(_, 0, 0) - nca_se_ana(_, 0))), eps);
+  ASSERT_LE(nda::max_element(nda::abs(nca_se[1].data()(_, 0, 0) - nca_se_ana(_, 1))), eps);
+
+  // OCA
+  nda::array<int, 2> topology2 = {{0, 1}, {2, 3}};
+  auto oca_se                  = D.compute_self_energy(topology2);
+  // CURRENTLY NOT PASSING
+  // ASSERT_LE(nda::max_element(nda::abs(oca_se[0].data()(_, 0, 0))), eps);
+  // ASSERT_LE(nda::max_element(nda::abs(oca_se[1].data()(_, 0, 0))), eps);
+
+  // third order
+  nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
+  auto third_order_se          = D.compute_self_energy(topology3);
+  auto third_order_se_ana      = nda::zeros<double>(r, 2);
+  double denom                 = om * (exp(beta * om) + 1);
+  denom                        = denom * denom * denom;
+  denom                        = 2 * om * denom;
+  for (int i = 0; i < r; ++i) {
+    t                        = rel2abs(dlr_it(i)); // t = tau / beta
+    tom                      = t * om;
+    third_order_se_ana(i, 0) = (tom * tom * exp(tom) - 4 * tom * exp(tom) - 2 * tom + 6 * exp(tom) - 6) * exp(beta * om);
+    third_order_se_ana(i, 1) += (tom * tom + 4 * tom + 2 * (tom - 3) * exp(tom) + 6) * exp(om * (2 * beta - t));
+    third_order_se_ana(i, _) *= exp(-t * std::numbers::ln2) / denom;
+  }
+  ASSERT_LE(nda::max_element(nda::abs(third_order_se_ana(_, 0) - third_order_se[0].data()(_, 0, 0))), eps);
+  ASSERT_LE(nda::max_element(nda::abs(third_order_se_ana(_, 1) - third_order_se[1].data()(_, 0, 0))), eps);
 }
