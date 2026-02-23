@@ -115,8 +115,8 @@ void Backbone::set_pole_inds(nda::vector_const_view<int> pole_inds_vec, nda::vec
         prefactor_Kexps(i - 1)  = topology(i, 1) - topology(i, 0) - 1;
       }
     } else { // line i is backward
-      // if (hyb_poles(pole_inds(i - 1)) >= 0) {
-      if (hyb_poles(pole_inds(i - 1)) <= 0) { // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
+      // Work with the reflected hybridization, which has poles and weights that are the negative of the forward hybridization
+      if (hyb_poles(pole_inds(i - 1)) >= 0) {
         // step 4(a)
         // place K^+_l F^dag_pi at the right vertex
         vertices[topology(i, 0)].set_hyb_ind(i - 1);
@@ -441,16 +441,7 @@ std::ostream &operator<<(std::ostream &os, CorrelatorBackbone &B) {
       v_str_tmp += "l";
       for (int j = 0; j < B.get_vertex_hyb_ind(i); j++) v_str_tmp += "`";
     }
-    // hybridization
-    /*
-    if (i == B.get_topology(0, 1)) {
-      v_str_tmp += " Delta_{";
-      if (B.has_vertex_dag(i) == 1)
-        v_str_tmp += "0," + std::to_string(i) + "} ";
-      else
-        v_str_tmp += std::to_string(i) + ",0}";
-    } else
-     */
+
     v_str_tmp += " ";
     int vlen0 = v_str_tmp.size();
     for (int j = vlen0; j < diag_str_cent - 2; j++) v_str_tmp = " " + v_str_tmp;
