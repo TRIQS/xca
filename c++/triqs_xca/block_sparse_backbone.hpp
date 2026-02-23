@@ -58,6 +58,14 @@ class DiagramEvaluator {
                                     nda::vector_const_view<int> block_dims);
   // compose_with_edge_block on the left side of a correlator diagram
 
+  void multiply_vertex_corr_block_reverse(CorrelatorBackbone &backbone, int v_ix, nda::vector_const_view<int> ind_path,
+                                  nda::vector_const_view<int> block_dims);
+  // multiply_vertex_block on the left side of a correlator diagram
+  void compose_with_edge_corr_block_reverse(CorrelatorBackbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
+                                    nda::vector_const_view<int> block_dims);
+  // compose_with_edge_block on the left side of a correlator diagram
+
+  
   std::vector<BlockOp> setup_mu_ops_for_single_ptcle_gf();
   std::vector<BlockOp> setup_kap_ops_for_single_ptcle_gf();
   

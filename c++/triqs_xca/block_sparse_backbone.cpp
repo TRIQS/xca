@@ -629,6 +629,9 @@ void DiagramEvaluator::multiply_vertex_corr_block(CorrelatorBackbone &backbone, 
    * - using U for temporary storage (instead of T), and
    * - skipping the K-factor on the last vertex.
    */
+
+  //std::cout << "--> DiagramEvaluator::multiply_vertex_corr_block\n";
+  //std::cout << "  v_ix = " << v_ix << "\n";
   
   int o_ix = backbone.get_vertex_orb(v_ix); // orbital_index
   // split backbone orbital index into symmetry set index and orbital index within the symmetry set
@@ -710,10 +713,69 @@ void DiagramEvaluator::multiply_vertex_corr_block(CorrelatorBackbone &backbone, 
   if (v_ix != 2 * backbone.m - 1) { // skip if last vertex
     int Ksign = backbone.get_vertex_Ksign(v_ix);
     if (Ksign != 0) {
+      //std::cout << "l_ix = " << l_ix << ", Ksign = " << Ksign << "\n";    
       //if (backbone.get_vertex_direction(v_ix) == 0) Ksign *= -1; // For bwd dir pole -> -pole
       for (int t = 0; t < r; t++)
 	U_vp(t, _, _) *= k_it(dlr_it(t), Ksign * hyb_poles(l_ix));
     }
+  }
+}
+
+void DiagramEvaluator::multiply_vertex_corr_block_reverse(CorrelatorBackbone &backbone, int v_ix, nda::vector_const_view<int> ind_path,
+                                                  nda::vector_const_view<int> block_dims) {
+
+  /*
+   * This method is almost identical to DiagramEvaluator::multiply_vertex_block apart from
+   *
+   * - n_col_r
+   * - using U for temporary storage (instead of T), and
+   * - skipping the K-factor on the last vertex.
+   */
+
+  //std::cout << "--> DiagramEvaluator::multiply_vertex_corr_block_reverse\n";
+  //std::cout << "  v_ix = " << v_ix << "\n";
+  
+  int o_ix = backbone.get_vertex_orb(v_ix); // orbital_index
+  // split backbone orbital index into symmetry set index and orbital index within the symmetry set
+  // i.e. have mapping between backbone orbital index and symmetry set index
+  int q_ix    = static_cast<int>(Fq.sym_set_labels(o_ix)); // symmetry set index
+  int qo_ix   = static_cast<int>(Fq.sym_set_inds(o_ix));   // index within the symmetry set
+  int l_ix    = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(v_ix));
+  //int n_col_r = block_dims(backbone.get_topology(0, 1) + 1); // number of columns for the left-hand side of the diagram
+  int n_col_l = block_dims(backbone.get_topology(0, 1) + 1); // number of columns for the left-hand side of the diagram
+  int b_ix    = ind_path(v_ix - 1);                          // block index for the vertex v_ix
+
+  // Get the current operator matrix F using the flags and indices of the vertex with index v_ix
+  
+  bool has_bar = backbone.has_vertex_bar(v_ix);
+  bool has_dag = backbone.has_vertex_dag(v_ix);
+
+  auto F_selector = [&]() {
+    if (has_bar) return has_dag ? Fq.F_dag_bars [q_ix].get_block(b_ix)(qo_ix, l_ix, _, _) :
+	                          Fq.F_bars_refl[q_ix].get_block(b_ix)(qo_ix, l_ix, _, _);
+    else         return has_dag ? Fq.F_dags[q_ix].get_block(b_ix)(qo_ix, _, _) :
+                                  Fq.Fs    [q_ix].get_block(b_ix)(qo_ix, _, _);
+  };
+
+  nda::array_const_view<dcomplex, 2> F{F_selector()};
+
+  // Get views on temporary storage for input and output
+  
+  nda::array_view<dcomplex, 3> U_v  = U(_, range(0, n_col_l), range(0, block_dims(v_ix + 1)));
+  nda::array_view<dcomplex, 3> U_vp = U(_, range(0, n_col_l), range(0, block_dims(v_ix)));
+  
+  // Multiply with the operator matrix F from the right
+
+  if (has_bar && !has_dag) U_v *= -1.; // Using F_bar_refl requires an extra sign ?
+  for (int t = 0; t < r; t++) U_vp(t, _, _) = matmul(U_v(t, _, _), F);
+  
+  // K factor
+  
+  int Ksign = backbone.get_vertex_Ksign(v_ix);
+  if (Ksign != 0) {
+    //std::cout << "l_ix = " << l_ix << ", Ksign = " << Ksign << "\n";    
+    for (int t = 0; t < r; t++)
+      U_vp(t, _, _) *= k_it(dlr_it(t), -Ksign * hyb_poles(l_ix)); // extra sign for K(t) -> K(beta - t)
   }
 }
 
@@ -747,6 +809,9 @@ void DiagramEvaluator::compose_with_edge_corr_block(CorrelatorBackbone &backbone
    * - the n_col_r index, and
    * - using U for temporary storage (instead of T)
    */
+
+  //std::cout << "--> DiagramEvaluator::compose_with_edge_corr_block_reverse\n";
+  //std::cout << "  e_ix = " << e_ix << "\n";  
   
   int m = backbone.m;
   int b_ix = ind_path(e_ix); // block index for the edge e_ix
@@ -754,11 +819,13 @@ void DiagramEvaluator::compose_with_edge_corr_block(CorrelatorBackbone &backbone
 
   nda::array_view<dcomplex, 3> GKt_ep = GKt(_, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1)));
 
+  std::cout << "Gt.get_block(ind_path(e_ix)), e_ix = " << e_ix << "\n";
   GKt_ep = Gt.get_block(b_ix);
   
   for (int x = 0; x < m - 1; x++) {
     int Ksign = backbone.get_edge(e_ix, x);
     if (Ksign != 0) {
+      //std::cout << "x = " << x << ", Ksign = " << Ksign << "\n";
       //if (backbone.get_fb(x + 1) == 0) Ksign *= -1; // For bwd dir pole -> -pole
       for (int t = 0; t < r; t++)
 	GKt_ep(t, _, _) *= k_it(dlr_it(t), Ksign * hyb_poles(backbone.get_pole_ind(x)));
@@ -767,6 +834,43 @@ void DiagramEvaluator::compose_with_edge_corr_block(CorrelatorBackbone &backbone
 
   nda::array_view<dcomplex, 3> U_ep = U(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r));
   U_ep = itops.convolve(beta, itops.vals2coefs(GKt_ep), itops.vals2coefs(U_ep), TIME_ORDERED);
+}
+
+void DiagramEvaluator::compose_with_edge_corr_block_reverse(CorrelatorBackbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
+                                                    nda::vector_const_view<int> block_dims) {
+
+  /*
+   * This routine is almost identical to DiagramEvaluator::compose_with_edge_block
+   *
+   * apart from
+   * - the n_col_r index, and
+   * - using U for temporary storage (instead of T)
+   */
+
+  //std::cout << "--> DiagramEvaluator::compose_with_edge_corr_block_reverse\n";
+  //std::cout << "  e_ix = " << e_ix << "\n";
+  
+  int m = backbone.m;
+  int b_ix = ind_path(e_ix); // block index for the edge e_ix
+  //int n_col_r = block_dims(backbone.get_topology(0, 1) + 1); // Different n_col_r behavour c.f. compose_with_edge_block(...)
+  int n_col_l = block_dims(backbone.get_topology(0, 1) + 1); // number of columns for the left-hand side of the diagram
+
+  nda::array_view<dcomplex, 3> GKt_ep = GKt(_, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1)));
+
+  //std::cout << "Gt.get_block(ind_path(e_ix)), e_ix = " << e_ix << "\n";
+  GKt_ep = Gt.get_block(b_ix);
+  
+  for (int x = 0; x < m - 1; x++) {
+    int Ksign = backbone.get_edge(e_ix, x);
+    if (Ksign != 0) {
+      //std::cout << "x = " << x << ", Ksign = " << Ksign << "\n";
+      for (int t = 0; t < r; t++)
+	GKt_ep(t, _, _) *= k_it(dlr_it(t), Ksign * hyb_poles(backbone.get_pole_ind(x)));
+    }
+  }
+
+  nda::array_view<dcomplex, 3> U_ep = U(_, range(0, n_col_l), range(0, block_dims(e_ix + 1)));
+  U_ep = itops.convolve(beta, itops.vals2coefs(U_ep), itops.vals2coefs(GKt_ep), TIME_ORDERED);
 }
 
 nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops) {
@@ -1024,7 +1128,16 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &ba
       ++w;
     }
     if (path_all_nonzero) {
-      
+
+      //std::cout << "------------------------------------------------\n";
+      //std::cout << "--> non-zero block b_ix = " << b_ix << "\n";
+      //std::cout << backbone << "\n";
+
+      /*
+      // Evaluation of left correlator term [beta, tau] starting from tau
+      // Conjecture: the application of tau local kernels is not possible with this order of integrals.
+	
+      //std::cout << "Gt.get_block(ind_path(vct0)), vct0 = " << vct0 << "\n";
       U(_, range(0, block_dims(vct0 + 1)), range(0, block_dims(vct0 + 1))) = Gt.get_block(ind_path(vct0));
 
       if (m > 1) { // only do this for second-order and higher
@@ -1050,6 +1163,7 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &ba
 
         // convolve with last edge
 
+	//std::cout << "Gt.get_block(ind_path(2*m - 1)), 2*m - 1 = " << 2 * m - 1 << "\n";
         GKt(_, range(0, block_dims(2 * m)), range(0, block_dims(2 * m))) = Gt.get_block(ind_path(2 * m - 1));
 
         int bv = backbone.get_vertex_Ksign(2 * m - 1); // sign on K
@@ -1064,8 +1178,24 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &ba
 	
         U(_, range(0, block_dims(2 * m)), range(0, block_dims(vct0 + 1))) =
            itops.convolve(beta, itops.vals2coefs(GKt(_, range(0, block_dims(2 * m)), range(0, block_dims(2 * m)))),
-                          itops.vals2coefs(U(_, range(0, block_dims(2 * m)), range(0, block_dims(vct0 + 1)))), TIME_ORDERED);
-      }      
+                          itops.vals2coefs(U(_, range(0, block_dims(2 * m)), range(0, block_dims(vct0 + 1)))), TIME_ORDERED);	
+      }
+      */
+
+      // Evaluation of left correlator term [beta, tau] starting from beta
+      // and applying tau local kernels to the left (with reflect operation) K(tau, w) -> K(beta - tau, -w)
+
+      nda::array_view<dcomplex, 3> U_beta = U(_, range(0, block_dims(2*m)), range(0, block_dims(2*m)));
+
+      //std::cout << "Gt.get_block(ind_path(2*m - 1)), 2*m - 1 = " << 2*m - 1 << "\n";
+      U_beta = Gt.get_block(ind_path(2*m - 1));
+
+      for (int v = 2*m - 1; v > vct0; v--) {
+	multiply_vertex_corr_block_reverse(backbone, v, ind_path, block_dims); // NB! using the "corr" routines assigning to U internally
+	compose_with_edge_corr_block_reverse(backbone, v - 1, ind_path, block_dims); // NB! using the "corr" routines assigning to U internally
+      }
+
+      // store result
       U                    = itops.reflect(U);
       left[ind_path(vct0)] = U(_, range(0, block_dims(2 * m)), range(0, block_dims(vct0 + 1)));
       left_inds(b_ix)      = ind_path(2 * m - 1);

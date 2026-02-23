@@ -131,7 +131,7 @@ def make_Delta_with_cont_spec_mat( Z, rho, a=-1.0, b=1.0, eps=1e-12):
     return Delta[:, None, None] * T[None, :, :]
 
 
-def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
+def test_oca_diagram_cf_block_sparse_and_dense(e1=0.8, beta=2.0, verbose=False):
 
     print('='*72)
     print('='*72)
@@ -145,7 +145,6 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     b = +1.0
     r0 = 0.5
     mu = 0.0
-    e1 = -0.8
     
     eps = 1e-12
     #lamb = 20.0 * beta
@@ -598,5 +597,6 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
 if __name__ == '__main__':
 
     #test_oca_diagram_cf_block_sparse_and_dense(beta=1.0, verbose=True)
-    test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=True)
+    test_oca_diagram_cf_block_sparse_and_dense(e1=+0.8, beta=2.0, verbose=False)
+    test_oca_diagram_cf_block_sparse_and_dense(e1=-0.8, beta=2.0, verbose=False)
      
