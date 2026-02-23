@@ -72,15 +72,16 @@ DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps, nda::
 void DiagramEvaluator::multiply_vertex_block(Backbone &backbone, int v_ix, nda::vector_const_view<int> ind_path,
                                              nda::vector_const_view<int> block_dims) {
 
-  std::cout << "--> DiagramEvaluator::multiply_vertex_block\n";
+  //std::cout << "--> DiagramEvaluator::multiply_vertex_block\n";
 
+  int vct0 = backbone.get_topology(0, 1);
   int o_ix = backbone.get_vertex_orb(v_ix); // orbital_index
   // split backbone orbital index into symmetry set index and orbital index within the symmetry set
   // i.e. have mapping between backbone orbital index and symmetry set index
   int q_ix    = static_cast<int>(Fq.sym_set_labels(o_ix)); // symmetry set index
   int qo_ix   = static_cast<int>(Fq.sym_set_inds(o_ix));   // index within the symmetry set
   int l_ix    = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(v_ix));
-  int n_col_r = v_ix < backbone.get_topology(0, 1) ? block_dims(1) : block_dims(0);
+  int n_col_r = v_ix < vct0 ? block_dims(1) : block_dims(0);
   int b_ix    = ind_path(v_ix - 1); // block index for the vertex v_ix
 
   /*
@@ -149,12 +150,14 @@ void DiagramEvaluator::multiply_vertex_block(Backbone &backbone, int v_ix, nda::
 
   int Ksign = backbone.get_vertex_Ksign(v_ix); // sign on K
 
+  /*
   std::cout << "l_ix = " << l_ix
 	    << ", has_bar = " << has_bar
 	    << ", has_dag = " << has_dag
 	    << ", Ksign = " << Ksign
 	    << ", fb = " << backbone.get_vertex_direction(v_ix)
 	    << "\n\n";
+  */
   
   if (Ksign != 0) {
     //if (backbone.get_vertex_direction(v_ix) == 0) Ksign *= -1; // For bwd dir pole -> -pole // BUG? accounted for by Ksign
@@ -186,11 +189,12 @@ void DiagramEvaluator::compose_with_edge_block(Backbone &backbone, int e_ix, nda
                     itops.vals2coefs(T(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r))), TIME_ORDERED);
   */
 
-  std::cout << "--> DiagramEvaluator::compose_with_edge_block\n";
+  //std::cout << "--> DiagramEvaluator::compose_with_edge_block\n";
   
   int m = backbone.m;
   int b_ix = ind_path(e_ix); // block index for the edge e_ix
-  int n_col_r = e_ix < backbone.get_topology(0, 1) ? block_dims(1) : block_dims(0);
+  int vct0 = backbone.get_topology(0, 1);
+  int n_col_r = e_ix < vct0 ? block_dims(1) : block_dims(0);
 
   nda::array_view<dcomplex, 3> GKt_ep = GKt(_, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1)));
   
@@ -199,11 +203,13 @@ void DiagramEvaluator::compose_with_edge_block(Backbone &backbone, int e_ix, nda
   for (int x = 0; x < m - 1; x++) {
     int Ksign = backbone.get_edge(e_ix, x); // sign on K
 
+    /*
     std::cout << "x = " << x
 	      << ", Ksign = " << Ksign
 	      << ", fb = " << backbone.get_fb(x + 1)
 	      << ", p_xi = " << backbone.get_pole_ind(x)
 	      << "\n";
+    */
 				    
     if (Ksign != 0) {
       //if (backbone.get_fb(x + 1) == 0) Ksign *= -1; // For bwd dir pole -> -pole // BUG? accounted for by Ksign
@@ -212,7 +218,7 @@ void DiagramEvaluator::compose_with_edge_block(Backbone &backbone, int e_ix, nda
     }
   }
 
-  std::cout << "\n";
+  //std::cout << "\n";
   
   nda::array_view<dcomplex, 3> T_ep = T(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r));
   T_ep = itops.convolve(beta, itops.vals2coefs(GKt_ep), itops.vals2coefs(T_ep), TIME_ORDERED);
@@ -299,10 +305,9 @@ void DiagramEvaluator::multiply_zero_vertex_block(Backbone &backbone, bool is_fo
     }
   }
   */
-  
-  int b_ix_mu = ind_path(backbone.get_topology(0, 1) - 1); // block index for F_mu
 
   int v_ix = backbone.get_topology(0, 1);
+  int b_ix_mu = ind_path(v_ix - 1); // block index for F_mu
 
   nda::array_view<dcomplex, 3> T_v  = T(_, range(0, block_dims(v_ix)),     range(0, block_dims(1)));
   nda::array_view<dcomplex, 3> T_vp = T(_, range(0, block_dims(v_ix + 1)), range(0, block_dims(0)));
@@ -346,9 +351,11 @@ void DiagramEvaluator::find_path_self_energy(Backbone &backbone, int f_ix, nda::
   int m = backbone.m;
   backbone.set_flat_index(f_ix, hyb_poles); // set directions, pole indices, and orbital indices from a single integer index
 
+  /*
   std::cout << "--------------------------------------------\n";
   std::cout << "f_ix = " << f_ix << "\n";
   std::cout << "backbone (dressed) = \n" << backbone << "\n";
+  */
   
   /*  Example of block_dims for m = 2 (OCA): each number is an index of block_dims, and each square represents a block of a matrix 
           3            3            2            2            1            1            0
@@ -504,10 +511,12 @@ void DiagramEvaluator::find_path_self_energy(Backbone &backbone, int f_ix, nda::
 	  block_dims(w + 2) = F_selector(w + 1).get_block_size(ind_path(w), 0);
 	}
 
+	/*
 	std::cout << "--> self-energy block index: b_ix = " << b_ix << "\n";
 	std::cout << "symmetry sectors: p_kap, p_mu = " << p_kap << ", " << p_mu << "\n";
 	std::cout << "block_dims = " << block_dims << "\n";
 	std::cout << "ind_path = " << ind_path << "\n";
+	*/
 	
 	// evaluate the diagram with these directions, poles, and orbital indices
 	// b_ix is the block index for the first edge
@@ -546,35 +555,38 @@ void DiagramEvaluator::eval_self_energy(Backbone &backbone) {
 void DiagramEvaluator::eval_self_energy_fixed_indices(Backbone &backbone, int b_ix, int p_kap, int p_mu, nda::vector_const_view<int> ind_path,
                                                       nda::vector_const_view<int> block_dims) {
 
+  /*
   std::cout << "--> DiagramEvaluator::eval_self_energy_fixed_indices\n";
   std::cout << "v1 = " << backbone.get_topology(0, 1) << "\n";
- 
+  */
+  
   int m = backbone.m;
+  int vct0 = backbone.get_topology(0, 1);
 
-  T = 0.; // DEBUG;
+  //T = 0.; // DEBUG;
 
-  std::cout << "get 1st backbone\n";
+  //std::cout << "get 1st backbone\n";
   T(_, range(0, block_dims(1)), range(0, block_dims(1))) = Gt.get_block(ind_path(0));
   
-  for (int v = 1; v < backbone.get_topology(0, 1); v++) {
-    std::cout << "compose vertex and edge: v = " << v << "\n";
+  for (int v = 1; v < vct0; v++) {
+    //std::cout << "compose vertex and edge: v = " << v << "\n";
     multiply_vertex_block(backbone, v, ind_path, block_dims);
     compose_with_edge_block(backbone, v, ind_path, block_dims);
   }
 
-  std::cout << "multiply_zero_vertex_block\n";
+  //std::cout << "multiply_zero_vertex_block\n";
   multiply_zero_vertex_block(backbone, (not backbone.has_vertex_dag(0)), b_ix, p_kap, p_mu, ind_path, block_dims);
 
-  for (int v = backbone.get_topology(0, 1) + 1; v < 2 * m; v++) {
-    std::cout << "compose edge and vertex: v = " << v << "\n";
+  for (int v = vct0 + 1; v < 2 * m; v++) {
+    //std::cout << "compose edge and vertex: v = " << v << "\n";
     compose_with_edge_block(backbone, v - 1, ind_path, block_dims);
     multiply_vertex_block(backbone, v, ind_path, block_dims);
   }
 
-  std::cout << "multiply_prefactor\n";
+  //std::cout << "multiply_prefactor\n";
   multiply_prefactor(backbone);
 
-  std::cout << "diagram sign\n";
+  //std::cout << "diagram sign\n";
   int diag_order_sign = (m % 2 == 0) ? -1 : 1;
   if (backbone.get_fb(0) == 0) diag_order_sign *= -1;
 
@@ -588,9 +600,9 @@ void DiagramEvaluator::eval_self_energy_fixed_indices(Backbone &backbone, int b_
 
 block_gf<dlr_imtime> DiagramEvaluator::compute_self_energy(nda::array_const_view<int, 2> topology) {
   Backbone backbone(topology, n);
-  std::cout << "--> DiagramEvaluator::compute_self_energy\n";
-  std::cout << "topology = " << topology << "\n";
-  std::cout << "backbone =\n" << backbone << "\n";
+  //std::cout << "--> DiagramEvaluator::compute_self_energy\n";
+  //std::cout << "topology = " << topology << "\n";
+  //std::cout << "backbone =\n" << backbone << "\n";
   eval_self_energy(backbone);
   BlockDiagOpFun sig = get_self_energy();
   std::vector<gf<dlr_imtime>> sig_blocks(sig.get_num_block_cols());
@@ -698,7 +710,7 @@ void DiagramEvaluator::multiply_vertex_corr_block(CorrelatorBackbone &backbone, 
   if (v_ix != 2 * backbone.m - 1) { // skip if last vertex
     int Ksign = backbone.get_vertex_Ksign(v_ix);
     if (Ksign != 0) {
-      if (backbone.get_vertex_direction(v_ix) == 0) Ksign *= -1; // For bwd dir pole -> -pole
+      //if (backbone.get_vertex_direction(v_ix) == 0) Ksign *= -1; // For bwd dir pole -> -pole
       for (int t = 0; t < r; t++)
 	U_vp(t, _, _) *= k_it(dlr_it(t), Ksign * hyb_poles(l_ix));
     }
@@ -747,7 +759,7 @@ void DiagramEvaluator::compose_with_edge_corr_block(CorrelatorBackbone &backbone
   for (int x = 0; x < m - 1; x++) {
     int Ksign = backbone.get_edge(e_ix, x);
     if (Ksign != 0) {
-      if (backbone.get_fb(x + 1) == 0) Ksign *= -1; // For bwd dir pole -> -pole
+      //if (backbone.get_fb(x + 1) == 0) Ksign *= -1; // For bwd dir pole -> -pole
       for (int t = 0; t < r; t++)
 	GKt_ep(t, _, _) *= k_it(dlr_it(t), Ksign * hyb_poles(backbone.get_pole_ind(x)));
     }
@@ -755,7 +767,6 @@ void DiagramEvaluator::compose_with_edge_corr_block(CorrelatorBackbone &backbone
 
   nda::array_view<dcomplex, 3> U_ep = U(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r));
   U_ep = itops.convolve(beta, itops.vals2coefs(GKt_ep), itops.vals2coefs(U_ep), TIME_ORDERED);
-  //U_ep = itops.reflect(U_ep);
 }
 
 nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops) {
@@ -1024,7 +1035,7 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &ba
           int be = backbone.get_edge(vct0, i);
           if (be != 0) {
 	    double pole = hyb_poles(backbone.get_pole_ind(i));
-	    if (backbone.get_fb(i + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
+	    //if (backbone.get_fb(i + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
             for (int t = 0; t < r; t++) {
               U(t, range(0, block_dims(vct0 + 1)), range(0, block_dims(vct0 + 1))) *= k_it(dlr_it(t), be * pole);
             }
@@ -1045,7 +1056,7 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &ba
         if (bv != 0) {
 	  int l_ix = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(2 * m - 1));
 	  double pole = hyb_poles(l_ix);
-	  if (backbone.get_vertex_direction(2 * m - 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
+	  //if (backbone.get_vertex_direction(2 * m - 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
           for (int t = 0; t < r; t++) {
             GKt(t, range(0, block_dims(2 * m)), range(0, block_dims(2 * m))) *= k_it(dlr_it(t), -bv * pole);
           }
