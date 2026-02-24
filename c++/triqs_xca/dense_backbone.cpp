@@ -1,5 +1,6 @@
 #include <cppdlr/dlr_imtime.hpp>
 #include <cppdlr/dlr_kernels.hpp>
+#include <cppdlr/utils.hpp>
 #include <nda/nda.hpp>
 #include <triqs_xca/block_sparse.hpp>
 #include <triqs_xca/dense_backbone.hpp>
@@ -197,22 +198,6 @@ void DenseDiagramEvaluator::multiply_vertex_corr_reverse(Backbone &backbone, int
   // backbone.get_vertex_hyb_ind(v_ix) = i, where i is the # of primes on l
   // l_ix = value of l with i primes
 
-  /*
-  if (backbone.has_vertex_bar(v_ix)) {   // F has bar
-    if (backbone.has_vertex_dag(v_ix)) { // F has dagger
-      for (int t = 0; t < r; t++) U(t, _, _) = matmul(Fset.F_dag_bars(o_ix, l_ix, _, _), U(t, _, _));
-    } else {
-      for (int t = 0; t < r; t++) U(t, _, _) = -matmul(Fset.F_bars_refl(o_ix, l_ix, _, _), U(t, _, _));
-    }
-  } else {
-    if (backbone.has_vertex_dag(v_ix)) { // F has dagger
-      for (int t = 0; t < r; t++) U(t, _, _) = matmul(Fset.F_dags(o_ix, _, _), U(t, _, _));
-    } else {
-      for (int t = 0; t < r; t++) U(t, _, _) = matmul(Fset.Fs(o_ix, _, _), U(t, _, _));
-    }
-  }
-  */
-
   bool has_bar = backbone.has_vertex_bar(v_ix);
   bool has_dag = backbone.has_vertex_dag(v_ix);
 
@@ -272,12 +257,24 @@ nda::array<dcomplex, 3> DenseDiagramEvaluator::eval_correlator(CorrelatorBackbon
   nda::array<dcomplex, 3> correlator = nda::zeros<dcomplex>(r, mu_ops.extent(0), kap_ops.extent(0));
   nda::array<dcomplex, 3> Tmuop      = nda::zeros<dcomplex>(r, Gt.extent(1), Gt.extent(1));
   for (int f_ix = 0; f_ix < f_ix_max; ++f_ix) {
+    std::cout << "f_ix = " << f_ix << "\n";
     backbone.set_flat_index(f_ix, hyb_poles); // set directions, pole indices, and orbital indices from a single integer index
     eval_correlator_fixed_indices(backbone);  // evaluate the diagram with these directions, poles, and orbital indices
     for (int mu = 0; mu < mu_ops.extent(0); ++mu) {
+      // if (f_ix == 3 && mu == 0) {
+      //   std::cout << "  T = " << T(5, _, _) << "\n";
+      //   std::cout << "  U = " << U(5, _, _) << "\n";
+      //   std::cout << "  mu_op = " << mu_ops(mu, _, _) << "\n";
+      // }
       for (int t = 0; t < r; ++t) { Tmuop(t, _, _) = matmul(U(t, _, _), matmul(mu_ops(mu, _, _), T(t, _, _))); }
       for (int kap = 0; kap < kap_ops.extent(0); ++kap) {
-        for (int t = 0; t < r; ++t) { correlator(t, mu, kap) += trace(matmul(Tmuop(t, _, _), kap_ops(kap, _, _))); }
+        // std::cout << "  mu = " << mu << ", kap = " << kap << "\n";
+        // if (f_ix == 3 && mu == 0 && kap == 0) {
+          // std::cout << "Tmuop slice = " << Tmuop(5, _, _) << "\n";
+        // }
+        for (int t = 0; t < r; ++t) { correlator(t, mu, kap) += trace(matmul(Tmuop(t, _, _), kap_ops(kap, _, _))); 
+        // if (t == 5) std::cout << "    contribution to correlator from t = " << t << " is " << trace(matmul(Tmuop(t, _, _), kap_ops(kap, _, _))) << "\n";
+        }
       }
     }
     backbone.reset_all_inds(); // reset directions, pole indices, and orbital indices for the next iteration
@@ -301,43 +298,13 @@ void DenseDiagramEvaluator::eval_correlator_fixed_indices(CorrelatorBackbone &ba
   // result is another N x N matrix-valued function of tau.
   U = Gt; // U stores the result moving right to left
 
-  /*
-  if (m > 1) { // only do this for second-order and higher
-    // compute U, which is the edge immediately to the left of the vertex connected to 0
-    int be = 0;
-    for (int i = 0; i < m - 1; ++i) {
-      be          = backbone.get_edge(backbone.get_topology(0, 1), i);
-      double pole = hyb_poles(backbone.get_pole_ind(i));
-      // if (backbone.get_fb(i + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
-      if (be != 0) {
-        for (int t = 0; t < r; t++) { U(t, _, _) = k_it(dlr_it(t), be * pole) * U(t, _, _); }
-      }
-    }
-    for (int v = backbone.get_topology(0, 1) + 1; v < 2 * m - 1; ++v) { // loop from the special vertex to before the last vertex
-      multiply_vertex_corr(backbone, v);
-      compose_with_edge_corr(backbone, v);
-    }
-    // multiply by the last vertex
-    multiply_vertex_corr(backbone, 2 * m - 1);
-    // convolve with last edge
-    GKt         = Gt;
-    int bv      = backbone.get_vertex_Ksign(2 * m - 1); // sign on K
-    int l_ix    = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(2 * m - 1));
-    double pole = hyb_poles(l_ix);
-    // if (backbone.get_vertex_direction(2 * m - 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
-    if (bv != 0) {
-      for (int t = 0; t < r; t++) { GKt(t, _, _) = k_it(dlr_it(t), -bv * pole) * GKt(t, _, _); }
-    }
-    U = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(U), TIME_ORDERED);
-  }
-  */
-
   for (int v = 2*m - 1; v > backbone.get_topology(0, 1); v--) {
     multiply_vertex_corr_reverse(backbone, v);
     compose_with_edge_corr_reverse(backbone, v - 1);
   }
   
   U = itops.reflect(U);
+  std::cout << "U after reflection = " << U(5, _, _) << "\n";
 
   multiply_prefactor(backbone);
   int diag_order_sign = 1; // (m % 2 == 1) ? -1 : 1;

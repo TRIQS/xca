@@ -35,8 +35,8 @@ TEST(two_fermions, one_hyb_pole) {
   fop_set.insert("1", 0);
 
   // conserved operators
-  // std::vector<triqs::operators::many_body_operator_real> sym_ops = {Nop};
-  std::vector<triqs::operators::many_body_operator_real> sym_ops = {N0, N1};
+  std::vector<triqs::operators::many_body_operator_real> sym_ops = {Nop};
+  // std::vector<triqs::operators::many_body_operator_real> sym_ops = {N0, N1};
 
   // atom_diag object
   triqs::atom_diag::atom_diag<false> ad(H, fop_set, sym_ops);
@@ -46,36 +46,40 @@ TEST(two_fermions, one_hyb_pole) {
   int norb = 2;
   nda::array<dcomplex, 3> hyb_coeffs(p, norb, norb);
   hyb_coeffs(0, _, _) = nda::eye(2);
-  double r0 = 0.5;
-  hyb_coeffs(0, 0, 1) = r0;
-  hyb_coeffs(0, 1, 0) = r0;
+  // double r0 = 0.5;
+  // hyb_coeffs(0, 0, 1) = r0;
+  // hyb_coeffs(0, 1, 0) = r0;
   nda::vector<double> hyb_poles(p);
   hyb_poles = -1.5;
 
   // compute single-particle Green's function for the two-fermion system with one hybridization pole
   auto G_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
   DiagramEvaluator D(beta, Lambda, eps, hyb_poles, hyb_coeffs, G_ppsc, ad);
-  nda::array<int, 2> topology = {{0, 1}};
+  nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto spgf                   = D.compute_single_ptcle_gf(topology);
 
   // compare to call to dense code
-  auto hyb                                  = aaa_coefs2vals(beta, Lambda, eps, hyb_coeffs, hyb_poles);
-  auto dlr_rf                               = build_dlr_rf(Lambda, eps);
-  auto itops                                = imtime_ops(Lambda, dlr_rf);
-  auto hyb_refl                             = itops.reflect(hyb);
-  auto G_ppsc_dense                         = nda::zeros<dcomplex>(itops.rank(), ad.get_full_hilbert_space_dim(), ad.get_full_hilbert_space_dim());
-  int s0 = 0;
-  int s1 = 0;
+  auto hyb          = aaa_coefs2vals(beta, Lambda, eps, hyb_coeffs, hyb_poles);
+  auto dlr_rf       = build_dlr_rf(Lambda, eps);
+  auto itops        = imtime_ops(Lambda, dlr_rf);
+  auto hyb_refl     = itops.reflect(hyb);
+  auto G_ppsc_dense = nda::zeros<dcomplex>(itops.rank(), ad.get_full_hilbert_space_dim(), ad.get_full_hilbert_space_dim());
+  int s0            = 0;
+  int s1            = 0;
   for (int s = 0; s < ad.n_subspaces(); ++s) {
     s1 += ad.get_fock_states(s).size();
     G_ppsc_dense(_, range(s0, s1), range(s0, s1)) = G_ppsc[s].data();
-    s0 = s1;
+    s0                                            = s1;
   }
-  auto Fset                                 = get_operators_dense(ad, norb, hyb_coeffs);
+  std::cout << "G_ppsc_dense = " << G_ppsc_dense(0, _, _) << "\n";
+  auto Fset = get_operators_dense(ad, norb, hyb_coeffs);
+  hyb_poles = nda::make_regular(beta * hyb_poles);
   DenseDiagramEvaluator D_dense(beta, itops, hyb, hyb_refl, hyb_poles, G_ppsc_dense, Fset);
   auto mu_ops  = Fset.Fs;
   auto kap_ops = Fset.F_dags;
   CorrelatorBackbone B(topology, norb);
   auto spgf_dense = D_dense.eval_correlator(B, mu_ops, kap_ops);
+  std::cout << "spgf = " << spgf(_, 0, 0) << "\n";
+  std::cout << "spgf_dense = " << spgf_dense(_, 0, 0) << "\n";
   ASSERT_LE(nda::max_element(nda::abs(spgf - spgf_dense)), 1.0e-15);
 }
