@@ -202,22 +202,21 @@ void DenseDiagramEvaluator::multiply_vertex_corr_reverse(Backbone &backbone, int
   bool has_dag = backbone.has_vertex_dag(v_ix);
 
   auto F_selector = [&]() {
-    if (has_bar) return has_dag ? Fset.F_dag_bars (o_ix, l_ix, _, _) :
-	                          Fset.F_bars_refl(o_ix, l_ix, _, _);
-    else         return has_dag ? Fset.F_dags(o_ix, _, _) :
-                                  Fset.Fs    (o_ix, _, _);
+    if (has_bar)
+      return has_dag ? Fset.F_dag_bars(o_ix, l_ix, _, _) : Fset.F_bars_refl(o_ix, l_ix, _, _);
+    else
+      return has_dag ? Fset.F_dags(o_ix, _, _) : Fset.Fs(o_ix, _, _);
   };
 
   nda::array_const_view<dcomplex, 2> F = F_selector();
 
   if (has_bar && !has_dag) U *= -1.; // Using F_bar_refl requires an extra sign ?
   for (int t = 0; t < r; t++) U(t, _, _) = matmul(U(t, _, _), F);
-  
+
   // K factor
   int Ksign = backbone.get_vertex_Ksign(v_ix); // sign on K
   if (Ksign != 0) {
-    for (int t = 0; t < r; t++)
-      U(t, _, _) *= k_it(dlr_it(t), -Ksign * hyb_poles(l_ix));
+    for (int t = 0; t < r; t++) U(t, _, _) *= k_it(dlr_it(t), -Ksign * hyb_poles(l_ix));
   }
 }
 
@@ -242,8 +241,7 @@ void DenseDiagramEvaluator::compose_with_edge_corr_reverse(Backbone &backbone, i
     int Ksign = backbone.get_edge(e_ix, x); // sign on K
     if (Ksign != 0) {
       double pole = hyb_poles(backbone.get_pole_ind(x));
-      for (int t = 0; t < r; t++)
-	GKt(t, _, _) *= k_it(dlr_it(t), Ksign * pole);
+      for (int t = 0; t < r; t++) GKt(t, _, _) *= k_it(dlr_it(t), Ksign * pole);
     }
   }
   U = itops.convolve(beta, itops.vals2coefs(U), itops.vals2coefs(GKt), TIME_ORDERED);
@@ -257,24 +255,12 @@ nda::array<dcomplex, 3> DenseDiagramEvaluator::eval_correlator(CorrelatorBackbon
   nda::array<dcomplex, 3> correlator = nda::zeros<dcomplex>(r, mu_ops.extent(0), kap_ops.extent(0));
   nda::array<dcomplex, 3> Tmuop      = nda::zeros<dcomplex>(r, Gt.extent(1), Gt.extent(1));
   for (int f_ix = 0; f_ix < f_ix_max; ++f_ix) {
-    std::cout << "f_ix = " << f_ix << "\n";
     backbone.set_flat_index(f_ix, hyb_poles); // set directions, pole indices, and orbital indices from a single integer index
     eval_correlator_fixed_indices(backbone);  // evaluate the diagram with these directions, poles, and orbital indices
     for (int mu = 0; mu < mu_ops.extent(0); ++mu) {
-      // if (f_ix == 3 && mu == 0) {
-      //   std::cout << "  T = " << T(5, _, _) << "\n";
-      //   std::cout << "  U = " << U(5, _, _) << "\n";
-      //   std::cout << "  mu_op = " << mu_ops(mu, _, _) << "\n";
-      // }
       for (int t = 0; t < r; ++t) { Tmuop(t, _, _) = matmul(U(t, _, _), matmul(mu_ops(mu, _, _), T(t, _, _))); }
       for (int kap = 0; kap < kap_ops.extent(0); ++kap) {
-        // std::cout << "  mu = " << mu << ", kap = " << kap << "\n";
-        // if (f_ix == 3 && mu == 0 && kap == 0) {
-          // std::cout << "Tmuop slice = " << Tmuop(5, _, _) << "\n";
-        // }
-        for (int t = 0; t < r; ++t) { correlator(t, mu, kap) += trace(matmul(Tmuop(t, _, _), kap_ops(kap, _, _))); 
-        // if (t == 5) std::cout << "    contribution to correlator from t = " << t << " is " << trace(matmul(Tmuop(t, _, _), kap_ops(kap, _, _))) << "\n";
-        }
+        for (int t = 0; t < r; ++t) { correlator(t, mu, kap) += trace(matmul(Tmuop(t, _, _), kap_ops(kap, _, _))); }
       }
     }
     backbone.reset_all_inds(); // reset directions, pole indices, and orbital indices for the next iteration
@@ -298,13 +284,12 @@ void DenseDiagramEvaluator::eval_correlator_fixed_indices(CorrelatorBackbone &ba
   // result is another N x N matrix-valued function of tau.
   U = Gt; // U stores the result moving right to left
 
-  for (int v = 2*m - 1; v > backbone.get_topology(0, 1); v--) {
+  for (int v = 2 * m - 1; v > backbone.get_topology(0, 1); v--) {
     multiply_vertex_corr_reverse(backbone, v);
     compose_with_edge_corr_reverse(backbone, v - 1);
   }
-  
+
   U = itops.reflect(U);
-  std::cout << "U after reflection = " << U(5, _, _) << "\n";
 
   multiply_prefactor(backbone);
   int diag_order_sign = 1; // (m % 2 == 1) ? -1 : 1;

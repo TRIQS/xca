@@ -71,7 +71,6 @@ TEST(two_fermions, one_hyb_pole) {
     G_ppsc_dense(_, range(s0, s1), range(s0, s1)) = G_ppsc[s].data();
     s0                                            = s1;
   }
-  std::cout << "G_ppsc_dense = " << G_ppsc_dense(0, _, _) << "\n";
   auto Fset = get_operators_dense(ad, norb, hyb_coeffs);
   hyb_poles = nda::make_regular(beta * hyb_poles);
   DenseDiagramEvaluator D_dense(beta, itops, hyb, hyb_refl, hyb_poles, G_ppsc_dense, Fset);
@@ -79,7 +78,5 @@ TEST(two_fermions, one_hyb_pole) {
   auto kap_ops = Fset.F_dags;
   CorrelatorBackbone B(topology, norb);
   auto spgf_dense = D_dense.eval_correlator(B, mu_ops, kap_ops);
-  std::cout << "spgf = " << spgf(_, 0, 0) << "\n";
-  std::cout << "spgf_dense = " << spgf_dense(_, 0, 0) << "\n";
   ASSERT_LE(nda::max_element(nda::abs(spgf - spgf_dense)), 1.0e-15);
 }
