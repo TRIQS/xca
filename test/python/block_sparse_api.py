@@ -68,7 +68,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     mu = 4.0
 
     eps = 1e-12
-    lamb = 20.0 * beta
+    lamb = 5.0 * beta
     w_max = lamb / beta
 
     # -- Local Hamiltonian
@@ -118,8 +118,9 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
 
     BSS = BlockSparseSolver(
         H, fops, beta, w_max, eps,
-        conserved_operators=[N_up + N_dn],
-        #conserved_operators=[N_up, N_dn], # Segfaults, FIXME!
+        #conserved_operators=[],
+        #conserved_operators=[N_up + N_dn],
+        conserved_operators=[N_up, N_dn],
         )
 
     #BSS.set_hybridization(Delta_w)
@@ -330,6 +331,5 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
 
 if __name__ == '__main__':
 
-    test_oca_diagram_cf_block_sparse_and_dense(beta=1.0, verbose=False)
-    test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False)
+    test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=True)
      

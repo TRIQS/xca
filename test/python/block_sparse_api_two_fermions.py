@@ -63,7 +63,7 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
     a = -1.0
     b = +1.0
     r0 = 0.5
-    mu = 0.0
+    mu = 0.3
     U = 3.0
 
     eps = 1e-12
@@ -223,7 +223,7 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
             t1 = time.time()
             d.spgf_S = S.S.calc_spgf_toplogy(topology)
             t2 = time.time()
-            d.spgf_BSS = BSS.single_particle_greens_function_topology(topology)
+            d.spgf_BSS = BSS.single_particle_greens_function_topology(topology) 
             t3 = time.time()
 
             print(f'    spgf time ZH ({t2 - t1} s) BS ({t3 - t2} s)')
@@ -370,13 +370,14 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
 if __name__ == '__main__':
 
     ops = [
-        'none', # Works
-        'total_density', # Gives numerically wrong result 
-        'individual_density', # Segfaults
+        'none', 
+        'total_density',
+        'individual_density',
         ]
     
     for op in ops:
-        #for e1 in [+1.5, -1.5]:
-        for e1 in [-1.5]:
+        for e1 in [+1.5, -1.5]:
+        #for e1 in [-1.5]:
+        #for e1 in [0.]:
             test_diagrams_cf_block_sparse_and_dense(e1=e1, beta=2.0, conserved_operators=op, verbose=False)
      

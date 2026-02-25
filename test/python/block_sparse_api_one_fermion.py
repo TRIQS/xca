@@ -256,12 +256,12 @@ def test_oca_diagram_cf_block_sparse_and_dense(e1=0.8, beta=2.0, conserved_opera
         (3, [(1, [(0, 3), (1, 4), (2, 5)])]), # Non-zero 3rd order diagram
         ]
     
-    #for order in [1, 2, 3]:
-    #    print(f'order = {order}')
-    #    for sign, topology in all_connected_pairings(order):
-    for order, signs_and_topologies in orders_with_signs_and_topologies:
-        print(f'signs_and_topologies = {signs_and_topologies}')
-        for sign, topology in signs_and_topologies:
+    for order in [1, 2, 3]:
+        print(f'order = {order}')
+        for sign, topology in all_connected_pairings(order):
+    #for order, signs_and_topologies in orders_with_signs_and_topologies:
+    #    print(f'signs_and_topologies = {signs_and_topologies}')
+    #    for sign, topology in signs_and_topologies:
             print(f'  topology = {topology}')
 
             d = Dummy()
@@ -361,9 +361,9 @@ def test_oca_diagram_cf_block_sparse_and_dense(e1=0.8, beta=2.0, conserved_opera
         plt.tight_layout()        
 
         
-        plt.figure(figsize=(14, 6))
-        subp = [2, 4, 1]
-        #subp = [6, 4, 1]
+        plt.figure(figsize=(14, 12))
+        #subp = [2, 4, 1]
+        subp = [6, 4, 1]
         #subp = [34, 4, 1]
 
         print(len(results))
@@ -602,5 +602,4 @@ if __name__ == '__main__':
     
     for op in ops:
         for e1 in [+0.8, -0.8]:
-        #for e1 in [+0.8]:
             test_oca_diagram_cf_block_sparse_and_dense(e1=e1, beta=2.0, conserved_operators=op, verbose=False)
