@@ -42,7 +42,7 @@ void DenseDiagramEvaluator::multiply_vertex(Backbone &backbone, int v_ix) {
     if (backbone.has_vertex_dag(v_ix)) { // F has dagger
       for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fset.F_dag_bars(o_ix, l_ix, _, _), T(t, _, _));
     } else {
-      for (int t = 0; t < r; t++) T(t, _, _) = -matmul(Fset.F_bars_refl(o_ix, l_ix, _, _), T(t, _, _));
+      for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fset.F_bars_refl(o_ix, l_ix, _, _), T(t, _, _));
     }
   } else {
     if (backbone.has_vertex_dag(v_ix)) { // F has dagger
@@ -168,7 +168,7 @@ void DenseDiagramEvaluator::multiply_vertex_corr(Backbone &backbone, int v_ix) {
     if (backbone.has_vertex_dag(v_ix)) { // F has dagger
       for (int t = 0; t < r; t++) U(t, _, _) = matmul(Fset.F_dag_bars(o_ix, l_ix, _, _), U(t, _, _));
     } else {
-      for (int t = 0; t < r; t++) U(t, _, _) = -matmul(Fset.F_bars_refl(o_ix, l_ix, _, _), U(t, _, _));
+      for (int t = 0; t < r; t++) U(t, _, _) = matmul(Fset.F_bars_refl(o_ix, l_ix, _, _), U(t, _, _));
     }
   } else {
     if (backbone.has_vertex_dag(v_ix)) { // F has dagger
@@ -210,7 +210,6 @@ void DenseDiagramEvaluator::multiply_vertex_corr_reverse(Backbone &backbone, int
 
   nda::array_const_view<dcomplex, 2> F = F_selector();
 
-  if (has_bar && !has_dag) U *= -1.; // Using F_bar_refl requires an extra sign ?
   for (int t = 0; t < r; t++) U(t, _, _) = matmul(U(t, _, _), F);
 
   // K factor

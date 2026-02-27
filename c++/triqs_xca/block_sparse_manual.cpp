@@ -261,13 +261,13 @@ void OCA_bs_left_in_place(double beta, imtime_ops &itops, nda::vector_const_view
       // 6. convolve by G
       Tin = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(Tin), TIME_ORDERED);
       // 7. multiply by Fbar
-      for (int t = 0; t < r; t++) { Tout(t, _, _) = matmul(Fbar, Tin(t, _, _)); }
+      for (int t = 0; t < r; t++) { Tout(t, _, _) = -matmul(Fbar, Tin(t, _, _)); } // Add -1 sign for reflected F_bar
     } else {
       // 6. convolve by G K^-
       for (int t = 0; t < r; t++) { GKt(t, _, _) = k_it(dlr_it(t), -omega_l) * Gt(t, _, _); }
       Tin = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(Tin), TIME_ORDERED);
       // 7. multiply by Fbar
-      for (int t = 0; t < r; t++) { Tout(t, _, _) = matmul(Fbar, Tin(t, _, _)); }
+      for (int t = 0; t < r; t++) { Tout(t, _, _) = -matmul(Fbar, Tin(t, _, _)); } // Add -1 sign for reflected F_bar
     }
   }
 }

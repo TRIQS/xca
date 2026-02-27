@@ -361,7 +361,7 @@ DenseFSet::DenseFSet(nda::array_const_view<dcomplex, 3> Fs, nda::array_const_vie
     for (int l = 0; l < p; l++) {
       for (int nu = 0; nu < n; nu++) {
         F_dag_bars(lam, l, _, _) += hyb_coeffs(l, nu, lam) * F_dags(nu, _, _);
-        F_bars_refl(nu, l, _, _) += hyb_coeffs(l, nu, lam) * Fs(lam, _, _);
+        F_bars_refl(nu, l, _, _) -= hyb_coeffs(l, nu, lam) * Fs(lam, _, _); // Add -1 sign for reflected F
       }
     }
   }
@@ -510,7 +510,7 @@ BlockOpSymQuartet::BlockOpSymQuartet(std::vector<BlockOpSymSet> Fs, std::vector<
             }
             for (int b = 0; b < Fs[p_nu].get_num_block_cols(); b++) {
               if (Fs[p_nu].get_block_index(b) != -1) {
-                F_bars_refl[p_nu].add_block(b, nu, l, nda::make_regular(hyb_coeffs(l, nu_orb, lam_orb) * Fs[p_nu].get_block(b)(lam, _, _)));
+                F_bars_refl[p_nu].add_block(b, nu, l, nda::make_regular(-hyb_coeffs(l, nu_orb, lam_orb) * Fs[p_nu].get_block(b)(lam, _, _))); // Add -1 sign for reflected F
               }
             }
           }

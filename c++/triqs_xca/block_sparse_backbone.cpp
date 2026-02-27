@@ -103,7 +103,6 @@ void DiagramEvaluator::multiply_vertex_block(Backbone &backbone, int v_ix, nda::
 
   // Multiply with the operator matrix F from the left
 
-  if (has_bar && !has_dag) T_v *= -1.; // Using F_bar_refl requires an extra sign ?
   for (int t = 0; t < r; t++) T_vp(t, _, _) = matmul(F, T_v(t, _, _));
 
   // Multiply with scalar K(\tau) factor of the pole with index l_ix
@@ -384,7 +383,6 @@ void DiagramEvaluator::multiply_vertex_corr_block(CorrelatorBackbone &backbone, 
 
   // Multiply with the operator matrix F from the left
 
-  if (has_bar && !has_dag) U_v *= -1.; // Using F_bar_refl requires an extra sign ?
   for (int t = 0; t < r; t++) U_vp(t, _, _) = matmul(F, U_v(t, _, _));
 
   // K factor
@@ -438,7 +436,6 @@ void DiagramEvaluator::multiply_vertex_corr_block_reverse(CorrelatorBackbone &ba
 
   // Multiply with the operator matrix F from the right
 
-  if (has_bar && !has_dag) U_vp *= -1.; // Using F_bar_refl requires an extra sign ?
   for (int t = 0; t < r; t++) U_v(t, _, _) = matmul(U_vp(t, _, _), F);
 
   // K factor

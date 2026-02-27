@@ -335,7 +335,7 @@ void OCA_gf_bs_left(double beta, imtime_ops &itops, nda::vector_const_view<doubl
       // multiply G K^+ Fbar
       for (int t = 0; t < r; t++) {
         T(t, range(0, block_dims(4)), range(0, block_dims(3))) =
-           k_it(dlr_it(t), omega_l) * matmul(Gt.get_block(ind_path(3))(t, _, _), Fbar.get_block(ind_path(2))(lam, pole_ind, _, _));
+           k_it(dlr_it(t), omega_l) * matmul(Gt.get_block(ind_path(3))(t, _, _), -Fbar.get_block(ind_path(2))(lam, pole_ind, _, _)); // Add -1 sign for reflected F_bar
       }
       // convolve by G
       T(_, range(0, block_dims(4)), range(0, block_dims(3))) = itops.convolve(
@@ -344,7 +344,7 @@ void OCA_gf_bs_left(double beta, imtime_ops &itops, nda::vector_const_view<doubl
       // multiply Fbar G K^-
       for (int t = 0; t < r; t++) {
         T(t, range(0, block_dims(4)), range(0, block_dims(3))) =
-           k_it(dlr_it(t), -omega_l) * matmul(Fbar.get_block(ind_path(2))(lam, pole_ind, _, _), Gt.get_block(ind_path(2))(t, _, _));
+           k_it(dlr_it(t), -omega_l) * matmul(-Fbar.get_block(ind_path(2))(lam, pole_ind, _, _), Gt.get_block(ind_path(2))(t, _, _)); // Add -1 sign for reflected F_bar
       }
       // convolve
       T(_, range(0, block_dims(4)), range(0, block_dims(3))) = itops.convolve(
