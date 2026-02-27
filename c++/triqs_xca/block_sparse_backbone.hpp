@@ -31,39 +31,41 @@ class DiagramEvaluator {
   BlockDiagOpFun Sigma;       // array for storing self-energy contribution (final result)
   mesh::dlr_imtime tau_mesh;  // imaginary time mesh
 
-  // routines for any diagram
-  void multiply_vertex_block(Backbone &backbone, int v_ix, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
-  // for block b_ix, multiply by a single vertex, v_ix, in a backbone diagram
-  void compose_with_edge_block(Backbone &backbone, int e_ix, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
-  // for block b_ix, convolve with a single edge, e_ix, in a backbone diagram
+  // Diagram composition routines
+  
   void multiply_prefactor(Backbone &backbone);
 
+  // multiply vertex (v_ix) from the left, in a backbone diagram (for block b_ix)
+  void multiply_left_vertex(Backbone &backbone, int v_ix, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
+
+  // integrate edge (e_ix) from the left, in a backbone diagram (for block b_ix)
+  void integrate_left_edge(Backbone &backbone, int e_ix, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
+
+  // Composition routines specific for correlator diagrams (used in the left part on [beta, tau])
+
+  // multiply vertex (v_ix) from the right, in a backbone diagram (for block b_ix)
+  void multiply_right_vertex(CorrelatorBackbone &backbone, int v_ix, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
+
+  // integrate edge (e_ix) from the right, in a backbone diagram (for block b_ix)
+  void integrate_right_edge(CorrelatorBackbone &backbone, int e_ix, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
+
   // routines for self-energy diagrams
-  void multiply_zero_vertex_block(Backbone &backbone, bool is_forward, int b_ix_0, int p_kap, int p_mu, nda::vector_const_view<int> ind_path,
-                                  nda::vector_const_view<int> block_dims); // multiply by the zero vertex and the vertex connected to zero
+  
+  // multiply by the zero vertex (from the right) and the vertex connected to zero (from the left)
+  void multiply_left_vertex_and_right_zero_vertex(Backbone &backbone, bool is_forward, int b_ix_0, int p_kap, int p_mu, nda::vector_const_view<int> ind_path,
+                                                  nda::vector_const_view<int> block_dims);
+
   BlockDiagOpFun &get_self_energy();                                       // get the self-energy result
+
   void find_path_self_energy(Backbone &backbone, int f_ix, nda::vector_view<int> ind_path, nda::vector_view<int> block_dims);
   void eval_self_energy(Backbone &backbone, int f_ix); // evaluate a particular backbone diagram
   void eval_self_energy(Backbone &backbone);           // evaluate a diagram of a given order and topology in block-sparse storage
+
   void eval_self_energy_fixed_indices(
      Backbone &backbone, int b_ix, int p_kap, int p_mu, nda::vector_const_view<int> ind_path,
      nda::vector_const_view<int>
         block_dims); // evaluate a diagram with fixed orbital indices, poles, and line directions in dense storage, including prefactor
 
-  // routines for correlator diagrams
-  void multiply_vertex_corr_block(CorrelatorBackbone &backbone, int v_ix, nda::vector_const_view<int> ind_path,
-                                  nda::vector_const_view<int> block_dims);
-  // multiply_vertex_block on the left side of a correlator diagram
-  void compose_with_edge_corr_block(CorrelatorBackbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
-                                    nda::vector_const_view<int> block_dims);
-  // compose_with_edge_block on the left side of a correlator diagram
-
-  void multiply_vertex_corr_block_reverse(CorrelatorBackbone &backbone, int v_ix, nda::vector_const_view<int> ind_path,
-                                  nda::vector_const_view<int> block_dims);
-  // multiply_vertex_block on the left side of a correlator diagram
-  void compose_with_edge_corr_block_reverse(CorrelatorBackbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
-                                    nda::vector_const_view<int> block_dims);
-  // compose_with_edge_block on the left side of a correlator diagram
 
   
   std::vector<BlockOp> setup_mu_ops_for_single_ptcle_gf();

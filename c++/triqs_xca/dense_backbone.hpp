@@ -36,26 +36,22 @@ class DenseDiagramEvaluator {
 
   // routines for any diagram
   void reset(); // reset all arrays to zero
-  void multiply_vertex(Backbone &backbone,
+  void multiply_left_vertex(Backbone &backbone,
                        int v_ix);                       // multiply by a single vertex, v_ix, in a backbone diagram using dense storage
-  void compose_with_edge(Backbone &backbone, int e_ix); // convolve with a single edge, e_ix, in a backbone diagram using dense storage
+  void integrate_left_edge(Backbone &backbone, int e_ix); // convolve with a single edge, e_ix, in a backbone diagram using dense storage
   void multiply_prefactor(Backbone &backbone);          // multiply by the prefactor associated with the backbone
 
   // routines for self-energy diagrams
-  void multiply_zero_vertex(Backbone &backbone, bool is_forward); // multiply by the zero vertex and the vertex connected to zero
+  void multiply_left_vertex_and_right_zero_vertex(Backbone &backbone, bool is_forward); // multiply by the zero vertex and the vertex connected to zero
   void eval_self_energy(Backbone &backbone);                      // evaluate a diagram of a given order and topology in dense storage
   // (i.e., evaluate and sum all backbones with different orbital indices, poles, and hybridization line directions)
   void eval_self_energy_fixed_indices(Backbone &backbone);
   // evaluate a diagram with fixed orbital indices, poles, and line directions in dense storage, including prefactor
 
   // routines for correlator diagrams
-  void multiply_vertex_corr(Backbone &backbone, int v_ix);
+  void multiply_right_vertex(Backbone &backbone, int v_ix);
   // multiply by a single vertex, v_ix, on the tau-beta side of a correlator backbone diagram using dense storage
-  void compose_with_edge_corr(Backbone &backbone, int e_ix);
-  // convolve with a single edge, e_ix, on the tau-beta side of a correlator backbone diagram using dense storage
-  void multiply_vertex_corr_reverse(Backbone &backbone, int v_ix);
-  // multiply by a single vertex, v_ix, on the tau-beta side of a correlator backbone diagram using dense storage
-  void compose_with_edge_corr_reverse(Backbone &backbone, int e_ix);
+  void integrate_right_edge(Backbone &backbone, int e_ix);
   // convolve with a single edge, e_ix, on the tau-beta side of a correlator backbone diagram using dense storage
 
   nda::array<dcomplex, 3> eval_correlator(CorrelatorBackbone &backbone, nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops);

@@ -70,7 +70,7 @@ DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps, nda::
 
 // ----------- Private routines for any diagram ==========
 
-void DiagramEvaluator::multiply_vertex_block(Backbone &backbone, int v_ix, nda::vector_const_view<int> ind_path,
+void DiagramEvaluator::multiply_left_vertex(Backbone &backbone, int v_ix, nda::vector_const_view<int> ind_path,
                                              nda::vector_const_view<int> block_dims) {
   int vct0 = backbone.get_topology(0, 1);   // vertex connnected to time zero
   int o_ix = backbone.get_vertex_orb(v_ix); // orbital_index
@@ -114,7 +114,7 @@ void DiagramEvaluator::multiply_vertex_block(Backbone &backbone, int v_ix, nda::
   }
 }
 
-void DiagramEvaluator::compose_with_edge_block(Backbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
+void DiagramEvaluator::integrate_left_edge(Backbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
                                                nda::vector_const_view<int> block_dims) {
   int m       = backbone.m;
   int b_ix    = ind_path(e_ix); // block index for the edge e_ix
@@ -132,7 +132,8 @@ void DiagramEvaluator::compose_with_edge_block(Backbone &backbone, int e_ix, nda
     }
   }
   nda::array_view<dcomplex, 3> T_ep = T(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r));
-  T_ep                              = itops.convolve(beta, itops.vals2coefs(GKt_ep), itops.vals2coefs(T_ep), TIME_ORDERED);
+  
+  T_ep = itops.convolve(beta, itops.vals2coefs(GKt_ep), itops.vals2coefs(T_ep), TIME_ORDERED);
 }
 
 void DiagramEvaluator::multiply_prefactor(Backbone &backbone) {
@@ -149,7 +150,7 @@ void DiagramEvaluator::multiply_prefactor(Backbone &backbone) {
 
 // ========== Private self-energy routines ==========
 
-void DiagramEvaluator::multiply_zero_vertex_block(Backbone &backbone, bool is_forward, int b_ix_0, int p_kap, int p_mu,
+void DiagramEvaluator::multiply_left_vertex_and_right_zero_vertex(Backbone &backbone, bool is_forward, int b_ix_0, int p_kap, int p_mu,
                                                   nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims) {
   int v_ix    = backbone.get_topology(0, 1);
   int b_ix_mu = ind_path(v_ix - 1); // block index for F_mu
@@ -301,15 +302,15 @@ void DiagramEvaluator::eval_self_energy_fixed_indices(Backbone &backbone, int b_
 
   T(_, range(0, block_dims(1)), range(0, block_dims(1))) = Gt.get_block(ind_path(0));
   for (int v = 1; v < vct0; v++) {
-    multiply_vertex_block(backbone, v, ind_path, block_dims);
-    compose_with_edge_block(backbone, v, ind_path, block_dims);
+    multiply_left_vertex(backbone, v, ind_path, block_dims);
+    integrate_left_edge(backbone, v, ind_path, block_dims);
   }
 
-  multiply_zero_vertex_block(backbone, (not backbone.has_vertex_dag(0)), b_ix, p_kap, p_mu, ind_path, block_dims);
+  multiply_left_vertex_and_right_zero_vertex(backbone, (not backbone.has_vertex_dag(0)), b_ix, p_kap, p_mu, ind_path, block_dims);
 
   for (int v = vct0 + 1; v < 2 * m; v++) {
-    compose_with_edge_block(backbone, v - 1, ind_path, block_dims);
-    multiply_vertex_block(backbone, v, ind_path, block_dims);
+    integrate_left_edge(backbone, v - 1, ind_path, block_dims);
+    multiply_left_vertex(backbone, v, ind_path, block_dims);
   }
 
   multiply_prefactor(backbone);
@@ -342,68 +343,14 @@ block_gf<dlr_imtime> DiagramEvaluator::compute_self_energy(nda::array_const_view
 
 // ========== Private correlator routines ==========
 
-void DiagramEvaluator::multiply_vertex_corr_block(CorrelatorBackbone &backbone, int v_ix, nda::vector_const_view<int> ind_path,
-                                                  nda::vector_const_view<int> block_dims) {
-
-  /*
-   * This method is almost identical to DiagramEvaluator::multiply_vertex_block apart from
-   *
-   * - n_col_r
-   * - using U for temporary storage (instead of T), and
-   * - skipping the K-factor on the last vertex.
-   */
-
-  int o_ix = backbone.get_vertex_orb(v_ix); // orbital_index
-  // split backbone orbital index into symmetry set index and orbital index within the symmetry set
-  // i.e. have mapping between backbone orbital index and symmetry set index
-  int q_ix    = static_cast<int>(Fq.sym_set_labels(o_ix)); // symmetry set index
-  int qo_ix   = static_cast<int>(Fq.sym_set_inds(o_ix));   // index within the symmetry set
-  int l_ix    = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(v_ix));
-  int n_col_r = block_dims(backbone.get_topology(0, 1) + 1); // number of columns for the left-hand side of the diagram
-  int b_ix    = ind_path(v_ix - 1);                          // block index for the vertex v_ix
-
-  // Get the current operator matrix F using the flags and indices of the vertex with index v_ix
-
-  bool has_bar = backbone.has_vertex_bar(v_ix);
-  bool has_dag = backbone.has_vertex_dag(v_ix);
-
-  auto F_selector = [&]() {
-    if (has_bar)
-      return has_dag ? Fq.F_dag_bars[q_ix].get_block(b_ix)(qo_ix, l_ix, _, _) : Fq.F_bars_refl[q_ix].get_block(b_ix)(qo_ix, l_ix, _, _);
-    else
-      return has_dag ? Fq.F_dags[q_ix].get_block(b_ix)(qo_ix, _, _) : Fq.Fs[q_ix].get_block(b_ix)(qo_ix, _, _);
-  };
-
-  nda::array_const_view<dcomplex, 2> F{F_selector()};
-
-  // Get views on temporary storage for input and output
-
-  nda::array_view<dcomplex, 3> U_v  = U(_, range(0, block_dims(v_ix)), range(0, n_col_r));
-  nda::array_view<dcomplex, 3> U_vp = U(_, range(0, block_dims(v_ix + 1)), range(0, n_col_r));
-
-  // Multiply with the operator matrix F from the left
-
-  for (int t = 0; t < r; t++) U_vp(t, _, _) = matmul(F, U_v(t, _, _));
-
-  // K factor
-
-  if (v_ix != 2 * backbone.m - 1) { // skip if last vertex
-    int Ksign = backbone.get_vertex_Ksign(v_ix);
-    if (Ksign != 0) {
-      for (int t = 0; t < r; t++) U_vp(t, _, _) *= k_it(dlr_it(t), Ksign * hyb_poles(l_ix));
-    }
-  }
-}
-
-void DiagramEvaluator::multiply_vertex_corr_block_reverse(CorrelatorBackbone &backbone, int v_ix, nda::vector_const_view<int> ind_path,
+void DiagramEvaluator::multiply_right_vertex(CorrelatorBackbone &backbone, int v_ix, nda::vector_const_view<int> ind_path,
                                                           nda::vector_const_view<int> block_dims) {
 
   /*
-   * This method is almost identical to DiagramEvaluator::multiply_vertex_block apart from
+   * This method is almost identical to DiagramEvaluator::multiply_left_vertex apart from
    *
    * - n_col_r
    * - using U for temporary storage (instead of T), and
-   * - skipping the K-factor on the last vertex.
    */
 
   int o_ix = backbone.get_vertex_orb(v_ix); // orbital_index
@@ -446,32 +393,11 @@ void DiagramEvaluator::multiply_vertex_corr_block_reverse(CorrelatorBackbone &ba
   }
 }
 
-void DiagramEvaluator::compose_with_edge_corr_block(CorrelatorBackbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
-                                                    nda::vector_const_view<int> block_dims) {
-  int m       = backbone.m;
-  int b_ix    = ind_path(e_ix);                              // block index for the edge e_ix
-  int n_col_r = block_dims(backbone.get_topology(0, 1) + 1); // Different n_col_r behavour c.f. compose_with_edge_block(...)
-
-  nda::array_view<dcomplex, 3> GKt_ep = GKt(_, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1)));
-
-  GKt_ep = Gt.get_block(b_ix);
-
-  for (int x = 0; x < m - 1; x++) {
-    int Ksign = backbone.get_edge(e_ix, x);
-    if (Ksign != 0) {
-      for (int t = 0; t < r; t++) GKt_ep(t, _, _) *= k_it(dlr_it(t), Ksign * hyb_poles(backbone.get_pole_ind(x)));
-    }
-  }
-
-  nda::array_view<dcomplex, 3> U_ep = U(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r));
-  U_ep                              = itops.convolve(beta, itops.vals2coefs(GKt_ep), itops.vals2coefs(U_ep), TIME_ORDERED);
-}
-
-void DiagramEvaluator::compose_with_edge_corr_block_reverse(CorrelatorBackbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
+void DiagramEvaluator::integrate_right_edge(CorrelatorBackbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
                                                             nda::vector_const_view<int> block_dims) {
 
   /*
-   * This routine is almost identical to DiagramEvaluator::compose_with_edge_block
+   * This routine is almost identical to DiagramEvaluator::integrate_left_edge
    *
    * apart from
    * - the n_col_r index, and
@@ -494,7 +420,8 @@ void DiagramEvaluator::compose_with_edge_corr_block_reverse(CorrelatorBackbone &
   }
 
   nda::array_view<dcomplex, 3> U_e = U(_, range(0, n_row_l), range(0, block_dims(e_ix + 1)));
-  U_e                              = itops.convolve(beta, itops.vals2coefs(U_e), itops.vals2coefs(GKt_ep), TIME_ORDERED);
+  
+  U_e = itops.convolve(beta, itops.vals2coefs(U_e), itops.vals2coefs(GKt_ep), TIME_ORDERED);
 }
 
 nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops) {
@@ -577,8 +504,8 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &ba
     T(_, range(0, block_dims(1)), range(0, block_dims(1))) = Gt.get_block(ind_path(0)); // first edge at 0
     
     for (int v = 1; v < vct0; v++) {
-      multiply_vertex_block(backbone, v, ind_path, block_dims);   // NB! assigning to T internally
-      compose_with_edge_block(backbone, v, ind_path, block_dims); // NB! assigning to T internally
+      multiply_left_vertex(backbone, v, ind_path, block_dims);   // NB! assigning to T internally
+      integrate_left_edge(backbone, v, ind_path, block_dims); // NB! assigning to T internally
     }
     multiply_prefactor(backbone); // NB! assigning to T internally
 
@@ -620,8 +547,8 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &ba
     U_beta = Gt.get_block(ind_path(2 * m - 1));
 
     for (int v = 2 * m - 1; v > vct0; v--) {
-      multiply_vertex_corr_block_reverse(backbone, v, ind_path, block_dims);       // NB! assigning to U internally
-      compose_with_edge_corr_block_reverse(backbone, v - 1, ind_path, block_dims); // NB! assigning to U internally
+      multiply_right_vertex(backbone, v, ind_path, block_dims);       // NB! assigning to U internally
+      integrate_right_edge(backbone, v - 1, ind_path, block_dims); // NB! assigning to U internally
     }
 
     U = itops.reflect(U); // Reflect result to account for outer [beta, tau] integral order

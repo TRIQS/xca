@@ -32,7 +32,7 @@ void DenseDiagramEvaluator::reset() {
   Sigma = 0;
 }
 
-void DenseDiagramEvaluator::multiply_vertex(Backbone &backbone, int v_ix) {
+void DenseDiagramEvaluator::multiply_left_vertex(Backbone &backbone, int v_ix) {
   int o_ix = backbone.get_vertex_orb(v_ix); // orbital index
   int l_ix = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(v_ix));
   // backbone.get_vertex_hyb_ind(v_ix) = i, where i is the # of primes on l
@@ -61,7 +61,7 @@ void DenseDiagramEvaluator::multiply_vertex(Backbone &backbone, int v_ix) {
   }
 }
 
-void DenseDiagramEvaluator::compose_with_edge(Backbone &backbone, int e_ix) {
+void DenseDiagramEvaluator::integrate_left_edge(Backbone &backbone, int e_ix) {
   GKt   = Gt;
   int m = backbone.m;
   for (int x = 0; x < m - 1; x++) {
@@ -89,7 +89,7 @@ void DenseDiagramEvaluator::multiply_prefactor(Backbone &backbone) {
   }
 }
 
-void DenseDiagramEvaluator::multiply_zero_vertex(Backbone &backbone, bool is_forward) {
+void DenseDiagramEvaluator::multiply_left_vertex_and_right_zero_vertex(Backbone &backbone, bool is_forward) {
   int n = backbone.n;
   if (is_forward) {
     for (int kap = 0; kap < n; kap++) {
@@ -137,18 +137,18 @@ void DenseDiagramEvaluator::eval_self_energy_fixed_indices(Backbone &backbone) {
   T = Gt; // T stores the result moving left to right
   // T is initialized to Gt, which is always the function at the rightmost edge
   for (int v = 1; v < backbone.get_topology(0, 1); v++) { // loop from the first vertex to before the special vertex
-    multiply_vertex(backbone, v);
-    compose_with_edge(backbone, v);
+    multiply_left_vertex(backbone, v);
+    integrate_left_edge(backbone, v);
   }
 
   // 2. For each kappa, multiply by F_kappa(^dag). Then for each mu, kappa, multiply by Delta_{mu kappa}, and sum over kappa. Finally for each mu,
   // multiply F_mu[^dag] and sum over mu.
-  multiply_zero_vertex(backbone, (not backbone.has_vertex_dag(0)));
+  multiply_left_vertex_and_right_zero_vertex(backbone, (not backbone.has_vertex_dag(0)));
 
   // 3. Continue right to left until the final vertex multiplication is complete.
   for (int v = backbone.get_topology(0, 1) + 1; v < 2 * m; v++) { // loop from the special vertex to the last vertex
-    compose_with_edge(backbone, v - 1);
-    multiply_vertex(backbone, v);
+    integrate_left_edge(backbone, v - 1);
+    multiply_left_vertex(backbone, v);
   }
 
   multiply_prefactor(backbone);
@@ -158,39 +158,7 @@ void DenseDiagramEvaluator::eval_self_energy_fixed_indices(Backbone &backbone) {
   Sigma += T;
 }
 
-void DenseDiagramEvaluator::multiply_vertex_corr(Backbone &backbone, int v_ix) {
-  int o_ix = backbone.get_vertex_orb(v_ix); // orbital index
-  int l_ix = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(v_ix));
-  // backbone.get_vertex_hyb_ind(v_ix) = i, where i is the # of primes on l
-  // l_ix = value of l with i primes
-
-  if (backbone.has_vertex_bar(v_ix)) {   // F has bar
-    if (backbone.has_vertex_dag(v_ix)) { // F has dagger
-      for (int t = 0; t < r; t++) U(t, _, _) = matmul(Fset.F_dag_bars(o_ix, l_ix, _, _), U(t, _, _));
-    } else {
-      for (int t = 0; t < r; t++) U(t, _, _) = matmul(Fset.F_bars_refl(o_ix, l_ix, _, _), U(t, _, _));
-    }
-  } else {
-    if (backbone.has_vertex_dag(v_ix)) { // F has dagger
-      for (int t = 0; t < r; t++) U(t, _, _) = matmul(Fset.F_dags(o_ix, _, _), U(t, _, _));
-    } else {
-      for (int t = 0; t < r; t++) U(t, _, _) = matmul(Fset.Fs(o_ix, _, _), U(t, _, _));
-    }
-  }
-
-  // K factor
-  // skip if last vertex
-  if (v_ix != 2 * backbone.m - 1) {
-    int bv      = backbone.get_vertex_Ksign(v_ix); // sign on K
-    double pole = hyb_poles(l_ix);
-    // if (backbone.get_vertex_direction(v_ix) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
-    if (bv != 0) {
-      for (int t = 0; t < r; t++) { U(t, _, _) = k_it(dlr_it(t), bv * pole) * U(t, _, _); }
-    }
-  }
-}
-
-void DenseDiagramEvaluator::multiply_vertex_corr_reverse(Backbone &backbone, int v_ix) {
+void DenseDiagramEvaluator::multiply_right_vertex(Backbone &backbone, int v_ix) {
 
   int o_ix = backbone.get_vertex_orb(v_ix); // orbital index
   int l_ix = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(v_ix));
@@ -219,21 +187,7 @@ void DenseDiagramEvaluator::multiply_vertex_corr_reverse(Backbone &backbone, int
   }
 }
 
-void DenseDiagramEvaluator::compose_with_edge_corr(Backbone &backbone, int e_ix) {
-  GKt   = Gt;
-  int m = backbone.m;
-  for (int x = 0; x < m - 1; x++) {
-    int be      = backbone.get_edge(e_ix, x); // sign on K
-    double pole = hyb_poles(backbone.get_pole_ind(x));
-    // if (backbone.get_fb(x + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
-    if (be != 0) {
-      for (int t = 0; t < r; t++) { GKt(t, _, _) = k_it(dlr_it(t), be * pole) * GKt(t, _, _); }
-    }
-  }
-  U = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(U), TIME_ORDERED);
-}
-
-void DenseDiagramEvaluator::compose_with_edge_corr_reverse(Backbone &backbone, int e_ix) {
+void DenseDiagramEvaluator::integrate_right_edge(Backbone &backbone, int e_ix) {
   GKt   = Gt;
   int m = backbone.m;
   for (int x = 0; x < m - 1; x++) {
@@ -275,8 +229,8 @@ void DenseDiagramEvaluator::eval_correlator_fixed_indices(CorrelatorBackbone &ba
   T = Gt; // T stores the result moving right to left
   // T is initialized to Gt, which is always the function at the rightmost edge
   for (int v = 1; v < backbone.get_topology(0, 1); ++v) { // loop from the first vertex to before the special vertex
-    multiply_vertex(backbone, v);
-    compose_with_edge(backbone, v);
+    multiply_left_vertex(backbone, v);
+    integrate_left_edge(backbone, v);
   }
 
   // evaluate the second sequence of backbone products and convolutions from tau to beta, using a change of variables to perform convolutions. the
@@ -284,8 +238,8 @@ void DenseDiagramEvaluator::eval_correlator_fixed_indices(CorrelatorBackbone &ba
   U = Gt; // U stores the result moving right to left
 
   for (int v = 2 * m - 1; v > backbone.get_topology(0, 1); v--) {
-    multiply_vertex_corr_reverse(backbone, v);
-    compose_with_edge_corr_reverse(backbone, v - 1);
+    multiply_right_vertex(backbone, v);
+    integrate_right_edge(backbone, v - 1);
   }
 
   U = itops.reflect(U);
