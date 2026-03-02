@@ -1,4 +1,5 @@
 #include "triqs_xca/block_sparse.hpp"
+#include "triqs_xca/dense.hpp"
 #include <cppdlr/dlr_imtime.hpp>
 #include <triqs/atom_diag/atom_diag.hpp>
 
