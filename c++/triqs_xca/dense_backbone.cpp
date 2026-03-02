@@ -32,7 +32,7 @@ void DenseDiagramEvaluator::reset() {
   Sigma = 0;
 }
 
-void DenseDiagramEvaluator::multiply_left_vertex(Backbone &backbone, int v_ix) {
+void DenseDiagramEvaluator::multiply_left_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, int v_ix) {
   int o_ix = backbone.get_vertex_orb(v_ix); // orbital index
   int l_ix = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(v_ix));
   // backbone.get_vertex_hyb_ind(v_ix) = i, where i is the # of primes on l
@@ -40,15 +40,15 @@ void DenseDiagramEvaluator::multiply_left_vertex(Backbone &backbone, int v_ix) {
 
   if (backbone.has_vertex_bar(v_ix)) {   // F has bar
     if (backbone.has_vertex_dag(v_ix)) { // F has dagger
-      for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fset.F_dag_bars(o_ix, l_ix, _, _), T(t, _, _));
+      for (int t = 0; t < r; t++) T_buf(t, _, _) = matmul(Fset.F_dag_bars(o_ix, l_ix, _, _), T_buf(t, _, _));
     } else {
-      for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fset.F_bars_refl(o_ix, l_ix, _, _), T(t, _, _));
+      for (int t = 0; t < r; t++) T_buf(t, _, _) = matmul(Fset.F_bars_refl(o_ix, l_ix, _, _), T_buf(t, _, _));
     }
   } else {
     if (backbone.has_vertex_dag(v_ix)) { // F has dagger
-      for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fset.F_dags(o_ix, _, _), T(t, _, _));
+      for (int t = 0; t < r; t++) T_buf(t, _, _) = matmul(Fset.F_dags(o_ix, _, _), T_buf(t, _, _));
     } else {
-      for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fset.Fs(o_ix, _, _), T(t, _, _));
+      for (int t = 0; t < r; t++) T_buf(t, _, _) = matmul(Fset.Fs(o_ix, _, _), T_buf(t, _, _));
     }
   }
 
@@ -57,11 +57,11 @@ void DenseDiagramEvaluator::multiply_left_vertex(Backbone &backbone, int v_ix) {
   double pole = hyb_poles(l_ix);
   // if (backbone.get_vertex_direction(v_ix) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
   if (bv != 0) {
-    for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), bv * pole) * T(t, _, _); }
+    for (int t = 0; t < r; t++) { T_buf(t, _, _) = k_it(dlr_it(t), bv * pole) * T_buf(t, _, _); }
   }
 }
 
-void DenseDiagramEvaluator::integrate_left_edge(Backbone &backbone, int e_ix) {
+void DenseDiagramEvaluator::integrate_left_edge(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, int e_ix) {
   GKt   = Gt;
   int m = backbone.m;
   for (int x = 0; x < m - 1; x++) {
@@ -72,10 +72,10 @@ void DenseDiagramEvaluator::integrate_left_edge(Backbone &backbone, int e_ix) {
       for (int t = 0; t < r; t++) { GKt(t, _, _) = k_it(dlr_it(t), be * pole) * GKt(t, _, _); }
     }
   }
-  T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), TIME_ORDERED);
+  T_buf = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T_buf), TIME_ORDERED);
 }
 
-void DenseDiagramEvaluator::multiply_prefactor(Backbone &backbone) {
+void DenseDiagramEvaluator::multiply_prefactor(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone) {
   int m = backbone.m;
   // Multiply by prefactor
   for (int m_ix = 0; m_ix < m - 1; m_ix++) {     // loop over hybridization indices
@@ -84,36 +84,36 @@ void DenseDiagramEvaluator::multiply_prefactor(Backbone &backbone) {
       int Ksign = backbone.get_prefactor_Ksign(m_ix);     // sign on K for this hybridization index
       double om = hyb_poles(backbone.get_pole_ind(m_ix)); // DLR frequency for this value of this hybridization index
       // if (backbone.get_fb(m_ix + 1) == 0) om = -om;       // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
-      for (int q = 0; q < exp; q++) T /= k_it(0, Ksign * om);
+      for (int q = 0; q < exp; q++) T_buf /= k_it(0, Ksign * om);
     }
   }
 }
 
-void DenseDiagramEvaluator::multiply_left_vertex_and_right_zero_vertex(Backbone &backbone, bool is_forward) {
+void DenseDiagramEvaluator::multiply_left_vertex_and_right_zero_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, bool is_forward) {
   int n = backbone.n;
   if (is_forward) {
     for (int kap = 0; kap < n; kap++) {
-      for (int t = 0; t < r; t++) { Tkaps(kap, t, _, _) = matmul(T(t, _, _), Fset.Fs(kap, _, _)); }
+      for (int t = 0; t < r; t++) { Tkaps(kap, t, _, _) = matmul(T_buf(t, _, _), Fset.Fs(kap, _, _)); }
     }
-    T = 0;
+    T_buf = 0;
     for (int mu = 0; mu < n; mu++) {
       Tmu = 0;
       for (int kap = 0; kap < n; kap++) {
         for (int t = 0; t < r; t++) { Tmu(t, _, _) += hyb(t, mu, kap) * Tkaps(kap, t, _, _); }
       }
-      for (int t = 0; t < r; t++) { T(t, _, _) += matmul(Fset.F_dags(mu, _, _), Tmu(t, _, _)); }
+      for (int t = 0; t < r; t++) { T_buf(t, _, _) += matmul(Fset.F_dags(mu, _, _), Tmu(t, _, _)); }
     }
   } else {
     for (int kap = 0; kap < n; kap++) {
-      for (int t = 0; t < r; t++) { Tkaps(kap, t, _, _) = matmul(T(t, _, _), Fset.F_dags(kap, _, _)); }
+      for (int t = 0; t < r; t++) { Tkaps(kap, t, _, _) = matmul(T_buf(t, _, _), Fset.F_dags(kap, _, _)); }
     }
-    T = 0;
+    T_buf = 0;
     for (int mu = 0; mu < n; mu++) {
       Tmu = 0;
       for (int kap = 0; kap < n; kap++) {
         for (int t = 0; t < r; t++) { Tmu(t, _, _) -= hyb_refl(t, mu, kap) * Tkaps(kap, t, _, _); }
       }
-      for (int t = 0; t < r; t++) { T(t, _, _) += matmul(Fset.Fs(mu, _, _), Tmu(t, _, _)); }
+      for (int t = 0; t < r; t++) { T_buf(t, _, _) += matmul(Fset.Fs(mu, _, _), Tmu(t, _, _)); }
     }
   }
 }
@@ -134,31 +134,31 @@ void DenseDiagramEvaluator::eval_self_energy_fixed_indices(Backbone &backbone) {
 
   // 1. Starting from tau_1, proceed right to left, performing multiplications at vertices and convolutions at edges, until reaching the vertex
   // containing the undecomposed hybridization line Delta_{mu kappa}.
-  T = Gt; // T stores the result moving left to right
+  T = Gt;
   // T is initialized to Gt, which is always the function at the rightmost edge
   for (int v = 1; v < backbone.get_topology(0, 1); v++) { // loop from the first vertex to before the special vertex
-    multiply_left_vertex(backbone, v);
-    integrate_left_edge(backbone, v);
+    multiply_left_vertex(T, backbone, v);
+    integrate_left_edge(T, backbone, v);
   }
 
   // 2. For each kappa, multiply by F_kappa(^dag). Then for each mu, kappa, multiply by Delta_{mu kappa}, and sum over kappa. Finally for each mu,
   // multiply F_mu[^dag] and sum over mu.
-  multiply_left_vertex_and_right_zero_vertex(backbone, (not backbone.has_vertex_dag(0)));
+  multiply_left_vertex_and_right_zero_vertex(T, backbone, (not backbone.has_vertex_dag(0)));
 
   // 3. Continue right to left until the final vertex multiplication is complete.
   for (int v = backbone.get_topology(0, 1) + 1; v < 2 * m; v++) { // loop from the special vertex to the last vertex
-    integrate_left_edge(backbone, v - 1);
-    multiply_left_vertex(backbone, v);
+    integrate_left_edge(T, backbone, v - 1);
+    multiply_left_vertex(T, backbone, v);
   }
 
-  multiply_prefactor(backbone);
+  multiply_prefactor(T, backbone);
   int diag_order_sign = (m % 2 == 0) ? -1 : 1;
   if (backbone.get_fb(0) == 0) diag_order_sign *= -1; // if the first hybridization line is backward, there is an additional sign change
   T *= diag_order_sign * backbone.prefactor_sign;
   Sigma += T;
 }
 
-void DenseDiagramEvaluator::multiply_right_vertex(Backbone &backbone, int v_ix) {
+void DenseDiagramEvaluator::multiply_right_vertex(nda::array_view<dcomplex, 3> U_buf, Backbone &backbone, int v_ix) {
 
   int o_ix = backbone.get_vertex_orb(v_ix); // orbital index
   int l_ix = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(v_ix));
@@ -178,16 +178,16 @@ void DenseDiagramEvaluator::multiply_right_vertex(Backbone &backbone, int v_ix) 
 
   nda::array_const_view<dcomplex, 2> F = F_selector();
 
-  for (int t = 0; t < r; t++) U(t, _, _) = matmul(U(t, _, _), F);
+  for (int t = 0; t < r; t++) U_buf(t, _, _) = matmul(U_buf(t, _, _), F);
 
   // K factor
   int Ksign = backbone.get_vertex_Ksign(v_ix); // sign on K
   if (Ksign != 0) {
-    for (int t = 0; t < r; t++) U(t, _, _) *= k_it(dlr_it(t), -Ksign * hyb_poles(l_ix));
+    for (int t = 0; t < r; t++) U_buf(t, _, _) *= k_it(dlr_it(t), -Ksign * hyb_poles(l_ix));
   }
 }
 
-void DenseDiagramEvaluator::integrate_right_edge(Backbone &backbone, int e_ix) {
+void DenseDiagramEvaluator::integrate_right_edge(nda::array_view<dcomplex, 3> U_buf, Backbone &backbone, int e_ix) {
   GKt   = Gt;
   int m = backbone.m;
   for (int x = 0; x < m - 1; x++) {
@@ -197,7 +197,7 @@ void DenseDiagramEvaluator::integrate_right_edge(Backbone &backbone, int e_ix) {
       for (int t = 0; t < r; t++) GKt(t, _, _) *= k_it(dlr_it(t), Ksign * pole);
     }
   }
-  U = itops.convolve(beta, itops.vals2coefs(U), itops.vals2coefs(GKt), TIME_ORDERED);
+  U_buf = itops.convolve(beta, itops.vals2coefs(U_buf), itops.vals2coefs(GKt), TIME_ORDERED);
 }
 
 nda::array<dcomplex, 3> DenseDiagramEvaluator::eval_correlator(CorrelatorBackbone &backbone, nda::array<dcomplex, 3> mu_ops,
@@ -226,25 +226,25 @@ void DenseDiagramEvaluator::eval_correlator_fixed_indices(CorrelatorBackbone &ba
 
   // evaluate the first sequence of backbone products and convolutions from tau_1 to tau, proceeding right to left, not inculding the creation and
   // annihilation matrices at the end points. the result is an N x N matrix-valued function of tau.
-  T = Gt; // T stores the result moving right to left
+  T = Gt;
   // T is initialized to Gt, which is always the function at the rightmost edge
   for (int v = 1; v < backbone.get_topology(0, 1); ++v) { // loop from the first vertex to before the special vertex
-    multiply_left_vertex(backbone, v);
-    integrate_left_edge(backbone, v);
+    multiply_left_vertex(T, backbone, v);
+    integrate_left_edge(T, backbone, v);
   }
 
   // evaluate the second sequence of backbone products and convolutions from tau to beta, using a change of variables to perform convolutions. the
   // result is another N x N matrix-valued function of tau.
-  U = Gt; // U stores the result moving right to left
+  U = Gt;
 
   for (int v = 2 * m - 1; v > backbone.get_topology(0, 1); v--) {
-    multiply_right_vertex(backbone, v);
-    integrate_right_edge(backbone, v - 1);
+    multiply_right_vertex(U, backbone, v);
+    integrate_right_edge(U, backbone, v - 1);
   }
 
   U = itops.reflect(U);
 
-  multiply_prefactor(backbone);
+  multiply_prefactor(T, backbone);
   int diag_order_sign = 1; // (m % 2 == 1) ? -1 : 1;
   T *= diag_order_sign * backbone.prefactor_sign;
 }

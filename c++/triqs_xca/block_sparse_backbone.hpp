@@ -33,27 +33,31 @@ class DiagramEvaluator {
 
   // Diagram composition routines
   
-  void multiply_prefactor(Backbone &backbone);
+  void multiply_prefactor(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone);
 
   // multiply vertex (v_ix) from the left, in a backbone diagram (for block b_ix)
-  void multiply_left_vertex(Backbone &backbone, int v_ix, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
+  void multiply_left_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, int v_ix, nda::vector_const_view<int> ind_path,
+                            nda::vector_const_view<int> block_dims);
 
   // integrate edge (e_ix) from the left, in a backbone diagram (for block b_ix)
-  void integrate_left_edge(Backbone &backbone, int e_ix, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
+  void integrate_left_edge(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
+                           nda::vector_const_view<int> block_dims);
 
   // Composition routines specific for correlator diagrams (used in the left part on [beta, tau])
 
   // multiply vertex (v_ix) from the right, in a backbone diagram (for block b_ix)
-  void multiply_right_vertex(CorrelatorBackbone &backbone, int v_ix, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
+  void multiply_right_vertex(nda::array_view<dcomplex, 3> U_buf, CorrelatorBackbone &backbone, int v_ix, nda::vector_const_view<int> ind_path,
+                             nda::vector_const_view<int> block_dims);
 
   // integrate edge (e_ix) from the right, in a backbone diagram (for block b_ix)
-  void integrate_right_edge(CorrelatorBackbone &backbone, int e_ix, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
+  void integrate_right_edge(nda::array_view<dcomplex, 3> U_buf, CorrelatorBackbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
+                            nda::vector_const_view<int> block_dims);
 
   // routines for self-energy diagrams
   
   // multiply by the zero vertex (from the right) and the vertex connected to zero (from the left)
-  void multiply_left_vertex_and_right_zero_vertex(Backbone &backbone, bool is_forward, int b_ix_0, int p_kap, int p_mu, nda::vector_const_view<int> ind_path,
-                                                  nda::vector_const_view<int> block_dims);
+  void multiply_left_vertex_and_right_zero_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, bool is_forward, int b_ix_0, int p_kap,
+                                                  int p_mu, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
 
   BlockDiagOpFun &get_self_energy();                                       // get the self-energy result
 
