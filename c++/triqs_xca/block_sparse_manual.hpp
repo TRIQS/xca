@@ -1,9 +1,8 @@
-#include "nda/nda.hpp"
-#include "block_sparse.hpp"
-#include <cppdlr/dlr_kernels.hpp>
-#include <nda/declarations.hpp>
+#include "triqs_xca/block_sparse.hpp"
 
-using namespace nda;
+using nda::dcomplex;
+
+using cppdlr::imtime_ops;
 
 /**
  * @brief Evaluate NCA self-energy term using block-sparse storage

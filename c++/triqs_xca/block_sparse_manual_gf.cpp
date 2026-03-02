@@ -1,10 +1,10 @@
-#include "block_sparse.hpp"
-#include <cppdlr/dlr_kernels.hpp>
-#include <cstddef>
-#include <nda/algorithms.hpp>
-#include <nda/declarations.hpp>
-#include <nda/layout_transforms.hpp>
-#include <nda/linalg/matmul.hpp>
+#include "triqs_xca/block_sparse_manual_gf.hpp"
+
+using cppdlr::_;
+
+using nda::trace;
+using nda::range;
+using nda::linalg::matmul;
 
 nda::array<dcomplex, 3> NCA_gf_dense(nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Gt_refl,
                                      nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags) {
@@ -141,26 +141,26 @@ void OCA_gf_dense_right(double beta, imtime_ops &itops, nda::vector_const_view<d
   if (forward) {
     if (omega_l <= 0) {
       // 1. multiply F_lambda G(tau_1) K^-(tau_1)
-      for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), -omega_l) * matmul(Flam, Gt(t, _, _)); }
+      for (int t = 0; t < r; t++) { T(t, _, _) = cppdlr::k_it(dlr_it(t), -omega_l) * matmul(Flam, Gt(t, _, _)); }
       // 2. convolve by G
-      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), cppdlr::TIME_ORDERED);
     } else {
       // 1. multiply G(tau-tau_1) K^+(tau-tau_1) F_lambda
-      for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), omega_l) * matmul(Gt(t, _, _), Flam); }
+      for (int t = 0; t < r; t++) { T(t, _, _) = cppdlr::k_it(dlr_it(t), omega_l) * matmul(Gt(t, _, _), Flam); }
       // 2. convolve by G
-      T = itops.convolve(beta, itops.vals2coefs(T), itops.vals2coefs(Gt), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(T), itops.vals2coefs(Gt), cppdlr::TIME_ORDERED);
     }
   } else {
     if (omega_l >= 0) {
       // 1. multiply F_lambda G(tau_1) K^+(tau_1)
-      for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), omega_l) * matmul(Flam, Gt(t, _, _)); }
+      for (int t = 0; t < r; t++) { T(t, _, _) = cppdlr::k_it(dlr_it(t), omega_l) * matmul(Flam, Gt(t, _, _)); }
       // 2. convolve by G
-      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), cppdlr::TIME_ORDERED);
     } else {
       // 1. multiply G(tau-tau_1) K^-(tau-tau_1) F_lambda
-      for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), -omega_l) * matmul(Gt(t, _, _), Flam); }
+      for (int t = 0; t < r; t++) { T(t, _, _) = cppdlr::k_it(dlr_it(t), -omega_l) * matmul(Gt(t, _, _), Flam); }
       // 2. convolve by G
-      T = itops.convolve(beta, itops.vals2coefs(T), itops.vals2coefs(Gt), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(T), itops.vals2coefs(Gt), cppdlr::TIME_ORDERED);
     }
   }
 }
@@ -172,26 +172,26 @@ void OCA_gf_dense_left(double beta, imtime_ops &itops, nda::vector_const_view<do
   if (forward) {
     if (omega_l <= 0) {
       // multiply G K^- Fbar
-      for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), -omega_l) * matmul(Gt(t, _, _), Fbar); }
+      for (int t = 0; t < r; t++) { T(t, _, _) = cppdlr::k_it(dlr_it(t), -omega_l) * matmul(Gt(t, _, _), Fbar); }
       // convolve by G
-      T = itops.convolve(beta, itops.vals2coefs(T), itops.vals2coefs(Gt), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(T), itops.vals2coefs(Gt), cppdlr::TIME_ORDERED);
     } else {
       // multiply Fbar G K^+
-      for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), omega_l) * matmul(Fbar, Gt(t, _, _)); }
+      for (int t = 0; t < r; t++) { T(t, _, _) = cppdlr::k_it(dlr_it(t), omega_l) * matmul(Fbar, Gt(t, _, _)); }
       // convolve
-      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), cppdlr::TIME_ORDERED);
     }
   } else {
     if (omega_l > 0) {
       // multiply G K^+ Fbar
-      for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), omega_l) * matmul(Gt(t, _, _), Fbar); }
+      for (int t = 0; t < r; t++) { T(t, _, _) = cppdlr::k_it(dlr_it(t), omega_l) * matmul(Gt(t, _, _), Fbar); }
       // convolve by G
-      T = itops.convolve(beta, itops.vals2coefs(T), itops.vals2coefs(Gt), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(T), itops.vals2coefs(Gt), cppdlr::TIME_ORDERED);
     } else {
       // multiply Fbar G K^-
-      for (int t = 0; t < r; t++) { T(t, _, _) = k_it(dlr_it(t), -omega_l) * matmul(Fbar, Gt(t, _, _)); }
+      for (int t = 0; t < r; t++) { T(t, _, _) = cppdlr::k_it(dlr_it(t), -omega_l) * matmul(Fbar, Gt(t, _, _)); }
       // convolve
-      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), TIME_ORDERED);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), cppdlr::TIME_ORDERED);
     }
   }
   // reflect
@@ -242,9 +242,9 @@ nda::array<dcomplex, 3> OCA_gf_dense(nda::array_const_view<dcomplex, 3> hyb_coef
           OCA_gf_dense_right(beta, itops, dlr_it, hyb_poles(l), fb, Gt, F1(lam, _, _), T);
           OCA_gf_dense_left(beta, itops, dlr_it, hyb_poles(l), fb, Gt, Fbar(lam, l, _, _), U);
           if (hyb_poles(l) <= 0) {
-            for (int t = 0; t < r; t++) { Tnu(t, _, _) += matmul(U(t, _, _), matmul(Fs(nu, _, _), T(t, _, _))) / k_it(0, -hyb_poles(l)); }
+            for (int t = 0; t < r; t++) { Tnu(t, _, _) += matmul(U(t, _, _), matmul(Fs(nu, _, _), T(t, _, _))) / cppdlr::k_it(0, -hyb_poles(l)); }
           } else {
-            for (int t = 0; t < r; t++) { Tnu(t, _, _) += matmul(U(t, _, _), matmul(Fs(nu, _, _), T(t, _, _))) / k_it(0, hyb_poles(l)); }
+            for (int t = 0; t < r; t++) { Tnu(t, _, _) += matmul(U(t, _, _), matmul(Fs(nu, _, _), T(t, _, _))) / cppdlr::k_it(0, hyb_poles(l)); }
           }
         }
       }
@@ -267,40 +267,40 @@ void OCA_gf_bs_right(double beta, imtime_ops &itops, nda::vector_const_view<doub
       // multiply F_lambda G(tau_1) K^-(tau_1)
       for (int t = 0; t < r; t++) {
         T(t, range(0, block_dims(2)), range(0, block_dims(1))) =
-           k_it(dlr_it(t), -omega_l) * matmul(Flam.get_block(ind_path(0))(lam, _, _), Gt.get_block(ind_path(0))(t, _, _));
+           cppdlr::k_it(dlr_it(t), -omega_l) * matmul(Flam.get_block(ind_path(0))(lam, _, _), Gt.get_block(ind_path(0))(t, _, _));
       }
       // convolve by G
       T(_, range(0, block_dims(2)), range(0, block_dims(1))) = itops.convolve(
-         beta, itops.vals2coefs(Gt.get_block(ind_path(1))), itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))), TIME_ORDERED);
+         beta, itops.vals2coefs(Gt.get_block(ind_path(1))), itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))), cppdlr::TIME_ORDERED);
     } else {
       // multiply G(tau-tau_1) K^+(tau-tau_1) F_lambda
       for (int t = 0; t < r; t++) {
         T(t, range(0, block_dims(2)), range(0, block_dims(1))) =
-           k_it(dlr_it(t), omega_l) * matmul(Gt.get_block(ind_path(1))(t, _, _), Flam.get_block(ind_path(0))(lam, _, _));
+           cppdlr::k_it(dlr_it(t), omega_l) * matmul(Gt.get_block(ind_path(1))(t, _, _), Flam.get_block(ind_path(0))(lam, _, _));
       }
       // convolve by G
       T(_, range(0, block_dims(2)), range(0, block_dims(1))) = itops.convolve(
-         beta, itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))), itops.vals2coefs(Gt.get_block(ind_path(0))), TIME_ORDERED);
+         beta, itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))), itops.vals2coefs(Gt.get_block(ind_path(0))), cppdlr::TIME_ORDERED);
     }
   } else {
     if (omega_l >= 0) {
       // multiply F_lambda G(tau_1) K^+(tau_1)
       for (int t = 0; t < r; t++) {
         T(t, range(0, block_dims(2)), range(0, block_dims(1))) =
-           k_it(dlr_it(t), omega_l) * matmul(Flam.get_block(ind_path(0))(lam, _, _), Gt.get_block(ind_path(0))(t, _, _));
+           cppdlr::k_it(dlr_it(t), omega_l) * matmul(Flam.get_block(ind_path(0))(lam, _, _), Gt.get_block(ind_path(0))(t, _, _));
       }
       // convolve by G
       T(_, range(0, block_dims(2)), range(0, block_dims(1))) = itops.convolve(
-         beta, itops.vals2coefs(Gt.get_block(ind_path(1))), itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))), TIME_ORDERED);
+         beta, itops.vals2coefs(Gt.get_block(ind_path(1))), itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))), cppdlr::TIME_ORDERED);
     } else {
       // multiply G(tau-tau_1) K^-(tau-tau_1) F_lambda
       for (int t = 0; t < r; t++) {
         T(t, range(0, block_dims(2)), range(0, block_dims(1))) =
-           k_it(dlr_it(t), -omega_l) * matmul(Gt.get_block(ind_path(1))(t, _, _), Flam.get_block(ind_path(0))(lam, _, _));
+           cppdlr::k_it(dlr_it(t), -omega_l) * matmul(Gt.get_block(ind_path(1))(t, _, _), Flam.get_block(ind_path(0))(lam, _, _));
       }
       // convolve by G
       T(_, range(0, block_dims(2)), range(0, block_dims(1))) = itops.convolve(
-         beta, itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))), itops.vals2coefs(Gt.get_block(ind_path(0))), TIME_ORDERED);
+         beta, itops.vals2coefs(T(_, range(0, block_dims(2)), range(0, block_dims(1)))), itops.vals2coefs(Gt.get_block(ind_path(0))), cppdlr::TIME_ORDERED);
     }
   }
 }
@@ -315,40 +315,40 @@ void OCA_gf_bs_left(double beta, imtime_ops &itops, nda::vector_const_view<doubl
       // multiply G K^- Fbar
       for (int t = 0; t < r; t++) {
         T(t, range(0, block_dims(4)), range(0, block_dims(3))) =
-           k_it(dlr_it(t), -omega_l) * matmul(Gt.get_block(ind_path(3))(t, _, _), Fbar.get_block(ind_path(2))(lam, pole_ind, _, _));
+           cppdlr::k_it(dlr_it(t), -omega_l) * matmul(Gt.get_block(ind_path(3))(t, _, _), Fbar.get_block(ind_path(2))(lam, pole_ind, _, _));
       }
       // convolve by G
       T(_, range(0, block_dims(4)), range(0, block_dims(3))) = itops.convolve(
-         beta, itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))), itops.vals2coefs(Gt.get_block(ind_path(2))), TIME_ORDERED);
+         beta, itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))), itops.vals2coefs(Gt.get_block(ind_path(2))), cppdlr::TIME_ORDERED);
     } else {
       // multiply Fbar G K^+
       for (int t = 0; t < r; t++) {
         T(t, range(0, block_dims(4)), range(0, block_dims(3))) =
-           k_it(dlr_it(t), omega_l) * matmul(Fbar.get_block(ind_path(2))(lam, pole_ind, _, _), Gt.get_block(ind_path(2))(t, _, _));
+           cppdlr::k_it(dlr_it(t), omega_l) * matmul(Fbar.get_block(ind_path(2))(lam, pole_ind, _, _), Gt.get_block(ind_path(2))(t, _, _));
       }
       // convolve
       T(_, range(0, block_dims(4)), range(0, block_dims(3))) = itops.convolve(
-         beta, itops.vals2coefs(Gt.get_block(ind_path(3))), itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))), TIME_ORDERED);
+         beta, itops.vals2coefs(Gt.get_block(ind_path(3))), itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))), cppdlr::TIME_ORDERED);
     }
   } else {
     if (omega_l > 0) {
       // multiply G K^+ Fbar
       for (int t = 0; t < r; t++) {
         T(t, range(0, block_dims(4)), range(0, block_dims(3))) =
-           k_it(dlr_it(t), omega_l) * matmul(Gt.get_block(ind_path(3))(t, _, _), -Fbar.get_block(ind_path(2))(lam, pole_ind, _, _)); // Add -1 sign for reflected F_bar
+           cppdlr::k_it(dlr_it(t), omega_l) * matmul(Gt.get_block(ind_path(3))(t, _, _), -Fbar.get_block(ind_path(2))(lam, pole_ind, _, _)); // Add -1 sign for reflected F_bar
       }
       // convolve by G
       T(_, range(0, block_dims(4)), range(0, block_dims(3))) = itops.convolve(
-         beta, itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))), itops.vals2coefs(Gt.get_block(ind_path(2))), TIME_ORDERED);
+         beta, itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))), itops.vals2coefs(Gt.get_block(ind_path(2))), cppdlr::TIME_ORDERED);
     } else {
       // multiply Fbar G K^-
       for (int t = 0; t < r; t++) {
         T(t, range(0, block_dims(4)), range(0, block_dims(3))) =
-           k_it(dlr_it(t), -omega_l) * matmul(-Fbar.get_block(ind_path(2))(lam, pole_ind, _, _), Gt.get_block(ind_path(2))(t, _, _)); // Add -1 sign for reflected F_bar
+           cppdlr::k_it(dlr_it(t), -omega_l) * matmul(-Fbar.get_block(ind_path(2))(lam, pole_ind, _, _), Gt.get_block(ind_path(2))(t, _, _)); // Add -1 sign for reflected F_bar
       }
       // convolve
       T(_, range(0, block_dims(4)), range(0, block_dims(3))) = itops.convolve(
-         beta, itops.vals2coefs(Gt.get_block(ind_path(3))), itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))), TIME_ORDERED);
+         beta, itops.vals2coefs(Gt.get_block(ind_path(3))), itops.vals2coefs(T(_, range(0, block_dims(4)), range(0, block_dims(3)))), cppdlr::TIME_ORDERED);
     }
   }
   // reflect. Why does only reflecting all of T work?
@@ -427,14 +427,14 @@ nda::array<dcomplex, 3> OCA_gf_bs(nda::vector_const_view<double> hyb_poles, imti
                         Tmu(t, range(0, block_dims(4)), range(0, block_dims(1))) +=
                            matmul(U(t, range(0, block_dims(4)), range(0, block_dims(3))),
                                   matmul(Fq.Fs[p_mu].get_block(ind_path(1))(mu, _, _), T(t, range(0, block_dims(2)), range(0, block_dims(1)))))
-                           / k_it(0, -hyb_poles(l));
+                           / cppdlr::k_it(0, -hyb_poles(l));
                       }
                     } else {
                       for (int t = 0; t < r; t++) {
                         Tmu(t, range(0, block_dims(4)), range(0, block_dims(1))) +=
                            matmul(U(t, range(0, block_dims(4)), range(0, block_dims(3))),
                                   matmul(Fq.Fs[p_mu].get_block(ind_path(1))(mu, _, _), T(t, range(0, block_dims(2)), range(0, block_dims(1)))))
-                           / k_it(0, hyb_poles(l));
+                           / cppdlr::k_it(0, hyb_poles(l));
                       }
                     }
                   }
