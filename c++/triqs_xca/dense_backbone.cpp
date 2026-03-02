@@ -21,6 +21,9 @@ DenseDiagramEvaluator::DenseDiagramEvaluator(double beta, imtime_ops &itops, nda
   Tkaps = nda::zeros<dcomplex>(n, r, N, N);
   Tmu   = nda::zeros<dcomplex>(r, N, N);
   Sigma = nda::zeros<dcomplex>(r, N, N);
+
+  this->hyb_refl *= -1.; // Follow sign convention of block_sparse_backbone for reflected hybridization function.
+
 }
 
 void DenseDiagramEvaluator::reset() {
@@ -38,19 +41,19 @@ void DenseDiagramEvaluator::multiply_left_vertex(nda::array_view<dcomplex, 3> T_
   // backbone.get_vertex_hyb_ind(v_ix) = i, where i is the # of primes on l
   // l_ix = value of l with i primes
 
-  if (backbone.has_vertex_bar(v_ix)) {   // F has bar
-    if (backbone.has_vertex_dag(v_ix)) { // F has dagger
-      for (int t = 0; t < r; t++) T_buf(t, _, _) = matmul(Fset.F_dag_bars(o_ix, l_ix, _, _), T_buf(t, _, _));
-    } else {
-      for (int t = 0; t < r; t++) T_buf(t, _, _) = matmul(Fset.F_bars_refl(o_ix, l_ix, _, _), T_buf(t, _, _));
-    }
-  } else {
-    if (backbone.has_vertex_dag(v_ix)) { // F has dagger
-      for (int t = 0; t < r; t++) T_buf(t, _, _) = matmul(Fset.F_dags(o_ix, _, _), T_buf(t, _, _));
-    } else {
-      for (int t = 0; t < r; t++) T_buf(t, _, _) = matmul(Fset.Fs(o_ix, _, _), T_buf(t, _, _));
-    }
-  }
+  bool has_bar = backbone.has_vertex_bar(v_ix);
+  bool has_dag = backbone.has_vertex_dag(v_ix);
+
+  auto F_selector = [&]() {
+    if (has_bar)
+      return has_dag ? Fset.F_dag_bars(o_ix, l_ix, _, _) : Fset.F_bars_refl(o_ix, l_ix, _, _);
+    else
+      return has_dag ? Fset.F_dags(o_ix, _, _) : Fset.Fs(o_ix, _, _);
+  };
+
+  nda::array_const_view<dcomplex, 2> F = F_selector();
+
+  for (int t = 0; t < r; t++) T_buf(t, _, _) = matmul(F, T_buf(t, _, _));
 
   // K factor
   int bv      = backbone.get_vertex_Ksign(v_ix); // sign on K
@@ -91,30 +94,24 @@ void DenseDiagramEvaluator::multiply_prefactor(nda::array_view<dcomplex, 3> T_bu
 
 void DenseDiagramEvaluator::multiply_left_vertex_and_right_zero_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, bool is_forward) {
   int n = backbone.n;
-  if (is_forward) {
+
+  auto F_selector = [&](bool forward, int ix) { return forward ? Fset.Fs(ix, _, _) : Fset.F_dags(ix, _, _); };
+
+  for (int kap = 0; kap < n; kap++) {
+    nda::array_const_view<dcomplex, 2> F_kap = F_selector(is_forward, kap);
+    for (int t = 0; t < r; t++) { Tkaps(kap, t, _, _) = matmul(T_buf(t, _, _), F_kap); }
+  }
+
+  T_buf = 0;
+
+  for (int mu = 0; mu < n; mu++) {
+    Tmu = 0;
     for (int kap = 0; kap < n; kap++) {
-      for (int t = 0; t < r; t++) { Tkaps(kap, t, _, _) = matmul(T_buf(t, _, _), Fset.Fs(kap, _, _)); }
+      nda::array_const_view<dcomplex, 1> hyb_oo = is_forward ? hyb(_, mu, kap) : hyb_refl(_, mu, kap);
+      for (int t = 0; t < r; t++) { Tmu(t, _, _) += hyb_oo(t) * Tkaps(kap, t, _, _); }
     }
-    T_buf = 0;
-    for (int mu = 0; mu < n; mu++) {
-      Tmu = 0;
-      for (int kap = 0; kap < n; kap++) {
-        for (int t = 0; t < r; t++) { Tmu(t, _, _) += hyb(t, mu, kap) * Tkaps(kap, t, _, _); }
-      }
-      for (int t = 0; t < r; t++) { T_buf(t, _, _) += matmul(Fset.F_dags(mu, _, _), Tmu(t, _, _)); }
-    }
-  } else {
-    for (int kap = 0; kap < n; kap++) {
-      for (int t = 0; t < r; t++) { Tkaps(kap, t, _, _) = matmul(T_buf(t, _, _), Fset.F_dags(kap, _, _)); }
-    }
-    T_buf = 0;
-    for (int mu = 0; mu < n; mu++) {
-      Tmu = 0;
-      for (int kap = 0; kap < n; kap++) {
-        for (int t = 0; t < r; t++) { Tmu(t, _, _) -= hyb_refl(t, mu, kap) * Tkaps(kap, t, _, _); }
-      }
-      for (int t = 0; t < r; t++) { T_buf(t, _, _) += matmul(Fset.Fs(mu, _, _), Tmu(t, _, _)); }
-    }
+    nda::array_const_view<dcomplex, 2> F_mu = F_selector(!is_forward, mu);
+    for (int t = 0; t < r; t++) { T_buf(t, _, _) += matmul(F_mu, Tmu(t, _, _)); }
   }
 }
 
