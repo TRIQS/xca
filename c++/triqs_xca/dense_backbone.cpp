@@ -18,7 +18,7 @@ DenseDiagramEvaluator::DenseDiagramEvaluator(double beta, imtime_ops &itops, nda
   T     = nda::zeros<dcomplex>(r, N, N);
   U     = nda::zeros<dcomplex>(r, N, N);
   GKt   = nda::zeros<dcomplex>(r, N, N);
-  Tkaps = nda::zeros<dcomplex>(n, r, N, N);
+  Tkaps = nda::zeros<dcomplex>(n, r, N, N); // Biggest memory footprint, speeding up multiply_left_vertex_and_right_zero_vertex
   Tmu   = nda::zeros<dcomplex>(r, N, N);
   Sigma = nda::zeros<dcomplex>(r, N, N);
 
@@ -93,9 +93,13 @@ void DenseDiagramEvaluator::multiply_prefactor(nda::array_view<dcomplex, 3> T_bu
 }
 
 void DenseDiagramEvaluator::multiply_left_vertex_and_right_zero_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, bool is_forward) {
+
   int n = backbone.n;
 
   auto F_selector = [&](bool forward, int ix) { return forward ? Fset.Fs(ix, _, _) : Fset.F_dags(ix, _, _); };
+
+  // Save compute by precomputing Tkaps = T_buf * F_kap for all kappa, since this is needed for each mu
+  // at the cost of storing an n x r x N x N array (Tkaps) instead of an r x N x N array
 
   for (int kap = 0; kap < n; kap++) {
     nda::array_const_view<dcomplex, 2> F_kap = F_selector(is_forward, kap);
