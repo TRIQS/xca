@@ -1,9 +1,14 @@
 #include <gtest/gtest.h>
+
 #include <nda/nda.hpp>
 #include <cppdlr/cppdlr.hpp>
-#include "block_sparse_utils.hpp"
+
+#include <triqs_xca/strong_cpl.hpp>
+
 #include <triqs_xca/block_sparse.hpp>
 #include <triqs_xca/block_sparse_manual.hpp>
+
+#include "block_sparse_utils.hpp"
 
 using namespace nda;
 

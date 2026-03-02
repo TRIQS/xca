@@ -14,6 +14,8 @@
 
 using nda::dcomplex;
 
+using cppdlr::imtime_ops;
+
 /**
  * @class DiagramEvaluator
  * @brief Class for evaluating a diagram of a given order and topology in block-sparse storage

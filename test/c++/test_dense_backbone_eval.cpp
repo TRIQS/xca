@@ -1,12 +1,19 @@
-#include <gtest/gtest.h>
 #include <iomanip>
+
+#include <gtest/gtest.h>
+
 #include <nda/nda.hpp>
+
 #include <cppdlr/cppdlr.hpp>
-#include "block_sparse_utils.hpp"
+
+#include <triqs_xca/backbone.hpp>
 #include <triqs_xca/block_sparse.hpp>
 #include <triqs_xca/block_sparse_manual.hpp>
-#include <triqs_xca/backbone.hpp>
 #include <triqs_xca/dense_backbone.hpp>
+
+#include <triqs_xca/strong_cpl.hpp>
+
+#include "block_sparse_utils.hpp"
 
 TEST(DenseBackbone, OCA) {
   int n         = 4;

@@ -1,9 +1,13 @@
 #include <chrono>
+
 #include <nda/nda.hpp>
 #include <cppdlr/cppdlr.hpp>
+
 #include <triqs_xca/block_sparse.hpp>
 #include <triqs_xca/block_sparse_manual.hpp>
 #include <triqs_xca/dense_backbone.hpp>
+
+#include <triqs_xca/strong_cpl.hpp>
 
 using namespace nda;
 using namespace cppdlr;

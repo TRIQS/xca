@@ -1,19 +1,27 @@
-#include <cppdlr/dlr_kernels.hpp>
-#include <gtest/gtest.h>
-#include <nda/basic_functions.hpp>
-#include <nda/nda.hpp>
-#include <cppdlr/cppdlr.hpp>
-#include "block_sparse_utils.hpp"
 #include <set>
+#include <iomanip>
+
+#include <gtest/gtest.h>
+
+#include <nda/nda.hpp>
+#include <nda/basic_functions.hpp>
+
+#include <cppdlr/cppdlr.hpp>
+#include <cppdlr/dlr_kernels.hpp>
+
 #include <triqs/operators/many_body_operator.hpp>
 #include <triqs/atom_diag/atom_diag.hpp>
+
+#include <triqs_xca/strong_cpl.hpp>
+
 #include <triqs_xca/block_sparse.hpp>
 #include <triqs_xca/block_sparse_manual.hpp>
 #include <triqs_xca/backbone.hpp>
 #include <triqs_xca/dense_backbone.hpp>
 #include <triqs_xca/block_sparse_backbone.hpp>
 #include <triqs_xca/atom_diag_utils.hpp>
-#include <iomanip>
+
+#include "block_sparse_utils.hpp"
 
 using namespace triqs;
 using namespace triqs::operators;

@@ -1,15 +1,14 @@
-#include <triqs_xca/dense.hpp>
+#include "triqs_xca/dense.hpp"
 
-
-DenseFSet::DenseFSet(nda::array_const_view<nda::dcomplex, 3> Fs, nda::array_const_view<nda::dcomplex, 3> F_dags,
-                     nda::array_const_view<nda::dcomplex, 3> hyb_coeffs)
+DenseFSet::DenseFSet(nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags,
+                     nda::array_const_view<dcomplex, 3> hyb_coeffs)
    : Fs(Fs), F_dags(F_dags) {
 
   int n       = Fs.extent(0);
   int N       = Fs.extent(1);
   int p       = hyb_coeffs.extent(0);
-  F_dag_bars  = nda::array<nda::dcomplex, 4>(n, p, N, N);
-  F_bars_refl = nda::array<nda::dcomplex, 4>(n, p, N, N);
+  F_dag_bars  = nda::array<dcomplex, 4>(n, p, N, N);
+  F_bars_refl = nda::array<dcomplex, 4>(n, p, N, N);
 
   static constexpr auto _ = nda::range::all;
 

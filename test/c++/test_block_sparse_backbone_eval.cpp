@@ -2,24 +2,32 @@
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
+
 #include <gtest/gtest.h>
+
 #include <nda/basic_functions.hpp>
 #include <nda/macros.hpp>
 #include <nda/mapped_functions.hxx>
 #include <nda/nda.hpp>
+
 #include <cppdlr/cppdlr.hpp>
-#include "block_sparse_utils.hpp"
-#include "triqs_xca/dense_backbone.hpp"
+
 #include <triqs/atom_diag/gf.hpp>
 #include <triqs/mesh/dlr_imtime.hpp>
 #include <triqs/mesh/imtime.hpp>
-#include <triqs_xca/block_sparse.hpp>
-#include <triqs_xca/block_sparse_manual.hpp>
-#include <triqs_xca/backbone.hpp>
-#include <triqs_xca/block_sparse_backbone.hpp>
 #include <triqs/atom_diag/atom_diag.hpp>
 #include <triqs/operators/many_body_operator.hpp>
+
+#include <triqs_xca/backbone.hpp>
 #include <triqs_xca/atom_diag_utils.hpp>
+#include <triqs_xca/dense_backbone.hpp>
+#include <triqs_xca/block_sparse.hpp>
+#include <triqs_xca/block_sparse_manual.hpp>
+#include <triqs_xca/block_sparse_backbone.hpp>
+
+#include <triqs_xca/strong_cpl.hpp>
+
+#include "block_sparse_utils.hpp"
 
 using namespace triqs;
 using namespace triqs::operators;
