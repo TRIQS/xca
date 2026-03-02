@@ -1,11 +1,6 @@
-#include <cppdlr/dlr_imtime.hpp>
-#include <cppdlr/dlr_kernels.hpp>
-#include <nda/declarations.hpp>
 #include <nda/nda.hpp>
-#include <triqs_xca/block_sparse.hpp>
-#include <triqs_xca/backbone.hpp>
 
-using namespace nda;
+#include <triqs_xca/backbone.hpp>
 
 BackboneVertex::BackboneVertex() : bar(false), dag(false), hyb_ind(0), Ksign(0), orb(0) { ; }
 
@@ -259,7 +254,7 @@ void CorrelatorBackbone::set_directions(nda::vector_const_view<int> fb_vec) {
   // same logic as the Backbone method, but no line connected to vertex 0 -- just the "for loop" part
 
   if (m - 1 != fb_vec.size()) { throw std::invalid_argument("fb must have m - 1 elements"); }
-  this->fb(range(1, m)) = fb_vec;
+  this->fb(nda::range(1, m)) = fb_vec;
   this->fb(0)           = -1; // no line connected to vertex 0
 
   vertices[topology(0, 0)].set_bar(false); // operator on vertex 0 has no bar
