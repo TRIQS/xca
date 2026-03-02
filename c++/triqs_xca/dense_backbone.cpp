@@ -5,7 +5,7 @@
 
 #include <triqs_xca/dense_backbone.hpp>
 
-static constexpr auto _ = nda::range::all;
+using cppdlr::_;
 
 using nda::linalg::matmul;
 using nda::trace;

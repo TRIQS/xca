@@ -1,6 +1,4 @@
-#include <nda/nda.hpp>
-
-#include <triqs_xca/backbone.hpp>
+#include "triqs_xca/backbone.hpp"
 
 BackboneVertex::BackboneVertex() : bar(false), dag(false), hyb_ind(0), Ksign(0), orb(0) { ; }
 
