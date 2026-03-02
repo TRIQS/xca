@@ -1,9 +1,14 @@
+#include <nda/nda.hpp>
+
 #include <cppdlr/dlr_imtime.hpp>
 #include <cppdlr/dlr_kernels.hpp>
-#include <cppdlr/utils.hpp>
-#include <nda/nda.hpp>
-#include <triqs_xca/block_sparse.hpp>
+
 #include <triqs_xca/dense_backbone.hpp>
+
+static constexpr auto _ = nda::range::all;
+
+using nda::linalg::matmul;
+using nda::trace;
 
 DenseDiagramEvaluator::DenseDiagramEvaluator(double beta, imtime_ops &itops, nda::array_const_view<dcomplex, 3> hyb,
                                              nda::array_const_view<dcomplex, 3> hyb_refl, nda::vector_const_view<double> hyb_poles,
@@ -60,7 +65,7 @@ void DenseDiagramEvaluator::multiply_left_vertex(nda::array_view<dcomplex, 3> T_
   double pole = hyb_poles(l_ix);
   // if (backbone.get_vertex_direction(v_ix) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
   if (bv != 0) {
-    for (int t = 0; t < r; t++) { T_buf(t, _, _) = k_it(dlr_it(t), bv * pole) * T_buf(t, _, _); }
+    for (int t = 0; t < r; t++) { T_buf(t, _, _) = cppdlr::k_it(dlr_it(t), bv * pole) * T_buf(t, _, _); }
   }
 }
 
@@ -72,10 +77,10 @@ void DenseDiagramEvaluator::integrate_left_edge(nda::array_view<dcomplex, 3> T_b
     double pole = hyb_poles(backbone.get_pole_ind(x));
     // if (backbone.get_fb(x + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
     if (be != 0) {
-      for (int t = 0; t < r; t++) { GKt(t, _, _) = k_it(dlr_it(t), be * pole) * GKt(t, _, _); }
+      for (int t = 0; t < r; t++) { GKt(t, _, _) = cppdlr::k_it(dlr_it(t), be * pole) * GKt(t, _, _); }
     }
   }
-  T_buf = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T_buf), TIME_ORDERED);
+  T_buf = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T_buf), cppdlr::TIME_ORDERED);
 }
 
 void DenseDiagramEvaluator::multiply_prefactor(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone) {
@@ -87,7 +92,7 @@ void DenseDiagramEvaluator::multiply_prefactor(nda::array_view<dcomplex, 3> T_bu
       int Ksign = backbone.get_prefactor_Ksign(m_ix);     // sign on K for this hybridization index
       double om = hyb_poles(backbone.get_pole_ind(m_ix)); // DLR frequency for this value of this hybridization index
       // if (backbone.get_fb(m_ix + 1) == 0) om = -om;       // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
-      for (int q = 0; q < exp; q++) T_buf /= k_it(0, Ksign * om);
+      for (int q = 0; q < exp; q++) T_buf /= cppdlr::k_it(0, Ksign * om);
     }
   }
 }
@@ -184,7 +189,7 @@ void DenseDiagramEvaluator::multiply_right_vertex(nda::array_view<dcomplex, 3> U
   // K factor
   int Ksign = backbone.get_vertex_Ksign(v_ix); // sign on K
   if (Ksign != 0) {
-    for (int t = 0; t < r; t++) U_buf(t, _, _) *= k_it(dlr_it(t), -Ksign * hyb_poles(l_ix));
+    for (int t = 0; t < r; t++) U_buf(t, _, _) *= cppdlr::k_it(dlr_it(t), -Ksign * hyb_poles(l_ix));
   }
 }
 
@@ -195,10 +200,10 @@ void DenseDiagramEvaluator::integrate_right_edge(nda::array_view<dcomplex, 3> U_
     int Ksign = backbone.get_edge(e_ix, x); // sign on K
     if (Ksign != 0) {
       double pole = hyb_poles(backbone.get_pole_ind(x));
-      for (int t = 0; t < r; t++) GKt(t, _, _) *= k_it(dlr_it(t), Ksign * pole);
+      for (int t = 0; t < r; t++) GKt(t, _, _) *= cppdlr::k_it(dlr_it(t), Ksign * pole);
     }
   }
-  U_buf = itops.convolve(beta, itops.vals2coefs(U_buf), itops.vals2coefs(GKt), TIME_ORDERED);
+  U_buf = itops.convolve(beta, itops.vals2coefs(U_buf), itops.vals2coefs(GKt), cppdlr::TIME_ORDERED);
 }
 
 nda::array<dcomplex, 3> DenseDiagramEvaluator::eval_correlator(CorrelatorBackbone &backbone, nda::array<dcomplex, 3> mu_ops,

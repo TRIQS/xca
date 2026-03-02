@@ -1,11 +1,14 @@
 #pragma once
-#include <cppdlr/dlr_kernels.hpp>
-#include <nda/declarations.hpp>
-#include <triqs_xca/block_sparse.hpp>
 #include <nda/nda.hpp>
+
+#include <cppdlr/dlr_imtime.hpp>
+
+#include <triqs_xca/dense.hpp>
 #include <triqs_xca/backbone.hpp>
 
 using namespace nda;
+
+using imtime_ops = cppdlr::imtime_ops;
 
 /**
  * @class DenseDiagramEvaluator
