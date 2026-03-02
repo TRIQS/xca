@@ -1,22 +1,28 @@
-#include "triqs_xca/block_sparse.hpp"
-#include "triqs_xca/dense.hpp"
+#include <nda/nda.hpp>
+
 #include <cppdlr/dlr_imtime.hpp>
+
+#include <triqs/gfs.hpp>
 #include <triqs/atom_diag/atom_diag.hpp>
 
-using namespace nda;
-using namespace triqs;
+#include "triqs_xca/dense.hpp"
+#include "triqs_xca/block_sparse.hpp"
+
+using cppdlr::imtime_ops;
+
+using triqs_atom_diag = triqs::atom_diag::atom_diag<false>; // true for complex valued Hamiltonians
 
 /**
  * @brief Utility function to get full Hamiltonian matrix from an AtomDiag object.
  * @param[in] ad AtomDiag object
  */
-matrix<double> get_full_h_atomic(const atom_diag::atom_diag<false> &ad);
+nda::matrix<double> get_full_h_atomic(const triqs_atom_diag &ad);
 
 /**
  * @brief Get full Hamiltonian matrix from an AtomDiag object with rows and columns permuted by Fock state ordering.
  * @param[in] ad AtomDiag object
  */
-matrix<double> get_full_h_atomic_perm(const atom_diag::atom_diag<false> &ad);
+nda::matrix<double> get_full_h_atomic_perm(const triqs_atom_diag &ad);
 
 /**
  * @brief Utility function to get full operator matrix from an AtomDiag object.
@@ -24,14 +30,14 @@ matrix<double> get_full_h_atomic_perm(const atom_diag::atom_diag<false> &ad);
  * @param[in] oidx operator index
  * @param[in] is_creation true for creation operator, false for annihilation operator
  */
-matrix<double> get_full_operator_matrix(const atom_diag::atom_diag<false> &ad, int oidx, bool is_creation);
+nda::matrix<double> get_full_operator_matrix(const triqs_atom_diag &ad, int oidx, bool is_creation);
 
 /**
  * @brief Get symmetry blocks of Hamiltonian from an AtomDiag object
  * @param[in] ad AtomDiag object
  * @return Tuple of vectors of Hamiltonian blocks and block indices
  */
-std::tuple<std::vector<nda::array<double, 2>>, nda::vector<long>> get_hamiltonian_blocks(const atom_diag::atom_diag<false> &ad);
+std::tuple<std::vector<nda::array<double, 2>>, nda::vector<long>> get_hamiltonian_blocks(const triqs_atom_diag &ad);
 
 /**
  * @brief Exponentiate Hamiltonian blocks to get atomic propagator blocks
@@ -52,7 +58,7 @@ std::vector<nda::array<T, 3>> H_to_atom_prop_blocks(std::vector<nda::array<doubl
  * @param[in] itops Imaginary time object
  * @return BlockDiagOpFun representing the atomic propagator
  */
-BlockDiagOpFun ad_to_atom_prop(const atom_diag::atom_diag<false> &ad, double beta, imtime_ops &itops);
+BlockDiagOpFun ad_to_atom_prop(const triqs_atom_diag &ad, double beta, imtime_ops &itops);
 
 /**
  * @brief Get atomic propagator from an AtomDiag object as a triqs::block_gf<dlr_imtime>
@@ -62,7 +68,7 @@ BlockDiagOpFun ad_to_atom_prop(const atom_diag::atom_diag<false> &ad, double bet
  * @param[in] eps DLR epsilon parameter
  * @return triqs::block_gf<dlr_imtime> representing the atomic propagator
  */
-block_gf<dlr_imtime> ad_to_atom_prop(const atom_diag::atom_diag<false> &ad, double beta, double Lambda, double eps);
+triqs::gfs::block_gf<triqs::mesh::dlr_imtime> ad_to_atom_prop(const triqs_atom_diag &ad, double beta, double Lambda, double eps);
 
 /**
  * @brief Get creation and annihilation operators from an AtomDiag object
@@ -70,7 +76,7 @@ block_gf<dlr_imtime> ad_to_atom_prop(const atom_diag::atom_diag<false> &ad, doub
  * @param[in] hyb_coeffs Hybridization SOE coefficients
  * @return Tuple of BlockOpSymSet objects
  */
-std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const atom_diag::atom_diag<false> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs);
+std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const triqs_atom_diag &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs);
 
 /**
  * @brief Get creation and annihilation operators from an AtomDiag object in dense storage
@@ -79,4 +85,4 @@ std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const atom_diag::a
  * @param[in] hyb_coeffs Hybridization SOE coefficients
  * @return DenseFSet object
  */
-DenseFSet get_operators_dense(const atom_diag::atom_diag<false> &ad, int norb, nda::array_const_view<dcomplex, 3> hyb_coeffs);
+DenseFSet get_operators_dense(const triqs_atom_diag &ad, int norb, nda::array_const_view<dcomplex, 3> hyb_coeffs);

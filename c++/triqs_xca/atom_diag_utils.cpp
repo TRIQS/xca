@@ -1,27 +1,23 @@
 #include "triqs_xca/atom_diag_utils.hpp"
-#include "triqs_xca/block_sparse.hpp"
-#include <cppdlr/dlr_imtime.hpp>
-#include <iostream>
-#include <triqs/atom_diag/atom_diag.hpp>
-#include <triqs/mesh/dlr_imtime.hpp>
 
-using namespace nda;
-using namespace triqs;
+using nda::linalg::matmul;
 
-matrix<double> get_full_h_atomic(const atom_diag::atom_diag<false> &ad) {
+using cppdlr::_;
+
+nda::matrix<double> get_full_h_atomic(const triqs_atom_diag &ad) {
   int dim              = ad.get_full_hilbert_space_dim();
-  matrix<double> H_mat = zeros<double>(dim, dim);
+  auto H_mat = nda::zeros<double>(dim, dim);
 
   for (int sidx = 0; sidx < ad.n_subspaces(); ++sidx) {
     auto U        = ad.get_unitary_matrix(sidx);
     auto energies = ad.get_energies()[sidx];
 
     // Create diagonal energy matrix
-    matrix<double> H_block_diag = zeros<double>(energies.size(), energies.size());
+    nda::matrix<double> H_block_diag = nda::zeros<double>(energies.size(), energies.size());
     for (int i = 0; i < energies.size(); ++i) { H_block_diag(i, i) = energies[i] + ad.get_gs_energy(); }
 
     // Transform to Fock basis: H_block = U @ H_block_diag @ U^T
-    matrix<double> H_block = U * H_block_diag * transpose(U);
+    nda::matrix<double> H_block = U * H_block_diag * nda::transpose(U);
 
     // Get Fock states for this subspace
     auto fock_states = ad.get_fock_states(sidx);
@@ -35,7 +31,7 @@ matrix<double> get_full_h_atomic(const atom_diag::atom_diag<false> &ad) {
   return H_mat;
 }
 
-matrix<double> get_full_h_atomic_perm(const atom_diag::atom_diag<false> &ad) {
+nda::matrix<double> get_full_h_atomic_perm(const triqs_atom_diag &ad) {
   // Get full Hamiltonian matrix
   auto H_mat = get_full_h_atomic(ad);
 
@@ -47,7 +43,7 @@ matrix<double> get_full_h_atomic_perm(const atom_diag::atom_diag<false> &ad) {
   }
 
   // Apply permutation
-  matrix<double> H_mat_perm = zeros<double>(H_mat.extent(0), H_mat.extent(1));
+  nda::matrix<double> H_mat_perm = nda::zeros<double>(H_mat.extent(0), H_mat.extent(1));
   for (int i = 0; i < H_mat.extent(0); ++i) {
     for (int j = 0; j < H_mat.extent(1); ++j) { H_mat_perm(i, j) = H_mat(H_perm[i], H_perm[j]); }
   }
@@ -55,9 +51,9 @@ matrix<double> get_full_h_atomic_perm(const atom_diag::atom_diag<false> &ad) {
   return H_mat_perm;
 }
 
-matrix<double> get_full_operator_matrix(const atom_diag::atom_diag<false> &ad, int oidx, bool is_creation) {
+nda::matrix<double> get_full_operator_matrix(const triqs_atom_diag &ad, int oidx, bool is_creation) {
   int dim               = ad.get_full_hilbert_space_dim();
-  matrix<double> op_mat = zeros<double>(dim, dim);
+  nda::matrix<double> op_mat = nda::zeros<double>(dim, dim);
 
   for (int s1 = 0; s1 < ad.n_subspaces(); ++s1) {
     // Get connection to target subspace
@@ -70,7 +66,7 @@ matrix<double> get_full_operator_matrix(const atom_diag::atom_diag<false> &ad, i
     // Transform to Fock basis
     auto U1                       = ad.get_unitary_matrix(s1);
     auto U2                       = ad.get_unitary_matrix(s2);
-    matrix<double> block_mat_fock = U2 * block_mat * transpose(U1);
+    nda::matrix<double> block_mat_fock = U2 * block_mat * nda::transpose(U1);
 
     // Get Fock states
     auto f1 = ad.get_fock_states(s1);
@@ -85,7 +81,7 @@ matrix<double> get_full_operator_matrix(const atom_diag::atom_diag<false> &ad, i
   return op_mat;
 }
 
-std::tuple<std::vector<nda::array<double, 2>>, nda::vector<long>> get_hamiltonian_blocks(const atom_diag::atom_diag<false> &ad) {
+std::tuple<std::vector<nda::array<double, 2>>, nda::vector<long>> get_hamiltonian_blocks(const triqs_atom_diag &ad) {
   // Get full Hamiltonian matrix
   auto H_mat = get_full_h_atomic(ad);
 
@@ -99,7 +95,7 @@ std::tuple<std::vector<nda::array<double, 2>>, nda::vector<long>> get_hamiltonia
     for (auto state : fock_states) { H_perm.push_back(state); }
 
     // Extract block from full matrix
-    nda::array<double, 2> H_block = zeros<double>(fock_states.size(), fock_states.size());
+    nda::array<double, 2> H_block = nda::zeros<double>(fock_states.size(), fock_states.size());
     for (int i = 0; i < fock_states.size(); ++i) {
       for (int j = 0; j < fock_states.size(); ++j) { H_block(i, j) = H_mat(fock_states[i], fock_states[j]); }
     }
@@ -156,7 +152,7 @@ std::vector<nda::array<T, 3>> H_to_atom_prop_blocks(std::vector<nda::array<doubl
   return ap_blocks;
 }
 
-BlockDiagOpFun ad_to_atom_prop(const atom_diag::atom_diag<false> &ad, double beta, imtime_ops &itops) {
+BlockDiagOpFun ad_to_atom_prop(const triqs_atom_diag &ad, double beta, imtime_ops &itops) {
   // Get Hamiltonian blocks and block indices
   auto [H_blocks, H_block_inds] = get_hamiltonian_blocks(ad);
 
@@ -168,23 +164,23 @@ BlockDiagOpFun ad_to_atom_prop(const atom_diag::atom_diag<false> &ad, double bet
   return {ap_blocks, zero_block_indices};
 }
 
-block_gf<dlr_imtime> ad_to_atom_prop(const atom_diag::atom_diag<false> &ad, double beta, double Lambda, double eps) {
+triqs::gfs::block_gf<triqs::mesh::dlr_imtime> ad_to_atom_prop(const triqs_atom_diag &ad, double beta, double Lambda, double eps) {
   // Get Hamiltonian blocks and block indices
   auto [H_blocks, H_block_inds] = get_hamiltonian_blocks(ad);
 
   // Compute atomic propagator blocks
-  auto dlr_rf                                    = build_dlr_rf(Lambda, eps);
+  auto dlr_rf                                    = cppdlr::build_dlr_rf(Lambda, eps);
   auto itops                                     = imtime_ops(Lambda, dlr_rf);
   std::vector<nda::array<dcomplex, 3>> ap_blocks = H_to_atom_prop_blocks<dcomplex>(H_blocks, H_block_inds, beta, itops);
 
   // Create vector of gf<dlr_imtime>
-  std::vector<gf<dlr_imtime>> gf_blocks(H_block_inds.size());
-  mesh::dlr_imtime tau_mesh(beta, triqs::mesh::Fermion, Lambda / beta, eps);
-  for (int i = 0; i < H_block_inds.size(); ++i) { gf_blocks[i] = gf<dlr_imtime>(tau_mesh, ap_blocks[i]); }
+  std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> gf_blocks(H_block_inds.size());
+  triqs::mesh::dlr_imtime tau_mesh(beta, triqs::mesh::Fermion, Lambda / beta, eps);
+  for (int i = 0; i < H_block_inds.size(); ++i) { gf_blocks[i] = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, ap_blocks[i]); }
   return {gf_blocks};
 }
 
-std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const atom_diag::atom_diag<false> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
+std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const triqs_atom_diag &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
 
   // Find like rows of c_connection (resp. cdag_connection), which correspond with annihilation (resp. creation) operators that have the same
   // sparsity pattern
@@ -331,7 +327,7 @@ std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const atom_diag::a
   return std::make_tuple(Fq, sym_set_labels);
 }
 
-DenseFSet get_operators_dense(const atom_diag::atom_diag<false> &ad, int norb, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
+DenseFSet get_operators_dense(const triqs_atom_diag &ad, int norb, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
   // get Fock state ordering
   std::vector<unsigned long> H_perm;
   for (int s = 0; s < ad.n_subspaces(); ++s) {
