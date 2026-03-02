@@ -1,28 +1,12 @@
-#include "block_sparse.hpp"
-#include <cppdlr/dlr_imtime.hpp>
-#include <cppdlr/utils.hpp>
-#include <h5/format.hpp>
-#include <h5/group.hpp>
 #include <iostream>
-#include <cppdlr/dlr_kernels.hpp>
-#include <nda/algorithms.hpp>
-#include <nda/declarations.hpp>
-#include <nda/basic_functions.hpp>
-#include <nda/layout_transforms.hpp>
-#include <nda/linalg/eigh.hpp>
-#include <nda/print.hpp>
-#include <ostream>
-#include <string>
-#include <triqs/mesh/dlr_imtime.hpp>
-#include <vector>
-#include <stdexcept>
-#include <triqs/gfs.hpp>
-#include <triqs/mesh.hpp>
-#include <triqs/gfs/block/block_gf.hpp>
 
-using namespace nda;
-using namespace triqs;
-using namespace triqs::gfs;
+#include <cppdlr/dlr_imtime.hpp>
+
+#include "triqs_xca/block_sparse.hpp"
+
+using cppdlr::_;
+
+using nda::linalg::matmul;
 
 /////////////// BlockDiagOpFun (BDOF) class ///////////////
 BlockDiagOpFun::BlockDiagOpFun(std::vector<nda::array<dcomplex, 3>> &blocks, nda::vector_const_view<int> zero_block_indices)
@@ -35,7 +19,7 @@ BlockDiagOpFun::BlockDiagOpFun(int r, nda::vector_const_view<int> block_sizes) :
   this->blocks = temp_blocks;
 }
 
-BlockDiagOpFun::BlockDiagOpFun(const block_gf<dlr_imtime> &bgf) : num_block_cols(bgf.size()) {
+BlockDiagOpFun::BlockDiagOpFun(const triqs::gfs::block_gf<triqs::mesh::dlr_imtime> &bgf) : num_block_cols(bgf.size()) {
   // TODO set block to just a single zero if the block gf is numerically zero
   blocks.resize(num_block_cols);
   zero_block_indices = nda::zeros<int>(num_block_cols);
@@ -132,15 +116,6 @@ void BlockDiagOpFun::add_block(int i, nda::array_const_view<dcomplex, 3> block) 
     blocks[i] = nda::make_regular(blocks[i] + block);
   }
   zero_block_indices(i) = 0; // mark block as non-zero
-}
-
-std::string BlockDiagOpFun::hdf5_format() { return "BlockDiagOpFun"; }
-
-void h5_write(h5::group g, const std::string &subgroup_name, const BlockDiagOpFun &BDOF) {
-  auto sg = g.create_group(subgroup_name);
-  h5::write_hdf5_format(sg, BDOF);
-  for (int i = 0; i < BDOF.num_block_cols; i++) { h5::write(sg, "block_" + std::to_string(i), BDOF.blocks[i]); }
-  h5::write(sg, "zero_block_indices", BDOF.zero_block_indices);
 }
 
 /////////////// BlockOp (BO) class ///////////////
@@ -699,12 +674,12 @@ nda::array<dcomplex, 3> aaa_coefs2vals(double beta, double Lambda, double eps, n
                                        nda::vector_const_view<double> poles) {
   long n1     = coefs.extent(1);
   long n2     = coefs.extent(2);
-  auto dlr_rf = build_dlr_rf(Lambda, eps);
-  auto itops  = imtime_ops(Lambda, dlr_rf);
+  auto dlr_rf = cppdlr::build_dlr_rf(Lambda, eps);
+  auto itops  = cppdlr::imtime_ops(Lambda, dlr_rf);
   auto dlr_it = itops.get_itnodes();
   int r       = itops.rank();
   int p       = static_cast<int>(poles.size());
-  auto kmat   = build_k_it(dlr_it, nda::make_regular(beta * poles));
+  auto kmat   = cppdlr::build_k_it(dlr_it, nda::make_regular(beta * poles));
   auto cf_r   = nda::reshape(coefs, p, coefs.size() / p);
   nda::array<dcomplex, 3> vals(r, n1, n2);
   reshape(vals, r, n1 * n2) = matmul(kmat, cf_r);
@@ -714,29 +689,29 @@ nda::array<dcomplex, 3> aaa_coefs2vals(double beta, double Lambda, double eps, n
 nda::array<dcomplex, 3> aaa_reflect(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> coefs,
                                     nda::vector_const_view<double> poles) {
   auto vals   = aaa_coefs2vals(beta, Lambda, eps, coefs, poles);
-  auto dlr_rf = build_dlr_rf(Lambda, eps);
-  auto itops  = imtime_ops(Lambda, dlr_rf);
+  auto dlr_rf = cppdlr::build_dlr_rf(Lambda, eps);
+  auto itops  = cppdlr::imtime_ops(Lambda, dlr_rf);
   auto refl   = itops.reflect(vals);
   // TODO
   return coefs; // placeholder
 }
 
-block_gf<dlr_imtime> BDOF_to_block_gf(BlockDiagOpFun const &BDOF, double beta, double Lambda, double eps) {
-  auto dlr_rf = build_dlr_rf(Lambda, eps);
-  auto itops  = imtime_ops(Lambda, dlr_rf);
+triqs::gfs::block_gf<triqs::mesh::dlr_imtime> BDOF_to_block_gf(BlockDiagOpFun const &BDOF, double beta, double Lambda, double eps) {
+  auto dlr_rf = cppdlr::build_dlr_rf(Lambda, eps);
+  auto itops  = cppdlr::imtime_ops(Lambda, dlr_rf);
 
   // triqs gf mesh
-  auto t_mesh = mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda, eps);
+  auto t_mesh = triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda, eps);
   // create vector of gf
-  std::vector<gf<dlr_imtime>> gf_vec(BDOF.get_num_block_cols());
+  std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> gf_vec(BDOF.get_num_block_cols());
 
   for (int i = 0; i < BDOF.get_num_block_cols(); ++i) {
     if (BDOF.get_zero_block_index(i) == 0) {
-      gf_vec[i]        = gf<dlr_imtime>{t_mesh, {BDOF.get_block(i).extent(1), BDOF.get_block(i).extent(2)}};
+      gf_vec[i]        = triqs::gfs::gf<triqs::mesh::dlr_imtime>{t_mesh, {BDOF.get_block(i).extent(1), BDOF.get_block(i).extent(2)}};
       gf_vec[i].data() = BDOF.get_block(i);
     } else {
       // empty block
-      gf_vec[i] = gf<dlr_imtime>{t_mesh, {0, 0}};
+      gf_vec[i] = triqs::gfs::gf<triqs::mesh::dlr_imtime>{t_mesh, {0, 0}};
     }
   }
   return {gf_vec};

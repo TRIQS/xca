@@ -1,19 +1,11 @@
 #pragma once
-#include "nda/nda.hpp"
-#include "strong_cpl.hpp"
-#include <cppdlr/dlr_imtime.hpp>
-#include <cppdlr/dlr_kernels.hpp>
-#include <nda/blas/tools.hpp>
-#include <nda/declarations.hpp>
-#include <triqs/gfs/gf/targets.hpp>
 #include <vector>
-#include <triqs/gfs.hpp>
-#include <triqs/mesh.hpp>
-#include <triqs/gfs/block/block_gf.hpp>
 
-using namespace nda;
-using namespace triqs;
-using namespace triqs::gfs;
+#include <nda/nda.hpp>
+
+#include <triqs/gfs.hpp>
+
+using nda::dcomplex;
 
 // TODO templates for double/dcomplex
 
@@ -42,8 +34,6 @@ class BlockDiagOpFun {
   int get_num_time_nodes() const;
   void add_block(int i, nda::array_const_view<dcomplex, 3> block);
   static std::string hdf5_format();
-  friend void h5_write(h5::group g, const std::string &subgroup_name, const BlockDiagOpFun &BDOF);
-  friend void h5_read(h5::group g, const std::string &subgroup_name, BlockDiagOpFun &BDOF);
 
   /**
    * @brief Constructor for BlockDiagOpFun
@@ -63,7 +53,7 @@ class BlockDiagOpFun {
    * @brief Constructor for BlockDiagOpFun from a triqs block_gf<dlr_imtime>
    * @param[in] bgf block_gf<dlr_imtime>
    */
-  BlockDiagOpFun(const block_gf<dlr_imtime> &bgf);
+  BlockDiagOpFun(const triqs::gfs::block_gf<triqs::mesh::dlr_imtime> &bgf);
 };
 
 /**
@@ -369,10 +359,10 @@ nda::array<dcomplex, 3> aaa_reflect(double beta, double Lambda, double eps, nda:
                                     nda::vector_const_view<double> poles);
 
 /**
- * @brief Convert a BlockDiagOpFun to a triqs::block_gf<dlr_imtime>
+ * @brief Convert a BlockDiagOpFun to a triqs::gfs::block_gf<triqs::mesh::dlr_imtime>
  * @param[in] BDOF BlockDiagOpFun
  * @param[in] beta inverse temperature
  * @param[in] Lambda DLR cutoff parameter
  * @param[in] eps DLR epsilon parameter
  */
-block_gf<dlr_imtime> BDOF_to_block_gf(BlockDiagOpFun const &BDOF, double beta, double Lambda, double eps);
+triqs::gfs::block_gf<triqs::mesh::dlr_imtime> BDOF_to_block_gf(BlockDiagOpFun const &BDOF, double beta, double Lambda, double eps);
