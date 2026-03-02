@@ -1,26 +1,22 @@
-#include "triqs_xca/backbone.hpp"
-#include <cppdlr/dlr_imtime.hpp>
-#include <cppdlr/dlr_kernels.hpp>
-#include <cppdlr/utils.hpp>
 #include <iostream>
-#include <nda/algorithms.hpp>
-#include <nda/blas/tools.hpp>
-#include <nda/declarations.hpp>
-#include <nda/mapped_functions.hxx>
-#include <nda/nda.hpp>
-#include <triqs/mesh/dlr_imtime.hpp>
-#include <triqs/mesh/imtime.hpp>
-#include <triqs_xca/block_sparse.hpp>
-#include <triqs_xca/block_sparse_backbone.hpp>
-#include <triqs_xca/atom_diag_utils.hpp>
+
+#include "triqs_xca/atom_diag_utils.hpp"
+
+#include "triqs_xca/block_sparse_backbone.hpp"
+
+using cppdlr::_;
+
+using nda::trace;
+using nda::range;
+using nda::linalg::matmul;
 
 DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> hyb,
                                    nda::vector_const_view<double> hyb_poles, BlockDiagOpFun &Gt, BlockOpSymQuartet &Fq)
-   : itops(imtime_ops(Lambda, build_dlr_rf(Lambda, eps))),
+   : itops(imtime_ops(Lambda, cppdlr::build_dlr_rf(Lambda, eps))),
      Gt(Gt),
      Fq(Fq),
      Sigma(itops.rank(), Gt.get_block_sizes()),
-     tau_mesh(mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda / beta, eps)),
+     tau_mesh(triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda / beta, eps)),
      beta(beta),
      r(itops.rank()),
      n(hyb.extent(1)),
@@ -41,14 +37,14 @@ DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps, nda::
 }
 
 DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps, nda::vector_const_view<double> hyb_poles,
-                                   nda::array_const_view<dcomplex, 3> hyb_coeffs, block_gf_view<dlr_imtime> G_ppsc,
+                                   nda::array_const_view<dcomplex, 3> hyb_coeffs, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc,
                                    triqs::atom_diag::atom_diag<false> const &ad)
-   : itops(imtime_ops(Lambda, build_dlr_rf(Lambda, eps))),
+   : itops(imtime_ops(Lambda, cppdlr::build_dlr_rf(Lambda, eps))),
      dlr_it(itops.get_itnodes()),
      Gt(BlockDiagOpFun(G_ppsc)),
      Fq(std::get<0>(get_operators(ad, hyb_coeffs))),
      Sigma(itops.rank(), Gt.get_block_sizes()),
-     tau_mesh(mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda / beta, eps)),
+     tau_mesh(triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda / beta, eps)),
      beta(beta),
      r(itops.rank()),
      n(hyb_coeffs.extent(1)),
@@ -110,7 +106,7 @@ void DiagramEvaluator::multiply_left_vertex(nda::array_view<dcomplex, 3> T_buf, 
   int Ksign = backbone.get_vertex_Ksign(v_ix); // sign on K
 
   if (Ksign != 0) {
-    for (int t = 0; t < r; t++) T_vp(t, _, _) *= k_it(dlr_it(t), Ksign * hyb_poles(l_ix));
+    for (int t = 0; t < r; t++) T_vp(t, _, _) *= cppdlr::k_it(dlr_it(t), Ksign * hyb_poles(l_ix));
   }
 }
 
@@ -128,12 +124,12 @@ void DiagramEvaluator::integrate_left_edge(nda::array_view<dcomplex, 3> T_buf, B
   for (int x = 0; x < m - 1; x++) {
     int Ksign = backbone.get_edge(e_ix, x); // sign on K
     if (Ksign != 0) {
-      for (int t = 0; t < r; t++) GKt_ep(t, _, _) *= k_it(dlr_it(t), Ksign * hyb_poles(backbone.get_pole_ind(x)));
+      for (int t = 0; t < r; t++) GKt_ep(t, _, _) *= cppdlr::k_it(dlr_it(t), Ksign * hyb_poles(backbone.get_pole_ind(x)));
     }
   }
   nda::array_view<dcomplex, 3> T_ep = T_buf(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r));
   
-  T_ep = itops.convolve(beta, itops.vals2coefs(GKt_ep), itops.vals2coefs(T_ep), TIME_ORDERED);
+  T_ep = itops.convolve(beta, itops.vals2coefs(GKt_ep), itops.vals2coefs(T_ep), cppdlr::TIME_ORDERED);
 }
 
 void DiagramEvaluator::multiply_prefactor(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone) {
@@ -143,7 +139,7 @@ void DiagramEvaluator::multiply_prefactor(nda::array_view<dcomplex, 3> T_buf, Ba
     int exp = backbone.get_prefactor_Kexp(m_ix);
     if (exp != 0) {
       int Ksign = backbone.get_prefactor_Ksign(m_ix);
-      T_buf *= std::pow(k_it(0, Ksign * hyb_poles(backbone.get_pole_ind(m_ix))), -exp);
+      T_buf *= std::pow(cppdlr::k_it(0, Ksign * hyb_poles(backbone.get_pole_ind(m_ix))), -exp);
     }
   }
 }
@@ -326,16 +322,16 @@ void DiagramEvaluator::eval_self_energy_fixed_indices(Backbone &backbone, int b_
   if (nda::max_element(nda::abs(T_out)) > 1e-16) Sigma.add_block(b_ix, T_out);
 }
 
-block_gf<dlr_imtime> DiagramEvaluator::compute_self_energy(nda::array_const_view<int, 2> topology) {
+triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_energy(nda::array_const_view<int, 2> topology) {
   Backbone backbone(topology, n);
   eval_self_energy(backbone);
   BlockDiagOpFun sig = get_self_energy();
-  std::vector<gf<dlr_imtime>> sig_blocks(sig.get_num_block_cols());
+  std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> sig_blocks(sig.get_num_block_cols());
   for (int i = 0; i < sig.get_num_block_cols(); ++i) {
     if (sig.get_zero_block_index(i) == -1) {
-      sig_blocks[i] = gf<dlr_imtime>(tau_mesh, 0 * Gt.get_block(i)); // zero block
+      sig_blocks[i] = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, 0 * Gt.get_block(i)); // zero block
     } else {
-      sig_blocks[i] = gf<dlr_imtime>(tau_mesh, sig.get_block(i));
+      sig_blocks[i] = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, sig.get_block(i));
     }
   }
   reset();
@@ -383,7 +379,7 @@ void DiagramEvaluator::multiply_right_vertex(nda::array_view<dcomplex, 3> U_buf,
 
   int Ksign = backbone.get_vertex_Ksign(v_ix);
   if (Ksign != 0) {
-    for (int t = 0; t < r; t++) U_v(t, _, _) *= k_it(dlr_it(t), -Ksign * hyb_poles(l_ix)); // extra sign for K(t) -> K(beta - t)
+    for (int t = 0; t < r; t++) U_v(t, _, _) *= cppdlr::k_it(dlr_it(t), -Ksign * hyb_poles(l_ix)); // extra sign for K(t) -> K(beta - t)
   }
 }
 
@@ -401,13 +397,13 @@ void DiagramEvaluator::integrate_right_edge(nda::array_view<dcomplex, 3> U_buf, 
   for (int x = 0; x < m - 1; x++) {
     int Ksign = backbone.get_edge(e_ix, x);
     if (Ksign != 0) {
-      for (int t = 0; t < r; t++) GKt_ep(t, _, _) *= k_it(dlr_it(t), Ksign * hyb_poles(backbone.get_pole_ind(x)));
+      for (int t = 0; t < r; t++) GKt_ep(t, _, _) *= cppdlr::k_it(dlr_it(t), Ksign * hyb_poles(backbone.get_pole_ind(x)));
     }
   }
 
   nda::array_view<dcomplex, 3> U_e = U_buf(_, range(0, n_row_l), range(0, block_dims(e_ix + 1)));
   
-  U_e = itops.convolve(beta, itops.vals2coefs(U_e), itops.vals2coefs(GKt_ep), TIME_ORDERED);
+  U_e = itops.convolve(beta, itops.vals2coefs(U_e), itops.vals2coefs(GKt_ep), cppdlr::TIME_ORDERED);
 }
 
 nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops) {
@@ -616,16 +612,16 @@ int DiagramEvaluator::get_num_self_energy_backbones(nda::array_const_view<int, 2
   return static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), backbone.m - 1));
 }
 
-block_gf<dlr_imtime> DiagramEvaluator::compute_self_energy(nda::array_const_view<int, 2> topology, int f_ix) {
+triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_energy(nda::array_const_view<int, 2> topology, int f_ix) {
   Backbone backbone(topology, n);
   eval_self_energy(backbone, f_ix);
   BlockDiagOpFun sig = get_self_energy();
-  std::vector<gf<dlr_imtime>> sig_blocks(sig.get_num_block_cols());
+  std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> sig_blocks(sig.get_num_block_cols());
   for (int i = 0; i < sig.get_num_block_cols(); ++i) {
     if (sig.get_zero_block_index(i) == -1) {
-      sig_blocks[i] = gf<dlr_imtime>(tau_mesh, 0 * Gt.get_block(i)); // zero block
+      sig_blocks[i] = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, 0 * Gt.get_block(i)); // zero block
     } else {
-      sig_blocks[i] = gf<dlr_imtime>(tau_mesh, sig.get_block(i));
+      sig_blocks[i] = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, sig.get_block(i));
     }
   }
   reset();

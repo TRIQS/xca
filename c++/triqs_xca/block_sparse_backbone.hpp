@@ -1,11 +1,10 @@
 #pragma once
-#include <cppdlr/dlr_kernels.hpp>
-#include <nda/blas/tools.hpp>
-#include <nda/declarations.hpp>
-#include <triqs/atom_diag/atom_diag.hpp>
-#include <triqs_xca/block_sparse.hpp>
 #include <nda/nda.hpp>
-#include <triqs_xca/backbone.hpp>
+
+#include <triqs/atom_diag/atom_diag.hpp>
+
+#include "triqs_xca/backbone.hpp"
+#include "triqs_xca/block_sparse.hpp"
 
 #ifdef __clang__
 #define C2PY_IGNORE __attribute__((annotate("c2py_ignore")))
@@ -13,7 +12,7 @@
 #define C2PY_IGNORE
 #endif
 
-using namespace nda;
+using nda::dcomplex;
 
 /**
  * @class DiagramEvaluator
@@ -29,7 +28,7 @@ class DiagramEvaluator {
   BlockDiagOpFun Gt;          // Green's function at imaginary time nodes
   BlockOpSymQuartet Fq;       // BlockOpSymQuartet (field operators with and without bars)
   BlockDiagOpFun Sigma;       // array for storing self-energy contribution (final result)
-  mesh::dlr_imtime tau_mesh;  // imaginary time mesh
+  triqs::mesh::dlr_imtime tau_mesh;  // imaginary time mesh
 
   // Diagram composition routines
   
@@ -95,8 +94,8 @@ class DiagramEvaluator {
 
   // routines for self-energy diagrams
   int get_num_self_energy_backbones(nda::array_const_view<int, 2> topology);                  // get number of backbones for given topology
-  block_gf<dlr_imtime> compute_self_energy(nda::array_const_view<int, 2> topology);           // compute self-energy for given topology
-  block_gf<dlr_imtime> compute_self_energy(nda::array_const_view<int, 2> topology, int f_ix); // compute self-energy for given topology and flat index
+  triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy(nda::array_const_view<int, 2> topology);           // compute self-energy for given topology
+  triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy(nda::array_const_view<int, 2> topology, int f_ix); // compute self-energy for given topology and flat index
   void print_self_energy_backbone(nda::array_const_view<int, 2> topology,
                                   int f_ix); // print the backbone corresponding to a given flat index for debugging
 
@@ -123,7 +122,7 @@ class DiagramEvaluator {
    * @param[in] ad atom_diag object with Hamiltonian and field operators
    */
   DiagramEvaluator(double beta, double Lambda, double eps, nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-                   block_gf_view<dlr_imtime> G_ppsc, triqs::atom_diag::atom_diag<false> const &ad);
+                   triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, triqs::atom_diag::atom_diag<false> const &ad);
 
   /**
    * @brief Old constructor for DiagramEvaluator
