@@ -1,22 +1,30 @@
-#include <cppdlr/utils.hpp>
 #include <gtest/gtest.h>
-#include "triqs_xca/strong_cpl.hpp"
-#include <nda/algorithms.hpp>
-#include <triqs_xca/block_sparse.hpp>
-#include <triqs/atom_diag/gf.hpp>
-#include "block_sparse_utils.hpp"
-#include "triqs_xca/backbone.hpp"
-#include "triqs_xca/block_sparse_backbone.hpp"
-#include "triqs_xca/dense_backbone.hpp"
-#include "triqs_xca/atom_diag_utils.hpp"
-#include <algorithm>
-#include <iomanip>
 
-using namespace triqs;
-using namespace triqs::operators;
-using namespace triqs::atom_diag;
+#include <triqs_xca/atom_diag_utils.hpp>
+
+#include <triqs_xca/dense_backbone.hpp>
+#include <triqs_xca/block_sparse_backbone.hpp>
+
+#include <triqs_xca/strong_cpl.hpp>
+
+#include "block_sparse_utils.hpp"
+
+using triqs::operators::n;
+
+using nda::range;
+
+using cppdlr::_;
+using cppdlr::build_dlr_rf;
+using cppdlr::imtime_ops;
 
 using triqs_xca::dense::DenseDiagramEvaluator;
+
+using triqs_xca::block_sparse::aaa_coefs2vals;
+
+using triqs_xca::block_sparse::DiagramEvaluator;
+
+using triqs_xca::atom_diag::get_operators_dense;
+using triqs_xca::atom_diag::ad_to_atom_prop;
 
 TEST(two_fermions, one_hyb_pole) {
 
@@ -26,7 +34,7 @@ TEST(two_fermions, one_hyb_pole) {
 
   // set up Hamiltonian
   triqs::operators::many_body_operator_real H;
-  fundamental_operator_set fop_set;
+  triqs::atom_diag::fundamental_operator_set fop_set;
   double mu = 0.0;
   double U  = 3.0;
   auto N0   = n("0", 0);

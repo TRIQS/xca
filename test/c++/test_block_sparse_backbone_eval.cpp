@@ -1,40 +1,32 @@
-#include <cmath>
-#include <cstdint>
-#include <iomanip>
-#include <iostream>
-
 #include <gtest/gtest.h>
 
-#include <nda/basic_functions.hpp>
-#include <nda/macros.hpp>
-#include <nda/mapped_functions.hxx>
-#include <nda/nda.hpp>
-
-#include <cppdlr/cppdlr.hpp>
-
-#include <triqs/atom_diag/gf.hpp>
-#include <triqs/mesh/dlr_imtime.hpp>
-#include <triqs/mesh/imtime.hpp>
-#include <triqs/atom_diag/atom_diag.hpp>
 #include <triqs/operators/many_body_operator.hpp>
 
-#include <triqs_xca/backbone.hpp>
 #include <triqs_xca/atom_diag_utils.hpp>
+
 #include <triqs_xca/dense_backbone.hpp>
-#include <triqs_xca/block_sparse.hpp>
-#include <triqs_xca/block_sparse_manual.hpp>
 #include <triqs_xca/block_sparse_backbone.hpp>
 
 #include <triqs_xca/strong_cpl.hpp>
 
 #include "block_sparse_utils.hpp"
 
-using namespace triqs;
-using namespace triqs::operators;
-using namespace triqs::atom_diag;
+using triqs::operators::n;
+using triqs::operators::c;
+using triqs::operators::c_dag;
 
-using triqs_xca::dense::DenseDiagramEvaluator;
 using triqs_xca::dense::DenseFSet;
+using triqs_xca::dense::DenseDiagramEvaluator;
+
+using triqs_xca::block_sparse::BlockOpSymSet;
+
+using triqs_xca::block_sparse::DiagramEvaluator;
+
+using triqs_xca::atom_diag::get_operators;
+using triqs_xca::atom_diag::get_operators_dense;
+using triqs_xca::atom_diag::get_full_h_atomic_perm;
+using triqs_xca::atom_diag::get_hamiltonian_blocks;
+using triqs_xca::atom_diag::ad_to_atom_prop;
 
 TEST(Backbone, flat_index) {
   nda::array<int, 2> topology = {{0, 2}, {1, 4}, {3, 5}};
@@ -183,7 +175,7 @@ TEST(Backbone, spin_flip_fermion) {
 
   // set up Hamiltonian
   triqs::operators::many_body_operator_real H;
-  fundamental_operator_set fop_set;
+  triqs::atom_diag::fundamental_operator_set fop_set;
 
   double mu = 0.25;
   double U  = 1.0;
@@ -262,7 +254,7 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
 
   // set up Hamiltonian
   triqs::operators::many_body_operator_real H;
-  fundamental_operator_set fop_set;
+  triqs::atom_diag::fundamental_operator_set fop_set;
 
   double mu = 0.25;
   double U  = 1.0;
@@ -444,7 +436,7 @@ TEST(Backbone, spin_flip_fermion_aaa) {
 
   // set up Hamiltonian
   triqs::operators::many_body_operator_real H;
-  fundamental_operator_set fop_set;
+  triqs::atom_diag::fundamental_operator_set fop_set;
 
   double mu = 0.25;
   double U  = 1.0;
@@ -546,7 +538,7 @@ TEST(Backbone, spin_flip_fermion_all_sym_aaa) {
 
   // set up Hamiltonian
   triqs::operators::many_body_operator_real H;
-  fundamental_operator_set fop_set;
+  triqs::atom_diag::fundamental_operator_set fop_set;
 
   double mu = 0.25;
   double U  = 1.0;
@@ -617,7 +609,7 @@ TEST(Backbone, OCA_gf_construct) {
 
   // set up Kanamori Hamiltonian
   triqs::operators::many_body_operator_real H;
-  fundamental_operator_set fop_set;
+  triqs::atom_diag::fundamental_operator_set fop_set;
   int norb = 2;
   double U = 2.0;
   for (int i = 0; i < norb; i++) {
@@ -688,7 +680,7 @@ TEST(Backbone, manual_loop) {
 
   // set up Kanamori Hamiltonian
   triqs::operators::many_body_operator_real H;
-  fundamental_operator_set fop_set;
+  triqs::atom_diag::fundamental_operator_set fop_set;
   int norb = 2;
   double U = 2.0;
   for (int i = 0; i < norb; i++) {
@@ -759,7 +751,7 @@ TEST(Backbone, one_fermion_third_order_const_hyb) {
   triqs::operators::many_body_operator_real N;
   N = n("0", 0);
   H = -mu * N;
-  fundamental_operator_set fop_set;
+  triqs::atom_diag::fundamental_operator_set fop_set;
   fop_set.insert("0", 0);
   triqs::atom_diag::atom_diag<false> ad(H, fop_set);
   auto G0_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
@@ -813,7 +805,7 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
   triqs::operators::many_body_operator_real N;
   N = n("0", 0);
   H = -mu * N;
-  fundamental_operator_set fop_set;
+  triqs::atom_diag::fundamental_operator_set fop_set;
   fop_set.insert("0", 0);
   triqs::atom_diag::atom_diag<false> ad(H, fop_set);
   auto G0_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);

@@ -12,6 +12,8 @@ using nda::trace;
 using nda::range;
 using nda::linalg::matmul;
 
+using triqs_xca::atom_diag::get_operators;
+
 DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> hyb,
                                    nda::vector_const_view<double> hyb_poles, BlockDiagOpFun &Gt, BlockOpSymQuartet &Fq)
    : itops(imtime_ops(Lambda, cppdlr::build_dlr_rf(Lambda, eps))),

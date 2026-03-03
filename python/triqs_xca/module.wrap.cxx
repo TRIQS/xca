@@ -20,20 +20,21 @@ using c2py::operator""_a;
 
 // ==================== Wrapped classes =====================
 
-template <> constexpr bool c2py::is_wrapped<DiagramEvaluator> = true;
+template <> constexpr bool c2py::is_wrapped<triqs_xca::block_sparse::DiagramEvaluator> = true;
 
 // ==================== enums =====================
 
 // ==================== module classes =====================
 
-template <> inline constexpr auto c2py::tp_name<DiagramEvaluator> = "triqs_xca.module.DiagramEvaluator";
-static auto init_0                                                = c2py::dispatcher_c_kw_t{
-   c2py::c_constructor<DiagramEvaluator, double, double, double, nda::vector_const_view<double>, nda::array_const_view<nda::dcomplex, 3>,
-                                                                      triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>, const triqs::atom_diag::atom_diag<0> &>(
-      "beta", "Lambda", "eps", "hyb_poles", "hyb_coeffs", "G_ppsc", "ad")};
-template <> constexpr initproc c2py::tp_init<DiagramEvaluator> = c2py::pyfkw_constructor<init_0>;
+template <> inline constexpr auto c2py::tp_name<triqs_xca::block_sparse::DiagramEvaluator> = "triqs_xca.module.DiagramEvaluator";
+static auto init_0                                                                         = c2py::dispatcher_c_kw_t{
+   c2py::c_constructor<triqs_xca::block_sparse::DiagramEvaluator, double, double, double, nda::vector_const_view<double>,
+                                                                                               nda::array_const_view<nda::dcomplex, 3>, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>,
+                                                                                               const triqs::atom_diag::atom_diag<0> &>("beta", "Lambda", "eps", "hyb_poles", "hyb_coeffs", "G_ppsc", "ad")};
+template <> constexpr initproc c2py::tp_init<triqs_xca::block_sparse::DiagramEvaluator> = c2py::pyfkw_constructor<init_0>;
 template <>
-const std::string c2py::tp_ctor_doc<DiagramEvaluator> = init_0.doc(R"DOC(
+const std::string c2py::tp_ctor_doc<triqs_xca::block_sparse::DiagramEvaluator> =
+   init_0.doc(R"DOC(
 Constructor for DiagramEvaluator
 
 Parameters
@@ -53,49 +54,58 @@ G_ppsc : {par_5}
 ad : {par_6}
    atom_diag object with Hamiltonian and field operators
 )DOC",
-                                                                   {{c2py::python_typename<double>()},
-                                                                    {c2py::python_typename<double>()},
-                                                                    {c2py::python_typename<double>()},
-                                                                    {c2py::python_typename<nda::vector_const_view<double>>()},
-                                                                    {c2py::python_typename<nda::array_const_view<nda::dcomplex, 3>>()},
-                                                                    {c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()},
-                                                                    {c2py::python_typename<const triqs::atom_diag::atom_diag<0> &>()}});
+              {{c2py::python_typename<double>()},
+               {c2py::python_typename<double>()},
+               {c2py::python_typename<double>()},
+               {c2py::python_typename<nda::vector_const_view<double>>()},
+               {c2py::python_typename<nda::array_const_view<nda::dcomplex, 3>>()},
+               {c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()},
+               {c2py::python_typename<const triqs::atom_diag::atom_diag<0> &>()}});
 // compute_self_energy
-static auto const fun_0 = c2py::dispatcher_f_kw_t{
-   c2py::cmethod([](DiagramEvaluator &self, nda::array_const_view<int, 2> topology) { return self.compute_self_energy(topology); }, "self",
-                 "topology"),
-   c2py::cmethod([](DiagramEvaluator &self, nda::array_const_view<int, 2> topology, int f_ix) { return self.compute_self_energy(topology, f_ix); },
-                 "self", "topology", "f_ix")};
+static auto const fun_0 =
+   c2py::dispatcher_f_kw_t{c2py::cmethod([](triqs_xca::block_sparse::DiagramEvaluator &self,
+                                            nda::array_const_view<int, 2> topology) { return self.compute_self_energy(topology); },
+                                         "self", "topology"),
+                           c2py::cmethod([](triqs_xca::block_sparse::DiagramEvaluator &self, nda::array_const_view<int, 2> topology,
+                                            int f_ix) { return self.compute_self_energy(topology, f_ix); },
+                                         "self", "topology", "f_ix")};
 
 // compute_single_ptcle_gf
-static auto const fun_1 = c2py::dispatcher_f_kw_t{
-   c2py::cmethod([](DiagramEvaluator &self, nda::array_const_view<int, 2> topology) { return self.compute_single_ptcle_gf(topology); }, "self",
-                 "topology"),
-   c2py::cmethod(
-      [](DiagramEvaluator &self, nda::array_const_view<int, 2> topology, int f_ix) { return self.compute_single_ptcle_gf(topology, f_ix); }, "self",
-      "topology", "f_ix")};
+static auto const fun_1 =
+   c2py::dispatcher_f_kw_t{c2py::cmethod([](triqs_xca::block_sparse::DiagramEvaluator &self,
+                                            nda::array_const_view<int, 2> topology) { return self.compute_single_ptcle_gf(topology); },
+                                         "self", "topology"),
+                           c2py::cmethod([](triqs_xca::block_sparse::DiagramEvaluator &self, nda::array_const_view<int, 2> topology,
+                                            int f_ix) { return self.compute_single_ptcle_gf(topology, f_ix); },
+                                         "self", "topology", "f_ix")};
 
 // get_num_self_energy_backbones
-static auto const fun_2 = c2py::dispatcher_f_kw_t{c2py::cmethod(
-   [](DiagramEvaluator &self, nda::array_const_view<int, 2> topology) { return self.get_num_self_energy_backbones(topology); }, "self", "topology")};
+static auto const fun_2 =
+   c2py::dispatcher_f_kw_t{c2py::cmethod([](triqs_xca::block_sparse::DiagramEvaluator &self,
+                                            nda::array_const_view<int, 2> topology) { return self.get_num_self_energy_backbones(topology); },
+                                         "self", "topology")};
 
 // get_num_single_ptcle_gf_backbones
-static auto const fun_3 = c2py::dispatcher_f_kw_t{
-   c2py::cmethod([](DiagramEvaluator &self, nda::array_const_view<int, 2> topology) { return self.get_num_single_ptcle_gf_backbones(topology); },
-                 "self", "topology")};
+static auto const fun_3 =
+   c2py::dispatcher_f_kw_t{c2py::cmethod([](triqs_xca::block_sparse::DiagramEvaluator &self,
+                                            nda::array_const_view<int, 2> topology) { return self.get_num_single_ptcle_gf_backbones(topology); },
+                                         "self", "topology")};
 
 // print_self_energy_backbone
-static auto const fun_4 = c2py::dispatcher_f_kw_t{c2py::cmethod(
-   [](DiagramEvaluator &self, nda::array_const_view<int, 2> topology, int f_ix) { return self.print_self_energy_backbone(topology, f_ix); }, "self",
-   "topology", "f_ix")};
+static auto const fun_4 =
+   c2py::dispatcher_f_kw_t{c2py::cmethod([](triqs_xca::block_sparse::DiagramEvaluator &self, nda::array_const_view<int, 2> topology,
+                                            int f_ix) { return self.print_self_energy_backbone(topology, f_ix); },
+                                         "self", "topology", "f_ix")};
 
 // print_single_ptcle_gf_backbone
-static auto const fun_5 = c2py::dispatcher_f_kw_t{c2py::cmethod(
-   [](DiagramEvaluator &self, nda::array_const_view<int, 2> topology, int f_ix) { return self.print_single_ptcle_gf_backbone(topology, f_ix); },
-   "self", "topology", "f_ix")};
+static auto const fun_5 =
+   c2py::dispatcher_f_kw_t{c2py::cmethod([](triqs_xca::block_sparse::DiagramEvaluator &self, nda::array_const_view<int, 2> topology,
+                                            int f_ix) { return self.print_single_ptcle_gf_backbone(topology, f_ix); },
+                                         "self", "topology", "f_ix")};
 
 // reset
-static auto const fun_6 = c2py::dispatcher_f_kw_t{c2py::cmethod([](DiagramEvaluator &self) { return self.reset(); }, "self")};
+static auto const fun_6 =
+   c2py::dispatcher_f_kw_t{c2py::cmethod([](triqs_xca::block_sparse::DiagramEvaluator &self) { return self.reset(); }, "self")};
 
 static const auto doc_d_0 = fun_0.doc(R"DOC()DOC");
 static const auto doc_d_1 = fun_1.doc(R"DOC()DOC");
@@ -107,7 +117,7 @@ static const auto doc_d_6 = fun_6.doc(R"DOC()DOC");
 
 // ----- Method table ----
 template <>
-PyMethodDef c2py::tp_methods<DiagramEvaluator>[] = {
+PyMethodDef c2py::tp_methods<triqs_xca::block_sparse::DiagramEvaluator>[] = {
    {"compute_self_energy", (PyCFunction)c2py::pyfkw<fun_0>, METH_VARARGS | METH_KEYWORDS, doc_d_0.c_str()},
    {"compute_single_ptcle_gf", (PyCFunction)c2py::pyfkw<fun_1>, METH_VARARGS | METH_KEYWORDS, doc_d_1.c_str()},
    {"get_num_self_energy_backbones", (PyCFunction)c2py::pyfkw<fun_2>, METH_VARARGS | METH_KEYWORDS, doc_d_2.c_str()},
@@ -135,29 +145,32 @@ constexpr auto doc_member_12 = R"DOC()DOC";
 // ----- Method table ----
 
 template <>
-constinit PyGetSetDef c2py::tp_getset<DiagramEvaluator>[] = {
-   c2py::getsetdef_from_member<&DiagramEvaluator::beta, DiagramEvaluator>("beta", doc_member_0),
-   c2py::getsetdef_from_member<&DiagramEvaluator::r, DiagramEvaluator>("r", doc_member_1),
-   c2py::getsetdef_from_member<&DiagramEvaluator::n, DiagramEvaluator>("n", doc_member_2),
-   c2py::getsetdef_from_member<&DiagramEvaluator::q, DiagramEvaluator>("q", doc_member_3),
-   c2py::getsetdef_from_member<&DiagramEvaluator::Nmax, DiagramEvaluator>("Nmax", doc_member_4),
-   c2py::getsetdef_from_member<&DiagramEvaluator::hyb, DiagramEvaluator>("hyb", doc_member_5),
-   c2py::getsetdef_from_member<&DiagramEvaluator::hyb_reflect, DiagramEvaluator>("hyb_reflect", doc_member_6),
-   c2py::getsetdef_from_member<&DiagramEvaluator::hyb_poles, DiagramEvaluator>("hyb_poles", doc_member_7),
-   c2py::getsetdef_from_member<&DiagramEvaluator::T, DiagramEvaluator>("T", doc_member_8),
-   c2py::getsetdef_from_member<&DiagramEvaluator::U, DiagramEvaluator>("U", doc_member_9),
-   c2py::getsetdef_from_member<&DiagramEvaluator::GKt, DiagramEvaluator>("GKt", doc_member_10),
-   c2py::getsetdef_from_member<&DiagramEvaluator::Tkaps, DiagramEvaluator>("Tkaps", doc_member_11),
-   c2py::getsetdef_from_member<&DiagramEvaluator::Tmu, DiagramEvaluator>("Tmu", doc_member_12),
+constinit PyGetSetDef c2py::tp_getset<triqs_xca::block_sparse::DiagramEvaluator>[] = {
+   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::beta, triqs_xca::block_sparse::DiagramEvaluator>("beta", doc_member_0),
+   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::r, triqs_xca::block_sparse::DiagramEvaluator>("r", doc_member_1),
+   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::n, triqs_xca::block_sparse::DiagramEvaluator>("n", doc_member_2),
+   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::q, triqs_xca::block_sparse::DiagramEvaluator>("q", doc_member_3),
+   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::Nmax, triqs_xca::block_sparse::DiagramEvaluator>("Nmax", doc_member_4),
+   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::hyb, triqs_xca::block_sparse::DiagramEvaluator>("hyb", doc_member_5),
+   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::hyb_reflect, triqs_xca::block_sparse::DiagramEvaluator>("hyb_reflect",
+                                                                                                                                   doc_member_6),
+   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::hyb_poles, triqs_xca::block_sparse::DiagramEvaluator>("hyb_poles",
+                                                                                                                                 doc_member_7),
+   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::T, triqs_xca::block_sparse::DiagramEvaluator>("T", doc_member_8),
+   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::U, triqs_xca::block_sparse::DiagramEvaluator>("U", doc_member_9),
+   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::GKt, triqs_xca::block_sparse::DiagramEvaluator>("GKt", doc_member_10),
+   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::Tkaps, triqs_xca::block_sparse::DiagramEvaluator>("Tkaps", doc_member_11),
+   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::Tmu, triqs_xca::block_sparse::DiagramEvaluator>("Tmu", doc_member_12),
 
    {nullptr, nullptr, nullptr, nullptr, nullptr}};
 
 template <>
-const std::string c2py::tp_doc<DiagramEvaluator> = R"DOC(Class for evaluating a diagram of a given order and topology in block-sparse storage
+const std::string c2py::tp_doc<triqs_xca::block_sparse::DiagramEvaluator> =
+   R"DOC(Class for evaluating a diagram of a given order and topology in block-sparse storage
 This class is used to evaluate all the backbone decompositions of a given order and topology. It reads the information from a Backbone object
 and contains the Green's functions and creation/annihilation operators needed to actually compute the diagram. It also contains temporary 
 data structures required for computation.)DOC"
-   + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<DiagramEvaluator>;
+   + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<triqs_xca::block_sparse::DiagramEvaluator>;
 
 // ==================== module functions ====================
 
@@ -195,7 +208,7 @@ extern "C" __attribute__((visibility("default"))) PyObject *PyInit_module() {
   PyObject *m;
 
   if (PyType_Ready(&c2py::wrap_pytype<c2py::py_range>) < 0) return NULL;
-  if (PyType_Ready(&c2py::wrap_pytype<DiagramEvaluator>) < 0) return NULL;
+  if (PyType_Ready(&c2py::wrap_pytype<triqs_xca::block_sparse::DiagramEvaluator>) < 0) return NULL;
 
   m = PyModule_Create(&module_def);
   if (m == NULL) return NULL;
@@ -203,7 +216,7 @@ extern "C" __attribute__((visibility("default"))) PyObject *PyInit_module() {
   auto &conv_table = *c2py::conv_table_sptr.get();
 
   conv_table[std::type_index(typeid(c2py::py_range)).name()] = &c2py::wrap_pytype<c2py::py_range>;
-  c2py::add_type_object_to_main<DiagramEvaluator>("DiagramEvaluator", m, conv_table);
+  c2py::add_type_object_to_main<triqs_xca::block_sparse::DiagramEvaluator>("DiagramEvaluator", m, conv_table);
 
   return m;
 }

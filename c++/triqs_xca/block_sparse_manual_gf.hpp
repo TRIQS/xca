@@ -58,9 +58,3 @@ nda::array<dcomplex, 3> OCA_gf_bs(nda::vector_const_view<double> hyb_poles, imti
                                   const BlockOpSymQuartet &Fq);
 
 } // namespace triqs_xca::block_sparse
-
-using triqs_xca::block_sparse::NCA_gf_dense;
-using triqs_xca::block_sparse::NCA_gf_bs;
-using triqs_xca::block_sparse::OCA_gf_tpz;
-using triqs_xca::block_sparse::OCA_gf_dense;
-using triqs_xca::block_sparse::OCA_gf_bs;

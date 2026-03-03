@@ -1,10 +1,11 @@
 #pragma once
-#include <nda/nda.hpp>
-#include <cppdlr/cppdlr.hpp>
+
 #include <triqs_xca/block_sparse.hpp>
 
-using namespace nda;
-using namespace cppdlr;
+using nda::dcomplex;
+
+using triqs_xca::block_sparse::BlockDiagOpFun;
+using triqs_xca::block_sparse::BlockOpSymQuartet;
 
 /**
  * @brief Convert a Hamiltonian matrix to a non-interacting Green's function matrix in dense storage

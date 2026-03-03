@@ -1,23 +1,29 @@
-#include <cppdlr/utils.hpp>
 #include <gtest/gtest.h>
-#include "triqs_xca/strong_cpl.hpp"
-#include <nda/algorithms.hpp>
-#include <triqs_xca/block_sparse.hpp>
-#include <triqs/atom_diag/gf.hpp>
-#include "block_sparse_utils.hpp"
-#include "triqs_xca/backbone.hpp"
-#include "triqs_xca/block_sparse_backbone.hpp"
-#include "triqs_xca/dense_backbone.hpp"
-#include "triqs_xca/atom_diag_utils.hpp"
-#include <algorithm>
-#include <iomanip>
 
-using namespace triqs;
-using namespace triqs::operators;
-using namespace triqs::atom_diag;
+#include <triqs_xca/atom_diag_utils.hpp>
+
+#include <triqs_xca/dense_backbone.hpp>
+#include <triqs_xca/block_sparse_backbone.hpp>
+
+#include <triqs_xca/strong_cpl.hpp>
+
+#include "block_sparse_utils.hpp"
+
+using triqs::operators::n;
+using triqs::operators::c;
+using triqs::operators::c_dag;
 
 using triqs_xca::dense::DenseDiagramEvaluator;
 using triqs_xca::dense::DenseFSet;
+
+using triqs_xca::block_sparse::BlockOp;
+using triqs_xca::block_sparse::DiagramEvaluator;
+
+using triqs_xca::atom_diag::get_operators;
+using triqs_xca::atom_diag::get_operators_dense;
+using triqs_xca::atom_diag::get_full_h_atomic_perm;
+using triqs_xca::atom_diag::get_hamiltonian_blocks;
+using triqs_xca::atom_diag::ad_to_atom_prop;
 
 TEST(BSGFBackbone, NCA) {
   int n         = 4;
@@ -147,7 +153,7 @@ TEST(Backbone, spin_flip_fermion) {
 
   // set up Hamiltonian
   triqs::operators::many_body_operator_real H;
-  fundamental_operator_set fop_set;
+  triqs::atom_diag::fundamental_operator_set fop_set;
 
   double mu = 0.25;
   double U  = 1.0;
@@ -237,7 +243,7 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
 
   // set up Hamiltonian
   triqs::operators::many_body_operator_real H;
-  fundamental_operator_set fop_set;
+  triqs::atom_diag::fundamental_operator_set fop_set;
 
   double mu = 0.25;
   double U  = 1.0;
@@ -439,7 +445,7 @@ TEST(Backbone, OCA_py_constructors) {
 
   // set up Kanamori Hamiltonian
   triqs::operators::many_body_operator_real H;
-  fundamental_operator_set fop_set;
+  triqs::atom_diag::fundamental_operator_set fop_set;
   int norb = 2;
   double U = 2.0;
   for (int i = 0; i < norb; i++) {
@@ -520,7 +526,7 @@ TEST(Backbone, one_fermion_third_order_const_hyb) {
   triqs::operators::many_body_operator_real N;
   N = n("0", 0);
   H = -mu * N;
-  fundamental_operator_set fop_set;
+  triqs::atom_diag::fundamental_operator_set fop_set;
   fop_set.insert("0", 0);
   triqs::atom_diag::atom_diag<false> ad(H, fop_set);
   auto G0_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
@@ -572,7 +578,7 @@ TEST(Backbone, one_fermion_third_order_hyb_one_pole) {
   triqs::operators::many_body_operator_real N;
   N = n("0", 0);
   H = -mu * N;
-  fundamental_operator_set fop_set;
+  triqs::atom_diag::fundamental_operator_set fop_set;
   fop_set.insert("0", 0);
   triqs::atom_diag::atom_diag<false> ad(H, fop_set);
   auto G0_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
@@ -627,7 +633,7 @@ TEST(Backbone, one_fermion_third_order_semic_hyb) {
   triqs::operators::many_body_operator_real N;
   N = n("0", 0);
   H = -mu * N;
-  fundamental_operator_set fop_set;
+  triqs::atom_diag::fundamental_operator_set fop_set;
   fop_set.insert("0", 0);
   triqs::atom_diag::atom_diag<false> ad(H, fop_set);
 

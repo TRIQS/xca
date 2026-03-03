@@ -1,14 +1,26 @@
-#include "triqs_xca/dense_backbone.hpp"
-#include "triqs_xca/strong_cpl.hpp"
-#include <chrono>
-#include <nda/nda.hpp>
-#include <cppdlr/cppdlr.hpp>
-#include <triqs_xca/block_sparse.hpp>
+#include <triqs_xca/strong_cpl.hpp>
+
+#include <triqs_xca/dense_backbone.hpp>
+
 #include <triqs_xca/block_sparse_manual.hpp>
 #include <triqs_xca/block_sparse_backbone.hpp>
 
-using namespace nda;
-using namespace cppdlr;
+using nda::range;
+using nda::linalg::matmul;
+
+using cppdlr::_;
+using cppdlr::build_dlr_rf;
+using cppdlr::imtime_ops;
+using cppdlr::rel2abs;
+using cppdlr::k_it;
+
+using triqs_xca::block_sparse::nonint_gf_BDOF;
+
+using triqs_xca::block_sparse::BlockDiagOpFun;
+using triqs_xca::block_sparse::BlockOpSymQuartet;
+using triqs_xca::block_sparse::BlockOpSymSet;
+
+using triqs_xca::block_sparse::DiagramEvaluator;
 
 nda::array<dcomplex, 3> Hmat_to_Gtmat(nda::array<dcomplex, 2> Hmat, double beta, nda::array<double, 1> dlr_it_abs) {
   // Helper function for computing the non-interacting Green's function from the Hamiltonian, both in dense storage

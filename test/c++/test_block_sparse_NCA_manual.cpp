@@ -1,16 +1,22 @@
 #include <gtest/gtest.h>
 
-#include <nda/nda.hpp>
-#include <cppdlr/cppdlr.hpp>
-
 #include <triqs_xca/strong_cpl.hpp>
 
-#include <triqs_xca/block_sparse.hpp>
 #include <triqs_xca/block_sparse_manual.hpp>
 
 #include "block_sparse_utils.hpp"
 
-using namespace nda;
+using nda::range;
+using nda::dcomplex;
+using nda::linalg::matmul;
+
+using cppdlr::_;
+using cppdlr::build_dlr_rf;
+using cppdlr::imtime_ops;
+
+using triqs_xca::block_sparse::BlockOp;
+
+using triqs_xca::block_sparse::NCA_dense;
 
 TEST(BlockSparseNCAManual, simple) {
   // set up arguments to block_sparse/NCA_bs()

@@ -27,24 +27,24 @@ using c2py::operator""_a;
 // ==================== module functions ====================
 
 // NCA_dense
-static auto const fun_0 =
-   c2py::dispatcher_f_kw_t{c2py::cfun([](nda::array_const_view<nda::dcomplex, 3> hyb, nda::array_const_view<nda::dcomplex, 3> hyb_refl,
-                                         nda::array_const_view<nda::dcomplex, 3> Gt, nda::array_const_view<nda::dcomplex, 3> Fs,
-                                         nda::array_const_view<nda::dcomplex, 3> F_dags) { return NCA_dense(hyb, hyb_refl, Gt, Fs, F_dags); },
-                                      "hyb", "hyb_refl", "Gt", "Fs", "F_dags")};
+static auto const fun_0 = c2py::dispatcher_f_kw_t{
+   c2py::cfun([](nda::array_const_view<nda::dcomplex, 3> hyb, nda::array_const_view<nda::dcomplex, 3> hyb_refl,
+                 nda::array_const_view<nda::dcomplex, 3> Gt, nda::array_const_view<nda::dcomplex, 3> Fs,
+                 nda::array_const_view<nda::dcomplex, 3> F_dags) { return triqs_xca::block_sparse::NCA_dense(hyb, hyb_refl, Gt, Fs, F_dags); },
+              "hyb", "hyb_refl", "Gt", "Fs", "F_dags")};
 
 // OCA_dense
 static auto const fun_1 = c2py::dispatcher_f_kw_t{
    c2py::cfun([](nda::array_const_view<nda::dcomplex, 3> hyb, cppdlr::imtime_ops itops, double beta, nda::array_const_view<nda::dcomplex, 3> Gt,
                  nda::array_const_view<nda::dcomplex, 3> Fs,
-                 nda::array_const_view<nda::dcomplex, 3> F_dags) { return OCA_dense(hyb, itops, beta, Gt, Fs, F_dags); },
+                 nda::array_const_view<nda::dcomplex, 3> F_dags) { return triqs_xca::block_sparse::OCA_dense(hyb, itops, beta, Gt, Fs, F_dags); },
               "hyb", "itops", "beta", "Gt", "Fs", "F_dags"),
    c2py::cfun(
       [](nda::array_const_view<nda::dcomplex, 3> hyb, nda::array_const_view<nda::dcomplex, 3> hyb_coeffs,
          nda::array_const_view<nda::dcomplex, 3> hyb_refl, nda::array_const_view<nda::dcomplex, 3> hyb_refl_coeffs,
          nda::vector_const_view<double> hyb_poles, cppdlr::imtime_ops &itops, double beta, nda::array_const_view<nda::dcomplex, 3> Gt,
          nda::array_const_view<nda::dcomplex, 3> Fs, nda::array_const_view<nda::dcomplex, 3> F_dags) {
-        return OCA_dense(hyb, hyb_coeffs, hyb_refl, hyb_refl_coeffs, hyb_poles, itops, beta, Gt, Fs, F_dags);
+        return triqs_xca::block_sparse::OCA_dense(hyb, hyb_coeffs, hyb_refl, hyb_refl_coeffs, hyb_poles, itops, beta, Gt, Fs, F_dags);
       },
       "hyb", "hyb_coeffs", "hyb_refl", "hyb_refl_coeffs", "hyb_poles", "itops", "beta", "Gt", "Fs", "F_dags")};
 

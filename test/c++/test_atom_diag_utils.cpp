@@ -1,15 +1,22 @@
-#include <triqs/atom_diag.hpp>
-#include <triqs/atom_diag/atom_diag.hpp>
 #include <gtest/gtest.h>
-#include <triqs/operators/many_body_operator.hpp>
-#include <triqs_xca/atom_diag_utils.hpp>
-#include <cppdlr/utils.hpp>
 
-using namespace nda;
-using namespace triqs;
-using namespace triqs::operators;
-using namespace triqs::atom_diag;
-using namespace cppdlr;
+#include <triqs/operators/many_body_operator.hpp>
+
+#include <triqs_xca/atom_diag_utils.hpp>
+
+using cppdlr::_;
+using cppdlr::build_dlr_rf;
+using cppdlr::imtime_ops;
+using cppdlr::k_it;
+
+using triqs::operators::n;
+using triqs::operators::c;
+using triqs::operators::c_dag;
+
+using triqs_xca::atom_diag::get_operators;
+using triqs_xca::atom_diag::get_full_h_atomic;
+using triqs_xca::atom_diag::get_full_operator_matrix;
+using triqs_xca::atom_diag::get_hamiltonian_blocks;
 
 /**
  * @brief Creates a two-orbital Hamiltonian with spin and constructs the atom_diag object.
@@ -24,8 +31,9 @@ using namespace cppdlr;
  * @return triqs::atom_diag::atom_diag<false> object representing the Hamiltonian
  */
 triqs::atom_diag::atom_diag<false> make_two_orbital_ad(int norb = 2, double mu = 0.25, double U = 1.0, double V = 0.1) {
-  many_body_operator_real H;
-  fundamental_operator_set fop_set;
+
+  triqs::operators::many_body_operator_real H;
+  triqs::atom_diag::fundamental_operator_set fop_set;
 
   // Build Hamiltonian and fundamental operator set
   for (int i = 0; i < norb; ++i) {

@@ -1,17 +1,24 @@
-#include <cppdlr/utils.hpp>
 #include <gtest/gtest.h>
-#include <itertools/range.hpp>
-#include <nda/algorithms.hpp>
-#include <nda/mapped_functions.hxx>
-#include <nda/nda.hpp>
-#include <cppdlr/cppdlr.hpp>
-#include "block_sparse_utils.hpp"
-#include "triqs_xca/strong_cpl.hpp"
-#include <triqs_xca/block_sparse.hpp>
+
+#include <triqs_xca/strong_cpl.hpp>
+
 #include <triqs_xca/block_sparse_manual.hpp>
 #include <triqs_xca/block_sparse_manual_gf.hpp>
 
-using namespace nda;
+#include "block_sparse_utils.hpp"
+
+using nda::range;
+
+using cppdlr::_;
+using cppdlr::build_dlr_rf;
+using cppdlr::imtime_ops;
+using cppdlr::k_it;
+
+using triqs_xca::block_sparse::BlockOpSymSet;
+
+using triqs_xca::block_sparse::OCA_gf_dense;
+using triqs_xca::block_sparse::OCA_gf_tpz;
+using triqs_xca::block_sparse::eval_eq;
 
 TEST(DenseOCAGF, single_exponential) {
   double beta        = 1.0;

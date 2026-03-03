@@ -139,14 +139,3 @@ nda::array<dcomplex, 3> third_order_dense_partial(nda::array_const_view<dcomplex
                                                   nda::array_const_view<dcomplex, 3> F_dags);
 
 } // namespace triqs_xca::block_sparse
-
-using triqs_xca::block_sparse::NCA_bs;
-using triqs_xca::block_sparse::NCA_dense;
-
-using triqs_xca::block_sparse::OCA_dense;
-using triqs_xca::block_sparse::OCA_tpz;
-using triqs_xca::block_sparse::OCA_bs;
-
-using triqs_xca::block_sparse::eval_eq;
-
-using triqs_xca::block_sparse::third_order_dense_partial;

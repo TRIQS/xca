@@ -1,12 +1,20 @@
 #include <gtest/gtest.h>
-#include <itertools/range.hpp>
-#include <nda/nda.hpp>
-#include <cppdlr/cppdlr.hpp>
-#include "block_sparse_utils.hpp"
-#include <triqs_xca/block_sparse.hpp>
+
 #include <triqs_xca/block_sparse_manual_gf.hpp>
 
-using namespace nda;
+#include "block_sparse_utils.hpp"
+
+using nda::range;
+using nda::linalg::matmul;
+
+using cppdlr::_;
+using cppdlr::build_dlr_rf;
+using cppdlr::imtime_ops;
+using cppdlr::k_it;
+
+using triqs_xca::block_sparse::BlockOpSymSet;
+
+using triqs_xca::block_sparse::NCA_gf_dense;
 
 TEST(DenseNCAGF, single_exponential) {
   double beta        = 1.0;

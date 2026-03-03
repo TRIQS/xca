@@ -144,5 +144,3 @@ class DiagramEvaluator {
 };
 
 } // namespace triqs_xca::block_sparse
-
-using triqs_xca::block_sparse::DiagramEvaluator;
