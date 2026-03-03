@@ -3,8 +3,17 @@
 
 #include <cppdlr/dlr_imtime.hpp>
 
-#include <triqs_xca/dense.hpp>
-#include <triqs_xca/backbone.hpp>
+#include <triqs/gfs.hpp>
+
+#include "triqs_xca/dense.hpp"
+#include "triqs_xca/backbone.hpp"
+#include "triqs_xca/atom_diag_utils.hpp"
+
+#ifdef __clang__
+#define C2PY_IGNORE __attribute__((annotate("c2py_ignore")))
+#else
+#define C2PY_IGNORE
+#endif
 
 namespace triqs_xca::dense {
 
@@ -28,7 +37,7 @@ namespace triqs_xca::dense {
       nda::array<dcomplex, 3> hyb;      // hybridization function at imaginary time nodes
       nda::array<dcomplex, 3> hyb_refl; // hybridization function at (beta - tau) nodes
       nda::array<dcomplex, 3> Gt;       // Green's function at imaginary time nodes
-      DenseFSet Fset;                   // DenseFSet (cre/ann operators with and without bars)
+      C2PY_IGNORE DenseFSet Fset;                   // DenseFSet (cre/ann operators with and without bars)
       nda::vector<double> dlr_it;       // DLR imaginary time nodes in relative ordering
       int r;                            // DLR rank
       nda::vector<double> hyb_poles;    // hybridization poles
@@ -39,8 +48,9 @@ namespace triqs_xca::dense {
       nda::array<dcomplex, 3> Tmu;      // intermediate storage array
       nda::array<dcomplex, 3> U;        // array for storing intermediate result (left side of correlator diagram)
 
+      private:
+
       // routines for any diagram
-      void reset(); // reset all arrays to zero
       void multiply_left_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone,
                                 int v_ix); // multiply by a single vertex, v_ix, in a backbone diagram using dense storage
       void integrate_left_edge(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone,
@@ -50,10 +60,6 @@ namespace triqs_xca::dense {
       // routines for self-energy diagrams
       void multiply_left_vertex_and_right_zero_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone,
                                                       bool is_forward); // multiply by the zero vertex and the vertex connected to zero
-      void eval_self_energy(Backbone &backbone);                        // evaluate a diagram of a given order and topology in dense storage
-      // (i.e., evaluate and sum all backbones with different orbital indices, poles, and hybridization line directions)
-      void eval_self_energy_fixed_indices(Backbone &backbone);
-      // evaluate a diagram with fixed orbital indices, poles, and line directions in dense storage, including prefactor
 
       // routines for correlator diagrams
       void multiply_right_vertex(nda::array_view<dcomplex, 3> U_buf, Backbone &backbone, int v_ix);
@@ -61,9 +67,17 @@ namespace triqs_xca::dense {
       void integrate_right_edge(nda::array_view<dcomplex, 3> U_buf, Backbone &backbone, int e_ix);
       // convolve with a single edge, e_ix, on the tau-beta side of a correlator backbone diagram using dense storage
 
-      nda::array<dcomplex, 3> eval_correlator(CorrelatorBackbone &backbone, nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops);
+      public:
+
+      void reset(); // reset all arrays to zero
+      C2PY_IGNORE void eval_self_energy(Backbone &backbone);                        // evaluate a diagram of a given order and topology in dense storage
+      // (i.e., evaluate and sum all backbones with different orbital indices, poles, and hybridization line directions)
+      C2PY_IGNORE void eval_self_energy_fixed_indices(Backbone &backbone);
+      // evaluate a diagram with fixed orbital indices, poles, and line directions in dense storage, including prefactor
+
+      C2PY_IGNORE nda::array<dcomplex, 3> eval_correlator(CorrelatorBackbone &backbone, nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops);
       // evaluate the mu, kap entries of a correlator for a diagram of a given order and topology in dense storage
-      void eval_correlator_fixed_indices(CorrelatorBackbone &backbone);
+      C2PY_IGNORE void eval_correlator_fixed_indices(CorrelatorBackbone &backbone);
       // evaluate a correlator diagram with fixed orbital indices, poles, and line directions in dense storage, including prefactor
 
       /**
@@ -77,8 +91,21 @@ namespace triqs_xca::dense {
        * @param[in] Gt Green's function at imaginary time nodes
        * @param[in] Fset DenseFSet (cre/ann operators with and without bars)
        */
-      DenseDiagramEvaluator(double beta, imtime_ops &itops, nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl,
+      C2PY_IGNORE DenseDiagramEvaluator(double beta, imtime_ops &itops, nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl,
                             nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> Gt, DenseFSet &Fset);
+
+      /**
+       * @brief Constructor for DiagramEvaluator
+       * @param[in] beta inverse temperature
+       * @param[in] Lambda DLR imaginary time cutoff
+       * @param[in] eps DLR imaginary time accuracy
+       * @param[in] hyb_poles hybridization poles
+       * @param[in] hyb_coeffs hybridization function coefficients at imaginary time nodes
+       * @param[in] G_ppsc pseudo-particle Green's function at imaginary time nodes
+       * @param[in] ad atom_diag object with Hamiltonian and field operators
+       */
+      DenseDiagramEvaluator(double beta, double Lambda, double eps, nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
+                            triqs::gfs::gf_view<triqs::mesh::dlr_imtime> G_ppsc, triqs::atom_diag::atom_diag<false> const &ad);
 
       virtual ~DenseDiagramEvaluator() = default;
     };

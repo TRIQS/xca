@@ -5,12 +5,18 @@
 
 #include <triqs_xca/dense_backbone.hpp>
 
+#include <triqs_xca/block_sparse.hpp>
+
 namespace triqs_xca::dense {
     
     using cppdlr::_;
 
     using nda::trace;
     using nda::linalg::matmul;
+
+    using triqs_xca::atom_diag::get_operators_dense;
+
+    using triqs_xca::block_sparse::aaa_coefs2vals; // Move to separate namespace
 
     DenseDiagramEvaluator::DenseDiagramEvaluator(double beta, imtime_ops &itops, nda::array_const_view<dcomplex, 3> hyb,
                                                  nda::array_const_view<dcomplex, 3> hyb_refl, nda::vector_const_view<double> hyb_poles,
@@ -31,6 +37,36 @@ namespace triqs_xca::dense {
 
       this->hyb_refl *= -1.; // Follow sign convention of block_sparse_backbone for reflected hybridization function.
     }
+
+    DenseDiagramEvaluator::DenseDiagramEvaluator(
+      double beta, double Lambda, double eps, 
+      nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
+      triqs::gfs::gf_view<triqs::mesh::dlr_imtime> G_ppsc, triqs::atom_diag::atom_diag<false> const &ad)
+      :
+      beta(beta),
+      itops(imtime_ops(Lambda, cppdlr::build_dlr_rf(Lambda, eps))),
+      hyb(aaa_coefs2vals(beta, Lambda, eps, hyb_coeffs, hyb_poles)),
+      hyb_refl(itops.reflect(hyb)),
+      Gt(G_ppsc.data()),
+      Fset(get_operators_dense(ad, hyb_coeffs)),
+      r(itops.rank()),
+      hyb_poles(beta * hyb_poles) {
+
+      dlr_it = itops.get_itnodes();
+
+      // allocate arrays
+      int n = hyb.extent(1);
+      int N = Gt.extent(1);
+      T     = nda::zeros<dcomplex>(r, N, N);
+      U     = nda::zeros<dcomplex>(r, N, N);
+      GKt   = nda::zeros<dcomplex>(r, N, N);
+      Tkaps = nda::zeros<dcomplex>(n, r, N, N); // Biggest memory footprint, speeding up multiply_left_vertex_and_right_zero_vertex
+      Tmu   = nda::zeros<dcomplex>(r, N, N);
+      Sigma = nda::zeros<dcomplex>(r, N, N);
+
+      this->hyb_refl *= -1.; // Follow sign convention of block_sparse_backbone for reflected hybridization function.      
+    }
+
 
     void DenseDiagramEvaluator::reset() {
       T     = 0;
