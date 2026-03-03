@@ -1,6 +1,8 @@
 #pragma once
 #include <nda/nda.hpp>
 
+namespace triqs_xca::backbone {
+
 /**
  * @class BackboneVertex 
  * @brief Abstract representation of a backbone vertex
@@ -176,3 +178,9 @@ class CorrelatorBackbone : public Backbone {
  * @param[in] B CorrelatorBackbone
  */
 std::ostream &operator<<(std::ostream &os, CorrelatorBackbone &B);
+
+} // namespace triqs_xca::backbone
+
+using triqs_xca::backbone::Backbone;
+using triqs_xca::backbone::BackboneVertex;
+using triqs_xca::backbone::CorrelatorBackbone;

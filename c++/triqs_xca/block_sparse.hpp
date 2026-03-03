@@ -5,6 +5,8 @@
 
 #include <triqs/gfs.hpp>
 
+namespace triqs_xca::block_sparse {
+
 using nda::dcomplex;
 
 // TODO templates for double/dcomplex
@@ -366,3 +368,19 @@ nda::array<dcomplex, 3> aaa_reflect(double beta, double Lambda, double eps, nda:
  * @param[in] eps DLR epsilon parameter
  */
 triqs::gfs::block_gf<triqs::mesh::dlr_imtime> BDOF_to_block_gf(BlockDiagOpFun const &BDOF, double beta, double Lambda, double eps);
+
+} // namespace triqs_xca::block_sparse
+
+using triqs_xca::block_sparse::BlockDiagOpFun;
+using triqs_xca::block_sparse::BlockOp;
+using triqs_xca::block_sparse::BlockOp3D;
+using triqs_xca::block_sparse::BlockOpFun;
+using triqs_xca::block_sparse::BlockOpSymSet;
+using triqs_xca::block_sparse::BlockOpSymSetBar;
+using triqs_xca::block_sparse::BlockOpSymQuartet;
+using triqs_xca::block_sparse::dagger_bs;
+using triqs_xca::block_sparse::BOFtoBDOF;
+using triqs_xca::block_sparse::nonint_gf_BDOF;
+using triqs_xca::block_sparse::aaa_coefs2vals;
+using triqs_xca::block_sparse::aaa_reflect;
+using triqs_xca::block_sparse::BDOF_to_block_gf;

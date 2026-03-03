@@ -6,8 +6,7 @@
 #include <triqs_xca/dense.hpp>
 #include <triqs_xca/backbone.hpp>
 
-namespace triqs_xca {
-  namespace dense {
+namespace triqs_xca::dense {
 
     using namespace nda;
 
@@ -84,5 +83,4 @@ namespace triqs_xca {
       virtual ~DenseDiagramEvaluator() = default;
     };
 
-  } // namespace dense
-} // namespace triqs_xca
+} // namespace triqs_xca::dense

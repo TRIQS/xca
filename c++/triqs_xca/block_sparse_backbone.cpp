@@ -4,6 +4,8 @@
 
 #include "triqs_xca/block_sparse_backbone.hpp"
 
+namespace triqs_xca::block_sparse {
+
 using cppdlr::_;
 
 using nda::trace;
@@ -700,3 +702,5 @@ void DiagramEvaluator::print_single_ptcle_gf_backbone(nda::array_const_view<int,
   std::cout << "Single-particle Green's function backbone for f_ix = " << f_ix << ":\n";
   std::cout << backbone << std::endl;
 }
+
+} // namespace triqs_xca::block_sparse

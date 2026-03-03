@@ -5,8 +5,7 @@
 
 #include <triqs_xca/dense_backbone.hpp>
 
-namespace triqs_xca {
-  namespace dense {
+namespace triqs_xca::dense {
     
     using cppdlr::_;
 
@@ -257,5 +256,4 @@ namespace triqs_xca {
       T *= diag_order_sign * backbone.prefactor_sign;
     }
 
-  } // namespace dense
-} // namespace triqs_xca
+} // namespace triqs_xca::dense

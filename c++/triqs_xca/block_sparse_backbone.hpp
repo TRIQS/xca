@@ -12,6 +12,8 @@
 #define C2PY_IGNORE
 #endif
 
+namespace triqs_xca::block_sparse {
+
 using nda::dcomplex;
 
 using cppdlr::imtime_ops;
@@ -140,3 +142,7 @@ class DiagramEvaluator {
 
   virtual ~DiagramEvaluator() = default;
 };
+
+} // namespace triqs_xca::block_sparse
+
+using triqs_xca::block_sparse::DiagramEvaluator;

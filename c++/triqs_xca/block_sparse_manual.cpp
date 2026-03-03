@@ -1,5 +1,7 @@
 #include "triqs_xca/block_sparse_manual.hpp"
 
+namespace triqs_xca::block_sparse {
+
 using cppdlr::_;
 
 using nda::trace;
@@ -1212,3 +1214,5 @@ nda::array<dcomplex, 3> third_order_dense_partial(nda::array_const_view<dcomplex
   }
   return Sigma;
 }
+
+} // namespace triqs_xca::block_sparse

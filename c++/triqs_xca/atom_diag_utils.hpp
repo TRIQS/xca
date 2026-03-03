@@ -8,6 +8,8 @@
 #include "triqs_xca/dense.hpp"
 #include "triqs_xca/block_sparse.hpp"
 
+namespace triqs_xca::atom_diag {
+
 using cppdlr::imtime_ops;
 
 using triqs_atom_diag = triqs::atom_diag::atom_diag<false>; // true for complex valued Hamiltonians
@@ -88,3 +90,14 @@ std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const triqs_atom_d
  * @return DenseFSet object
  */
 DenseFSet get_operators_dense(const triqs_atom_diag &ad, int norb, nda::array_const_view<dcomplex, 3> hyb_coeffs);
+
+} // namespace triqs_xca::atom_diag
+
+using triqs_xca::atom_diag::get_full_h_atomic;
+using triqs_xca::atom_diag::get_full_h_atomic_perm;
+using triqs_xca::atom_diag::get_full_operator_matrix;
+using triqs_xca::atom_diag::get_hamiltonian_blocks;
+using triqs_xca::atom_diag::H_to_atom_prop_blocks;
+using triqs_xca::atom_diag::ad_to_atom_prop;
+using triqs_xca::atom_diag::get_operators;
+using triqs_xca::atom_diag::get_operators_dense;

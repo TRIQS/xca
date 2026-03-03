@@ -1,5 +1,7 @@
 #include "triqs_xca/atom_diag_utils.hpp"
 
+namespace triqs_xca::atom_diag {
+
 using nda::linalg::matmul;
 
 using cppdlr::_;
@@ -351,3 +353,6 @@ DenseFSet get_operators_dense(const triqs_atom_diag &ad, int norb, nda::array_co
   }
   return {Fs, Fdags, hyb_coeffs};
 }
+
+} // namespace triqs_xca::atom_diag
+

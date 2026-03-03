@@ -1,8 +1,7 @@
 #pragma once
 #include <nda/nda.hpp>
 
-namespace triqs_xca {
-  namespace dense {
+namespace triqs_xca::dense {
 
     using nda::dcomplex;
 
@@ -28,5 +27,4 @@ namespace triqs_xca {
       std::size_t get_num_orb_inds() const;
     };
 
-  } // namespace dense
-} // namespace triqs_xca
+} // namespace triqs_xca::dense

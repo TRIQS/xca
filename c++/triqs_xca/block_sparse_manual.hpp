@@ -1,5 +1,7 @@
 #include "triqs_xca/block_sparse.hpp"
 
+namespace triqs_xca::block_sparse {
+
 using nda::dcomplex;
 
 using cppdlr::imtime_ops;
@@ -135,3 +137,16 @@ nda::array<dcomplex, 3> OCA_tpz(nda::array_const_view<dcomplex, 3> hyb, imtime_o
 nda::array<dcomplex, 3> third_order_dense_partial(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta,
                                                   nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Fs,
                                                   nda::array_const_view<dcomplex, 3> F_dags);
+
+} // namespace triqs_xca::block_sparse
+
+using triqs_xca::block_sparse::NCA_bs;
+using triqs_xca::block_sparse::NCA_dense;
+
+using triqs_xca::block_sparse::OCA_dense;
+using triqs_xca::block_sparse::OCA_tpz;
+using triqs_xca::block_sparse::OCA_bs;
+
+using triqs_xca::block_sparse::eval_eq;
+
+using triqs_xca::block_sparse::third_order_dense_partial;

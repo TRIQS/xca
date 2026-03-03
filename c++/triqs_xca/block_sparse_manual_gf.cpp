@@ -1,10 +1,13 @@
 #include "triqs_xca/block_sparse_manual_gf.hpp"
 
+namespace triqs_xca::block_sparse {
+
 using cppdlr::_;
 
 using nda::trace;
 using nda::range;
 using nda::linalg::matmul;
+
 
 nda::array<dcomplex, 3> NCA_gf_dense(nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Gt_refl,
                                      nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags) {
@@ -456,3 +459,5 @@ nda::array<dcomplex, 3> OCA_gf_bs(nda::vector_const_view<double> hyb_poles, imti
 
   return gf;
 }
+
+} // namespace triqs_xca::block_sparse

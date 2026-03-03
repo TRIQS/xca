@@ -1,5 +1,7 @@
 #include "triqs_xca/backbone.hpp"
 
+namespace triqs_xca::backbone {
+
 BackboneVertex::BackboneVertex() : bar(false), dag(false), hyb_ind(0), Ksign(0), orb(0) { ; }
 
 bool BackboneVertex::has_bar() { return bar; }
@@ -468,3 +470,5 @@ std::ostream &operator<<(std::ostream &os, CorrelatorBackbone &B) {
   os << "\nPrefactor: " << p_str << "\nDiagram: \n" << diag_str;
   return os;
 }
+
+} // namespace triqs_xca::backbone

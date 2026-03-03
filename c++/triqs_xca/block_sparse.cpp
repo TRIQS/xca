@@ -4,6 +4,9 @@
 
 #include "triqs_xca/block_sparse.hpp"
 
+
+namespace triqs_xca::block_sparse {
+
 using cppdlr::_;
 
 using nda::linalg::matmul;
@@ -716,3 +719,5 @@ triqs::gfs::block_gf<triqs::mesh::dlr_imtime> BDOF_to_block_gf(BlockDiagOpFun co
   }
   return {gf_vec};
 }
+
+} // namespace triqs_xca::block_sparse

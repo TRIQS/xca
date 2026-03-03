@@ -1,7 +1,6 @@
 #include "triqs_xca/dense.hpp"
 
-namespace triqs_xca {
-  namespace dense {
+namespace triqs_xca::dense {
 
     DenseFSet::DenseFSet(nda::array_const_view<dcomplex, 3> Fs,
                          nda::array_const_view<dcomplex, 3> F_dags,
@@ -28,5 +27,4 @@ namespace triqs_xca {
 
     std::size_t DenseFSet::get_num_orb_inds() const { return Fs.extent(0); }
 
-  } // namespace dense
-} // namespace triqs_xca
+} // namespace triqs_xca::dense
