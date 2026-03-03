@@ -16,6 +16,8 @@ using namespace triqs;
 using namespace triqs::operators;
 using namespace triqs::atom_diag;
 
+using triqs_xca::dense::DenseDiagramEvaluator;
+
 TEST(two_fermions, one_hyb_pole) {
 
   double beta   = 2.0;

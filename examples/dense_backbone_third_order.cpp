@@ -12,6 +12,9 @@
 using namespace nda;
 using namespace cppdlr;
 
+using triqs_xca::dense::DenseFSet;
+using triqs_xca::dense::DenseDiagramEvaluator;
+
 nda::array<dcomplex, 3> Hmat_to_Gtmat(nda::array<dcomplex, 2> Hmat, double beta, nda::array<double, 1> dlr_it_abs) {
   // Helper function for computing the non-interacting Green's function from the Hamiltonian, both in dense storage
 

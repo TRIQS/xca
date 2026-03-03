@@ -16,6 +16,9 @@ using namespace triqs;
 using namespace triqs::operators;
 using namespace triqs::atom_diag;
 
+using triqs_xca::dense::DenseDiagramEvaluator;
+using triqs_xca::dense::DenseFSet;
+
 TEST(BSGFBackbone, NCA) {
   int n         = 4;
   double beta   = 2.0;

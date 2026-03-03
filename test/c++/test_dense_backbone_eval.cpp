@@ -15,6 +15,9 @@
 
 #include "block_sparse_utils.hpp"
 
+using triqs_xca::dense::DenseDiagramEvaluator;
+using triqs_xca::dense::DenseFSet;
+
 TEST(DenseBackbone, OCA) {
   int n         = 4;
   double beta   = 2.0;

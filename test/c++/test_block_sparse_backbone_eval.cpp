@@ -33,6 +33,9 @@ using namespace triqs;
 using namespace triqs::operators;
 using namespace triqs::atom_diag;
 
+using triqs_xca::dense::DenseDiagramEvaluator;
+using triqs_xca::dense::DenseFSet;
+
 TEST(Backbone, flat_index) {
   nda::array<int, 2> topology = {{0, 2}, {1, 4}, {3, 5}};
   int n                       = 4;

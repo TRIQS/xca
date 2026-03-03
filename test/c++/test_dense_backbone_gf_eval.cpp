@@ -13,6 +13,9 @@
 
 #include "block_sparse_utils.hpp"
 
+using triqs_xca::dense::DenseDiagramEvaluator;
+using triqs_xca::dense::DenseFSet;
+
 TEST(DenseGFBackbone, NCA) {
   double beta   = 2.0;
   double Lambda = 20.0 * beta;

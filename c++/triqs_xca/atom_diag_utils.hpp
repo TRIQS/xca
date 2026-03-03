@@ -12,6 +12,8 @@ using cppdlr::imtime_ops;
 
 using triqs_atom_diag = triqs::atom_diag::atom_diag<false>; // true for complex valued Hamiltonians
 
+using triqs_xca::dense::DenseFSet;
+
 /**
  * @brief Utility function to get full Hamiltonian matrix from an AtomDiag object.
  * @param[in] ad AtomDiag object
