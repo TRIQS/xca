@@ -81,7 +81,7 @@ TEST(two_fermions, one_hyb_pole) {
     G_ppsc_dense(_, range(s0, s1), range(s0, s1)) = G_ppsc[s].data();
     s0                                            = s1;
   }
-  auto Fset = get_operators_dense(ad, norb, hyb_coeffs);
+  auto Fset = get_operators_dense(ad, hyb_coeffs);
   hyb_poles = nda::make_regular(beta * hyb_poles);
   DenseDiagramEvaluator D_dense(beta, itops, hyb, hyb_refl, hyb_poles, G_ppsc_dense, Fset);
   auto mu_ops  = Fset.Fs;

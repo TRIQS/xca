@@ -217,7 +217,7 @@ TEST(Backbone, spin_flip_fermion) {
   // compare to dense backbone result
   auto H_mat               = get_full_h_atomic_perm(ad);
   auto Gt_dense            = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
-  auto Fset                = get_operators_dense(ad, norb, hyb_coeffs);
+  auto Fset                = get_operators_dense(ad, hyb_coeffs);
   auto C                   = DenseDiagramEvaluator(beta, itops, hyb, hyb_refl, dlr_rf, Gt_dense, Fset);
   auto OCA_result_gf_dense = C.eval_correlator(B, Fset.Fs, Fset.F_dags);
 
@@ -317,7 +317,7 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
   // compare to dense backbone result
   auto H_mat               = get_full_h_atomic_perm(ad);
   auto Gt_dense            = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
-  auto Fset                = get_operators_dense(ad, norb, hyb_coeffs);
+  auto Fset                = get_operators_dense(ad, hyb_coeffs);
   auto C                   = DenseDiagramEvaluator(beta, itops, hyb, hyb_refl, dlr_rf, Gt_dense, Fset);
   auto OCA_result_gf_dense = C.eval_correlator(B, Fset.Fs, Fset.F_dags);
 

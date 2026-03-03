@@ -89,10 +89,9 @@ std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const triqs_atom_d
 /**
  * @brief Get creation and annihilation operators from an AtomDiag object in dense storage
  * @param[in] ad AtomDiag object
- * @param[in] norb Number of orbitals
  * @param[in] hyb_coeffs Hybridization SOE coefficients
  * @return DenseFSet object
  */
-DenseFSet get_operators_dense(const triqs_atom_diag &ad, int norb, nda::array_const_view<dcomplex, 3> hyb_coeffs);
+DenseFSet get_operators_dense(const triqs_atom_diag &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs);
 
 } // namespace triqs_xca::atom_diag

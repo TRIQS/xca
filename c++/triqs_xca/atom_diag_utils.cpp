@@ -329,7 +329,7 @@ std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const triqs_atom_d
   return std::make_tuple(Fq, sym_set_labels);
 }
 
-DenseFSet get_operators_dense(const triqs_atom_diag &ad, int norb, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
+DenseFSet get_operators_dense(const triqs_atom_diag &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
   // get Fock state ordering
   std::vector<unsigned long> H_perm;
   for (int s = 0; s < ad.n_subspaces(); ++s) {
