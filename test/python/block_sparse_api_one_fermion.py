@@ -234,7 +234,6 @@ def test_oca_diagram_cf_block_sparse_and_dense(
     
     BSS.init_diagram_evaluator() # -- This calls the DiagramEvaluator constructor.
 
-
     # -- Compare pseudo particle Green's function
 
     G_S = S.S.G0_iaa
@@ -245,8 +244,18 @@ def test_oca_diagram_cf_block_sparse_and_dense(
 
     G_diff = np.max(np.abs(G_BSS.data - G_S))
     print(f'G_diff = {G_diff:2.2E}')
+    np.testing.assert_array_almost_equal(G_BSS.data, G_S)
 
-    
+    Z = BSS.partition_function()
+    print(f'Z = {Z}')
+    np.testing.assert_almost_equal(Z, 1.0)
+
+    G_DYSON_BSS = BSS.solve_dyson(BSS.Sigma, BSS.eta) # Solving Dyson with zero self-energy
+
+    if not dense: 
+        G_DYSON_BSS = pseudo_particle_block_gf_to_dense(G_DYSON_BSS, BSS.ad)
+    np.testing.assert_array_almost_equal(G_DYSON_BSS.data, G_S)
+
     # -- Compare self-energy topologies
 
     from triqs_xca.diag import all_connected_pairings

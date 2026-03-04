@@ -10,8 +10,11 @@ from adapol import anacont as adapol_anacont
 
 from .diag import all_connected_pairings
 
+from .dlr_dyson_ppsc import DysonItPPSC
+
 from . import DiagramEvaluator
 from .dense import DenseDiagramEvaluator
+
 
 class BlockSparseSolver(object):
     
@@ -25,6 +28,8 @@ class BlockSparseSolver(object):
         self.conserved_operators = conserved_operators
         self.dense = dense
 
+        self.eta = 0. # Pseudo particle chemical potential (shift of the pseudo particle energies).
+
         self.mesh_tau = MeshDLRImTime(beta=self.beta, statistic='Fermion', w_max=self.w_max, eps=self.eps)
 
         self.ad = AtomDiag(self.H_loc, self.fundamental_operators, self.conserved_operators)
@@ -37,6 +42,14 @@ class BlockSparseSolver(object):
 
         self.G = self.G0.copy()
         self.Sigma = self.get_zero_pseudo_particle_propagator()
+
+        # FIXME! Get ito from mesh_tau
+        from .pycppdlr import build_dlr_rf
+        from .pycppdlr import ImTimeOps
+        ito = ImTimeOps(w_max * beta, build_dlr_rf(w_max * beta, eps)) 
+
+        G0 = [(0, self.G0)] if self.dense else self.G0
+        self.dysons = [DysonItPPSC(self.beta, ito, G0_block.data) for _, G0_block in G0]
 
         print(logo())
         print()
@@ -79,6 +92,41 @@ class BlockSparseSolver(object):
 
     def pseudo_particle_greens_function(self):
         return self.G
+
+
+    def partition_function(self):
+
+        def trace(g_dlr): return -np.trace(g_dlr(self.beta))
+
+        def block_trace(G_dlr_blockgf):
+            return sum([trace(g) for _, g in G_dlr_blockgf])
+
+        from triqs.gf import make_gf_dlr
+        G_dlr = make_gf_dlr(self.G)
+
+        Z = block_trace(G_dlr) if type(G_dlr) is BlockGf else trace(G_dlr)
+
+        assert(Z.imag < 1e-12)
+        Z = Z.real
+
+        return Z
+
+
+    def solve_dyson(self, Sigma, eta):
+
+        if self.dense:
+            assert type(Sigma) is Gf, 'Sigma must be a Gf for dense solver'
+        else:
+            assert type(Sigma) is BlockGf, 'Sigma must be a BlockGf for block_sparse solver'
+
+        G = self.get_zero_pseudo_particle_propagator()
+        G_b = [G] if self.dense else G
+        Sigma_b = [(0, Sigma)] if self.dense else Sigma
+
+        for dyson, (bidx, sigma) in zip(self.dysons, Sigma_b):
+            G_b[bidx].data[:] = dyson.solve(sigma.data, eta)
+
+        return G
 
 
     def pseudo_particle_self_energy(self, max_order):
@@ -190,15 +238,33 @@ def hamiltonian_matrix(ad):
     H_mat = np.zeros([ad.full_hilbert_space_dim]*2, dtype=float)
 
     for sidx in range(ad.n_subspaces):
-        U = ad.unitary_matrices[sidx]
-        E = ad.energies[sidx]
-        H_block_diag = np.diag(E + ad.gs_energy)
-        H_block = U @ H_block_diag @ U.T.conj()
+        H_block = hamiltonian_matrix_block(ad, sidx)
         fidx = ad.fock_states[sidx]
         bidx = np.ix_(fidx, fidx)
         H_mat[bidx] = H_block
 
     return H_mat
+
+
+def hamiltonian_matrix_blocks(ad):
+  
+    H_blocks = []
+
+    for sidx in range(ad.n_subspaces):
+        H_block = hamiltonian_matrix_block(ad, sidx)
+        H_blocks.append(H_block)
+
+    return H_blocks
+
+
+def hamiltonian_matrix_block(ad, sidx):
+
+    U = ad.unitary_matrices[sidx]
+    E = ad.energies[sidx]
+    H_block_diag = np.diag(E + ad.gs_energy)
+    H_block = U @ H_block_diag @ U.T.conj()
+
+    return H_block
 
 
 def zero_pseudo_particle_propagator_dense(ad, mesh_tau):

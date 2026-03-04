@@ -83,6 +83,40 @@ namespace cppdlr {
     }
 
     /**
+    * @brief Constructor for dyson_it
+    * @param[in] beta Inverse temperature
+    * @param[in] itops DLR imaginary time object
+    * @param[in] g0 Free imaginary time DLR pseudo-particle Green's function
+    */
+    template <nda::MemoryArray Tg0>
+    dyson_it_ppsc(double beta, imtime_ops itops, Tg0 const &g0)
+       : beta(beta),
+         itops_ptr(std::make_shared<imtime_ops>(itops)),
+         r(itops.rank()),
+         norb(g0.shape(1)),
+         time_order(true),
+         g0(g0),
+         g0c(r, norb, norb),
+         sysmat(r * norb, r * norb) {
+
+      // dyson_it_ppsc object contains a shared pointer to the imtime_ops object
+      // itops. This is done to avoid making a copy of itops, which is meant to
+      // handle all imaginary time operations on the given DLR imaginary time
+      // grid.
+
+      g0c() = itops_ptr->vals2coefs(g0);    // DLR coefficients of free Green's function
+
+      // Get right hand side of Dyson equation
+      if constexpr (std::floating_point<Ht>) { // If h is real scalar, rhs is a vector
+        rhs.resize(r);
+        rhs() = g0;
+      } else { // Otherwise, rhs is given by g0 w/ some indices transposed (for compatibility w/ LAPACK)
+        rhs.resize(norb, r, norb);
+        rhs() = permuted_indices_view<nda::encode<3>({1, 2, 0})>(g0);
+      }
+    }
+
+    /**
     * @brief Solve pseudo-particle Dyson equation for given self-energy
     *
     * @tparam Tsig Type of self-energy

@@ -33,13 +33,20 @@ template <>
 inline constexpr auto c2py::tp_name<cppdlr::dyson_it_ppsc<
    nda::basic_array<std::complex<double>, 2, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>>,
    std::complex<double>>> = "triqs_xca.dlr_dyson_ppsc.DysonItPPSC";
-static auto init_0        = c2py::dispatcher_c_kw_t{c2py::c_constructor<
-          cppdlr::dyson_it_ppsc<
-             nda::basic_array<std::complex<double>, 2, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>>,
-             std::complex<double>>,
-          double, cppdlr::imtime_ops,
-          const nda::basic_array<std::complex<double>, 2, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>> &>(
-   "beta", "itops", "h")};
+static auto init_0        = c2py::dispatcher_c_kw_t{
+   c2py::c_constructor<
+             cppdlr::dyson_it_ppsc<
+                nda::basic_array<std::complex<double>, 2, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>>,
+                std::complex<double>>,
+             double, cppdlr::imtime_ops,
+             const nda::basic_array<std::complex<double>, 2, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>> &>(
+      "beta", "itops", "h"),
+   c2py::c_constructor<cppdlr::dyson_it_ppsc<nda::basic_array<std::complex<double>, 2, nda::C_layout, 'A',
+                                                                     nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>>,
+                                                    std::complex<double>>,
+                              double, cppdlr::imtime_ops,
+                              const nda::basic_array_view<std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                                          nda::borrowed<nda::mem::AddressSpace::Host>> &>("beta", "itops", "g0")};
 template <>
 constexpr initproc c2py::tp_init<cppdlr::dyson_it_ppsc<
    nda::basic_array<std::complex<double>, 2, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>>,
@@ -49,12 +56,18 @@ const std::string c2py::tp_ctor_doc<cppdlr::dyson_it_ppsc<
    nda::basic_array<std::complex<double>, 2, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>>,
    std::complex<double>>> =
    init_0.doc(R"DOC(
-Constructor for dyson_it
+[1] Constructor for dyson_it
 
 .. note::
 
    Hamiltonian must either be a symmetric matrix, a Hermitian matrix,
    or a real scalar.
+
+------
+
+[2] Constructor for dyson_it
+
+------
 
 Parameters
 ----------
@@ -64,11 +77,15 @@ itops : {par_1}
    DLR imaginary time object
 h : {par_2}
    Hamiltonian
+g0 : {par_3}
+   Free imaginary time DLR pseudo-particle Green's function
 )DOC",
               {{c2py::python_typename<double>()},
                {c2py::python_typename<cppdlr::imtime_ops>()},
                {c2py::python_typename<const nda::basic_array<std::complex<double>, 2, nda::C_layout, 'A',
-                                                             nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>> &>()}});
+                                                             nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>> &>()},
+               {c2py::python_typename<const nda::basic_array_view<std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                                                  nda::borrowed<nda::mem::AddressSpace::Host>> &>()}});
 // solve
 static auto const fun_0 = c2py::dispatcher_f_kw_t{c2py::cmethod(
    [](cppdlr::dyson_it_ppsc<

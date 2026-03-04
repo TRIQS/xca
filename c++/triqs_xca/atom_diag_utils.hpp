@@ -27,12 +27,6 @@ using triqs_xca::block_sparse::BlockOpSymSet;
 nda::matrix<double> get_full_h_atomic(const triqs_atom_diag &ad);
 
 /**
- * @brief Get full Hamiltonian matrix from an AtomDiag object with rows and columns permuted by Fock state ordering.
- * @param[in] ad AtomDiag object
- */
-nda::matrix<double> get_full_h_atomic_perm(const triqs_atom_diag &ad);
-
-/**
  * @brief Utility function to get full operator matrix from an AtomDiag object.
  * @param[in] ad AtomDiag object
  * @param[in] oidx operator index
