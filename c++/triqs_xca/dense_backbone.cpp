@@ -18,55 +18,57 @@ namespace triqs_xca::dense {
 
     using triqs_xca::block_sparse::aaa_coefs2vals; // Move to separate namespace
 
-    DenseDiagramEvaluator::DenseDiagramEvaluator(double beta, imtime_ops &itops, nda::array_const_view<dcomplex, 3> hyb,
-                                                 nda::array_const_view<dcomplex, 3> hyb_refl, nda::vector_const_view<double> hyb_poles,
-                                                 nda::array_const_view<dcomplex, 3> Gt, DenseFSet &Fset)
-       : beta(beta), itops(itops), hyb(hyb), hyb_refl(hyb_refl), Gt(Gt), Fset(Fset), r(itops.rank()), hyb_poles(hyb_poles) {
-
-      dlr_it = itops.get_itnodes();
-
+    DenseDiagramEvaluator::DenseDiagramEvaluator(
+      double beta, double eps, imtime_ops &itops, 
+      nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl, nda::vector_const_view<double> hyb_poles,
+      nda::array_const_view<dcomplex, 3> Gt, DenseFSet &Fset)
+      : 
+      tau_mesh(triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, itops.lambda() / beta, eps)),
+      beta(beta),
+      itops(itops), 
+      dlr_it(itops.get_itnodes()),
+      hyb(hyb), 
+      hyb_refl(-hyb_refl), // Follow sign convention of block_sparse_backbone for reflected hybridization function.
+      hyb_poles(hyb_poles),
+      Gt(Gt), 
+      Fset(Fset), 
+      r(itops.rank()), 
+      n(hyb.extent(1)),
+      N(Gt.extent(1)),
       // allocate arrays
-      int n = hyb.extent(1);
-      int N = Gt.extent(1);
-      T     = nda::zeros<dcomplex>(r, N, N);
-      U     = nda::zeros<dcomplex>(r, N, N);
-      GKt   = nda::zeros<dcomplex>(r, N, N);
-      Tkaps = nda::zeros<dcomplex>(n, r, N, N); // Biggest memory footprint, speeding up multiply_left_vertex_and_right_zero_vertex
-      Tmu   = nda::zeros<dcomplex>(r, N, N);
-      Sigma = nda::zeros<dcomplex>(r, N, N);
-
-      this->hyb_refl *= -1.; // Follow sign convention of block_sparse_backbone for reflected hybridization function.
-    }
+      Sigma(nda::zeros<dcomplex>(r, N, N)),
+      T(nda::zeros<dcomplex>(r, N, N)),
+      U(nda::zeros<dcomplex>(r, N, N)),
+      GKt(nda::zeros<dcomplex>(r, N, N)),
+      Tkaps(nda::zeros<dcomplex>(n, r, N, N)), // Largest memory footprint, speeding up multiply_left_vertex_and_right_zero_vertex
+      Tmu(nda::zeros<dcomplex>(r, N, N))
+      {}
 
     DenseDiagramEvaluator::DenseDiagramEvaluator(
-      double beta, double Lambda, double eps, 
       nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
       triqs::gfs::gf_view<triqs::mesh::dlr_imtime> G_ppsc, triqs::atom_diag::atom_diag<false> const &ad)
       :
-      beta(beta),
-      itops(imtime_ops(Lambda, cppdlr::build_dlr_rf(Lambda, eps))),
-      hyb(aaa_coefs2vals(beta, Lambda, eps, hyb_coeffs, hyb_poles)),
-      hyb_refl(itops.reflect(hyb)),
+      tau_mesh(G_ppsc.mesh()),
+      beta(tau_mesh.beta()),
+      itops(tau_mesh.dlr_it()),
+      dlr_it(itops.get_itnodes()),
+      // hybridization
+      hyb(aaa_coefs2vals(beta, tau_mesh.w_max() * tau_mesh.beta(), tau_mesh.eps(), hyb_coeffs, hyb_poles)),
+      hyb_refl(-itops.reflect(hyb)), // Follow sign convention of block_sparse_backbone for reflected hybridization function.
+      hyb_poles(beta * hyb_poles), 
       Gt(G_ppsc.data()),
       Fset(get_operators_dense(ad, hyb_coeffs)),
       r(itops.rank()),
-      hyb_poles(beta * hyb_poles) {
-
-      dlr_it = itops.get_itnodes();
-
+      n(hyb.extent(1)),
+      N(Gt.extent(1)),
       // allocate arrays
-      int n = hyb.extent(1);
-      int N = Gt.extent(1);
-      T     = nda::zeros<dcomplex>(r, N, N);
-      U     = nda::zeros<dcomplex>(r, N, N);
-      GKt   = nda::zeros<dcomplex>(r, N, N);
-      Tkaps = nda::zeros<dcomplex>(n, r, N, N); // Biggest memory footprint, speeding up multiply_left_vertex_and_right_zero_vertex
-      Tmu   = nda::zeros<dcomplex>(r, N, N);
-      Sigma = nda::zeros<dcomplex>(r, N, N);
-
-      this->hyb_refl *= -1.; // Follow sign convention of block_sparse_backbone for reflected hybridization function.      
-    }
-
+      Sigma(nda::zeros<dcomplex>(r, N, N)),
+      T(nda::zeros<dcomplex>(r, N, N)),
+      U(nda::zeros<dcomplex>(r, N, N)),
+      GKt(nda::zeros<dcomplex>(r, N, N)),
+      Tkaps(nda::zeros<dcomplex>(n, r, N, N)), // Largest memory footprint, speeding up multiply_left_vertex_and_right_zero_vertex
+      Tmu(nda::zeros<dcomplex>(r, N, N))
+      {}
 
     void DenseDiagramEvaluator::reset() {
       T     = 0;
@@ -75,6 +77,22 @@ namespace triqs_xca::dense {
       Tkaps = 0;
       Tmu   = 0;
       Sigma = 0;
+    }
+
+    triqs::gfs::gf<triqs::mesh::dlr_imtime> DenseDiagramEvaluator::compute_self_energy(nda::array_const_view<int, 2> topology) {
+      Backbone backbone(topology, n);
+      eval_self_energy(backbone);
+      auto sigma_gf = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, this->Sigma);
+      reset();
+      return sigma_gf;
+    }
+
+    triqs::gfs::gf<triqs::mesh::dlr_imtime> DenseDiagramEvaluator::compute_self_energy(nda::array_const_view<int, 2> topology, int f_ix) {
+      Backbone backbone(topology, n);
+      eval_self_energy_fixed_indices(backbone, f_ix); // evaluate the diagram with these directions, poles, and orbital indices
+      auto sigma_gf = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, this->Sigma);
+      reset();
+      return sigma_gf;
     }
 
     void DenseDiagramEvaluator::multiply_left_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, int v_ix) {
@@ -134,9 +152,9 @@ namespace triqs_xca::dense {
       }
     }
 
-    void DenseDiagramEvaluator::multiply_left_vertex_and_right_zero_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, bool is_forward) {
+    void DenseDiagramEvaluator::multiply_left_vertex_and_right_zero_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, int vtc0) {
 
-      int n = backbone.n;
+      bool is_forward = backbone.has_vertex_dag(vtc0);
 
       auto F_selector = [&](bool forward, int ix) { return forward ? Fset.Fs(ix, _, _) : Fset.F_dags(ix, _, _); };
 
@@ -161,35 +179,45 @@ namespace triqs_xca::dense {
       }
     }
 
+    int DenseDiagramEvaluator::get_num_self_energy_backbones(nda::array_const_view<int, 2> topology) {
+      Backbone backbone(topology, n);
+      return get_num_self_energy_backbones(backbone);
+    }
+
+    int DenseDiagramEvaluator::get_num_self_energy_backbones(Backbone &backbone) {
+      int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), backbone.m - 1));
+      return f_ix_max;
+    }    
+
     void DenseDiagramEvaluator::eval_self_energy(Backbone &backbone) {
-      int m = backbone.m;
       // loop over all flat indices
-      int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), m - 1));
+      int f_ix_max = get_num_self_energy_backbones(backbone);
       for (int f_ix = 0; f_ix < f_ix_max; f_ix++) {
-        backbone.set_flat_index(f_ix, hyb_poles); // set directions, pole indices, and orbital indices from a single integer index
-        eval_self_energy_fixed_indices(backbone); // evaluate the diagram with these directions, poles, and orbital indices
-        backbone.reset_all_inds();                // reset directions, pole indices, and orbital indices for the next iteration
+        eval_self_energy_fixed_indices(backbone, f_ix); // evaluate the diagram with these directions, poles, and orbital indices
       }
     }
 
-    void DenseDiagramEvaluator::eval_self_energy_fixed_indices(Backbone &backbone) {
+    void DenseDiagramEvaluator::eval_self_energy_fixed_indices(Backbone &backbone, int f_ix) {
       int m = backbone.m;
+      int vct0 = backbone.get_topology(0, 1); // Vertex Connected To zero
+
+      backbone.set_flat_index(f_ix, hyb_poles); // set directions, pole indices, and orbital indices from a single integer index
 
       // 1. Starting from tau_1, proceed right to left, performing multiplications at vertices and convolutions at edges, until reaching the vertex
       // containing the undecomposed hybridization line Delta_{mu kappa}.
       T = Gt;
       // T is initialized to Gt, which is always the function at the rightmost edge
-      for (int v = 1; v < backbone.get_topology(0, 1); v++) { // loop from the first vertex to before the special vertex
+      for (int v = 1; v < vct0; v++) { // loop from the first vertex to before the special vertex
         multiply_left_vertex(T, backbone, v);
         integrate_left_edge(T, backbone, v);
       }
 
       // 2. For each kappa, multiply by F_kappa(^dag). Then for each mu, kappa, multiply by Delta_{mu kappa}, and sum over kappa. Finally for each mu,
       // multiply F_mu[^dag] and sum over mu.
-      multiply_left_vertex_and_right_zero_vertex(T, backbone, (not backbone.has_vertex_dag(0)));
+      multiply_left_vertex_and_right_zero_vertex(T, backbone, vct0);
 
       // 3. Continue right to left until the final vertex multiplication is complete.
-      for (int v = backbone.get_topology(0, 1) + 1; v < 2 * m; v++) { // loop from the special vertex to the last vertex
+      for (int v = vct0 + 1; v < 2 * m; v++) { // loop from the special vertex to the last vertex
         integrate_left_edge(T, backbone, v - 1);
         multiply_left_vertex(T, backbone, v);
       }
@@ -199,6 +227,8 @@ namespace triqs_xca::dense {
       if (backbone.get_fb(0) == 0) diag_order_sign *= -1; // if the first hybridization line is backward, there is an additional sign change
       T *= diag_order_sign * backbone.prefactor_sign;
       Sigma += T;
+
+      backbone.reset_all_inds();                // reset directions, pole indices, and orbital indices for the next iteration
     }
 
     void DenseDiagramEvaluator::multiply_right_vertex(nda::array_view<dcomplex, 3> U_buf, Backbone &backbone, int v_ix) {
