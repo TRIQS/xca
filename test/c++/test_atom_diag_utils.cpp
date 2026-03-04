@@ -361,7 +361,7 @@ TEST(AtomDiagUtils, operators) {
     for (long l = 0; l < p; ++l) {
       for (int m = 0; m < nflav; ++m) {
         int mapped_m = sym_set_orbitals[f_k][orbital_position[m]];
-        exp_F_bars_refl(k, l, _, _) += hyb_coeffs(l, k, m) * expected_c_mats(mapped_m, _, _);
+        exp_F_bars_refl(k, l, _, _) += -hyb_coeffs(l, k, m) * expected_c_mats(mapped_m, _, _); // minus sign convention for F_bars_refl
       }
     }
   }
