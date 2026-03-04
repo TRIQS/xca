@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
-#include <triqs/operators/many_body_operator.hpp>
-
 #include <triqs_xca/atom_diag_utils.hpp>
+
+using nda::range;
 
 using cppdlr::_;
 using cppdlr::build_dlr_rf;
