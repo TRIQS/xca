@@ -82,20 +82,30 @@ namespace triqs_xca::dense {
 
       void reset(); // reset all arrays to zero
 
-      C2PY_IGNORE int get_num_self_energy_backbones(Backbone &backbone);                  // get number of backbones for given topology
-      C2PY_IGNORE void eval_self_energy(Backbone &backbone);                        // evaluate a diagram of a given order and topology in dense storage
+      // evaluate a diagram of a given order and topology in dense storage
       // (i.e., evaluate and sum all backbones with different orbital indices, poles, and hybridization line directions)
-      C2PY_IGNORE void eval_self_energy_fixed_indices(Backbone &backbone, int f_ix);
+      C2PY_IGNORE void eval_self_energy(Backbone &backbone);
       // evaluate a diagram with fixed orbital indices, poles, and line directions in dense storage, including prefactor
+      C2PY_IGNORE void eval_self_energy_fixed_indices(Backbone &backbone, int f_ix);
+      // get number of backbones for given topology
+      C2PY_IGNORE int get_num_self_energy_backbones(Backbone &backbone);                  
 
-      int get_num_self_energy_backbones(nda::array_const_view<int, 2> topology);                  // get number of backbones for given topology
       triqs::gfs::gf<triqs::mesh::dlr_imtime> compute_self_energy(nda::array_const_view<int, 2> topology);           // compute self-energy for given topology
       triqs::gfs::gf<triqs::mesh::dlr_imtime> compute_self_energy(nda::array_const_view<int, 2> topology, int f_ix); // compute self-energy for given topology and flat index
+      // get number of backbones for given topology
+      int get_num_self_energy_backbones(nda::array_const_view<int, 2> topology);
 
-      C2PY_IGNORE nda::array<dcomplex, 3> eval_correlator(CorrelatorBackbone &backbone, nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops);
       // evaluate the mu, kap entries of a correlator for a diagram of a given order and topology in dense storage
-      C2PY_IGNORE void eval_correlator_fixed_indices(CorrelatorBackbone &backbone);
+      C2PY_IGNORE nda::array<dcomplex, 3> eval_correlator(CorrelatorBackbone &backbone, nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops);
       // evaluate a correlator diagram with fixed orbital indices, poles, and line directions in dense storage, including prefactor
+      C2PY_IGNORE nda::array<dcomplex, 3> eval_correlator(CorrelatorBackbone &backbone, nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops, int f_ix);
+
+      // compute single particle Green's function for given topology
+      nda::array<dcomplex, 3> compute_single_ptcle_gf(nda::array_const_view<int, 2> topology);
+      // compute single particle Green's function for given topology and flat index
+      nda::array<dcomplex, 3> compute_single_ptcle_gf(nda::array_const_view<int, 2> topology, int f_ix);
+      // get number of backbones for given topology
+      int get_num_single_ptcle_gf_backbones(nda::array_const_view<int, 2> topology); 
 
       /**
        * @brief Constructor for DenseDiagramEvaluator

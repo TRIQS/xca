@@ -276,26 +276,25 @@ namespace triqs_xca::dense {
     nda::array<dcomplex, 3> DenseDiagramEvaluator::eval_correlator(CorrelatorBackbone &backbone, nda::array<dcomplex, 3> mu_ops,
                                                                    nda::array<dcomplex, 3> kap_ops) {
       int m = backbone.m;
-      // loop over all flat indices
-      int f_ix_max                       = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), m - 1));
+      int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), m - 1));
+      
       nda::array<dcomplex, 3> correlator = nda::zeros<dcomplex>(r, mu_ops.extent(0), kap_ops.extent(0));
-      nda::array<dcomplex, 3> Tmuop      = nda::zeros<dcomplex>(r, Gt.extent(1), Gt.extent(1));
+
+      // loop over all flat indices
       for (int f_ix = 0; f_ix < f_ix_max; ++f_ix) {
-        backbone.set_flat_index(f_ix, hyb_poles); // set directions, pole indices, and orbital indices from a single integer index
-        eval_correlator_fixed_indices(backbone);  // evaluate the diagram with these directions, poles, and orbital indices
-        for (int mu = 0; mu < mu_ops.extent(0); ++mu) {
-          for (int t = 0; t < r; ++t) { Tmuop(t, _, _) = matmul(U(t, _, _), matmul(mu_ops(mu, _, _), T(t, _, _))); }
-          for (int kap = 0; kap < kap_ops.extent(0); ++kap) {
-            for (int t = 0; t < r; ++t) { correlator(t, mu, kap) += trace(matmul(Tmuop(t, _, _), kap_ops(kap, _, _))); }
-          }
-        }
-        backbone.reset_all_inds(); // reset directions, pole indices, and orbital indices for the next iteration
+        correlator += eval_correlator(backbone, mu_ops, kap_ops, f_ix);  // evaluate the diagram with these directions, poles, and orbital indices
       }
+
       return correlator;
     }
 
-    void DenseDiagramEvaluator::eval_correlator_fixed_indices(CorrelatorBackbone &backbone) {
+    nda::array<dcomplex, 3> DenseDiagramEvaluator::eval_correlator(CorrelatorBackbone &backbone, nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops, int f_ix) {
+
       int m = backbone.m;
+
+      backbone.set_flat_index(f_ix, hyb_poles); // set directions, pole indices, and orbital indices from a single integer index
+
+      nda::array<dcomplex, 3> correlator = nda::zeros<dcomplex>(r, mu_ops.extent(0), kap_ops.extent(0));
 
       // evaluate the first sequence of backbone products and convolutions from tau_1 to tau, proceeding right to left, not inculding the creation and
       // annihilation matrices at the end points. the result is an N x N matrix-valued function of tau.
@@ -320,6 +319,42 @@ namespace triqs_xca::dense {
       multiply_prefactor(T, backbone);
       int diag_order_sign = 1; // (m % 2 == 1) ? -1 : 1;
       T *= diag_order_sign * backbone.prefactor_sign;
+
+      nda::array<dcomplex, 3> Tmuop = nda::zeros<dcomplex>(r, Gt.extent(1), Gt.extent(1));
+
+      for (int mu = 0; mu < mu_ops.extent(0); ++mu) {
+        for (int t = 0; t < r; ++t) 
+          Tmuop(t, _, _) = matmul(U(t, _, _), matmul(mu_ops(mu, _, _), T(t, _, _)));
+
+        for (int kap = 0; kap < kap_ops.extent(0); ++kap) {
+          for (int t = 0; t < r; ++t) 
+            correlator(t, mu, kap) += trace(matmul(Tmuop(t, _, _), kap_ops(kap, _, _)));
+        }
+      }
+
+      backbone.reset_all_inds(); // reset directions, pole indices, and orbital indices for the next iteration
+
+      return correlator;
     }
+
+    int DenseDiagramEvaluator::get_num_single_ptcle_gf_backbones(nda::array_const_view<int, 2> topology) {
+      CorrelatorBackbone backbone(topology, n);
+      return static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), backbone.m - 1));
+    }
+
+    nda::array<dcomplex, 3> DenseDiagramEvaluator::compute_single_ptcle_gf(nda::array_const_view<int, 2> topology) {
+      CorrelatorBackbone backbone(topology, n);
+      auto mu_ops = Fset.Fs;
+      auto kap_ops = Fset.F_dags;
+      return eval_correlator(backbone, mu_ops, kap_ops);
+    }
+
+    nda::array<dcomplex, 3> DenseDiagramEvaluator::compute_single_ptcle_gf(nda::array_const_view<int, 2> topology, int f_ix) {
+      CorrelatorBackbone backbone(topology, n);
+      auto mu_ops = Fset.Fs;
+      auto kap_ops = Fset.F_dags;
+      return eval_correlator(backbone, mu_ops, kap_ops, f_ix);
+    }    
+
 
 } // namespace triqs_xca::dense

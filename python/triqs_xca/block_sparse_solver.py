@@ -11,12 +11,11 @@ from adapol import anacont as adapol_anacont
 from .diag import all_connected_pairings
 
 from . import DiagramEvaluator
-
+from .dense import DenseDiagramEvaluator
 
 class BlockSparseSolver(object):
-
     
-    def __init__(self, H_loc, fundamental_operators, beta, w_max, eps, conserved_operators=[]):
+    def __init__(self, H_loc, fundamental_operators, beta, w_max, eps, conserved_operators=[], dense=False):
 
         self.H_loc = H_loc
         self.fundamental_operators = fundamental_operators
@@ -24,18 +23,30 @@ class BlockSparseSolver(object):
         self.w_max = w_max
         self.eps = eps
         self.conserved_operators = conserved_operators
+        self.dense = dense
 
         self.mesh_tau = MeshDLRImTime(beta=self.beta, statistic='Fermion', w_max=self.w_max, eps=self.eps)
 
         self.ad = AtomDiag(self.H_loc, self.fundamental_operators, self.conserved_operators)
         print_atom_diag_info(self.ad)
 
-        self.G0 = atomic_pseudo_particle_greens_function(self.ad, self.beta, self.mesh_tau)
+        if self.dense:
+            self.G0 = atomic_pseudo_particle_greens_function_dense(self.ad, self.beta, self.mesh_tau)
+        else:
+            self.G0 = atomic_pseudo_particle_greens_function(self.ad, self.beta, self.mesh_tau)
+
         self.G = self.G0.copy()
         self.Sigma = self.get_zero_pseudo_particle_propagator()
 
         print(logo())
-
+        print()
+        print(f'dense = {self.dense}')
+        if dense:
+            print('conserved_operators dissregarded (dense solver does not exploit symmetries)')
+        else:
+            print(f'conserved_operators = {self.conserved_operators}')
+        print()
+    
 
     def set_hybridization(self, Delta_iw, eps=None): # FIXME! Delta_tau on DLR mesh
 
@@ -57,10 +68,14 @@ class BlockSparseSolver(object):
 
     def init_diagram_evaluator(self):
         
-        self.d = DiagramEvaluator(
-            self.beta, self.w_max * self.beta, self.eps, # -- Todo: Get this info from self.G
-            self.hyb.poles, self.hyb.coefficients,
-            self.G, self.ad)
+        if self.dense:
+            self.d = DenseDiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.G, self.ad)
+        else:
+            self.d = DiagramEvaluator(
+                self.beta, self.w_max * self.beta, self.eps, # -- Todo: Get this info from self.G
+                self.hyb.poles, self.hyb.coefficients,
+                self.G, self.ad)
+
 
     def pseudo_particle_greens_function(self):
         return self.G
@@ -100,7 +115,10 @@ class BlockSparseSolver(object):
     
 
     def get_zero_pseudo_particle_propagator(self):
-        return zero_pseudo_particle_propagator(self.ad, self.mesh_tau)
+        if self.dense:
+            return zero_pseudo_particle_propagator_dense(self.ad, self.mesh_tau)
+        else:
+            return zero_pseudo_particle_propagator(self.ad, self.mesh_tau)
 
 
     def get_zero_single_particle_greens_function(self):
@@ -159,9 +177,7 @@ def logo():
  \     / /    \  \/  /  /_\  \
  /     \ \     \____/    |    \
 /___/\  \ \______  /\____|__  /
-      \_/        \/         \/  [github.com/TRIQS/xca]
-
-    [[Block-Sparse]]"""
+      \_/        \/         \/  [github.com/TRIQS/xca]"""
 
 
 class Dummy(object):
@@ -185,6 +201,14 @@ def hamiltonian_matrix(ad):
     return H_mat
 
 
+def zero_pseudo_particle_propagator_dense(ad, mesh_tau):
+
+    G_tau = Gf(mesh=mesh_tau, target_shape=[ad.full_hilbert_space_dim]*2)
+    G_tau.data[:] = 0.
+    
+    return G_tau
+
+
 def zero_pseudo_particle_propagator(ad, mesh_tau):
 
     G_tau_blocks = []
@@ -198,6 +222,12 @@ def zero_pseudo_particle_propagator(ad, mesh_tau):
 
     return G_tau
         
+
+def atomic_pseudo_particle_greens_function_dense(ad, beta, mesh_tau):
+    G_b_tau = atomic_pseudo_particle_greens_function(ad, beta, mesh_tau)
+    G_tau = pseudo_particle_block_gf_to_dense(G_b_tau, ad)
+    return G_tau
+
 
 def atomic_pseudo_particle_greens_function(ad, beta, mesh_tau):
 
