@@ -1,4 +1,4 @@
-""" Analytic test of diagrammatics for a single Fermion
+r""" Analytic test of diagrammatics for a single Fermion
 (and comparison to Z. Huang's code)
 
 Using a hybridization function with a single pole $\omega$
@@ -131,7 +131,8 @@ def make_Delta_with_cont_spec_mat( Z, rho, a=-1.0, b=1.0, eps=1e-12):
     return Delta[:, None, None] * T[None, :, :]
 
 
-def test_oca_diagram_cf_block_sparse_and_dense(e1=0.8, beta=2.0, conserved_operators='none', verbose=False):
+def test_oca_diagram_cf_block_sparse_and_dense(
+        e1=0.8, beta=2.0, conserved_operators='none', verbose=False, dense=False):
 
     print('='*72)
     print('='*72)
@@ -221,7 +222,8 @@ def test_oca_diagram_cf_block_sparse_and_dense(e1=0.8, beta=2.0, conserved_opera
     
     BSS = BlockSparseSolver(
         H, fops, beta, w_max, eps,
-        conserved_operators=[N_op],
+        conserved_operators=conserved_operators,
+        dense=dense,
         )
 
     #BSS.set_hybridization(Delta_w)
@@ -237,8 +239,9 @@ def test_oca_diagram_cf_block_sparse_and_dense(e1=0.8, beta=2.0, conserved_opera
 
     G_S = S.S.G0_iaa
     
-    G_BSS = pseudo_particle_block_gf_to_dense(
-        BSS.pseudo_particle_greens_function(), BSS.ad)
+    G_BSS = BSS.pseudo_particle_greens_function()
+    if not dense: 
+        G_BSS = pseudo_particle_block_gf_to_dense(G_BSS, BSS.ad)
 
     G_diff = np.max(np.abs(G_BSS.data - G_S))
     print(f'G_diff = {G_diff:2.2E}')
@@ -280,8 +283,9 @@ def test_oca_diagram_cf_block_sparse_and_dense(e1=0.8, beta=2.0, conserved_opera
 
             t2 = time.time()
 
-            d.Sigma_BSS_block = BSS.pseudo_particle_self_energy_topology(topology)
-            d.Sigma_BSS = pseudo_particle_block_gf_to_dense(d.Sigma_BSS_block, BSS.ad)
+            d.Sigma_BSS = BSS.pseudo_particle_self_energy_topology(topology)
+            if not dense:
+                d.Sigma_BSS = pseudo_particle_block_gf_to_dense(d.Sigma_BSS, BSS.ad)
 
             #d.Sigma_BSS.data[:] *= sign # FIXME! Different sign convention?!?
             d.Sigma_BSS.data[:] *= -pow(-1, d.order) # FIXME! Different sign convention?!?
@@ -599,7 +603,12 @@ if __name__ == '__main__':
         'none',
         'total_density', 
         ]
-    
-    for op in ops:
-        for e1 in [+0.8, -0.8]:
-            test_oca_diagram_cf_block_sparse_and_dense(e1=e1, beta=2.0, conserved_operators=op, verbose=False)
+
+    for e1 in [+0.8, -0.8]:
+        
+        test_oca_diagram_cf_block_sparse_and_dense(
+            e1=e1, beta=2.0, dense=True, verbose=False)
+        
+        for op in ops:
+            test_oca_diagram_cf_block_sparse_and_dense(
+                e1=e1, beta=2.0, conserved_operators=op, verbose=False)
