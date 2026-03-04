@@ -24,9 +24,11 @@ using triqs_xca::block_sparse::DiagramEvaluator;
 
 using triqs_xca::atom_diag::get_operators;
 using triqs_xca::atom_diag::get_operators_dense;
-using triqs_xca::atom_diag::get_full_h_atomic_perm;
+using triqs_xca::atom_diag::get_full_h_atomic;
 using triqs_xca::atom_diag::get_hamiltonian_blocks;
 using triqs_xca::atom_diag::ad_to_atom_prop;
+
+using triqs_xca::atom_diag::get_tensor_in_atom_diag_subspace;
 
 TEST(Backbone, flat_index) {
   nda::array<int, 2> topology = {{0, 2}, {1, 4}, {3, 5}};
@@ -217,7 +219,7 @@ TEST(Backbone, spin_flip_fermion) {
   auto result = BlockDiagOpFun(result_gf);
 
   // get dense Gt, field operators
-  auto H_mat    = get_full_h_atomic_perm(ad);
+  auto H_mat    = get_full_h_atomic(ad);
   auto Gt_dense = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
   auto Fset     = get_operators_dense(ad, hyb_coeffs);
 
@@ -228,11 +230,9 @@ TEST(Backbone, spin_flip_fermion) {
   duration          = end - start;
   auto result_dense = D2.Sigma;
 
-  int s0 = 0, s1 = 0;
   for (int i = 0; i < Gt_block_sizes.size(); i++) {
-    s1 += Gt_block_sizes[i];
-    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), eps);
-    s0 = s1;
+    auto result_dense_block = get_tensor_in_atom_diag_subspace(result_dense, i, ad);
+    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense_block)), eps);
   }
 }
 
@@ -290,7 +290,7 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
   auto result                            = BlockDiagOpFun(result_gf);
 
   // get dense Gt, field operators
-  auto H_mat    = get_full_h_atomic_perm(ad);
+  auto H_mat    = get_full_h_atomic(ad);
   auto Gt_dense = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
   auto Fset     = get_operators_dense(ad, hyb_coeffs);
 
@@ -301,11 +301,9 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
   duration          = end - start;
   auto result_dense = D2.Sigma;
 
-  int s0 = 0, s1 = 0;
   for (int i = 0; i < Gt_block_sizes.size(); i++) {
-    s1 += Gt_block_sizes[i];
-    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), eps);
-    s0 = s1;
+    auto result_dense_block = get_tensor_in_atom_diag_subspace(result_dense, i, ad);
+    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense_block)), eps);
   }
 }
 
@@ -475,7 +473,7 @@ TEST(Backbone, spin_flip_fermion_aaa) {
   auto result                            = BlockDiagOpFun(result_gf);
 
   // get dense Gt, field operators
-  auto H_mat    = get_full_h_atomic_perm(ad);
+  auto H_mat    = get_full_h_atomic(ad);
   auto Gt_dense = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
   auto Fset     = get_operators_dense(ad, hyb_coeffs);
 
@@ -487,11 +485,9 @@ TEST(Backbone, spin_flip_fermion_aaa) {
   duration          = end - start;
   auto result_dense = D2.Sigma;
 
-  int s0 = 0, s1 = 0;
   for (int i = 0; i < Gt_block_sizes.size(); i++) {
-    s1 += Gt_block_sizes[i];
-    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), eps);
-    s0 = s1;
+    auto result_dense_block = get_tensor_in_atom_diag_subspace(result_dense, i, ad);
+    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense_block)), eps);
   }
 }
 
@@ -573,7 +569,7 @@ TEST(Backbone, spin_flip_fermion_all_sym_aaa) {
   auto result                            = BlockDiagOpFun(result_gf);
 
   // get dense Gt, field operators
-  auto H_mat    = get_full_h_atomic_perm(ad);
+  auto H_mat    = get_full_h_atomic(ad);
   auto Gt_dense = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
   auto Fset     = get_operators_dense(ad, hyb_coeffs);
 
@@ -585,11 +581,9 @@ TEST(Backbone, spin_flip_fermion_all_sym_aaa) {
   duration          = end - start;
   auto result_dense = D2.Sigma;
 
-  int s0 = 0, s1 = 0;
   for (int i = 0; i < Gt_block_sizes.size(); i++) {
-    s1 += Gt_block_sizes[i];
-    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense(_, range(s0, s1), range(s0, s1)))), eps);
-    s0 = s1;
+    auto result_dense_block = get_tensor_in_atom_diag_subspace(result_dense, i, ad);
+    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense_block)), eps);
   }
 }
 

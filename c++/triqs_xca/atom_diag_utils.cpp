@@ -33,26 +33,6 @@ nda::matrix<double> get_full_h_atomic(const triqs_atom_diag &ad) {
   return H_mat;
 }
 
-nda::matrix<double> get_full_h_atomic_perm(const triqs_atom_diag &ad) {
-  // Get full Hamiltonian matrix
-  auto H_mat = get_full_h_atomic(ad);
-
-  // Create permutation based on Fock state ordering
-  std::vector<unsigned long> H_perm;
-  for (int s = 0; s < ad.n_subspaces(); ++s) {
-    auto fock_states = ad.get_fock_states(s);
-    for (auto state : fock_states) { H_perm.push_back(state); }
-  }
-
-  // Apply permutation
-  nda::matrix<double> H_mat_perm = nda::zeros<double>(H_mat.extent(0), H_mat.extent(1));
-  for (int i = 0; i < H_mat.extent(0); ++i) {
-    for (int j = 0; j < H_mat.extent(1); ++j) { H_mat_perm(i, j) = H_mat(H_perm[i], H_perm[j]); }
-  }
-
-  return H_mat_perm;
-}
-
 nda::matrix<double> get_full_operator_matrix(const triqs_atom_diag &ad, int oidx, bool is_creation) {
   int dim               = ad.get_full_hilbert_space_dim();
   nda::matrix<double> op_mat = nda::zeros<double>(dim, dim);
@@ -330,28 +310,44 @@ std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const triqs_atom_d
 }
 
 DenseFSet get_operators_dense(const triqs_atom_diag &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
-  // get Fock state ordering
-  std::vector<unsigned long> H_perm;
-  for (int s = 0; s < ad.n_subspaces(); ++s) {
-    auto fock_states = ad.get_fock_states(s);
-    for (auto state : fock_states) { H_perm.push_back(state); }
-  }
+
+  int norb = hyb_coeffs.extent(1);
+  int N = ad.get_full_hilbert_space_dim();
 
   // Get full operator matrices
-  nda::array<dcomplex, 3> Fs{hyb_coeffs.extent(1), H_perm.size(), H_perm.size()};
-  nda::array<dcomplex, 3> Fdags{hyb_coeffs.extent(1), H_perm.size(), H_perm.size()};
+  nda::array<dcomplex, 3> Fs{norb, N, N};
+  nda::array<dcomplex, 3> Fdags{norb, N, N};
 
-  for (int oidx = 0; oidx < hyb_coeffs.extent(1); ++oidx) {
-    auto c_full    = get_full_operator_matrix(ad, oidx, false);
-    auto cdag_full = get_full_operator_matrix(ad, oidx, true);
-    for (int i = 0; i < H_perm.size(); ++i) {
-      for (int j = 0; j < H_perm.size(); ++j) {
-        Fs(oidx, i, j)    = c_full(H_perm[i], H_perm[j]);
-        Fdags(oidx, i, j) = cdag_full(H_perm[i], H_perm[j]);
+  for (int oidx = 0; oidx < hyb_coeffs.extent(1); ++oidx) {    
+    Fs(oidx, _, _)    = get_full_operator_matrix(ad, oidx, false);
+    Fdags(oidx, _, _) = get_full_operator_matrix(ad, oidx, true);
+  }
+  return {Fs, Fdags, hyb_coeffs};
+}
+
+nda::array<dcomplex, 3> get_tensor_in_atom_diag_subspace(
+  nda::array_const_view<dcomplex, 3> tensor_full, int subspace_index, triqs_atom_diag const &ad) {
+  // Permute a tensor from the full Hilbert space to the Fock state ordered basis
+
+  int r = tensor_full.extent(0);
+  int N = tensor_full.extent(1);
+
+  std::vector<unsigned long> H_perm;
+  auto fock_states = ad.get_fock_states(subspace_index);
+  for (auto state : fock_states) H_perm.push_back(state);
+
+  int N_sub = fock_states.size();
+  nda::array<dcomplex, 3> tensor_subspace = nda::zeros<dcomplex>(r, N_sub, N_sub);
+
+  for(int t = 0; t < r; ++t) {
+    for (int i = 0; i < N_sub; ++i) {
+      for (int j = 0; j < N_sub; ++j) { 
+        tensor_subspace(t, i, j) = tensor_full(t, H_perm[i], H_perm[j]); 
       }
     }
   }
-  return {Fs, Fdags, hyb_coeffs};
+
+  return tensor_subspace;
 }
 
 } // namespace triqs_xca::atom_diag

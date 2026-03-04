@@ -94,4 +94,14 @@ std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const triqs_atom_d
  */
 DenseFSet get_operators_dense(const triqs_atom_diag &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs);
 
+/**
+ * @brief Get a dense tensor in the full Hilbert resticted to one atom_diag subspace
+ * @param[in] tensor_full Full tensor in the Hilbert space
+ * @param[in] subspace_index Index of the subspace
+ * @param[in] ad AtomDiag object
+ * @return tensor_subspace Tensor in the subspace
+ */
+nda::array<dcomplex, 3> get_tensor_in_atom_diag_subspace(nda::array_const_view<dcomplex, 3> tensor_full, int subspace_index, triqs_atom_diag const &ad);
+
+
 } // namespace triqs_xca::atom_diag

@@ -21,7 +21,7 @@ using triqs_xca::block_sparse::DiagramEvaluator;
 
 using triqs_xca::atom_diag::get_operators;
 using triqs_xca::atom_diag::get_operators_dense;
-using triqs_xca::atom_diag::get_full_h_atomic_perm;
+using triqs_xca::atom_diag::get_full_h_atomic;
 using triqs_xca::atom_diag::get_hamiltonian_blocks;
 using triqs_xca::atom_diag::ad_to_atom_prop;
 
@@ -215,7 +215,7 @@ TEST(Backbone, spin_flip_fermion) {
   std::cout << "OCA correlator evaluation took " << elapsed.count() << " seconds.\n";
 
   // compare to dense backbone result
-  auto H_mat               = get_full_h_atomic_perm(ad);
+  auto H_mat               = get_full_h_atomic(ad);
   auto Gt_dense            = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
   auto Fset                = get_operators_dense(ad, hyb_coeffs);
   auto C                   = DenseDiagramEvaluator(beta, eps, itops, hyb, hyb_refl, dlr_rf, Gt_dense, Fset);
@@ -315,7 +315,7 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
   std::cout << "OCA correlator evaluation took " << elapsed.count() << " seconds.\n";
 
   // compare to dense backbone result
-  auto H_mat               = get_full_h_atomic_perm(ad);
+  auto H_mat               = get_full_h_atomic(ad);
   auto Gt_dense            = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
   auto Fset                = get_operators_dense(ad, hyb_coeffs);
   auto C                   = DenseDiagramEvaluator(beta, eps, itops, hyb, hyb_refl, dlr_rf, Gt_dense, Fset);
