@@ -132,7 +132,7 @@ def make_Delta_with_cont_spec_mat( Z, rho, a=-1.0, b=1.0, eps=1e-12):
 
 
 def test_oca_diagram_cf_block_sparse_and_dense(
-        e1=0.8, beta=2.0, conserved_operators='none', verbose=False, dense=False):
+        e1=0.8, beta=2.0, conserved_operators='none', verbose=False):
 
     print('='*72)
     print('='*72)
@@ -171,6 +171,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(
     conserved_operators = dict(
         none=[],
         total_density=[N_op],
+        automatic=None,
         )[conserved_operators]
     
     print(f'conserved_operators = {conserved_operators}')    
@@ -223,7 +224,6 @@ def test_oca_diagram_cf_block_sparse_and_dense(
     BSS = BlockSparseSolver(
         H, fops, beta, w_max, eps,
         conserved_operators=conserved_operators,
-        dense=dense,
         )
 
     #BSS.set_hybridization(Delta_w)
@@ -239,8 +239,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(
     G_S = S.S.G0_iaa
     
     G_BSS = BSS.pseudo_particle_greens_function()
-    if not dense: 
-        G_BSS = pseudo_particle_block_gf_to_dense(G_BSS, BSS.ad)
+    G_BSS = pseudo_particle_block_gf_to_dense(G_BSS, BSS.ad)
 
     G_diff = np.max(np.abs(G_BSS.data - G_S))
     print(f'G_diff = {G_diff:2.2E}')
@@ -251,9 +250,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(
     np.testing.assert_almost_equal(Z, 1.0)
 
     G_DYSON_BSS = BSS.solve_dyson(BSS.Sigma, BSS.eta) # Solving Dyson with zero self-energy
-
-    if not dense: 
-        G_DYSON_BSS = pseudo_particle_block_gf_to_dense(G_DYSON_BSS, BSS.ad)
+    G_DYSON_BSS = pseudo_particle_block_gf_to_dense(G_DYSON_BSS, BSS.ad)
     np.testing.assert_array_almost_equal(G_DYSON_BSS.data, G_S)
 
     # -- Compare self-energy topologies
@@ -293,8 +290,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(
             t2 = time.time()
 
             d.Sigma_BSS = BSS.pseudo_particle_self_energy_topology(topology)
-            if not dense:
-                d.Sigma_BSS = pseudo_particle_block_gf_to_dense(d.Sigma_BSS, BSS.ad)
+            d.Sigma_BSS = pseudo_particle_block_gf_to_dense(d.Sigma_BSS, BSS.ad)
 
             #d.Sigma_BSS.data[:] *= sign # FIXME! Different sign convention?!?
             d.Sigma_BSS.data[:] *= -pow(-1, d.order) # FIXME! Different sign convention?!?
@@ -610,14 +606,11 @@ if __name__ == '__main__':
 
     ops = [
         'none',
-        'total_density', 
+        'total_density',
+        'automatic',
         ]
 
-    for e1 in [+0.8, -0.8]:
-        
-        test_oca_diagram_cf_block_sparse_and_dense(
-            e1=e1, beta=2.0, dense=True, verbose=False)
-        
+    for e1 in [+0.8, -0.8]:        
         for op in ops:
             test_oca_diagram_cf_block_sparse_and_dense(
                 e1=e1, beta=2.0, conserved_operators=op, verbose=False)

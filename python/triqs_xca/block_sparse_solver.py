@@ -3,7 +3,7 @@ import numpy as np
 
 import triqs.utility.mpi as mpi
 
-from triqs.gf import Gf, MeshDLRImTime, BlockGf
+from triqs.gf import Gf, MeshDLRImTime, BlockGf, make_gf_dlr
 from triqs.atom_diag import AtomDiag
 
 from adapol import anacont as adapol_anacont
@@ -18,7 +18,7 @@ from .dense import DenseDiagramEvaluator
 
 class BlockSparseSolver(object):
     
-    def __init__(self, H_loc, fundamental_operators, beta, w_max, eps, conserved_operators=[], dense=False):
+    def __init__(self, H_loc, fundamental_operators, beta, w_max, eps, conserved_operators=None):
 
         self.H_loc = H_loc
         self.fundamental_operators = fundamental_operators
@@ -26,20 +26,24 @@ class BlockSparseSolver(object):
         self.w_max = w_max
         self.eps = eps
         self.conserved_operators = conserved_operators
-        self.dense = dense
 
         self.eta = 0. # Pseudo particle chemical potential (shift of the pseudo particle energies).
 
         self.mesh_tau = MeshDLRImTime(beta=self.beta, statistic='Fermion', w_max=self.w_max, eps=self.eps)
 
-        self.ad = AtomDiag(self.H_loc, self.fundamental_operators, self.conserved_operators)
+        if self.conserved_operators is None:
+            # Uses autopartition algorithm for symmetry discovery, when no conserved operators are provided. 
+            # This is the default, and recommended, usage.
+            self.ad = AtomDiag(self.H_loc, self.fundamental_operators) 
+            self.conserved_operators = 'automatic'
+        else:
+            self.ad = AtomDiag(self.H_loc, self.fundamental_operators, self.conserved_operators)
+
+        self.use_dense_solver = (self.conserved_operators == []) # Without symmetries, use the dense solver
+
         print_atom_diag_info(self.ad)
 
-        if self.dense:
-            self.G0 = atomic_pseudo_particle_greens_function_dense(self.ad, self.beta, self.mesh_tau)
-        else:
-            self.G0 = atomic_pseudo_particle_greens_function(self.ad, self.beta, self.mesh_tau)
-
+        self.G0 = atomic_pseudo_particle_greens_function(self.ad, self.beta, self.mesh_tau)
         self.G = self.G0.copy()
         self.Sigma = self.get_zero_pseudo_particle_propagator()
 
@@ -48,16 +52,12 @@ class BlockSparseSolver(object):
         from .pycppdlr import ImTimeOps
         ito = ImTimeOps(w_max * beta, build_dlr_rf(w_max * beta, eps)) 
 
-        G0 = [(0, self.G0)] if self.dense else self.G0
-        self.dysons = [DysonItPPSC(self.beta, ito, G0_block.data) for _, G0_block in G0]
+        self.dysons = [DysonItPPSC(self.beta, ito, G0_block.data) for _, G0_block in self.G0]
 
         print(logo())
         print()
-        print(f'dense = {self.dense}')
-        if dense:
-            print('conserved_operators dissregarded (dense solver does not exploit symmetries)')
-        else:
-            print(f'conserved_operators = {self.conserved_operators}')
+        print(f'use_dense_solver = {self.use_dense_solver}')
+        print(f'conserved_operators = {self.conserved_operators}')
         print()
     
 
@@ -81,7 +81,7 @@ class BlockSparseSolver(object):
 
     def init_diagram_evaluator(self):
         
-        if self.dense:
+        if self.use_dense_solver:
             self.d = DenseDiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.G, self.ad)
         else:
             self.d = DiagramEvaluator(
@@ -95,17 +95,14 @@ class BlockSparseSolver(object):
 
 
     def partition_function(self):
+        """ Partition function of the impurity model, computed from the pseudo particle Green's function as
 
-        def trace(g_dlr): return -np.trace(g_dlr(self.beta))
-
-        def block_trace(G_dlr_blockgf):
-            return sum([trace(g) for _, g in G_dlr_blockgf])
-
-        from triqs.gf import make_gf_dlr
-        G_dlr = make_gf_dlr(self.G)
-
-        Z = block_trace(G_dlr) if type(G_dlr) is BlockGf else trace(G_dlr)
-
+        ..math::
+            Z = -\\mathrm{Tr}[ G(\\tau=\\beta) ]
+        
+        """
+        
+        Z = -trace_dlr_imtime_BlockGf(self.G)
         assert(Z.imag < 1e-12)
         Z = Z.real
 
@@ -114,28 +111,26 @@ class BlockSparseSolver(object):
 
     def solve_dyson(self, Sigma, eta):
 
-        if self.dense:
-            assert type(Sigma) is Gf, 'Sigma must be a Gf for dense solver'
-        else:
-            assert type(Sigma) is BlockGf, 'Sigma must be a BlockGf for block_sparse solver'
+        assert type(Sigma) is BlockGf, 'Sigma must be a BlockGf'
 
         G = self.get_zero_pseudo_particle_propagator()
-        G_b = [G] if self.dense else G
-        Sigma_b = [(0, Sigma)] if self.dense else Sigma
 
-        for dyson, (bidx, sigma) in zip(self.dysons, Sigma_b):
-            G_b[bidx].data[:] = dyson.solve(sigma.data, eta)
+        for dyson, (bidx, sigma_b) in zip(self.dysons, Sigma):
+            G[bidx].data[:] = dyson.solve(sigma_b.data, eta)
 
         return G
 
 
     def pseudo_particle_self_energy(self, max_order):
+
         self.Sigma = self.get_zero_pseudo_particle_propagator()
+
         for order in range(1, max_order+1):
             self.Sigma += self.pseudo_particle_self_energy_order(order)
 
         return self.Sigma
-            
+
+
     def pseudo_particle_self_energy_order(self, order):
 
         Sigma = self.get_zero_pseudo_particle_propagator()
@@ -149,7 +144,7 @@ class BlockSparseSolver(object):
     
     
     def pseudo_particle_self_energy_topology(self, topology):
-        return self.d.compute_self_energy(topology)
+        return self.d.compute_self_energy(topology) 
 
 
     def pseudo_particle_self_energy_topology_loop(self, topology):
@@ -163,10 +158,7 @@ class BlockSparseSolver(object):
     
 
     def get_zero_pseudo_particle_propagator(self):
-        if self.dense:
-            return zero_pseudo_particle_propagator_dense(self.ad, self.mesh_tau)
-        else:
-            return zero_pseudo_particle_propagator(self.ad, self.mesh_tau)
+        return zero_pseudo_particle_propagator(self.ad, self.mesh_tau)
 
 
     def get_zero_single_particle_greens_function(self):
@@ -202,8 +194,11 @@ class BlockSparseSolver(object):
 
 
     def single_particle_greens_function_topology(self, topology):
+
         spgf = self.get_zero_single_particle_greens_function()
-        spgf.data[:] = self.d.compute_single_ptcle_gf(topology)
+
+        spgf.data[:] = self.d.compute_single_ptcle_gf(topology) # FIXME! return triqs::gfs::gf
+
         return spgf
 
 
@@ -211,11 +206,9 @@ class BlockSparseSolver(object):
         spgf = self.get_zero_single_particle_greens_function()
 
         for n in range(self.d.get_num_single_ptcle_gf_backbones(topology)):
-            spgf.data[:] += self.d.compute_single_ptcle_gf(topology, n)
+            spgf.data[:] += self.d.compute_single_ptcle_gf(topology, n) # FIXME! return triqs::gfs::gf
 
         return spgf
-
-
 
 
 def logo():
@@ -321,7 +314,7 @@ def atomic_pseudo_particle_greens_function(ad, beta, mesh_tau):
     return G_tau
 
 
-def print_atom_diag_info(ad):
+def print_atom_diag_info(ad, verbose=False):
 
     print(r"""   _____    __                   ________   .___    _____     ________
   /  _  \ _/  |_  ____    _____  \______ \  |   |  /  _  \   /  _____/
@@ -331,16 +324,17 @@ def print_atom_diag_info(ad):
         \/                    \/         \/              \/         \/  """)
 
     print(ad)
-    print(f'full_hilbert_space_dim = {ad.full_hilbert_space_dim}')
-    print(f'n_subspaces = {ad.n_subspaces}')
-    print(f'get_subspace_dims = {ad.get_subspace_dims()}')
-    print(f'fops = {ad.fops}')
-    print(f'quantum_numbers = {ad.quantum_numbers}')
-    print(f'fock_states = {ad.fock_states}')
-    print(f'unitary_matrics = {ad.unitary_matrices}')
-    print(f'gs_energy = {ad.gs_energy}')
-    print(f'energies = {ad.energies}')
-    print(f'energies + gs_energy = {[ e + ad.gs_energy for e in ad.energies]}')
+    if verbose:
+        print(f'full_hilbert_space_dim = {ad.full_hilbert_space_dim}')
+        print(f'n_subspaces = {ad.n_subspaces}')
+        print(f'get_subspace_dims = {ad.get_subspace_dims()}')
+        print(f'fops = {ad.fops}')
+        print(f'quantum_numbers = {ad.quantum_numbers}')
+        print(f'fock_states = {ad.fock_states}')
+        print(f'unitary_matrics = {ad.unitary_matrices}')
+        print(f'gs_energy = {ad.gs_energy}')
+        print(f'energies = {ad.energies}')
+        print(f'energies + gs_energy = {[ e + ad.gs_energy for e in ad.energies]}')
     print('-'*72)
 
 
@@ -355,3 +349,12 @@ def pseudo_particle_block_gf_to_dense(block_gf, ad):
         dense_gf.data[bidx] = block_gf[sidx].data
 
     return dense_gf    
+
+def trace_dlr_imtime_BlockGf(G_dlr_imtime_BlockGf):
+
+    G_dlr_coeff_BlockGf = make_gf_dlr(G_dlr_imtime_BlockGf)
+
+    def block_trace(g_dlr_coeff): 
+        return np.trace(g_dlr_coeff(g_dlr_coeff.mesh.beta))
+
+    return np.sum([block_trace(g) for _, g in G_dlr_coeff_BlockGf])

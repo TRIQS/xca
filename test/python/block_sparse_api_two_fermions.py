@@ -50,14 +50,13 @@ def make_Delta_with_cont_spec_mat( Z, rho, a=-1.0, b=1.0, eps=1e-12):
     return Delta[:, None, None] * T[None, :, :]
 
 
-def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operators='none', dense=False,verbose=False):
+def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operators='none', verbose=False):
 
     print('='*72)
     print('='*72)
     print(f'beta = {beta}')
     print(f'e1 = {e1}')
     print(f'conserved_operators = {conserved_operators}')
-    print(f'dense = {dense}')
     print('='*72)
     print('='*72)
     
@@ -94,6 +93,7 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
         none=[],
         total_density=[N_op],
         individual_density=[N_0, N_1],
+        automatic=None,
         )[conserved_operators]
     
     print(f'conserved_operators = {conserved_operators}')
@@ -155,7 +155,6 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
     BSS = BlockSparseSolver(
         H, fops, beta, w_max, eps,
         conserved_operators=conserved_operators, # calling DiagramEvaluator with a list of operators segfaults!
-        dense=dense,
         )
 
     #BSS.set_hybridization(Delta_w)
@@ -172,8 +171,7 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
     G_S = S.S.G0_iaa
     
     G_BSS = BSS.pseudo_particle_greens_function()
-    if not dense: 
-        G_BSS = pseudo_particle_block_gf_to_dense(G_BSS, BSS.ad)
+    G_BSS = pseudo_particle_block_gf_to_dense(G_BSS, BSS.ad)
 
     G_diff = np.max(np.abs(G_BSS.data - G_S))
     print(f'G_diff = {G_diff:2.2E}')
@@ -209,8 +207,7 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
             t2 = time.time()
 
             d.Sigma_BSS = BSS.pseudo_particle_self_energy_topology(topology)
-            if not dense:
-                d.Sigma_BSS = pseudo_particle_block_gf_to_dense(d.Sigma_BSS, BSS.ad)
+            d.Sigma_BSS = pseudo_particle_block_gf_to_dense(d.Sigma_BSS, BSS.ad)
 
             #d.Sigma_BSS.data[:] *= sign # FIXME! Different sign convention?!?
             d.Sigma_BSS.data[:] *= -pow(-1, d.order) # FIXME! Different sign convention?!?
@@ -379,13 +376,10 @@ if __name__ == '__main__':
         'none', 
         'total_density',
         'individual_density',
+        'automatic',
         ]
     
     for e1 in [+1.5, -1.5]:
-        
-        test_diagrams_cf_block_sparse_and_dense(
-            e1=e1, beta=2.0, dense=True, verbose=False)
-
         for op in ops:
             test_diagrams_cf_block_sparse_and_dense(
                 e1=e1, beta=2.0, conserved_operators=op, verbose=False)

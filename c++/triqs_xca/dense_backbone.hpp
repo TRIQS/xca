@@ -90,8 +90,8 @@ namespace triqs_xca::dense {
       // get number of backbones for given topology
       C2PY_IGNORE int get_num_self_energy_backbones(Backbone &backbone);                  
 
-      triqs::gfs::gf<triqs::mesh::dlr_imtime> compute_self_energy(nda::array_const_view<int, 2> topology);           // compute self-energy for given topology
-      triqs::gfs::gf<triqs::mesh::dlr_imtime> compute_self_energy(nda::array_const_view<int, 2> topology, int f_ix); // compute self-energy for given topology and flat index
+      triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy(nda::array_const_view<int, 2> topology);           // compute self-energy for given topology
+      triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy(nda::array_const_view<int, 2> topology, int f_ix); // compute self-energy for given topology and flat index
       // get number of backbones for given topology
       int get_num_self_energy_backbones(nda::array_const_view<int, 2> topology);
 
@@ -129,7 +129,7 @@ namespace triqs_xca::dense {
        * @param[in] ad atom_diag object with Hamiltonian and field operators
        */
       DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-                            triqs::gfs::gf_view<triqs::mesh::dlr_imtime> G_ppsc, triqs::atom_diag::atom_diag<false> const &ad);
+                            triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, triqs::atom_diag::atom_diag<false> const &ad);
 
       virtual ~DenseDiagramEvaluator() = default;
     };

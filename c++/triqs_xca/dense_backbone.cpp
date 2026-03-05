@@ -46,9 +46,9 @@ namespace triqs_xca::dense {
 
     DenseDiagramEvaluator::DenseDiagramEvaluator(
       nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-      triqs::gfs::gf_view<triqs::mesh::dlr_imtime> G_ppsc, triqs::atom_diag::atom_diag<false> const &ad)
+      triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, triqs::atom_diag::atom_diag<false> const &ad)
       :
-      tau_mesh(G_ppsc.mesh()),
+      tau_mesh(G_ppsc[0].mesh()),
       beta(tau_mesh.beta()),
       itops(tau_mesh.dlr_it()),
       dlr_it(itops.get_itnodes()),
@@ -56,7 +56,7 @@ namespace triqs_xca::dense {
       hyb(aaa_coefs2vals(beta, tau_mesh.w_max() * tau_mesh.beta(), tau_mesh.eps(), hyb_coeffs, hyb_poles)),
       hyb_refl(-itops.reflect(hyb)), // Follow sign convention of block_sparse_backbone for reflected hybridization function.
       hyb_poles(beta * hyb_poles), 
-      Gt(G_ppsc.data()),
+      Gt(G_ppsc[0].data()),
       Fset(get_operators_dense(ad, hyb_coeffs)),
       r(itops.rank()),
       n(hyb.extent(1)),
@@ -79,20 +79,20 @@ namespace triqs_xca::dense {
       Sigma = 0;
     }
 
-    triqs::gfs::gf<triqs::mesh::dlr_imtime> DenseDiagramEvaluator::compute_self_energy(nda::array_const_view<int, 2> topology) {
+    triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DenseDiagramEvaluator::compute_self_energy(nda::array_const_view<int, 2> topology) {
       Backbone backbone(topology, n);
       eval_self_energy(backbone);
       auto sigma_gf = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, this->Sigma);
       reset();
-      return sigma_gf;
+      return std::vector{sigma_gf};
     }
 
-    triqs::gfs::gf<triqs::mesh::dlr_imtime> DenseDiagramEvaluator::compute_self_energy(nda::array_const_view<int, 2> topology, int f_ix) {
+    triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DenseDiagramEvaluator::compute_self_energy(nda::array_const_view<int, 2> topology, int f_ix) {
       Backbone backbone(topology, n);
       eval_self_energy_fixed_indices(backbone, f_ix); // evaluate the diagram with these directions, poles, and orbital indices
       auto sigma_gf = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, this->Sigma);
       reset();
-      return sigma_gf;
+      return std::vector{sigma_gf};
     }
 
     void DenseDiagramEvaluator::multiply_left_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, int v_ix) {
@@ -344,16 +344,33 @@ namespace triqs_xca::dense {
 
     nda::array<dcomplex, 3> DenseDiagramEvaluator::compute_single_ptcle_gf(nda::array_const_view<int, 2> topology) {
       CorrelatorBackbone backbone(topology, n);
+      
       auto mu_ops = Fset.Fs;
       auto kap_ops = Fset.F_dags;
+
+      /*
+      auto correlator = triqs::gfs::gf<triqs::mesh::dlr_imtime>(
+        tau_mesh, eval_correlator(backbone, mu_ops, kap_ops));
+      return correlator;
+      */
+
       return eval_correlator(backbone, mu_ops, kap_ops);
+
     }
 
     nda::array<dcomplex, 3> DenseDiagramEvaluator::compute_single_ptcle_gf(nda::array_const_view<int, 2> topology, int f_ix) {
       CorrelatorBackbone backbone(topology, n);
       auto mu_ops = Fset.Fs;
       auto kap_ops = Fset.F_dags;
+
+      /*
+      auto correlator = triqs::gfs::gf<triqs::mesh::dlr_imtime>(
+        tau_mesh, eval_correlator(backbone, mu_ops, kap_ops, f_ix));
+      return correlator;
+      */
+
       return eval_correlator(backbone, mu_ops, kap_ops, f_ix);
+
     }    
 
 
