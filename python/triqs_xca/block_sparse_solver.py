@@ -3,10 +3,10 @@ import numpy as np
 
 import triqs.utility.mpi as mpi
 
-from triqs.gf import Gf, MeshDLRImTime, BlockGf, make_gf_dlr
+from triqs.gf import Gf, MeshDLRImTime, BlockGf, make_gf_dlr, make_gf_dlr_imfreq
 from triqs.atom_diag import AtomDiag
 
-from adapol import anacont as adapol_anacont
+from adapol.anacont import anacont_triqs
 
 from .diag import all_connected_pairings
 
@@ -18,18 +18,22 @@ from .dense import DenseDiagramEvaluator
 
 class BlockSparseSolver(object):
     
-    def __init__(self, H_loc, fundamental_operators, beta, w_max, eps, conserved_operators=None):
+    def __init__(self, H_loc, beta, w_max, eps, gf_struct, conserved_operators=None):
 
         self.H_loc = H_loc
-        self.fundamental_operators = fundamental_operators
+        self.gf_struct = gf_struct
         self.beta = beta
         self.w_max = w_max
         self.eps = eps
         self.conserved_operators = conserved_operators
 
+        self.fundamental_operators = fundamental_operators_from_gf_struct(gf_struct)
+
         self.eta = 0. # Pseudo particle chemical potential (shift of the pseudo particle energies).
 
         self.mesh_tau = MeshDLRImTime(beta=self.beta, statistic='Fermion', w_max=self.w_max, eps=self.eps)
+
+        self.Delta_tau = BlockGf(mesh=self.mesh_tau, gf_struct=self.gf_struct)
 
         if self.conserved_operators is None:
             # Uses autopartition algorithm for symmetry discovery, when no conserved operators are provided. 
@@ -61,15 +65,51 @@ class BlockSparseSolver(object):
         print()
     
 
-    def set_hybridization(self, Delta_iw, eps=None): # FIXME! Delta_tau on DLR mesh
+    def fit_hybridization(self, tol=None):
 
-        self.tol_adapol = self.eps if eps is None else eps
+        self.tol_adapol = self.eps if tol is None else tol
 
-        iwn = np.array([ complex(iw) for iw in Delta_iw.mesh ])
+        Delta_iw = make_gf_dlr_imfreq(self.Delta_tau)
+
+        Delta_iw_dense = self.__from_blockgf_to_dense(Delta_iw)
+
+        _, fit_error, poles, pole_weights = anacont_triqs(Delta_iw_dense, tol=self.tol_adapol, debug=True)
+
+        self.set_hybridization_poles_and_coefficients(poles, pole_weights)
+
+        self.hyb.fit_error = fit_error
+
+
+    def __from_blockgf_to_dense(self, G):
+
+        for b, g in G:
+            assert( len(g.target_shape) == 2)
+            assert( g.target_shape[0] == g.target_shape[1] )
+
+        norb = sum([ g.target_shape[0] for b, g in G ])
         
-        func, fitting_error, pol, weight = adapol_anacont(Delta_iw.data, iwn, tol=self.tol_adapol)
+        G_dense = Gf(mesh=G.mesh, target_shape=[norb]*2)
         
-        self.set_hybridization_poles_and_coefficients(pol, weight)
+        sidx = 0
+        for b, g in G:
+            size = g.target_shape[0]
+            G_dense.data[:, sidx:sidx+size, sidx:sidx+size] = g.data
+            sidx += size
+
+        return G_dense
+
+
+    def __from_dense_to_blockgf(self, G_dense, gf_struct):
+
+        G = BlockGf(mesh=G_dense.mesh, gf_struct=gf_struct)
+
+        sidx = 0
+        for b, g in G:
+            size = g.target_shape[0]
+            g.data[:] = g_dense.data[:, sidx:sidx+size, sidx:sidx+size]
+            sidx += size
+
+        return G
 
 
     def set_hybridization_poles_and_coefficients(self, poles, coefficients):
@@ -90,11 +130,44 @@ class BlockSparseSolver(object):
                 self.G, self.ad)
 
 
+    def solve(self, max_order, tol=1e-7, maxiter=10, mix=1.):
+
+        for iter in range(1, maxiter+1):
+
+            self.Sigma = self.pseudo_particle_self_energy(max_order)
+            G_new = self.solve_dyson(self.Sigma, self.eta)
+            G_new = self.normalize_pseudo_particle_gf(G_new)
+            Z = self.partition_function(G_new)
+
+            diff_G = max_abs_diff_BlockGf(G_new, self.G)
+
+            print(f'iter = {iter}, diff_G = {diff_G:2.2E}, Z-1 = {Z-1:2.2E}')
+
+            self.G = mix * G_new + (1 - mix) * self.G
+
+            if diff_G < tol:
+                print(f'Converged after {iter} iterations with diff_G = {diff_G:2.2E} < tol = {tol:2.2E}')
+                break
+
+
+    def normalize_pseudo_particle_gf(self, G):
+        """ Normalize the pseudo particle Green's function by updating the pseudo particle chemical potential eta, such that the partition function Z is equal to 1. """
+
+        Z = self.partition_function_from_ppgf(G)
+        self.eta += -np.log(Z) / self.beta
+
+        print(f'Updated eta = {self.eta:2.2E} to normalize Z = {Z:2.2E} to 1.')
+
+        G_new = self.solve_dyson(self.Sigma, self.eta)
+
+        return G_new
+
+
     def pseudo_particle_greens_function(self):
         return self.G
 
 
-    def partition_function(self):
+    def partition_function_from_ppgf(self, G):
         """ Partition function of the impurity model, computed from the pseudo particle Green's function as
 
         ..math::
@@ -102,11 +175,15 @@ class BlockSparseSolver(object):
         
         """
         
-        Z = -trace_dlr_imtime_BlockGf(self.G)
+        Z = -trace_dlr_imtime_BlockGf(G)
         assert(Z.imag < 1e-12)
         Z = Z.real
 
         return Z
+
+
+    def partition_function(self):
+        return self.partition_function_from_ppgf(self.G)
 
 
     def solve_dyson(self, Sigma, eta):
@@ -333,6 +410,10 @@ def print_atom_diag_info(ad, verbose=False):
     print('-'*72)
 
 
+def max_abs_diff_BlockGf(G1, G2):
+    return np.max([ np.max(np.abs(g1.data - g2.data)) for (_, g1), (_, g2) in zip(G1, G2) ])
+
+
 def pseudo_particle_block_gf_to_dense(block_gf, ad):
 
     mesh = block_gf[0].mesh
@@ -345,6 +426,7 @@ def pseudo_particle_block_gf_to_dense(block_gf, ad):
 
     return dense_gf    
 
+
 def trace_dlr_imtime_BlockGf(G_dlr_imtime_BlockGf):
 
     G_dlr_coeff_BlockGf = make_gf_dlr(G_dlr_imtime_BlockGf)
@@ -353,3 +435,10 @@ def trace_dlr_imtime_BlockGf(G_dlr_imtime_BlockGf):
         return np.trace(g_dlr_coeff(g_dlr_coeff.mesh.beta))
 
     return np.sum([block_trace(g) for _, g in G_dlr_coeff_BlockGf])
+
+
+def fundamental_operators_from_gf_struct(gf_struct):
+    fundamental_operators = []
+    for s, n in gf_struct:
+        fundamental_operators += [ (s, i) for i in range(n) ]
+    return fundamental_operators

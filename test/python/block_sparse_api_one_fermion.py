@@ -157,8 +157,6 @@ def test_oca_diagram_cf_block_sparse_and_dense(
     
     gf_struct = [['0', 1]]
 
-    fops = [ ('0', 0) ]
-
     from triqs.operators import n
     
     N_op = n('0', 0) 
@@ -222,7 +220,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(
     # -- Block sparse solver
     
     BSS = BlockSparseSolver(
-        H, fops, beta, w_max, eps,
+        H, beta, w_max, eps, gf_struct=gf_struct,
         conserved_operators=conserved_operators,
         )
 

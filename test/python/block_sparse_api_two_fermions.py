@@ -76,8 +76,6 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
     
     gf_struct = [['0', 2]]
 
-    fops = [ ('0', 0),  ('0', 1) ]
-
     from triqs.operators import n
 
     N_0 = n('0', 0)
@@ -153,7 +151,7 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
     # -- Block sparse solver
 
     BSS = BlockSparseSolver(
-        H, fops, beta, w_max, eps,
+        H, beta, w_max, eps, gf_struct=gf_struct,
         conserved_operators=conserved_operators, # calling DiagramEvaluator with a list of operators segfaults!
         )
 

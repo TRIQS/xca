@@ -77,8 +77,6 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     spin_names = ('up', 'dn')
     gf_struct = [['up', 2], ['dn', 2]]
 
-    fops = [ (sn, on) for sn, on in product(spin_names, range(n_orb)) ]
-
     from triqs.operators import n
     
     N_up = n('up', 0) + n('up', 1)
@@ -117,7 +115,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     # -- Block sparse solver
 
     BSS = BlockSparseSolver(
-        H, fops, beta, w_max, eps,
+        H, beta, w_max, eps, gf_struct=gf_struct,
         #conserved_operators=[],
         #conserved_operators=[N_up + N_dn],
         conserved_operators=[N_up, N_dn],
