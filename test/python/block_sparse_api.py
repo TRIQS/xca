@@ -183,9 +183,6 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
             d.Sigma_BSS = pseudo_particle_block_gf_to_dense(
                 BSS.pseudo_particle_self_energy_topology(topology), BSS.ad)
 
-            #d.Sigma_BSS.data[:] *= sign # FIXME! Different sign convention?!?
-            d.Sigma_BSS.data[:] *= -pow(-1, d.order) # FIXME! Different sign convention?!?
-
             t3 = time.time()
 
             print(f'    Sigma time ZH ({t2 - t1} s) BS ({t3 - t2} s)')

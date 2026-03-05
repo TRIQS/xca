@@ -136,23 +136,24 @@ class BlockSparseSolver(object):
         Sigma = self.get_zero_pseudo_particle_propagator()
         
         for sign, topology in all_connected_pairings(order):
-            print(f'topology = {topology}')
             topology = np.array(topology, dtype=np.int32)
-            Sigma +=  pow(-1, order) * sign * self.pseudo_particle_self_energy_topology(topology)
+            Sigma +=  pow(-1, order) * sign * self.pseudo_particle_self_energy_topology(topology) # FIXME! Signs
             
         return Sigma
     
     
     def pseudo_particle_self_energy_topology(self, topology):
-        return self.d.compute_self_energy(topology) 
+        order = len(topology)
+        return pow(-1, order+1) * self.d.compute_self_energy(topology) # FIXME! Sign convention.
 
 
     def pseudo_particle_self_energy_topology_loop(self, topology):
 
+        order = len(topology)
         Sigma = self.get_zero_pseudo_particle_propagator()
 
         for n in range(self.d.get_num_self_energy_backbones(topology)):
-            Sigma += self.d.compute_self_energy(topology, n)
+            Sigma += pow(-1, order+1) * self.d.compute_self_energy(topology, n) # FIXME! Sign convention.
 
         return Sigma
     
@@ -168,10 +169,7 @@ class BlockSparseSolver(object):
 
 
     def single_particle_greens_function(self, max_order):
-        print('--> single_particle_greens_function')
-        print(f'max_order = {max_order}')
         self.spgf = self.get_zero_single_particle_greens_function()
-        print(self.spgf)
 
         for order in range(1, max_order+1):
             self.spgf += self.single_particle_greens_function_order(order)
@@ -180,13 +178,10 @@ class BlockSparseSolver(object):
 
 
     def single_particle_greens_function_order(self, order):
-        print('--> single_particle_greens_function_order')
-        print(f'order = {order}')
 
         spgf = self.get_zero_single_particle_greens_function()
 
         for sign, topology in all_connected_pairings(order):
-            print(f'topology = {topology}')
             topology = np.array(topology, dtype=np.int32)
             spgf += pow(-1, order) * sign * self.single_particle_greens_function_topology(topology)
 

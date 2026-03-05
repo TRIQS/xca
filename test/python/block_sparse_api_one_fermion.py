@@ -258,19 +258,23 @@ def test_oca_diagram_cf_block_sparse_and_dense(
     from triqs_xca.diag import all_connected_pairings
 
     results = dict()
-
-    orders_with_signs_and_topologies = [
-        (1, [(1, [(0, 1)])]), # 1st order (NCA) diagram
-        # 2nd order diags are zero, skip
-        (3, [(1, [(0, 3), (1, 4), (2, 5)])]), # Non-zero 3rd order diagram
-        ]
+    results_by_order = dict()
     
     for order in [1, 2, 3]:
         print(f'order = {order}')
+
+        d = Dummy()
+        d.order = order
+        
+        d.Sigma_S = S.S.calc_Sigma(d.order)
+        d.spgf_S = S.S.calc_spgf(d.order)
+
+        d.Sigma_BSS = pseudo_particle_block_gf_to_dense(BSS.pseudo_particle_self_energy(d.order), BSS.ad)
+        d.spgf_BSS = BSS.single_particle_greens_function(d.order)
+
+        results_by_order[order] = d
+
         for sign, topology in all_connected_pairings(order):
-    #for order, signs_and_topologies in orders_with_signs_and_topologies:
-    #    print(f'signs_and_topologies = {signs_and_topologies}')
-    #    for sign, topology in signs_and_topologies:
             print(f'  topology = {topology}')
 
             d = Dummy()
@@ -291,9 +295,6 @@ def test_oca_diagram_cf_block_sparse_and_dense(
 
             d.Sigma_BSS = BSS.pseudo_particle_self_energy_topology(topology)
             d.Sigma_BSS = pseudo_particle_block_gf_to_dense(d.Sigma_BSS, BSS.ad)
-
-            #d.Sigma_BSS.data[:] *= sign # FIXME! Different sign convention?!?
-            d.Sigma_BSS.data[:] *= -pow(-1, d.order) # FIXME! Different sign convention?!?
 
             t3 = time.time()
 
@@ -591,15 +592,25 @@ def test_oca_diagram_cf_block_sparse_and_dense(
 
     if not verbose:
 
+        print('-'*72)
+        print('Testing numerical agreement of block-sparse and dense implementations')
+        print('-'*72)
         H_mat = hamiltonian_matrix(BSS.ad)    
         np.testing.assert_array_almost_equal(H_mat, S.S.H_mat)
 
         np.testing.assert_array_almost_equal(G_BSS.data, G_S)
 
+        for order, t in results_by_order.items():
+            print(f'order = {order}')
+            np.testing.assert_array_almost_equal(t.Sigma_BSS.data, t.Sigma_S)
+            np.testing.assert_array_almost_equal(t.spgf_BSS.data, t.spgf_S)
+            print('  Passed')
+
         for topology, t in results.items():
             print(f'topology = {t.topology}')
             np.testing.assert_array_almost_equal(t.Sigma_BSS.data, t.Sigma_S)
             np.testing.assert_array_almost_equal(t.spgf_BSS.data, t.spgf_S)
+            print('  Passed')
 
 
 if __name__ == '__main__':
