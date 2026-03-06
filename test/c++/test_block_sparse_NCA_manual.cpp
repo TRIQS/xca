@@ -207,12 +207,11 @@ TEST(BlockSparseNCAManual, two_band_discrete_bath_bs_dense) {
   nda::array<int, 2> D1 = {{0, 1}}; // topology for NCA diagram evaluator
   auto NCA_old = -Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D1, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
 
-  ASSERT_LE(nda::max_element(nda::abs(NCA_result.get_block(0) - NCA_dense_result(_, range(0, 4), range(0, 4)))), 10 * eps);
-  ASSERT_LE(nda::max_element(nda::abs(NCA_result.get_block(1) - NCA_dense_result(_, range(4, 10), range(4, 10)))), 10 * eps);
-  ASSERT_LE(nda::max_element(nda::abs(NCA_result.get_block(2) - NCA_dense_result(_, range(10, 11), range(10, 11)))), 10 * eps);
-  ASSERT_LE(nda::max_element(nda::abs(NCA_result.get_block(3) - NCA_dense_result(_, range(11, 15), range(11, 15)))), 10 * eps);
-  ASSERT_LE(nda::max_element(nda::abs(NCA_result.get_block(4) - NCA_dense_result(_, range(15, 16), range(15, 16)))), 10 * eps);
-
+  auto ad = two_band_atom_diag_helper();
+  for (int i = 0; i < NCA_result.get_num_block_cols(); i++) {
+    auto result_dense_block = triqs_xca::atom_diag::get_tensor_in_atom_diag_subspace(NCA_dense_result, i, ad);
+    ASSERT_LE(nda::max_element(nda::abs(NCA_result.get_block(i) - result_dense_block)), 10 * eps);
+  }
   ASSERT_LE(nda::max_element(nda::abs(NCA_dense_result - NCA_old)), eps);
 }
 

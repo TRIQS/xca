@@ -1,5 +1,6 @@
 #pragma once
 
+#include <triqs_xca/atom_diag_utils.hpp>
 #include <triqs_xca/block_sparse.hpp>
 
 using nda::dcomplex;
@@ -34,6 +35,12 @@ std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> discrete_bath_helpe
  * @return Tuple of hybridization function and its reflection
  */
 std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> discrete_bath_spin_flip_helper(double beta, double Lambda, double eps, int n);
+
+/**
+ * @brief Helper function for setting up the two-band model's atom_diag object
+ * @return triqs::atom_diag::atom_diag<false> object representing the two-band model's atomic Hamiltonian
+ */
+triqs::atom_diag::atom_diag<false> two_band_atom_diag_helper();
 
 /**
  * @brief Helper function for setting up the two-band model in dense storage

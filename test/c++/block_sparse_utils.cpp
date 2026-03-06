@@ -1,3 +1,5 @@
+#include <triqs/operators/many_body_operator.hpp>
+
 #include "block_sparse_utils.hpp"
 
 using nda::dcomplex;
@@ -123,6 +125,50 @@ std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> discrete_bath_spin_
   return std::make_tuple(Deltat, Deltat_refl);
 }
 
+triqs::operators::many_body_operator_real make_kanamori_interaction(int n_orb, double U, double J, double mu) {
+  using triqs::operators::n;
+  using triqs::operators::c;
+  using triqs::operators::c_dag;
+  triqs::operators::many_body_operator_real H;
+  double U_prime = U - 2 * J;
+  for (int o = 0; o < n_orb; o++) H -= mu * (n("up", o) + n("do", o));
+  for (int o = 0; o < n_orb; o++) H += U * n("up", o) * n("do", o);
+  for (int o1 = 0; o1 < n_orb; o1++) {
+    for (int o2 = 0; o2 < n_orb; o2++) {
+      if (o1 != o2) {
+        H += 0.5 * U_prime * (n("up", o1) * n("do", o2) + n("do", o1) * n("up", o2)); // opposite spin
+        H += 0.5 * (U_prime - J) * (n("up", o1) * n("up", o2) + n("do", o1) * n("do", o2)); // equal spin
+        H += -J * c_dag("up", o1) * c("do", o1) * c_dag("do", o2) * c("up", o2); // spin-flip
+        H += -J * c_dag("up", o1) * c_dag("do", o1) * c("up", o2) * c("do", o2); // pair-hopping
+      }
+    }
+  }
+  return H;
+}
+
+triqs::operators::many_body_operator_real make_total_density_operator(int n_orb) {
+  using triqs::operators::n;
+  triqs::operators::many_body_operator_real N_tot;
+  for (int o = 0; o < n_orb; o++) N_tot += n("up", o) + n("do", o);
+  return N_tot;
+}
+
+triqs::atom_diag::fundamental_operator_set get_fundamental_operator_set(int n_orb) {
+  triqs::atom_diag::fundamental_operator_set fop_set;
+  for (int o = 0; o < n_orb; o++) fop_set.insert("up", o);
+  for (int o = 0; o < n_orb; o++) fop_set.insert("do", o);
+  return fop_set;
+}
+
+triqs::atom_diag::atom_diag<false> two_band_atom_diag_helper() {
+  // Kanamori interaction with n_orb = 2, U = 2.0, J = 0.2, and mu = (3*U - 5*J)/2 - 1.5
+  auto H_kana = make_kanamori_interaction(2, 2.0, 0.2, (3 * 2.0 - 5 * 0.2) / 2 - 1.5);
+  auto fop_set = get_fundamental_operator_set(2);
+  auto N_tot   = make_total_density_operator(2);
+  auto ad = triqs::atom_diag::atom_diag<false>(H_kana, fop_set, {N_tot});
+  return ad;
+}
+
 std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> two_band_dense_helper(double beta, double Lambda, double eps) {
 
   auto dlr_rf        = build_dlr_rf(Lambda, eps);
@@ -130,98 +176,10 @@ std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>, nda::array<dcomplex
   auto const &dlr_it = itops.get_itnodes();
   auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
 
-  // Hamiltonian in dense storage
-  auto H_dense    = nda::zeros<dcomplex>(16, 16);
-  H_dense(0, 0)   = -1;
-  H_dense(1, 1)   = -1;
-  H_dense(2, 2)   = -1;
-  H_dense(3, 3)   = -1;
-  H_dense(4, 4)   = -0.6;
-  H_dense(5, 8)   = 0.2;
-  H_dense(6, 6)   = -0.4;
-  H_dense(6, 7)   = 0.2;
-  H_dense(7, 6)   = 0.2;
-  H_dense(7, 7)   = -0.4;
-  H_dense(8, 5)   = 0.2;
-  H_dense(9, 9)   = -0.6;
-  H_dense(11, 11) = 2;
-  H_dense(12, 12) = 2;
-  H_dense(13, 13) = 2;
-  H_dense(14, 14) = 2;
-  H_dense(15, 15) = 6;
-
-  // Green's function in dense storage
+  auto ad = two_band_atom_diag_helper();
+  auto H_dense = triqs_xca::atom_diag::get_full_h_atomic(ad); 
   auto Gt_dense = Hmat_to_Gtmat(H_dense, beta, dlr_it_abs);
-
-  // creation/annihilation operators in dense storage
-  auto Fs_dense = nda::zeros<dcomplex>(4, 16, 16);
-  // copied from a text dump of an h5 file output from atom_diag
-  Fs_dense          = {{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 1, 0, 0, 2.23711e-17, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 2.23711e-17, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2.23711e-17, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2.23711e-17, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0},
-                        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
-                       {{0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 1, 2.23711e-17, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 2.23711e-17, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -2.23711e-17, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -2.23711e-17, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
-                        {0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
-                       {{0, 0, 0, 0, 0, -1, 0, 0, -2.23711e-17, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, -1, -2.23711e-17, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -2.23711e-17, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -2.23711e-17, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
-                       {{0, 0, 0, 0, 0, 0, -2.23711e-17, -1, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, -2.23711e-17, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2.23711e-17, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2.23711e-17, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}};
-  auto F_dags_dense = nda::zeros<dcomplex>(4, 16, 16);
-  for (int i = 0; i < 4; i++) { F_dags_dense(i, _, _) = nda::transpose(nda::conj(Fs_dense(i, _, _))); }
+  auto [Fs_dense, F_dags_dense] = triqs_xca::atom_diag::get_operators_dense(ad);
 
   return std::make_tuple(Gt_dense, Fs_dense, F_dags_dense);
 }
@@ -233,56 +191,10 @@ std::tuple<BlockDiagOpFun, BlockOpSymQuartet, nda::vector<int>> two_band_helper(
   auto const &dlr_it = itops.get_itnodes();
   auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
 
-  // get Hamiltonian, creation/annihilation operators in block-sparse storage
-  int num_blocks = 5; // number of blocks of Hamiltonian
-
-  // Hamiltonian
-  std::vector<nda::array<double, 2>> H_blocks(num_blocks); // Hamiltonian in sparse storage
-  H_blocks[0]                   = nda::make_regular(-1 * nda::eye<double>(4));
-  H_blocks[1]                   = {{-0.6, 0, 0, 0, 0, 0},   {0, 8.27955e-19, 0, 0, 0.2, 0}, {0, 0, -0.4, 0.2, 0, 0},
-                                   {0, 0, 0.2, -0.4, 0, 0}, {0, 0.2, 0, 0, 8.27955e-19, 0}, {0, 0, 0, 0, 0, -0.6}};
-  H_blocks[2]                   = {{0}};
-  H_blocks[3]                   = nda::make_regular(2 * nda::eye<double>(4));
-  H_blocks[4]                   = {{6}};
-  nda::vector<int> H_block_inds = {0, 0, -1, 0, 0};
-
-  // Green's function
-  auto Gt = nonint_gf_BDOF(H_blocks, H_block_inds, beta, dlr_it_abs);
-
-  // creation/annihilation operators
-  nda::vector<int> ann_conn = {2, 0, -1, 1, 3}; // block column indices of F operators
-  nda::vector<int> cre_conn = {1, 3, 0, 4, -1}; // block column indices of F^dag operators
-  std::vector<nda::array<dcomplex, 3>> F_blocks(num_blocks), Fdag_blocks(num_blocks);
-
-  F_blocks[0] = {{{1, 0, 0, 0}}, {{0, 1, 0, 0}}, {{0, 0, 1, 0}}, {{0, 0, 0, 1}}};
-  F_blocks[1] = {{{0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0}, {0, 1, 0, 0, 0, 0}, {0, 0, 0, 1, 0, 0}},
-                 {{-1, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0}, {0, 0, 1, 0, 0, 0}, {0, 0, 0, 0, 1, 0}},
-                 {{0, -1, 0, 0, 0, 0}, {0, 0, -1, 0, 0, 0}, {0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 1}},
-                 {{0, 0, 0, -1, 0, 0}, {0, 0, 0, 0, -1, 0}, {0, 0, 0, 0, 0, -1}, {0, 0, 0, 0, 0, 0}}};
-  F_blocks[2] = {{{0}}};
-  F_blocks[3] = {{{0, 0, 0, 0}, {0, 0, 0, 0}, {1, 0, 0, 0}, {0, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}},
-                 {{0, 0, 0, 0}, {-1, 0, 0, 0}, {0, 0, 0, 0}, {0, -1, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 1}},
-                 {{1, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, -1, 0}, {0, 0, 0, -1}, {0, 0, 0, 0}},
-                 {{0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}};
-  F_blocks[4] = {{{0}, {0}, {0}, {1}}, {{0}, {0}, {-1}, {0}}, {{0}, {1}, {0}, {0}}, {{-1}, {0}, {0}, {0}}};
-
-  Fdag_blocks[0] = {{{0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 0}, {0, 0, 0, 1}, {0, 0, 0, 0}, {0, 0, 0, 0}},
-                    {{-1, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 0}, {0, 0, 0, 1}, {0, 0, 0, 0}},
-                    {{0, 0, 0, 0}, {-1, 0, 0, 0}, {0, -1, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 1}},
-                    {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {-1, 0, 0, 0}, {0, -1, 0, 0}, {0, 0, -1, 0}}};
-  Fdag_blocks[1] = {{{0, 0, 1, 0, 0, 0}, {0, 0, 0, 0, 1, 0}, {0, 0, 0, 0, 0, 1}, {0, 0, 0, 0, 0, 0}},
-                    {{0, -1, 0, 0, 0, 0}, {0, 0, 0, -1, 0, 0}, {0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 1}},
-                    {{1, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0}, {0, 0, 0, -1, 0, 0}, {0, 0, 0, 0, -1, 0}},
-                    {{0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0}, {0, 1, 0, 0, 0, 0}, {0, 0, 1, 0, 0, 0}}};
-  Fdag_blocks[2] = {{{1}, {0}, {0}, {0}}, {{0}, {1}, {0}, {0}}, {{0}, {0}, {1}, {0}}, {{0}, {0}, {0}, {1}}};
-  Fdag_blocks[3] = {{{0, 0, 0, 1}}, {{0, 0, -1, 0}}, {{0, 1, 0, 0}}, {{-1, 0, 0, 0}}};
-  Fdag_blocks[4] = {{{0}}};
-
-  BlockOpSymSet F_BOSS(ann_conn, F_blocks), Fdag_BOSS(cre_conn, Fdag_blocks);
-  std::vector<BlockOpSymSet> F_sym_vec{F_BOSS}, F_dag_sym_vec{Fdag_BOSS};
-  nda::vector<long> sym_set_labels(4);
-  sym_set_labels = 0; // all operators belong to the same symmetry set
-  BlockOpSymQuartet Fq(F_sym_vec, F_dag_sym_vec, hyb_coeffs, sym_set_labels);
+  auto ad = two_band_atom_diag_helper();
+  auto [H_blocks, H_block_inds] = triqs_xca::atom_diag::get_hamiltonian_blocks(ad);
+  auto Gt = nonint_gf_BDOF(H_blocks, H_block_inds, beta, dlr_it_abs); // pseudo-particle Green's function
+  auto [Fq, sym_set_labels] = triqs_xca::atom_diag::get_operators(ad, hyb_coeffs);
 
   return std::make_tuple(Gt, Fq, sym_set_labels);
 }
