@@ -29,46 +29,26 @@ template <> constexpr bool c2py::is_wrapped<triqs_xca::dense::DenseDiagramEvalua
 template <> inline constexpr auto c2py::tp_name<triqs_xca::dense::DenseDiagramEvaluator> = "triqs_xca.dense.DenseDiagramEvaluator";
 static auto init_0                                                                       = c2py::dispatcher_c_kw_t{
    c2py::c_constructor<triqs_xca::dense::DenseDiagramEvaluator, nda::vector_const_view<double>, nda::array_const_view<nda::dcomplex, 3>,
-                                                                                             triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>, const triqs::atom_diag::atom_diag<0> &>("hyb_poles", "hyb_coeffs",
-                                                                                                                                                                                         "G_ppsc", "ad")};
-template <> constexpr initproc c2py::tp_init<triqs_xca::dense::DenseDiagramEvaluator> = c2py::pyfkw_constructor<init_0>;
-template <>
-const std::string c2py::tp_ctor_doc<triqs_xca::dense::DenseDiagramEvaluator> =
-   init_0.doc(R"DOC(
-Constructor for DiagramEvaluator
-
-Parameters
-----------
-hyb_poles : {par_0}
-   hybridization poles
-hyb_coeffs : {par_1}
-   hybridization function coefficients (at poles)
-G_ppsc : {par_2}
-   TRIQS pseudo-particle Green's function
-ad : {par_3}
-   atom_diag object with Hamiltonian and field operators
-)DOC",
-              {{c2py::python_typename<nda::vector_const_view<double>>()},
-               {c2py::python_typename<nda::array_const_view<nda::dcomplex, 3>>()},
-               {c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()},
-               {c2py::python_typename<const triqs::atom_diag::atom_diag<0> &>()}});
+                                                                                             triqs::mesh::dlr_imtime, const triqs::atom_diag::atom_diag<0> &>("hyb_poles", "hyb_coeffs", "tau_mesh", "ad")};
+template <> constexpr initproc c2py::tp_init<triqs_xca::dense::DenseDiagramEvaluator>    = c2py::pyfkw_constructor<init_0>;
+template <> const std::string c2py::tp_ctor_doc<triqs_xca::dense::DenseDiagramEvaluator> = init_0.doc(R"DOC()DOC");
 // compute_self_energy
-static auto const fun_0 =
-   c2py::dispatcher_f_kw_t{c2py::cmethod([](triqs_xca::dense::DenseDiagramEvaluator &self,
-                                            nda::array_const_view<int, 2> topology) { return self.compute_self_energy(topology); },
-                                         "self", "topology"),
-                           c2py::cmethod([](triqs_xca::dense::DenseDiagramEvaluator &self, nda::array_const_view<int, 2> topology,
-                                            int f_ix) { return self.compute_self_energy(topology, f_ix); },
-                                         "self", "topology", "f_ix")};
+static auto const fun_0 = c2py::dispatcher_f_kw_t{
+   c2py::cmethod([](triqs_xca::dense::DenseDiagramEvaluator &self, triqs_xca::dense::DenseDiagramEvaluator::gf_vt G_ppsc,
+                    nda::array_const_view<int, 2> topology) { return self.compute_self_energy(G_ppsc, topology); },
+                 "self", "G_ppsc", "topology"),
+   c2py::cmethod([](triqs_xca::dense::DenseDiagramEvaluator &self, triqs_xca::dense::DenseDiagramEvaluator::gf_vt G_ppsc,
+                    nda::array_const_view<int, 2> topology, int f_ix) { return self.compute_self_energy(G_ppsc, topology, f_ix); },
+                 "self", "G_ppsc", "topology", "f_ix")};
 
 // compute_single_ptcle_gf
-static auto const fun_1 =
-   c2py::dispatcher_f_kw_t{c2py::cmethod([](triqs_xca::dense::DenseDiagramEvaluator &self,
-                                            nda::array_const_view<int, 2> topology) { return self.compute_single_ptcle_gf(topology); },
-                                         "self", "topology"),
-                           c2py::cmethod([](triqs_xca::dense::DenseDiagramEvaluator &self, nda::array_const_view<int, 2> topology,
-                                            int f_ix) { return self.compute_single_ptcle_gf(topology, f_ix); },
-                                         "self", "topology", "f_ix")};
+static auto const fun_1 = c2py::dispatcher_f_kw_t{
+   c2py::cmethod([](triqs_xca::dense::DenseDiagramEvaluator &self, triqs_xca::dense::DenseDiagramEvaluator::gf_vt G_ppsc,
+                    nda::array_const_view<int, 2> topology) { return self.compute_single_ptcle_gf(G_ppsc, topology); },
+                 "self", "G_ppsc", "topology"),
+   c2py::cmethod([](triqs_xca::dense::DenseDiagramEvaluator &self, triqs_xca::dense::DenseDiagramEvaluator::gf_vt G_ppsc,
+                    nda::array_const_view<int, 2> topology, int f_ix) { return self.compute_single_ptcle_gf(G_ppsc, topology, f_ix); },
+                 "self", "G_ppsc", "topology", "f_ix")};
 
 // get_num_self_energy_backbones
 static auto const fun_2 = c2py::dispatcher_f_kw_t{c2py::cmethod(
@@ -117,7 +97,6 @@ constexpr auto doc_member_12 = R"DOC()DOC";
 constexpr auto doc_member_13 = R"DOC()DOC";
 constexpr auto doc_member_14 = R"DOC()DOC";
 constexpr auto doc_member_15 = R"DOC()DOC";
-constexpr auto doc_member_16 = R"DOC()DOC";
 
 // ----- Method table ----
 
@@ -131,16 +110,15 @@ constinit PyGetSetDef c2py::tp_getset<triqs_xca::dense::DenseDiagramEvaluator>[]
    c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::hyb_refl, triqs_xca::dense::DenseDiagramEvaluator>("hyb_refl", doc_member_5),
    c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::hyb_poles, triqs_xca::dense::DenseDiagramEvaluator>("hyb_poles",
                                                                                                                              doc_member_6),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::Gt, triqs_xca::dense::DenseDiagramEvaluator>("Gt", doc_member_7),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::r, triqs_xca::dense::DenseDiagramEvaluator>("r", doc_member_8),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::n, triqs_xca::dense::DenseDiagramEvaluator>("n", doc_member_9),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::N, triqs_xca::dense::DenseDiagramEvaluator>("N", doc_member_10),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::Sigma, triqs_xca::dense::DenseDiagramEvaluator>("Sigma", doc_member_11),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::T, triqs_xca::dense::DenseDiagramEvaluator>("T", doc_member_12),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::U, triqs_xca::dense::DenseDiagramEvaluator>("U", doc_member_13),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::GKt, triqs_xca::dense::DenseDiagramEvaluator>("GKt", doc_member_14),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::Tkaps, triqs_xca::dense::DenseDiagramEvaluator>("Tkaps", doc_member_15),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::Tmu, triqs_xca::dense::DenseDiagramEvaluator>("Tmu", doc_member_16),
+   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::r, triqs_xca::dense::DenseDiagramEvaluator>("r", doc_member_7),
+   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::n, triqs_xca::dense::DenseDiagramEvaluator>("n", doc_member_8),
+   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::N, triqs_xca::dense::DenseDiagramEvaluator>("N", doc_member_9),
+   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::Sigma, triqs_xca::dense::DenseDiagramEvaluator>("Sigma", doc_member_10),
+   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::T, triqs_xca::dense::DenseDiagramEvaluator>("T", doc_member_11),
+   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::U, triqs_xca::dense::DenseDiagramEvaluator>("U", doc_member_12),
+   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::GKt, triqs_xca::dense::DenseDiagramEvaluator>("GKt", doc_member_13),
+   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::Tkaps, triqs_xca::dense::DenseDiagramEvaluator>("Tkaps", doc_member_14),
+   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::Tmu, triqs_xca::dense::DenseDiagramEvaluator>("Tmu", doc_member_15),
 
    {nullptr, nullptr, nullptr, nullptr, nullptr}};
 

@@ -116,11 +116,11 @@ TEST(Backbone, OCA_BDOF_construct) {
   std::chrono::duration<double> elapsed = end - start;
 
   // dense diagram evaluation
-  DenseDiagramEvaluator D2(beta, eps, itops, Deltat, hyb_refl, dlr_rf, Gt_dense, Fset);
+  DenseDiagramEvaluator D2(beta, eps, itops, Deltat, hyb_refl, dlr_rf, Fset);
   start  = std::chrono::high_resolution_clock::now();
   int n  = 4;
   auto B = Backbone(topology, n);
-  D2.eval_self_energy(B);
+  D2.eval_self_energy(Gt_dense, B);
   end                   = std::chrono::high_resolution_clock::now();
   auto OCA_dense_result = D2.Sigma;
   elapsed               = end - start;
@@ -223,9 +223,9 @@ TEST(Backbone, spin_flip_fermion) {
   auto Gt_dense = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
   auto Fset     = get_operators_dense(ad, hyb_coeffs);
 
-  DenseDiagramEvaluator D2(beta, eps, itops, hyb, hyb_refl, dlr_rf, Gt_dense, Fset);
+  DenseDiagramEvaluator D2(beta, eps, itops, hyb, hyb_refl, dlr_rf, Fset);
   start = std::chrono::high_resolution_clock::now();
-  D2.eval_self_energy(B);
+  D2.eval_self_energy(Gt_dense, B);
   end               = std::chrono::high_resolution_clock::now();
   duration          = end - start;
   auto result_dense = D2.Sigma;
@@ -294,9 +294,9 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
   auto Gt_dense = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
   auto Fset     = get_operators_dense(ad, hyb_coeffs);
 
-  DenseDiagramEvaluator D2(beta, eps, itops, hyb, hyb_refl, dlr_rf, Gt_dense, Fset);
+  DenseDiagramEvaluator D2(beta, eps, itops, hyb, hyb_refl, dlr_rf, Fset);
   start = std::chrono::high_resolution_clock::now();
-  D2.eval_self_energy(B);
+  D2.eval_self_energy(Gt_dense, B);
   end               = std::chrono::high_resolution_clock::now();
   duration          = end - start;
   auto result_dense = D2.Sigma;
@@ -478,9 +478,9 @@ TEST(Backbone, spin_flip_fermion_aaa) {
   auto Fset     = get_operators_dense(ad, hyb_coeffs);
 
   // compare to dense result
-  DenseDiagramEvaluator D2(beta, eps, itops, hyb, hyb_refl, hyb_poles, Gt_dense, Fset);
+  DenseDiagramEvaluator D2(beta, eps, itops, hyb, hyb_refl, hyb_poles, Fset);
   start = std::chrono::high_resolution_clock::now();
-  D2.eval_self_energy(B);
+  D2.eval_self_energy(Gt_dense, B);
   end               = std::chrono::high_resolution_clock::now();
   duration          = end - start;
   auto result_dense = D2.Sigma;
@@ -574,9 +574,9 @@ TEST(Backbone, spin_flip_fermion_all_sym_aaa) {
   auto Fset     = get_operators_dense(ad, hyb_coeffs);
 
   // compare to dense result
-  DenseDiagramEvaluator D2(beta, eps, itops, hyb, hyb_refl, hyb_poles, Gt_dense, Fset);
+  DenseDiagramEvaluator D2(beta, eps, itops, hyb, hyb_refl, hyb_poles, Fset);
   start = std::chrono::high_resolution_clock::now();
-  D2.eval_self_energy(B);
+  D2.eval_self_energy(Gt_dense, B);
   end               = std::chrono::high_resolution_clock::now();
   duration          = end - start;
   auto result_dense = D2.Sigma;

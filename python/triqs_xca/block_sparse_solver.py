@@ -122,7 +122,7 @@ class BlockSparseSolver(object):
     def init_diagram_evaluator(self):
         
         if self.use_dense_solver:
-            self.d = DenseDiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.G, self.ad)
+            self.d = DenseDiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.ad)
         else:
             self.d = DiagramEvaluator(
                 self.beta, self.w_max * self.beta, self.eps, # -- Todo: Get this info from self.G
@@ -134,10 +134,10 @@ class BlockSparseSolver(object):
 
         for iter in range(1, maxiter+1):
 
-            self.Sigma = self.pseudo_particle_self_energy(max_order)
+            self.Sigma = self.pseudo_particle_self_energy(self.G, max_order)
             G_new = self.solve_dyson(self.Sigma, self.eta)
             G_new = self.normalize_pseudo_particle_gf(G_new)
-            Z = self.partition_function(G_new)
+            Z = self.partition_function_from_ppgf(G_new)
 
             diff_G = max_abs_diff_BlockGf(G_new, self.G)
 
@@ -154,11 +154,24 @@ class BlockSparseSolver(object):
         """ Normalize the pseudo particle Green's function by updating the pseudo particle chemical potential eta, such that the partition function Z is equal to 1. """
 
         Z = self.partition_function_from_ppgf(G)
-        self.eta += -np.log(Z) / self.beta
+
+        deta = np.log(np.abs(Z)) / self.beta
+
+        def energy_shift_ppgf(G, deta):
+            G_new = G.copy()
+            tau = np.array([ float(t) for t in G.mesh ])
+            for bidx, g in G_new:
+                g.data[:] *= np.exp(-tau * deta)[:, None, None]
+            return G_new
+
+        G_new = energy_shift_ppgf(G, deta)
+
+        Z_new = self.partition_function_from_ppgf(G_new)
 
         print(f'Updated eta = {self.eta:2.2E} to normalize Z = {Z:2.2E} to 1.')
+        print(f'After normalization, Z_new-1 = {Z_new-1:2.2E}')
 
-        G_new = self.solve_dyson(self.Sigma, self.eta)
+        self.eta += deta
 
         return G_new
 
@@ -198,39 +211,39 @@ class BlockSparseSolver(object):
         return G
 
 
-    def pseudo_particle_self_energy(self, max_order):
+    def pseudo_particle_self_energy(self, G, max_order):
 
         self.Sigma = self.get_zero_pseudo_particle_propagator()
 
         for order in range(1, max_order+1):
-            self.Sigma += self.pseudo_particle_self_energy_order(order)
+            self.Sigma += self.pseudo_particle_self_energy_order(G, order)
 
         return self.Sigma
 
 
-    def pseudo_particle_self_energy_order(self, order):
+    def pseudo_particle_self_energy_order(self, G, order):
 
         Sigma = self.get_zero_pseudo_particle_propagator()
         
         for sign, topology in all_connected_pairings(order):
             topology = np.array(topology, dtype=np.int32)
-            Sigma +=  pow(-1, order) * sign * self.pseudo_particle_self_energy_topology(topology) # FIXME! Signs
+            Sigma +=  pow(-1, order) * sign * self.pseudo_particle_self_energy_topology(G, topology) # FIXME! Signs
             
         return Sigma
     
     
-    def pseudo_particle_self_energy_topology(self, topology):
+    def pseudo_particle_self_energy_topology(self, G, topology):
         order = len(topology)
-        return pow(-1, order+1) * self.d.compute_self_energy(topology) # FIXME! Sign convention.
+        return pow(-1, order+1) * self.d.compute_self_energy(G, topology) # FIXME! Sign convention.
 
 
-    def pseudo_particle_self_energy_topology_loop(self, topology):
+    def pseudo_particle_self_energy_topology_loop(self, G, topology):
 
         order = len(topology)
         Sigma = self.get_zero_pseudo_particle_propagator()
 
         for n in range(self.d.get_num_self_energy_backbones(topology)):
-            Sigma += pow(-1, order+1) * self.d.compute_self_energy(topology, n) # FIXME! Sign convention.
+            Sigma += pow(-1, order+1) * self.d.compute_self_energy(G, topology, n) # FIXME! Sign convention.
 
         return Sigma
     
@@ -245,40 +258,40 @@ class BlockSparseSolver(object):
         return spgf
 
 
-    def single_particle_greens_function(self, max_order):
+    def single_particle_greens_function(self, G, max_order):
         self.spgf = self.get_zero_single_particle_greens_function()
 
         for order in range(1, max_order+1):
-            self.spgf += self.single_particle_greens_function_order(order)
+            self.spgf += self.single_particle_greens_function_order(G, order)
         
         return self.spgf
 
 
-    def single_particle_greens_function_order(self, order):
+    def single_particle_greens_function_order(self, G, order):
 
         spgf = self.get_zero_single_particle_greens_function()
 
         for sign, topology in all_connected_pairings(order):
             topology = np.array(topology, dtype=np.int32)
-            spgf += pow(-1, order) * sign * self.single_particle_greens_function_topology(topology)
+            spgf += pow(-1, order) * sign * self.single_particle_greens_function_topology(G, topology)
 
         return spgf
 
 
-    def single_particle_greens_function_topology(self, topology):
+    def single_particle_greens_function_topology(self, G, topology):
 
         spgf = self.get_zero_single_particle_greens_function()
 
-        spgf.data[:] = self.d.compute_single_ptcle_gf(topology) # FIXME! return triqs::gfs::gf
+        spgf.data[:] = self.d.compute_single_ptcle_gf(G, topology) # FIXME! return triqs::gfs::gf
 
         return spgf
 
 
-    def single_particle_greens_function_topology_loop(self, topology):
+    def single_particle_greens_function_topology_loop(self, G, topology):
         spgf = self.get_zero_single_particle_greens_function()
 
         for n in range(self.d.get_num_single_ptcle_gf_backbones(topology)):
-            spgf.data[:] += self.d.compute_single_ptcle_gf(topology, n) # FIXME! return triqs::gfs::gf
+            spgf.data[:] += self.d.compute_single_ptcle_gf(G, topology, n) # FIXME! return triqs::gfs::gf
 
         return spgf
 

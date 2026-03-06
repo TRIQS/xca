@@ -213,7 +213,7 @@ int main() {
   auto hyb_refl_coeffs = hyb_coeffs;
   auto Fset            = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs);
 
-  auto D = DenseDiagramEvaluator(beta, eps, itops, Deltat, hyb_refl, dlr_rf, Gt_dense, Fset);
+  auto D = DenseDiagramEvaluator(beta, eps, itops, Deltat, hyb_refl, dlr_rf, Fset);
 
   auto Deltadlr                            = itops.vals2coefs(Deltat); //obtain dlr coefficient of Delta(t)
   nda::vector<double> dlr_rf_reflect       = -dlr_rf;
@@ -235,7 +235,7 @@ int main() {
 
     // Compute third-order contribution using DenseDiagramEvaluator
     auto B = Backbone(topologies(i, _, _), n);
-    D.eval_self_energy(B);
+    D.eval_self_energy(Gt_dense, B);
     third_order_result = D.Sigma;
     D.reset(); // reset the DenseDiagramEvaluator for the next topology
     // Compute third-order contribution using old code

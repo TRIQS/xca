@@ -330,7 +330,6 @@ nda::array<dcomplex, 3> get_tensor_in_atom_diag_subspace(
   // Permute a tensor from the full Hilbert space to the Fock state ordered basis
 
   int r = tensor_full.extent(0);
-  int N = tensor_full.extent(1);
 
   std::vector<unsigned long> H_perm;
   auto fock_states = ad.get_fock_states(subspace_index);

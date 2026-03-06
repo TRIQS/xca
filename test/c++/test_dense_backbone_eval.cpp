@@ -44,10 +44,10 @@ TEST(DenseBackbone, OCA) {
   // initialize Backbone and DiagramEvaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = Backbone(topology, n);
-  auto D                      = DenseDiagramEvaluator(beta, eps, itops, Deltat, hyb_refl, dlr_rf, Gt_dense, Fset);
+  auto D                      = DenseDiagramEvaluator(beta, eps, itops, Deltat, hyb_refl, dlr_rf, Fset);
 
   // evaluate OCA self-energy contribution
-  D.eval_self_energy(B);
+  D.eval_self_energy(Gt_dense, B);
   auto OCA_result = D.Sigma;
 
   // compare against manually-computed OCA result
@@ -109,7 +109,7 @@ TEST(DenseBackbone, third_order_manual) {
   nda::vector<int> fb{1, 1, 1}, pole_inds{7, 9};
   B.set_directions(fb);
   B.set_pole_inds(pole_inds, dlr_rf);
-  auto D = DenseDiagramEvaluator(beta, eps, itops, Deltat, Deltat_refl, dlr_rf, Gt_dense, Fset);
+  auto D = DenseDiagramEvaluator(beta, eps, itops, Deltat, Deltat_refl, dlr_rf, Fset);
 
   // perform the same calculation using the a routine called by eval_diagram_dense()
   nda::array<dcomplex, 3> T(r, N, N), GKt(r, N, N), Tmu(r, N, N), Sigma_generic(r, N, N);
@@ -121,7 +121,7 @@ TEST(DenseBackbone, third_order_manual) {
   int f_ix_start = pow_n_mm1 * (pole_inds(0) + r * pole_inds(1)) + pow_nr_mm1 * (fb(0) + 2 * fb(1) + 4 * fb(2));
   for (int f_ix_off = 0; f_ix_off < pow_n_mm1; f_ix_off++) {
     //B.set_flat_index(f_ix_start + f_ix_off, dlr_rf);
-    D.eval_self_energy_fixed_indices(B, f_ix_start + f_ix_off);
+    D.eval_self_energy_fixed_indices(Gt_dense, B, f_ix_start + f_ix_off);
     //B.reset_all_inds();
   }
 
@@ -205,8 +205,8 @@ TEST(DenseBackbone, OCA_semicircle_bath_aaa) {
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = Backbone(topology, n);
   auto Fset                   = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs);
-  auto D                      = DenseDiagramEvaluator(beta, eps, itops, hyb, hyb_refl, hyb_poles, Gt_dense, Fset);
-  D.eval_self_energy(B);     // evaluate OCA diagram
+  auto D                      = DenseDiagramEvaluator(beta, eps, itops, hyb, hyb_refl, hyb_poles, Fset);
+  D.eval_self_energy(Gt_dense, B); // evaluate OCA diagram
   auto OCA_result = D.Sigma; // get the result from the DiagramEvaluator
 
   // compare with the dense result

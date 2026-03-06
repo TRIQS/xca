@@ -74,8 +74,8 @@ TEST(BSGFBackbone, NCA) {
   // compare to dense backbone result
   auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
   auto Fset                               = DenseFSet(Fs_dense, F_dags_dense, itops.vals2coefs(Deltat));
-  auto C                                  = DenseDiagramEvaluator(beta, eps, itops, Deltat, Deltat_refl, dlr_rf, Gt_dense, Fset);
-  auto NCA_result_gf_dense                = C.eval_correlator(B, Fs_dense, F_dags_dense);
+  auto C                                  = DenseDiagramEvaluator(beta, eps, itops, Deltat, Deltat_refl, dlr_rf, Fset);
+  auto NCA_result_gf_dense                = C.eval_correlator(Gt_dense, B, Fs_dense, F_dags_dense);
 
   ASSERT_LE(nda::max_element(nda::abs(NCA_result_gf - NCA_result_gf_dense)), 1.0e-15);
 }
@@ -129,8 +129,8 @@ TEST(BSGFBackbone, OCA_BDOF_construct) {
   // compare to dense backbone result
   auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
   auto Fset                               = DenseFSet(Fs_dense, F_dags_dense, itops.vals2coefs(Deltat));
-  auto C                                  = DenseDiagramEvaluator(beta, eps, itops, Deltat, Deltat_refl, dlr_rf, Gt_dense, Fset);
-  auto OCA_result_gf_dense                = C.eval_correlator(B, Fs_dense, F_dags_dense);
+  auto C                                  = DenseDiagramEvaluator(beta, eps, itops, Deltat, Deltat_refl, dlr_rf, Fset);
+  auto OCA_result_gf_dense                = C.eval_correlator(Gt_dense, B, Fs_dense, F_dags_dense);
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_result_gf - OCA_result_gf_dense)), 1.0e-15);
 }
@@ -218,8 +218,8 @@ TEST(Backbone, spin_flip_fermion) {
   auto H_mat               = get_full_h_atomic(ad);
   auto Gt_dense            = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
   auto Fset                = get_operators_dense(ad, hyb_coeffs);
-  auto C                   = DenseDiagramEvaluator(beta, eps, itops, hyb, hyb_refl, dlr_rf, Gt_dense, Fset);
-  auto OCA_result_gf_dense = C.eval_correlator(B, Fset.Fs, Fset.F_dags);
+  auto C                   = DenseDiagramEvaluator(beta, eps, itops, hyb, hyb_refl, dlr_rf, Fset);
+  auto OCA_result_gf_dense = C.eval_correlator(Gt_dense, B, Fset.Fs, Fset.F_dags);
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_result_gf - OCA_result_gf_dense)), 1.0e-15);
 }
@@ -318,8 +318,8 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
   auto H_mat               = get_full_h_atomic(ad);
   auto Gt_dense            = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
   auto Fset                = get_operators_dense(ad, hyb_coeffs);
-  auto C                   = DenseDiagramEvaluator(beta, eps, itops, hyb, hyb_refl, dlr_rf, Gt_dense, Fset);
-  auto OCA_result_gf_dense = C.eval_correlator(B, Fset.Fs, Fset.F_dags);
+  auto C                   = DenseDiagramEvaluator(beta, eps, itops, hyb, hyb_refl, dlr_rf, Fset);
+  auto OCA_result_gf_dense = C.eval_correlator(Gt_dense, B, Fset.Fs, Fset.F_dags);
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_result_gf - OCA_result_gf_dense)), 1.0e-15);
 }

@@ -83,10 +83,10 @@ TEST(two_fermions, one_hyb_pole) {
   }
   auto Fset = get_operators_dense(ad, hyb_coeffs);
   hyb_poles = nda::make_regular(beta * hyb_poles);
-  DenseDiagramEvaluator D_dense(beta, eps, itops, hyb, hyb_refl, hyb_poles, G_ppsc_dense, Fset);
+  DenseDiagramEvaluator D_dense(beta, eps, itops, hyb, hyb_refl, hyb_poles, Fset);
   auto mu_ops  = Fset.Fs;
   auto kap_ops = Fset.F_dags;
   CorrelatorBackbone B(topology, norb);
-  auto spgf_dense = D_dense.eval_correlator(B, mu_ops, kap_ops);
+  auto spgf_dense = D_dense.eval_correlator(G_ppsc_dense, B, mu_ops, kap_ops);
   ASSERT_LE(nda::max_element(nda::abs(spgf - spgf_dense)), 1.0e-15);
 }

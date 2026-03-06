@@ -21,7 +21,8 @@ namespace triqs_xca::dense {
     DenseDiagramEvaluator::DenseDiagramEvaluator(
       double beta, double eps, imtime_ops &itops, 
       nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl, nda::vector_const_view<double> hyb_poles,
-      nda::array_const_view<dcomplex, 3> Gt, DenseFSet &Fset)
+      //nda::array_const_view<dcomplex, 3> Gt, 
+      DenseFSet &Fset)
       : 
       tau_mesh(triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, itops.lambda() / beta, eps)),
       beta(beta),
@@ -30,11 +31,12 @@ namespace triqs_xca::dense {
       hyb(hyb), 
       hyb_refl(-hyb_refl), // Follow sign convention of block_sparse_backbone for reflected hybridization function.
       hyb_poles(hyb_poles),
-      Gt(Gt), 
+      //Gt(Gt), 
       Fset(Fset), 
       r(itops.rank()), 
       n(hyb.extent(1)),
-      N(Gt.extent(1)),
+      //N(Gt.extent(1)),
+      N(Fset.Fs.extent(1)),
       // allocate arrays
       Sigma(nda::zeros<dcomplex>(r, N, N)),
       T(nda::zeros<dcomplex>(r, N, N)),
@@ -46,9 +48,12 @@ namespace triqs_xca::dense {
 
     DenseDiagramEvaluator::DenseDiagramEvaluator(
       nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-      triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, triqs::atom_diag::atom_diag<false> const &ad)
+      //triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc,
+      triqs::mesh::dlr_imtime tau_mesh,
+      triqs::atom_diag::atom_diag<false> const &ad)
       :
-      tau_mesh(G_ppsc[0].mesh()),
+      //tau_mesh(G_ppsc[0].mesh()),
+      tau_mesh(tau_mesh),
       beta(tau_mesh.beta()),
       itops(tau_mesh.dlr_it()),
       dlr_it(itops.get_itnodes()),
@@ -56,11 +61,12 @@ namespace triqs_xca::dense {
       hyb(aaa_coefs2vals(beta, tau_mesh.w_max() * tau_mesh.beta(), tau_mesh.eps(), hyb_coeffs, hyb_poles)),
       hyb_refl(-itops.reflect(hyb)), // Follow sign convention of block_sparse_backbone for reflected hybridization function.
       hyb_poles(beta * hyb_poles), 
-      Gt(G_ppsc[0].data()),
+      //Gt(G_ppsc[0].data()),
       Fset(get_operators_dense(ad, hyb_coeffs)),
       r(itops.rank()),
       n(hyb.extent(1)),
-      N(Gt.extent(1)),
+      //N(Gt.extent(1)),
+      N(ad.get_full_hilbert_space_dim()),
       // allocate arrays
       Sigma(nda::zeros<dcomplex>(r, N, N)),
       T(nda::zeros<dcomplex>(r, N, N)),
@@ -79,17 +85,17 @@ namespace triqs_xca::dense {
       Sigma = 0;
     }
 
-    triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DenseDiagramEvaluator::compute_self_energy(nda::array_const_view<int, 2> topology) {
+    triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DenseDiagramEvaluator::compute_self_energy(gf_vt G_ppsc, nda::array_const_view<int, 2> topology) {
       Backbone backbone(topology, n);
-      eval_self_energy(backbone);
+      eval_self_energy(G_ppsc[0].data(), backbone);
       auto sigma_gf = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, this->Sigma);
       reset();
       return std::vector{sigma_gf};
     }
 
-    triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DenseDiagramEvaluator::compute_self_energy(nda::array_const_view<int, 2> topology, int f_ix) {
+    triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DenseDiagramEvaluator::compute_self_energy(gf_vt G_ppsc, nda::array_const_view<int, 2> topology, int f_ix) {
       Backbone backbone(topology, n);
-      eval_self_energy_fixed_indices(backbone, f_ix); // evaluate the diagram with these directions, poles, and orbital indices
+      eval_self_energy_fixed_indices(G_ppsc[0].data(), backbone, f_ix); // evaluate the diagram with these directions, poles, and orbital indices
       auto sigma_gf = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, this->Sigma);
       reset();
       return std::vector{sigma_gf};
@@ -124,7 +130,7 @@ namespace triqs_xca::dense {
       }
     }
 
-    void DenseDiagramEvaluator::integrate_left_edge(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, int e_ix) {
+    void DenseDiagramEvaluator::integrate_left_edge(nda::array_view<dcomplex, 3> T_buf, nda::array_const_view<dcomplex, 3> Gt, Backbone &backbone, int e_ix) {
       GKt   = Gt;
       int m = backbone.m;
       for (int x = 0; x < m - 1; x++) {
@@ -189,15 +195,15 @@ namespace triqs_xca::dense {
       return f_ix_max;
     }    
 
-    void DenseDiagramEvaluator::eval_self_energy(Backbone &backbone) {
+    void DenseDiagramEvaluator::eval_self_energy(nda::array_const_view<dcomplex, 3> Gt, Backbone &backbone) {
       // loop over all flat indices
       int f_ix_max = get_num_self_energy_backbones(backbone);
       for (int f_ix = 0; f_ix < f_ix_max; f_ix++) {
-        eval_self_energy_fixed_indices(backbone, f_ix); // evaluate the diagram with these directions, poles, and orbital indices
+        eval_self_energy_fixed_indices(Gt, backbone, f_ix); // evaluate the diagram with these directions, poles, and orbital indices
       }
     }
 
-    void DenseDiagramEvaluator::eval_self_energy_fixed_indices(Backbone &backbone, int f_ix) {
+    void DenseDiagramEvaluator::eval_self_energy_fixed_indices(nda::array_const_view<dcomplex, 3> Gt, Backbone &backbone, int f_ix) {
       int m = backbone.m;
       int vct0 = backbone.get_topology(0, 1); // Vertex Connected To zero
 
@@ -209,7 +215,7 @@ namespace triqs_xca::dense {
       // T is initialized to Gt, which is always the function at the rightmost edge
       for (int v = 1; v < vct0; v++) { // loop from the first vertex to before the special vertex
         multiply_left_vertex(T, backbone, v);
-        integrate_left_edge(T, backbone, v);
+        integrate_left_edge(T, Gt, backbone, v);
       }
 
       // 2. For each kappa, multiply by F_kappa(^dag). Then for each mu, kappa, multiply by Delta_{mu kappa}, and sum over kappa. Finally for each mu,
@@ -218,7 +224,7 @@ namespace triqs_xca::dense {
 
       // 3. Continue right to left until the final vertex multiplication is complete.
       for (int v = vct0 + 1; v < 2 * m; v++) { // loop from the special vertex to the last vertex
-        integrate_left_edge(T, backbone, v - 1);
+        integrate_left_edge(T, Gt, backbone, v - 1);
         multiply_left_vertex(T, backbone, v);
       }
 
@@ -260,7 +266,7 @@ namespace triqs_xca::dense {
       }
     }
 
-    void DenseDiagramEvaluator::integrate_right_edge(nda::array_view<dcomplex, 3> U_buf, Backbone &backbone, int e_ix) {
+    void DenseDiagramEvaluator::integrate_right_edge(nda::array_view<dcomplex, 3> U_buf, nda::array_const_view<dcomplex, 3> Gt, Backbone &backbone, int e_ix) {
       GKt   = Gt;
       int m = backbone.m;
       for (int x = 0; x < m - 1; x++) {
@@ -273,7 +279,7 @@ namespace triqs_xca::dense {
       U_buf = itops.convolve(beta, itops.vals2coefs(U_buf), itops.vals2coefs(GKt), cppdlr::TIME_ORDERED);
     }
 
-    nda::array<dcomplex, 3> DenseDiagramEvaluator::eval_correlator(CorrelatorBackbone &backbone, nda::array<dcomplex, 3> mu_ops,
+    nda::array<dcomplex, 3> DenseDiagramEvaluator::eval_correlator(nda::array_const_view<dcomplex, 3> Gt, CorrelatorBackbone &backbone, nda::array<dcomplex, 3> mu_ops,
                                                                    nda::array<dcomplex, 3> kap_ops) {
       int m = backbone.m;
       int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), m - 1));
@@ -282,13 +288,13 @@ namespace triqs_xca::dense {
 
       // loop over all flat indices
       for (int f_ix = 0; f_ix < f_ix_max; ++f_ix) {
-        correlator += eval_correlator(backbone, mu_ops, kap_ops, f_ix);  // evaluate the diagram with these directions, poles, and orbital indices
+        correlator += eval_correlator(Gt, backbone, mu_ops, kap_ops, f_ix);  // evaluate the diagram with these directions, poles, and orbital indices
       }
 
       return correlator;
     }
 
-    nda::array<dcomplex, 3> DenseDiagramEvaluator::eval_correlator(CorrelatorBackbone &backbone, nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops, int f_ix) {
+    nda::array<dcomplex, 3> DenseDiagramEvaluator::eval_correlator(nda::array_const_view<dcomplex, 3> Gt, CorrelatorBackbone &backbone, nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops, int f_ix) {
 
       int m = backbone.m;
 
@@ -302,7 +308,7 @@ namespace triqs_xca::dense {
       // T is initialized to Gt, which is always the function at the rightmost edge
       for (int v = 1; v < backbone.get_topology(0, 1); ++v) { // loop from the first vertex to before the special vertex
         multiply_left_vertex(T, backbone, v);
-        integrate_left_edge(T, backbone, v);
+        integrate_left_edge(T, Gt, backbone, v);
       }
 
       // evaluate the second sequence of backbone products and convolutions from tau to beta, using a change of variables to perform convolutions. the
@@ -311,7 +317,7 @@ namespace triqs_xca::dense {
 
       for (int v = 2 * m - 1; v > backbone.get_topology(0, 1); v--) {
         multiply_right_vertex(U, backbone, v);
-        integrate_right_edge(U, backbone, v - 1);
+        integrate_right_edge(U, Gt, backbone, v - 1);
       }
 
       U = itops.reflect(U);
@@ -342,7 +348,7 @@ namespace triqs_xca::dense {
       return static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), backbone.m - 1));
     }
 
-    nda::array<dcomplex, 3> DenseDiagramEvaluator::compute_single_ptcle_gf(nda::array_const_view<int, 2> topology) {
+    nda::array<dcomplex, 3> DenseDiagramEvaluator::compute_single_ptcle_gf(gf_vt G_ppsc, nda::array_const_view<int, 2> topology) {
       CorrelatorBackbone backbone(topology, n);
       
       auto mu_ops = Fset.Fs;
@@ -354,11 +360,11 @@ namespace triqs_xca::dense {
       return correlator;
       */
 
-      return eval_correlator(backbone, mu_ops, kap_ops);
+      return eval_correlator(G_ppsc[0].data(), backbone, mu_ops, kap_ops);
 
     }
 
-    nda::array<dcomplex, 3> DenseDiagramEvaluator::compute_single_ptcle_gf(nda::array_const_view<int, 2> topology, int f_ix) {
+    nda::array<dcomplex, 3> DenseDiagramEvaluator::compute_single_ptcle_gf(gf_vt G_ppsc, nda::array_const_view<int, 2> topology, int f_ix) {
       CorrelatorBackbone backbone(topology, n);
       auto mu_ops = Fset.Fs;
       auto kap_ops = Fset.F_dags;
@@ -369,7 +375,7 @@ namespace triqs_xca::dense {
       return correlator;
       */
 
-      return eval_correlator(backbone, mu_ops, kap_ops, f_ix);
+      return eval_correlator(G_ppsc[0].data(), backbone, mu_ops, kap_ops, f_ix);
 
     }    
 
