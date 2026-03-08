@@ -21,7 +21,6 @@ namespace triqs_xca::dense {
     DenseDiagramEvaluator::DenseDiagramEvaluator(
       double beta, double eps, imtime_ops &itops, 
       nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl, nda::vector_const_view<double> hyb_poles,
-      //nda::array_const_view<dcomplex, 3> Gt, 
       DenseFSet &Fset)
       : 
       tau_mesh(triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, itops.lambda() / beta, eps)),
@@ -31,11 +30,9 @@ namespace triqs_xca::dense {
       hyb(hyb), 
       hyb_refl(-hyb_refl), // Follow sign convention of block_sparse_backbone for reflected hybridization function.
       hyb_poles(hyb_poles),
-      //Gt(Gt), 
       Fset(Fset), 
       r(itops.rank()), 
       n(hyb.extent(1)),
-      //N(Gt.extent(1)),
       N(Fset.Fs.extent(1)),
       // allocate arrays
       Sigma(nda::zeros<dcomplex>(r, N, N)),
@@ -48,11 +45,9 @@ namespace triqs_xca::dense {
 
     DenseDiagramEvaluator::DenseDiagramEvaluator(
       nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-      //triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc,
       triqs::mesh::dlr_imtime tau_mesh,
       triqs::atom_diag::atom_diag<false> const &ad)
       :
-      //tau_mesh(G_ppsc[0].mesh()),
       tau_mesh(tau_mesh),
       beta(tau_mesh.beta()),
       itops(tau_mesh.dlr_it()),
@@ -61,11 +56,9 @@ namespace triqs_xca::dense {
       hyb(aaa_coefs2vals(beta, tau_mesh.w_max() * tau_mesh.beta(), tau_mesh.eps(), hyb_coeffs, hyb_poles)),
       hyb_refl(-itops.reflect(hyb)), // Follow sign convention of block_sparse_backbone for reflected hybridization function.
       hyb_poles(beta * hyb_poles), 
-      //Gt(G_ppsc[0].data()),
       Fset(get_operators_dense(ad, hyb_coeffs)),
       r(itops.rank()),
-      n(hyb.extent(1)),
-      //N(Gt.extent(1)),
+      n(ad.get_fops().size()), // number of fermion flavours (spin-orbitals)
       N(ad.get_full_hilbert_space_dim()),
       // allocate arrays
       Sigma(nda::zeros<dcomplex>(r, N, N)),
@@ -377,7 +370,5 @@ namespace triqs_xca::dense {
 
       return eval_correlator(G_ppsc[0].data(), backbone, mu_ops, kap_ops, f_ix);
 
-    }    
-
-
+    }
 } // namespace triqs_xca::dense

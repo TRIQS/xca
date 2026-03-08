@@ -120,23 +120,18 @@ namespace triqs_xca::dense {
        * @param[in] hyb hybridization function at imaginary time nodes
        * @param[in] hyb_refl hybridization function at (beta - tau) nodes
        * @param[in] hyb_poles hybridization poles
-       * @param[in] Gt Green's function at imaginary time nodes
        * @param[in] Fset DenseFSet (cre/ann operators with and without bars)
        */
       C2PY_IGNORE DenseDiagramEvaluator(double beta, double eps, imtime_ops &itops, nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl,
-                            nda::vector_const_view<double> hyb_poles, 
-                            //nda::array_const_view<dcomplex, 3> Gt, 
-                            DenseFSet &Fset);
+                            nda::vector_const_view<double> hyb_poles, DenseFSet &Fset);
 
       /**
        * @brief Constructor for DiagramEvaluator
        * @param[in] hyb_poles hybridization poles
        * @param[in] hyb_coeffs hybridization function coefficients (at poles)
-       * @param[in] G_ppsc TRIQS pseudo-particle Green's function
-       * @param[in] ad atom_diag object with Hamiltonian and field operators
+       * @param[in] tau_mesh TRIQS imagnary time DLR mesh
+       * @param[in] ad TRIQS atom_diag object with Hamiltonian and field operators
        */
-      //DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-      //                      triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, triqs::atom_diag::atom_diag<false> const &ad);
       DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
                             triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<false> const &ad);
 
