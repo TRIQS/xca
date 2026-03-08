@@ -14,59 +14,61 @@ using nda::linalg::matmul;
 
 using triqs_xca::atom_diag::get_operators;
 
-DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> hyb,
-                                   nda::vector_const_view<double> hyb_poles, BlockDiagOpFun &Gt, BlockOpSymQuartet &Fq)
-   : itops(imtime_ops(Lambda, cppdlr::build_dlr_rf(Lambda, eps))),
+DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps, 
+                                   nda::array_const_view<dcomplex, 3> hyb,
+                                   nda::vector_const_view<double> hyb_poles, 
+                                   BlockDiagOpFun &Gt, 
+                                   BlockOpSymQuartet &Fq)
+   : 
+     tau_mesh(triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda / beta, eps)),
+     itops(tau_mesh.dlr_it()),
+     dlr_it(itops.get_itnodes()),
      Gt(Gt),
      Fq(Fq),
      Sigma(itops.rank(), Gt.get_block_sizes()),
-     tau_mesh(triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda / beta, eps)),
      beta(beta),
      r(itops.rank()),
-     n(hyb.extent(1)),
+     n(nda::sum(Fq.sym_set_sizes)), // number of spin-orbitals
      q(nda::max_element(Fq.sym_set_labels) + 1),
-     Nmax(Gt.get_max_block_size()),
+     //Nmax(Gt.get_max_block_size()), // get from Fq instead
+     Nmax(nda::max_element(Fq.Fs[0].get_block_sizes())), // Possibly dangerous if Fs[0] has no block in the larges sector..?
      hyb(hyb),
-     hyb_poles(beta * hyb_poles) {
-
-  dlr_it      = itops.get_itnodes();
-  hyb_reflect = itops.reflect(hyb);
-
-  // allocate arrays
-  T     = nda::zeros<dcomplex>(r, Nmax, Nmax);
-  U     = nda::zeros<dcomplex>(r, Nmax, Nmax);
-  GKt   = nda::zeros<dcomplex>(r, Nmax, Nmax);
-  Tkaps = nda::zeros<dcomplex>(n, r, Nmax, Nmax);
-  Tmu   = nda::zeros<dcomplex>(r, Nmax, Nmax);
-}
+     hyb_reflect(itops.reflect(hyb)),
+     hyb_poles(beta * hyb_poles),
+     // allocate arrays
+     T(nda::zeros<dcomplex>(r, Nmax, Nmax)),
+     U(nda::zeros<dcomplex>(r, Nmax, Nmax)),
+     GKt(nda::zeros<dcomplex>(r, Nmax, Nmax)),
+     Tkaps(nda::zeros<dcomplex>(n, r, Nmax, Nmax)), // Largest memory footprint, speeding up multiply_left_vertex_and_right_zero_vertex
+     Tmu(nda::zeros<dcomplex>(r, Nmax, Nmax))
+     {}
 
 DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps, nda::vector_const_view<double> hyb_poles,
                                    nda::array_const_view<dcomplex, 3> hyb_coeffs, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc,
                                    triqs::atom_diag::atom_diag<false> const &ad)
-   : itops(imtime_ops(Lambda, cppdlr::build_dlr_rf(Lambda, eps))),
+   : 
+     tau_mesh(triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda / beta, eps)),
+     itops(tau_mesh.dlr_it()),
      dlr_it(itops.get_itnodes()),
      Gt(BlockDiagOpFun(G_ppsc)),
      Fq(std::get<0>(get_operators(ad, hyb_coeffs))),
      Sigma(itops.rank(), Gt.get_block_sizes()),
-     tau_mesh(triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda / beta, eps)),
      beta(beta),
      r(itops.rank()),
-     n(hyb_coeffs.extent(1)),
+     n(ad.get_fops().size()), // number of fermion flavours (spin-orbitals)
      q(nda::max_element(Fq.sym_set_labels) + 1),
-     Nmax(Gt.get_max_block_size()),
-     hyb_poles(beta * hyb_poles) {
-
-  // hyb on DLR imaginary time nodes
-  hyb         = aaa_coefs2vals(beta, Lambda, eps, hyb_coeffs, hyb_poles);
-  hyb_reflect = itops.reflect(hyb);
-
-  // allocate arrays
-  T     = nda::zeros<dcomplex>(r, Nmax, Nmax);
-  U     = nda::zeros<dcomplex>(r, Nmax, Nmax);
-  GKt   = nda::zeros<dcomplex>(r, Nmax, Nmax);
-  Tkaps = nda::zeros<dcomplex>(n, r, Nmax, Nmax);
-  Tmu   = nda::zeros<dcomplex>(r, Nmax, Nmax);
-}
+     //Nmax(Gt.get_max_block_size()),
+     Nmax(nda::max_element(Fq.Fs[0].get_block_sizes())), // Possibly dangerous if Fs[0] has no block in the larges sector..?
+     hyb(aaa_coefs2vals(beta, Lambda, eps, hyb_coeffs, hyb_poles)),
+     hyb_reflect(itops.reflect(hyb)),
+     hyb_poles(beta * hyb_poles),
+     // allocate arrays
+     T(nda::zeros<dcomplex>(r, Nmax, Nmax)),
+     U(nda::zeros<dcomplex>(r, Nmax, Nmax)),
+     GKt(nda::zeros<dcomplex>(r, Nmax, Nmax)),
+     Tkaps(nda::zeros<dcomplex>(n, r, Nmax, Nmax)), // Largest memory footprint, speeding up multiply_left_vertex_and_right_zero_vertex
+     Tmu(nda::zeros<dcomplex>(r, Nmax, Nmax))
+     {}
 
 // ----------- Private routines for any diagram ==========
 

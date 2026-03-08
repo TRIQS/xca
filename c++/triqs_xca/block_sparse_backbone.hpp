@@ -27,12 +27,12 @@ using cppdlr::imtime_ops;
  */
 class DiagramEvaluator {
   private:
+  triqs::mesh::dlr_imtime tau_mesh;  // imaginary time mesh
   imtime_ops itops;           // DLR imaginary time object
   nda::vector<double> dlr_it; // DLR imaginary time nodes in relative ordering
   BlockDiagOpFun Gt;          // Green's function at imaginary time nodes
   BlockOpSymQuartet Fq;       // BlockOpSymQuartet (field operators with and without bars)
   BlockDiagOpFun Sigma;       // array for storing self-energy contribution (final result)
-  triqs::mesh::dlr_imtime tau_mesh;  // imaginary time mesh
 
   // Diagram composition routines
   
