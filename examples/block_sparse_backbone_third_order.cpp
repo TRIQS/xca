@@ -276,7 +276,7 @@ int main() {
   auto hyb_coeffs               = itops.vals2coefs(Deltat); // hybridization DLR coeffs
   auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs);
 
-  auto D = DiagramEvaluator(beta, Lambda, eps, Deltat, nda::make_regular(dlr_rf / beta), Gt, Fq); // create DiagramEvaluator object
+  auto D = DiagramEvaluator(beta, Lambda, eps, Deltat, nda::make_regular(dlr_rf / beta), Fq); // create DiagramEvaluator object
 
   auto Deltadlr                            = itops.vals2coefs(Deltat); //obtain dlr coefficient of Delta(t)
   nda::vector<double> dlr_rf_reflect       = -dlr_rf;
@@ -296,7 +296,7 @@ int main() {
     std::cout << "Evaluating topology " << i << std::endl;
 
     // Compute third-order contribution using DiagramEvaluator
-    auto Sigma_third_gf = D.compute_self_energy(topologies(i, _, _));
+    auto Sigma_third_gf = D.compute_self_energy(Gt, topologies(i, _, _));
     third_order_se  = BlockDiagOpFun(Sigma_third_gf);
     D.reset(); // reset the DiagramEvaluator for the next topology
 
@@ -334,7 +334,7 @@ int main() {
   auto third_order_spgf = nda::zeros<dcomplex>(r, n, n);
   for (int i = 0; i < 4; ++i) {
     std::cout << "Evaluating topology " << i << " for single-particle Green's function" << std::endl;
-    third_order_spgf = D.compute_single_ptcle_gf(topologies(i, _, _));
+    third_order_spgf = D.compute_single_ptcle_gf(Gt, topologies(i, _, _));
     D.reset();
     // compute single-particle Green's function using old code
     auto spgf_old = G_Diagram_calc_sum_all(Delta_F, Delta_F_reflect, topologies(i, _, _), Gt_dense, itops, beta, Fs_dense, F_dags_dense);

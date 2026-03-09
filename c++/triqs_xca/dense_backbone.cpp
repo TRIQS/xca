@@ -3,9 +3,8 @@
 #include <cppdlr/dlr_imtime.hpp>
 #include <cppdlr/dlr_kernels.hpp>
 
-#include <triqs_xca/dense_backbone.hpp>
-
-#include <triqs_xca/block_sparse.hpp>
+#include "triqs_xca/hyb.hpp"
+#include "triqs_xca/dense_backbone.hpp"
 
 namespace triqs_xca::dense {
     
@@ -15,8 +14,6 @@ namespace triqs_xca::dense {
     using nda::linalg::matmul;
 
     using triqs_xca::atom_diag::get_operators_dense;
-
-    using triqs_xca::block_sparse::aaa_coefs2vals; // Move to separate namespace
 
     DenseDiagramEvaluator::DenseDiagramEvaluator(
       double beta, double eps, imtime_ops &itops, 
@@ -53,7 +50,7 @@ namespace triqs_xca::dense {
       itops(tau_mesh.dlr_it()),
       dlr_it(itops.get_itnodes()),
       // hybridization
-      hyb(aaa_coefs2vals(beta, tau_mesh.w_max() * tau_mesh.beta(), tau_mesh.eps(), hyb_coeffs, hyb_poles)),
+      hyb(hyb::coefs2vals(beta, tau_mesh.w_max() * tau_mesh.beta(), tau_mesh.eps(), hyb_coeffs, hyb_poles)),
       hyb_refl(-itops.reflect(hyb)), // Follow sign convention of block_sparse_backbone for reflected hybridization function.
       hyb_poles(beta * hyb_poles), 
       Fset(get_operators_dense(ad, hyb_coeffs)),

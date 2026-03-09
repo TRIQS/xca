@@ -28,9 +28,8 @@ template <> constexpr bool c2py::is_wrapped<triqs_xca::block_sparse::DiagramEval
 
 template <> inline constexpr auto c2py::tp_name<triqs_xca::block_sparse::DiagramEvaluator> = "triqs_xca.module.DiagramEvaluator";
 static auto init_0                                                                         = c2py::dispatcher_c_kw_t{
-   c2py::c_constructor<triqs_xca::block_sparse::DiagramEvaluator, double, double, double, nda::vector_const_view<double>,
-                                                                                               nda::array_const_view<nda::dcomplex, 3>, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>,
-                                                                                               const triqs::atom_diag::atom_diag<0> &>("beta", "Lambda", "eps", "hyb_poles", "hyb_coeffs", "G_ppsc", "ad")};
+   c2py::c_constructor<triqs_xca::block_sparse::DiagramEvaluator, nda::vector_const_view<double>, nda::array_const_view<nda::dcomplex, 3>,
+                                                                                               triqs::mesh::dlr_imtime, const triqs::atom_diag::atom_diag<0> &>("hyb_poles", "hyb_coeffs", "tau_mesh", "ad")};
 template <> constexpr initproc c2py::tp_init<triqs_xca::block_sparse::DiagramEvaluator> = c2py::pyfkw_constructor<init_0>;
 template <>
 const std::string c2py::tp_ctor_doc<triqs_xca::block_sparse::DiagramEvaluator> =
@@ -54,30 +53,30 @@ G_ppsc : {par_5}
 ad : {par_6}
    atom_diag object with Hamiltonian and field operators
 )DOC",
-              {{c2py::python_typename<double>()},
-               {c2py::python_typename<double>()},
-               {c2py::python_typename<double>()},
+              {{},
+               {},
+               {},
                {c2py::python_typename<nda::vector_const_view<double>>()},
                {c2py::python_typename<nda::array_const_view<nda::dcomplex, 3>>()},
-               {c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()},
+               {},
                {c2py::python_typename<const triqs::atom_diag::atom_diag<0> &>()}});
 // compute_self_energy
-static auto const fun_0 =
-   c2py::dispatcher_f_kw_t{c2py::cmethod([](triqs_xca::block_sparse::DiagramEvaluator &self,
-                                            nda::array_const_view<int, 2> topology) { return self.compute_self_energy(topology); },
-                                         "self", "topology"),
-                           c2py::cmethod([](triqs_xca::block_sparse::DiagramEvaluator &self, nda::array_const_view<int, 2> topology,
-                                            int f_ix) { return self.compute_self_energy(topology, f_ix); },
-                                         "self", "topology", "f_ix")};
+static auto const fun_0 = c2py::dispatcher_f_kw_t{
+   c2py::cmethod([](triqs_xca::block_sparse::DiagramEvaluator &self, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc,
+                    nda::array_const_view<int, 2> topology) { return self.compute_self_energy(G_ppsc, topology); },
+                 "self", "G_ppsc", "topology"),
+   c2py::cmethod([](triqs_xca::block_sparse::DiagramEvaluator &self, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc,
+                    nda::array_const_view<int, 2> topology, int f_ix) { return self.compute_self_energy(G_ppsc, topology, f_ix); },
+                 "self", "G_ppsc", "topology", "f_ix")};
 
 // compute_single_ptcle_gf
-static auto const fun_1 =
-   c2py::dispatcher_f_kw_t{c2py::cmethod([](triqs_xca::block_sparse::DiagramEvaluator &self,
-                                            nda::array_const_view<int, 2> topology) { return self.compute_single_ptcle_gf(topology); },
-                                         "self", "topology"),
-                           c2py::cmethod([](triqs_xca::block_sparse::DiagramEvaluator &self, nda::array_const_view<int, 2> topology,
-                                            int f_ix) { return self.compute_single_ptcle_gf(topology, f_ix); },
-                                         "self", "topology", "f_ix")};
+static auto const fun_1 = c2py::dispatcher_f_kw_t{
+   c2py::cmethod([](triqs_xca::block_sparse::DiagramEvaluator &self, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc,
+                    nda::array_const_view<int, 2> topology) { return self.compute_single_ptcle_gf(G_ppsc, topology); },
+                 "self", "G_ppsc", "topology"),
+   c2py::cmethod([](triqs_xca::block_sparse::DiagramEvaluator &self, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc,
+                    nda::array_const_view<int, 2> topology, int f_ix) { return self.compute_single_ptcle_gf(G_ppsc, topology, f_ix); },
+                 "self", "G_ppsc", "topology", "f_ix")};
 
 // get_num_self_energy_backbones
 static auto const fun_2 =

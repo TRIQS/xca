@@ -5,6 +5,8 @@
 
 #include <triqs/gfs.hpp>
 
+#include <cppdlr/dlr_imtime.hpp>
+
 namespace triqs_xca::block_sparse {
 
 using nda::dcomplex;
@@ -23,6 +25,7 @@ class BlockDiagOpFun {
 
   public:
   BlockDiagOpFun &operator+=(const BlockDiagOpFun &G);
+  BlockDiagOpFun &operator*=(const dcomplex scalar);
   void set_blocks(std::vector<nda::array<dcomplex, 3>> &new_blocks);
   void set_block(int i, nda::array_const_view<dcomplex, 3> block);
   void set_zero_block_indices(); // set zero_block_indices according to current blocks
@@ -337,28 +340,6 @@ BlockDiagOpFun BOFtoBDOF(BlockOpFun const &A);
  */
 BlockDiagOpFun nonint_gf_BDOF(std::vector<nda::array<double, 2>> H_blocks, nda::vector<int> H_block_inds, double beta,
                               nda::vector_const_view<double> dlr_it_abs);
-
-/**
- * @brief Convert AAA coefficients to values at DLR imaginary time nodes
- * @param[in] beta inverse temperature
- * @param[in] Lambda DLR cutoff parameter
- * @param[in] eps DLR epsilon parameter
- * @param[in] coefs DLR coefficients
- * @param[in] poles DLR poles
- */
-nda::array<dcomplex, 3> aaa_coefs2vals(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> coefs,
-                                       nda::vector_const_view<double> poles);
-
-/**
- * @brief Get AAA coefficients of reflection
- * @param[in] beta inverse temperature
- * @param[in] Lambda DLR cutoff parameter
- * @param[in] eps DLR epsilon parameter
- * @param[in] coefs DLR values at imaginary time nodes
- * @param[in] poles DLR imaginary time nodes
- */
-nda::array<dcomplex, 3> aaa_reflect(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> coefs,
-                                    nda::vector_const_view<double> poles);
 
 /**
  * @brief Convert a BlockDiagOpFun to a triqs::gfs::block_gf<triqs::mesh::dlr_imtime>

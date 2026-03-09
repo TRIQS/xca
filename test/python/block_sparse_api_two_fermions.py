@@ -199,8 +199,8 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
         d.Sigma_S = S.S.calc_Sigma(d.order)
         d.spgf_S = S.S.calc_spgf(d.order)
 
-        d.Sigma_BSS = pseudo_particle_block_gf_to_dense(BSS.pseudo_particle_self_energy(d.order), BSS.ad)
-        d.spgf_BSS = BSS.single_particle_greens_function(d.order)
+        d.Sigma_BSS = pseudo_particle_block_gf_to_dense(BSS.pseudo_particle_self_energy(BSS.G, d.order), BSS.ad)
+        d.spgf_BSS = BSS.single_particle_greens_function(BSS.G, d.order)
 
         results_by_order[order] = d
 
@@ -224,7 +224,7 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
 
             t2 = time.time()
 
-            d.Sigma_BSS = BSS.pseudo_particle_self_energy_topology(topology)
+            d.Sigma_BSS = BSS.pseudo_particle_self_energy_topology(BSS.G, topology)
             d.Sigma_BSS = pseudo_particle_block_gf_to_dense(d.Sigma_BSS, BSS.ad)
 
             t3 = time.time()
@@ -241,7 +241,7 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
             t1 = time.time()
             d.spgf_S = S.S.calc_spgf_toplogy(topology)
             t2 = time.time()
-            d.spgf_BSS = BSS.single_particle_greens_function_topology(topology) 
+            d.spgf_BSS = BSS.single_particle_greens_function_topology(BSS.G, topology) 
             t3 = time.time()
 
             print(f'    spgf time ZH ({t2 - t1} s) BS ({t3 - t2} s)')

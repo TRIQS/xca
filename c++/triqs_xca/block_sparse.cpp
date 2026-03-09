@@ -60,6 +60,17 @@ BlockDiagOpFun &BlockDiagOpFun::operator+=(const BlockDiagOpFun &G) {
   return *this;
 }
 
+BlockDiagOpFun &BlockDiagOpFun::operator*=(const dcomplex scalar) {
+  for (int i = 0; i < this->num_block_cols; i++) {
+    if (zero_block_indices(i) == -1) {
+      // zero block, do nothing
+    } else {
+      this->blocks[i] *= scalar;
+    }
+  }
+  return *this;
+}
+
 void BlockDiagOpFun::set_blocks(std::vector<nda::array<dcomplex, 3>> &new_blocks) {
 
   this->blocks       = new_blocks;
@@ -671,32 +682,6 @@ BlockDiagOpFun nonint_gf_BDOF(std::vector<nda::array<double, 2>> H_blocks, nda::
   }
 
   return Gt;
-}
-
-nda::array<dcomplex, 3> aaa_coefs2vals(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> coefs,
-                                       nda::vector_const_view<double> poles) {
-  long n1     = coefs.extent(1);
-  long n2     = coefs.extent(2);
-  auto dlr_rf = cppdlr::build_dlr_rf(Lambda, eps);
-  auto itops  = cppdlr::imtime_ops(Lambda, dlr_rf);
-  auto dlr_it = itops.get_itnodes();
-  int r       = itops.rank();
-  int p       = static_cast<int>(poles.size());
-  auto kmat   = cppdlr::build_k_it(dlr_it, nda::make_regular(beta * poles));
-  auto cf_r   = nda::reshape(coefs, p, coefs.size() / p);
-  nda::array<dcomplex, 3> vals(r, n1, n2);
-  reshape(vals, r, n1 * n2) = matmul(kmat, cf_r);
-  return vals;
-}
-
-nda::array<dcomplex, 3> aaa_reflect(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> coefs,
-                                    nda::vector_const_view<double> poles) {
-  auto vals   = aaa_coefs2vals(beta, Lambda, eps, coefs, poles);
-  auto dlr_rf = cppdlr::build_dlr_rf(Lambda, eps);
-  auto itops  = cppdlr::imtime_ops(Lambda, dlr_rf);
-  auto refl   = itops.reflect(vals);
-  // TODO
-  return coefs; // placeholder
 }
 
 triqs::gfs::block_gf<triqs::mesh::dlr_imtime> BDOF_to_block_gf(BlockDiagOpFun const &BDOF, double beta, double Lambda, double eps) {

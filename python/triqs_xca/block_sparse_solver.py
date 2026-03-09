@@ -124,10 +124,7 @@ class BlockSparseSolver(object):
         if self.use_dense_solver:
             self.d = DenseDiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.ad)
         else:
-            self.d = DiagramEvaluator(
-                self.beta, self.w_max * self.beta, self.eps, # -- Todo: Get this info from self.G
-                self.hyb.poles, self.hyb.coefficients,
-                self.G, self.ad)
+            self.d = DiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.ad)
 
 
     def solve(self, max_order, tol=1e-7, maxiter=10, mix=1.):
