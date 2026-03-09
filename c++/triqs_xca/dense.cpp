@@ -39,5 +39,20 @@ namespace triqs_xca::dense {
       }
     }
 
+    nda::array_const_view<dcomplex, 2> DenseFSet::get_operator(Backbone &backbone, int v_ix, int o_ix, int l_ix) const {
+
+      bool has_bar = backbone.has_vertex_bar(v_ix);
+      bool has_dag = backbone.has_vertex_dag(v_ix);
+
+      if (has_bar)
+        return has_dag ? F_dag_bars(o_ix, l_ix, _, _) : F_bars_refl(o_ix, l_ix, _, _);
+      else
+        return has_dag ? F_dags(o_ix, _, _) : Fs(o_ix, _, _);    
+    }
+
+    nda::array_const_view<dcomplex, 2> DenseFSet::get_operator(Backbone &backbone, int v_ix, int o_ix) const {
+      bool is_dag = backbone.has_vertex_dag(v_ix);
+      return is_dag ? F_dags(o_ix, _, _) : Fs(o_ix, _, _);
+    }
 
 } // namespace triqs_xca::dense

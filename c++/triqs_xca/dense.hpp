@@ -1,6 +1,8 @@
 #pragma once
 #include <nda/nda.hpp>
 
+#include "triqs_xca/backbone.hpp"
+
 namespace triqs_xca::dense {
 
     using nda::dcomplex;
@@ -40,6 +42,8 @@ namespace triqs_xca::dense {
        */
       void update_hybridization(nda::array_const_view<dcomplex, 3> hyb_coeffs);
 
+      nda::array_const_view<dcomplex, 2> get_operator(Backbone &backbone, int v_ix, int o_ix, int l_ix) const;
+      nda::array_const_view<dcomplex, 2> get_operator(Backbone &backbone, int v_ix, int o_ix) const;
     };
 
 } // namespace triqs_xca::dense
