@@ -82,7 +82,7 @@ TEST(two_fermions, one_hyb_pole) {
   }
   auto Fset = get_operators_dense(ad, hyb_coeffs);
   hyb_poles = nda::make_regular(beta * hyb_poles);
-  DenseDiagramEvaluator D_dense(beta, eps, itops, hyb, hyb_refl, hyb_poles, Fset);
+  DenseDiagramEvaluator D_dense(beta, eps, itops,hyb_poles, hyb_coeffs, Fset);
   auto mu_ops  = Fset.Fs;
   auto kap_ops = Fset.F_dags;
   CorrelatorBackbone B(topology, norb);

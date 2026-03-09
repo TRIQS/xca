@@ -19,7 +19,7 @@ namespace triqs_xca::hyb {
      poles(hyb_poles * tau_mesh.beta()), 
      coeffs(hyb_coeffs),
      values(coefs2vals(tau_mesh.beta(), tau_mesh.dlr_it(), hyb_coeffs, hyb_poles)),
-     values_reflect(tau_mesh.dlr_it().reflect(values))
+     values_reflect(-tau_mesh.dlr_it().reflect(values)) // Follow sign convention of block_sparse_backbone for reflected hybridization function.
      {};    
 
 nda::array<dcomplex, 3> coefs2vals(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> coefs,
@@ -40,7 +40,6 @@ nda::array<dcomplex, 3> coefs2vals(double beta, const cppdlr::imtime_ops &itops,
   nda::array<dcomplex, 3> vals(r, n1, n2);
   reshape(vals, r, n1 * n2) = matmul(kmat, cf_r);
   return vals;
-                                        
 }
 
 nda::array<dcomplex, 3> reflect(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> coefs,

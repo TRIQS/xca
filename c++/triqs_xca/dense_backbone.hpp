@@ -5,6 +5,7 @@
 
 #include <triqs/gfs.hpp>
 
+#include "triqs_xca/hyb.hpp"
 #include "triqs_xca/dense.hpp"
 #include "triqs_xca/backbone.hpp"
 #include "triqs_xca/atom_diag_utils.hpp"
@@ -42,11 +43,7 @@ namespace triqs_xca::dense {
       imtime_ops itops;                 // DLR imaginary time object
       nda::vector<double> dlr_it;       // DLR imaginary time nodes in relative ordering
 
-      nda::array<dcomplex, 3> hyb;      // hybridization function at imaginary time nodes
-      nda::array<dcomplex, 3> hyb_refl; // hybridization function at (beta - tau) nodes
-      nda::vector<double> hyb_poles;    // hybridization poles
-
-      //nda::array<dcomplex, 3> Gt;       // Green's function at imaginary time nodes
+      C2PY_IGNORE hyb::Hybridization hyb; // Hybridization object containing hyb and related information
       C2PY_IGNORE DenseFSet Fset;       // DenseFSet (cre/ann operators with and without bars)
 
       int r;                            // DLR rank
@@ -122,8 +119,9 @@ namespace triqs_xca::dense {
        * @param[in] hyb_poles hybridization poles
        * @param[in] Fset DenseFSet (cre/ann operators with and without bars)
        */
-      C2PY_IGNORE DenseDiagramEvaluator(double beta, double eps, imtime_ops &itops, nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl,
-                            nda::vector_const_view<double> hyb_poles, DenseFSet &Fset);
+      C2PY_IGNORE DenseDiagramEvaluator(double beta, double eps, imtime_ops &itops, 
+        nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs, 
+        DenseFSet &Fset);
 
       /**
        * @brief Constructor for DiagramEvaluator
@@ -132,8 +130,9 @@ namespace triqs_xca::dense {
        * @param[in] tau_mesh TRIQS imagnary time DLR mesh
        * @param[in] ad TRIQS atom_diag object with Hamiltonian and field operators
        */
-      DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-                            triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<false> const &ad);
+      DenseDiagramEvaluator(
+        nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
+        triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<false> const &ad);
 
       virtual ~DenseDiagramEvaluator() = default;
     };

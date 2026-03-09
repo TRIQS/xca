@@ -17,19 +17,18 @@ namespace triqs_xca::dense {
 
     DenseDiagramEvaluator::DenseDiagramEvaluator(
       double beta, double eps, imtime_ops &itops, 
-      nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl, nda::vector_const_view<double> hyb_poles,
+      nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
       DenseFSet &Fset)
       : 
       tau_mesh(triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, itops.lambda() / beta, eps)),
       beta(beta),
       itops(itops), 
       dlr_it(itops.get_itnodes()),
-      hyb(hyb), 
-      hyb_refl(-hyb_refl), // Follow sign convention of block_sparse_backbone for reflected hybridization function.
-      hyb_poles(hyb_poles),
+      hyb(tau_mesh, nda::make_regular(hyb_poles / beta), hyb_coeffs), // Scaling of poles by beta?
       Fset(Fset), 
       r(itops.rank()), 
-      n(hyb.extent(1)),
+      n(hyb_coeffs.extent(1)),
+      //n(Fset.Fs.extent(0)),
       N(Fset.Fs.extent(1)),
       // allocate arrays
       Sigma(nda::zeros<dcomplex>(r, N, N)),
@@ -42,17 +41,13 @@ namespace triqs_xca::dense {
 
     DenseDiagramEvaluator::DenseDiagramEvaluator(
       nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-      triqs::mesh::dlr_imtime tau_mesh,
-      triqs::atom_diag::atom_diag<false> const &ad)
+      triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<false> const &ad)
       :
       tau_mesh(tau_mesh),
       beta(tau_mesh.beta()),
       itops(tau_mesh.dlr_it()),
       dlr_it(itops.get_itnodes()),
-      // hybridization
-      hyb(hyb::coefs2vals(beta, tau_mesh.w_max() * tau_mesh.beta(), tau_mesh.eps(), hyb_coeffs, hyb_poles)),
-      hyb_refl(-itops.reflect(hyb)), // Follow sign convention of block_sparse_backbone for reflected hybridization function.
-      hyb_poles(beta * hyb_poles), 
+      hyb(tau_mesh, hyb_poles, hyb_coeffs),
       Fset(get_operators_dense(ad, hyb_coeffs)),
       r(itops.rank()),
       n(ad.get_fops().size()), // number of fermion flavours (spin-orbitals)
@@ -113,8 +108,7 @@ namespace triqs_xca::dense {
 
       // K factor
       int bv      = backbone.get_vertex_Ksign(v_ix); // sign on K
-      double pole = hyb_poles(l_ix);
-      // if (backbone.get_vertex_direction(v_ix) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
+      double pole = hyb.poles(l_ix);
       if (bv != 0) {
         for (int t = 0; t < r; t++) { T_buf(t, _, _) = cppdlr::k_it(dlr_it(t), bv * pole) * T_buf(t, _, _); }
       }
@@ -125,8 +119,7 @@ namespace triqs_xca::dense {
       int m = backbone.m;
       for (int x = 0; x < m - 1; x++) {
         int be      = backbone.get_edge(e_ix, x); // sign on K
-        double pole = hyb_poles(backbone.get_pole_ind(x));
-        // if (backbone.get_fb(x + 1) == 0) pole = -pole; // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
+        double pole = hyb.poles(backbone.get_pole_ind(x));
         if (be != 0) {
           for (int t = 0; t < r; t++) { GKt(t, _, _) = cppdlr::k_it(dlr_it(t), be * pole) * GKt(t, _, _); }
         }
@@ -141,8 +134,7 @@ namespace triqs_xca::dense {
         int exp = backbone.get_prefactor_Kexp(m_ix); // exponent on K for this hybridization index
         if (exp != 0) {
           int Ksign = backbone.get_prefactor_Ksign(m_ix);     // sign on K for this hybridization index
-          double om = hyb_poles(backbone.get_pole_ind(m_ix)); // DLR frequency for this value of this hybridization index
-          // if (backbone.get_fb(m_ix + 1) == 0) om = -om;       // MODIFIED LOGIC -- HYB_POLES->(-HYB_POLES) FOR BACKWARD LINES
+          double om = hyb.poles(backbone.get_pole_ind(m_ix)); // DLR frequency for this value of this hybridization index
           for (int q = 0; q < exp; q++) T_buf /= cppdlr::k_it(0, Ksign * om);
         }
       }
@@ -167,7 +159,7 @@ namespace triqs_xca::dense {
       for (int mu = 0; mu < n; mu++) {
         Tmu = 0;
         for (int kap = 0; kap < n; kap++) {
-          nda::array_const_view<dcomplex, 1> hyb_oo = is_forward ? hyb(_, mu, kap) : hyb_refl(_, mu, kap);
+          nda::array_const_view<dcomplex, 1> hyb_oo = is_forward ? hyb.values(_, mu, kap) : hyb.values_reflect(_, mu, kap);
           for (int t = 0; t < r; t++) { Tmu(t, _, _) += hyb_oo(t) * Tkaps(kap, t, _, _); }
         }
         nda::array_const_view<dcomplex, 2> F_mu = F_selector(!is_forward, mu);
@@ -181,7 +173,7 @@ namespace triqs_xca::dense {
     }
 
     int DenseDiagramEvaluator::get_num_self_energy_backbones(Backbone &backbone) {
-      int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), backbone.m - 1));
+      int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb.poles.size(), backbone.m - 1));
       return f_ix_max;
     }    
 
@@ -197,7 +189,7 @@ namespace triqs_xca::dense {
       int m = backbone.m;
       int vct0 = backbone.get_topology(0, 1); // Vertex Connected To zero
 
-      backbone.set_flat_index(f_ix, hyb_poles); // set directions, pole indices, and orbital indices from a single integer index
+      backbone.set_flat_index(f_ix, hyb.poles); // set directions, pole indices, and orbital indices from a single integer index
 
       // 1. Starting from tau_1, proceed right to left, performing multiplications at vertices and convolutions at edges, until reaching the vertex
       // containing the undecomposed hybridization line Delta_{mu kappa}.
@@ -252,7 +244,7 @@ namespace triqs_xca::dense {
       // K factor
       int Ksign = backbone.get_vertex_Ksign(v_ix); // sign on K
       if (Ksign != 0) {
-        for (int t = 0; t < r; t++) U_buf(t, _, _) *= cppdlr::k_it(dlr_it(t), -Ksign * hyb_poles(l_ix));
+        for (int t = 0; t < r; t++) U_buf(t, _, _) *= cppdlr::k_it(dlr_it(t), -Ksign * hyb.poles(l_ix));
       }
     }
 
@@ -262,7 +254,7 @@ namespace triqs_xca::dense {
       for (int x = 0; x < m - 1; x++) {
         int Ksign = backbone.get_edge(e_ix, x); // sign on K
         if (Ksign != 0) {
-          double pole = hyb_poles(backbone.get_pole_ind(x));
+          double pole = hyb.poles(backbone.get_pole_ind(x));
           for (int t = 0; t < r; t++) GKt(t, _, _) *= cppdlr::k_it(dlr_it(t), Ksign * pole);
         }
       }
@@ -272,7 +264,7 @@ namespace triqs_xca::dense {
     nda::array<dcomplex, 3> DenseDiagramEvaluator::eval_correlator(nda::array_const_view<dcomplex, 3> Gt, CorrelatorBackbone &backbone, nda::array<dcomplex, 3> mu_ops,
                                                                    nda::array<dcomplex, 3> kap_ops) {
       int m = backbone.m;
-      int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), m - 1));
+      int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb.poles.size(), m - 1));
       
       nda::array<dcomplex, 3> correlator = nda::zeros<dcomplex>(r, mu_ops.extent(0), kap_ops.extent(0));
 
@@ -288,7 +280,7 @@ namespace triqs_xca::dense {
 
       int m = backbone.m;
 
-      backbone.set_flat_index(f_ix, hyb_poles); // set directions, pole indices, and orbital indices from a single integer index
+      backbone.set_flat_index(f_ix, hyb.poles); // set directions, pole indices, and orbital indices from a single integer index
 
       nda::array<dcomplex, 3> correlator = nda::zeros<dcomplex>(r, mu_ops.extent(0), kap_ops.extent(0));
 
@@ -335,7 +327,7 @@ namespace triqs_xca::dense {
 
     int DenseDiagramEvaluator::get_num_single_ptcle_gf_backbones(nda::array_const_view<int, 2> topology) {
       CorrelatorBackbone backbone(topology, n);
-      return static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), backbone.m - 1));
+      return static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb.poles.size(), backbone.m - 1));
     }
 
     nda::array<dcomplex, 3> DenseDiagramEvaluator::compute_single_ptcle_gf(gf_vt G_ppsc, nda::array_const_view<int, 2> topology) {

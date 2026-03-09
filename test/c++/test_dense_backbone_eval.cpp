@@ -36,15 +36,16 @@ TEST(DenseBackbone, OCA) {
   auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
 
   // compute Fbars and Fdagbars and store in Fset
-  auto hyb_coeffs      = itops.vals2coefs(Deltat); // hybridization DLR coeffs
-  auto hyb_refl        = Deltat;
-  auto hyb_refl_coeffs = hyb_coeffs;
-  auto Fset            = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs);
+  auto hyb_poles  = dlr_rf;
+  auto hyb_coeffs = itops.vals2coefs(Deltat); // hybridization DLR coeffs
+
+  auto Fset = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs);
 
   // initialize Backbone and DiagramEvaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
-  auto B                      = Backbone(topology, n);
-  auto D                      = DenseDiagramEvaluator(beta, eps, itops, Deltat, hyb_refl, dlr_rf, Fset);
+
+  auto B = Backbone(topology, n);
+  auto D = DenseDiagramEvaluator(beta, eps, itops, hyb_poles, hyb_coeffs, Fset);
 
   // evaluate OCA self-energy contribution
   D.eval_self_energy(Gt_dense, B);
@@ -109,7 +110,7 @@ TEST(DenseBackbone, third_order_manual) {
   nda::vector<int> fb{1, 1, 1}, pole_inds{7, 9};
   B.set_directions(fb);
   B.set_pole_inds(pole_inds, dlr_rf);
-  auto D = DenseDiagramEvaluator(beta, eps, itops, Deltat, Deltat_refl, dlr_rf, Fset);
+  auto D = DenseDiagramEvaluator(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
 
   // perform the same calculation using the a routine called by eval_diagram_dense()
   nda::array<dcomplex, 3> T(r, N, N), GKt(r, N, N), Tmu(r, N, N), Sigma_generic(r, N, N);
@@ -205,7 +206,7 @@ TEST(DenseBackbone, OCA_semicircle_bath_aaa) {
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = Backbone(topology, n);
   auto Fset                   = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs);
-  auto D                      = DenseDiagramEvaluator(beta, eps, itops, hyb, hyb_refl, hyb_poles, Fset);
+  auto D                      = DenseDiagramEvaluator(beta, eps, itops, hyb_poles, hyb_coeffs, Fset);
   D.eval_self_energy(Gt_dense, B); // evaluate OCA diagram
   auto OCA_result = D.Sigma; // get the result from the DiagramEvaluator
 

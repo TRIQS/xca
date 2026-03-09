@@ -113,9 +113,6 @@ constexpr auto doc_member_9  = R"DOC()DOC";
 constexpr auto doc_member_10 = R"DOC()DOC";
 constexpr auto doc_member_11 = R"DOC()DOC";
 constexpr auto doc_member_12 = R"DOC()DOC";
-constexpr auto doc_member_13 = R"DOC()DOC";
-constexpr auto doc_member_14 = R"DOC()DOC";
-constexpr auto doc_member_15 = R"DOC()DOC";
 
 // ----- Method table ----
 
@@ -125,19 +122,15 @@ constinit PyGetSetDef c2py::tp_getset<triqs_xca::dense::DenseDiagramEvaluator>[]
    c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::beta, triqs_xca::dense::DenseDiagramEvaluator>("beta", doc_member_1),
    c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::itops, triqs_xca::dense::DenseDiagramEvaluator>("itops", doc_member_2),
    c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::dlr_it, triqs_xca::dense::DenseDiagramEvaluator>("dlr_it", doc_member_3),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::hyb, triqs_xca::dense::DenseDiagramEvaluator>("hyb", doc_member_4),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::hyb_refl, triqs_xca::dense::DenseDiagramEvaluator>("hyb_refl", doc_member_5),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::hyb_poles, triqs_xca::dense::DenseDiagramEvaluator>("hyb_poles",
-                                                                                                                             doc_member_6),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::r, triqs_xca::dense::DenseDiagramEvaluator>("r", doc_member_7),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::n, triqs_xca::dense::DenseDiagramEvaluator>("n", doc_member_8),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::N, triqs_xca::dense::DenseDiagramEvaluator>("N", doc_member_9),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::Sigma, triqs_xca::dense::DenseDiagramEvaluator>("Sigma", doc_member_10),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::T, triqs_xca::dense::DenseDiagramEvaluator>("T", doc_member_11),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::U, triqs_xca::dense::DenseDiagramEvaluator>("U", doc_member_12),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::GKt, triqs_xca::dense::DenseDiagramEvaluator>("GKt", doc_member_13),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::Tkaps, triqs_xca::dense::DenseDiagramEvaluator>("Tkaps", doc_member_14),
-   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::Tmu, triqs_xca::dense::DenseDiagramEvaluator>("Tmu", doc_member_15),
+   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::r, triqs_xca::dense::DenseDiagramEvaluator>("r", doc_member_4),
+   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::n, triqs_xca::dense::DenseDiagramEvaluator>("n", doc_member_5),
+   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::N, triqs_xca::dense::DenseDiagramEvaluator>("N", doc_member_6),
+   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::Sigma, triqs_xca::dense::DenseDiagramEvaluator>("Sigma", doc_member_7),
+   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::T, triqs_xca::dense::DenseDiagramEvaluator>("T", doc_member_8),
+   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::U, triqs_xca::dense::DenseDiagramEvaluator>("U", doc_member_9),
+   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::GKt, triqs_xca::dense::DenseDiagramEvaluator>("GKt", doc_member_10),
+   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::Tkaps, triqs_xca::dense::DenseDiagramEvaluator>("Tkaps", doc_member_11),
+   c2py::getsetdef_from_member<&triqs_xca::dense::DenseDiagramEvaluator::Tmu, triqs_xca::dense::DenseDiagramEvaluator>("Tmu", doc_member_12),
 
    {nullptr, nullptr, nullptr, nullptr, nullptr}};
 

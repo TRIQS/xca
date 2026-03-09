@@ -116,7 +116,7 @@ TEST(Backbone, OCA_BDOF_construct) {
   std::chrono::duration<double> elapsed = end - start;
 
   // dense diagram evaluation
-  DenseDiagramEvaluator D2(beta, eps, itops, Deltat, hyb_refl, dlr_rf, Fset);
+  DenseDiagramEvaluator D2(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
   start  = std::chrono::high_resolution_clock::now();
   int n  = 4;
   auto B = Backbone(topology, n);
@@ -220,7 +220,7 @@ TEST(Backbone, spin_flip_fermion) {
   auto Gt_dense = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
   auto Fset     = get_operators_dense(ad, hyb_coeffs);
 
-  DenseDiagramEvaluator D2(beta, eps, itops, hyb, hyb_refl, dlr_rf, Fset);
+  DenseDiagramEvaluator D2(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
   start = std::chrono::high_resolution_clock::now();
   D2.eval_self_energy(Gt_dense, B);
   end               = std::chrono::high_resolution_clock::now();
@@ -291,7 +291,7 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
   auto Gt_dense = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
   auto Fset     = get_operators_dense(ad, hyb_coeffs);
 
-  DenseDiagramEvaluator D2(beta, eps, itops, hyb, hyb_refl, dlr_rf, Fset);
+  DenseDiagramEvaluator D2(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
   start = std::chrono::high_resolution_clock::now();
   D2.eval_self_energy(Gt_dense, B);
   end               = std::chrono::high_resolution_clock::now();
@@ -475,7 +475,7 @@ TEST(Backbone, spin_flip_fermion_aaa) {
   auto Fset     = get_operators_dense(ad, hyb_coeffs);
 
   // compare to dense result
-  DenseDiagramEvaluator D2(beta, eps, itops, hyb, hyb_refl, hyb_poles, Fset);
+  DenseDiagramEvaluator D2(beta, eps, itops, hyb_poles, hyb_coeffs, Fset);
   start = std::chrono::high_resolution_clock::now();
   D2.eval_self_energy(Gt_dense, B);
   end               = std::chrono::high_resolution_clock::now();
@@ -571,7 +571,7 @@ TEST(Backbone, spin_flip_fermion_all_sym_aaa) {
   auto Fset     = get_operators_dense(ad, hyb_coeffs);
 
   // compare to dense result
-  DenseDiagramEvaluator D2(beta, eps, itops, hyb, hyb_refl, hyb_poles, Fset);
+  DenseDiagramEvaluator D2(beta, eps, itops, hyb_poles, hyb_coeffs, Fset);
   start = std::chrono::high_resolution_clock::now();
   D2.eval_self_energy(Gt_dense, B);
   end               = std::chrono::high_resolution_clock::now();
