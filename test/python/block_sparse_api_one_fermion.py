@@ -19,24 +19,21 @@ and single particle Green's function diagrams, see separate notebook in the exam
 
 """
 
+import numpy as np
+
 from itertools import product
 
-import numpy as np
-from scipy.integrate import quad
-
-import triqs.utility.mpi as mpi
-
-from triqs.gf import Gf, MeshDLRImTime
+from triqs.gf import make_gf_dlr_imtime, make_gf_dlr
+from triqs.gf import Gf, MeshDLRImTime, MeshDLRImFreq, iOmega_n, inverse
 from triqs.operators.util.hamiltonians import h_int_kanamori, make_operator_real
 
-from adapol import anacont
-
-
 from triqs_xca.triqs_solver import TriqsSolver
-
 from triqs_xca.block_sparse_solver import BlockSparseSolver
-
 from triqs_xca.block_sparse_solver import hamiltonian_matrix, pseudo_particle_block_gf_to_dense
+
+
+class Dummy():
+    def __init__(self): pass
 
 
 def get_analytic_solution():
@@ -102,35 +99,6 @@ def get_analytic_solution():
     return d
 
 
-
-class Dummy():
-    def __init__(self): pass
-
-
-def Kw(w, v):
-    return 1 / ( v - w)
-
-
-def semicircular(x):
-    return 2 * np.sqrt(1 - x**2) / np.pi
-
-
-def make_Delta_with_cont_spec_mat( Z, rho, a=-1.0, b=1.0, eps=1e-12):
-    Delta = np.zeros((Z.shape[0]), dtype=np.complex128)
-
-    for n in range(len(Z)):
-        def f(w):
-            return Kw(w , Z[n]) * rho(w)
-
-        Delta[n] = quad(
-            f, a, b, epsabs=eps, epsrel=eps, complex_func=True
-        )[0]
-        
-    T = np.array([[1.]])
-
-    return Delta[:, None, None] * T[None, :, :]
-
-
 def test_oca_diagram_cf_block_sparse_and_dense(
         e1=0.8, beta=2.0, conserved_operators='none', verbose=False):
 
@@ -148,7 +116,6 @@ def test_oca_diagram_cf_block_sparse_and_dense(
     mu = 0.0
     
     eps = 1e-12
-    #lamb = 20.0 * beta
     lamb = 200.0 * beta
     
     w_max = lamb / beta
@@ -174,35 +141,10 @@ def test_oca_diagram_cf_block_sparse_and_dense(
     
     print(f'conserved_operators = {conserved_operators}')    
     
-    # -- Hybridization function and adapol fit
-
-    if True:
-        N = 55
-        Z = 1j *(np.linspace(-N, N, N + 1)) * np.pi / beta
-        #Delta = make_Delta_with_cont_spec_mat(Z, semicircular, a=a, b=b, eps=eps)
-        #Delta = (1./Z).reshape(len(Z), 1, 1)
-        Delta = (1./(Z - e1)).reshape(len(Z), 1, 1)
-        #Delta = (1./(Z - e1) + 1./(Z - e2)).reshape(len(Z), 1, 1)
-        Np = 4 # unused?
-        func, fitting_error, pol, weight = anacont(Delta, Z, tol=eps)
-        print(f'pol = {pol}')
-        print(f'weight = {weight}')
-    else:
-        pol = np.array([0.])
-        weight = np.array([[[1.]]], dtype=complex)
-
-    from triqs.gf import MeshDLRImFreq
-
     mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=lamb/beta, eps=eps)
     Delta_w = Gf(mesh=mesh_w, target_shape=[1]*2)
-    iwn = np.array([ complex(x) for x in mesh_w ])
 
-    #Delta_w.data[:] = make_Delta_with_cont_spec_mat(iwn, semicircular, a=a, b=b, eps=eps)
-    #Delta_w.data[:, 0, 0] = 1./iwn
-    Delta_w.data[:, 0, 0] = 1./(iwn - e1)
-    #Delta_w.data[:, 0, 0] = 1./(iwn - e1) + 1./(iwn - e2)
-
-    from triqs.gf import make_gf_dlr_imtime, make_gf_dlr
+    Delta_w << inverse(iOmega_n - e1)
 
     Delta_tau = make_gf_dlr_imtime(Delta_w)
     Delta_dlr = make_gf_dlr(Delta_w)
@@ -224,13 +166,10 @@ def test_oca_diagram_cf_block_sparse_and_dense(
         conserved_operators=conserved_operators,
         )
 
-    #BSS.set_hybridization(Delta_w)
-    BSS.set_hybridization_poles_and_coefficients(pol, weight)
+    BSS.Delta_tau['0'] << Delta_tau
 
-    print(pol.shape)
-    print(weight.shape)
-    
-    BSS.init_diagram_evaluator() # -- This calls the DiagramEvaluator constructor.
+    BSS.fit_hybridization(tol=eps)
+
 
     # -- Compare pseudo particle Green's function
 
@@ -267,8 +206,8 @@ def test_oca_diagram_cf_block_sparse_and_dense(
         d.Sigma_S = S.S.calc_Sigma(d.order)
         d.spgf_S = S.S.calc_spgf(d.order)
 
-        d.Sigma_BSS = pseudo_particle_block_gf_to_dense(BSS.pseudo_particle_self_energy(BSS.G, d.order), BSS.ad)
-        d.spgf_BSS = BSS.single_particle_greens_function(BSS.G, d.order)
+        d.Sigma_BSS = pseudo_particle_block_gf_to_dense(BSS.eval_pseudo_particle_self_energy(BSS.G, d.order), BSS.ad)
+        d.spgf_BSS = BSS.eval_single_particle_greens_function(BSS.G, d.order)
 
         results_by_order[order] = d
 
@@ -291,7 +230,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(
 
             t2 = time.time()
 
-            d.Sigma_BSS = BSS.pseudo_particle_self_energy_topology(BSS.G, topology)
+            d.Sigma_BSS = BSS.eval_pseudo_particle_self_energy_topology(BSS.G, topology)
             d.Sigma_BSS = pseudo_particle_block_gf_to_dense(d.Sigma_BSS, BSS.ad)
 
             t3 = time.time()
@@ -308,7 +247,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(
             t1 = time.time()
             d.spgf_S = S.S.calc_spgf_toplogy(topology)
             t2 = time.time()
-            d.spgf_BSS = BSS.single_particle_greens_function_topology(BSS.G, topology)
+            d.spgf_BSS = BSS.eval_single_particle_greens_function_topology(BSS.G, topology)
             t3 = time.time()
 
             print(f'    spgf time ZH ({t2 - t1} s) BS ({t3 - t2} s)')
@@ -351,17 +290,13 @@ def test_oca_diagram_cf_block_sparse_and_dense(
         plt.ylabel(r'$\Delta(\tau)$]')
         
         plt.subplot(*subp); subp[-1] += 1
-        for i,j in product(range(Delta.shape[-1]), repeat=2):
-            if not (Delta[:, i, j].real == 0.).all():
-                plt.plot(Z.imag, Delta[:, i, j].real, label=f'i,j = {i},{j}')
+        oplotr(Delta_w)
         plt.legend()
         plt.xlabel(r'$\omega_n$')
         plt.ylabel(r'Re[$\Delta(i\omega_n)$]')
 
         plt.subplot(*subp); subp[-1] += 1
-        for i,j in product(range(Delta.shape[-1]), repeat=2):
-            if not (Delta[:, i, j].imag == 0.).all():
-                plt.plot(Z.imag, Delta[:, i, j].imag, label=f'i,j = {i},{j}')
+        oploti(Delta_w)
         plt.legend()
         plt.ylabel(r'Im[$\Delta(i\omega_n)$]')
         plt.xlabel(r'$\omega_n$')
@@ -370,12 +305,9 @@ def test_oca_diagram_cf_block_sparse_and_dense(
 
         
         plt.figure(figsize=(14, 12))
-        #subp = [2, 4, 1]
         subp = [6, 4, 1]
-        #subp = [34, 4, 1]
 
         print(len(results))
-        #exit()
 
         for topology, t in results.items():
             
@@ -383,10 +315,8 @@ def test_oca_diagram_cf_block_sparse_and_dense(
 
             plt.subplot(*subp); subp[-1] += 1
 
-            #oplotr(t.Sigma_BSS_block, label=None)
             oplot(t.Sigma_BSS, label=None)
             for i,j in product(range(t.Sigma_S.shape[-1]), repeat=2):
-            #for i,j in [(0,0), (1,1)]:
                 plt.plot(t.tau, t.Sigma_S[:, i, j].real, '+-')
 
             plt.plot([], [], 'x', color='gray', label='Block-sparse (PR)')
@@ -449,16 +379,6 @@ def test_oca_diagram_cf_block_sparse_and_dense(
             Sigma_anal_00 = ana.Sfunc_01_00(t.tau, beta, e1)
             Sigma_anal_11 = ana.Sfunc_01_11(t.tau, beta, e1)
 
-            if False:
-                a = np.log(2) / beta
-                def K(tau, omega): return -np.exp(-omega * tau) / (1 + np.exp(-beta * omega))
-                G_anal = - np.exp(-a * t.tau)
-                Sigma_anal1 = np.exp(-a * t.tau) * -K(t.tau, e1)
-                Sigma_anal2 = np.exp(-a * t.tau) * -K(beta - t.tau, e1)
-
-                #spgf_anal = 0.5**2 * np.exp(-a * beta) * (beta**2 - 2*beta*t.tau + t.tau**2) * t.tau**2 / 4
-                #spgf_BS_ref = -0.5**2 * np.exp(-a * beta) * (beta - t.tau) * t.tau**2 / 2 # -- Found in BS code
-
             plt.figure(figsize=(6, 6))
             subp = [2, 2, 1]
 
@@ -477,27 +397,11 @@ def test_oca_diagram_cf_block_sparse_and_dense(
                 plt.ylabel(r'$G(\tau)$')        
 
             plt.subplot(*subp); subp[-1] += 1
-            if False:
-                #oplot(t.spgf_BSS, label=None)
-                for i,j in [(0, 0)]:
-                #for i,j in product(range(t.spgf_S.shape[-1]), repeat=2):
-                    plt.subplot(*subp); subp[-1] += 1
-                    plt.plot(t.tau, t.spgf_S[:, i, j].real, '+', label='ZH numeric')
-                    #plt.plot(t.tau, t.spgf_S[:, i, j].imag, '+-')
-                    plt.plot(t.tau, t.spgf_BSS.data[:, i, j].real, 'x', label='BS numeric')
-                    #plt.plot(t.tau, spgf_anal, '-', label='analytic')
-                    #plt.plot(t.tau, spgf_BS_ref, '--', label='expression matching BS numeric')
-                    plt.xlabel(r'$\tau$')
-                    plt.ylabel(r'$g(\tau)$')
-                    plt.legend()
 
             for i,j in [(0, 0), (1, 1)]:
                 plt.subplot(*subp); subp[-1] += 1
-            #for i,j in product(range(t.Sigma_S.shape[-1]), repeat=2):
                 plt.plot(t.tau, t.Sigma_S[:, i, j].real, '+', label='ZH numeric')
                 plt.plot(t.tau, t.Sigma_BSS.data[:, i, j].real, 'x', label='BS numeric')
-                #plt.plot(t.tau, t.Sigma_BSS[0][:, i, j].real, 'x')
-                #plt.plot(t.tau, t.Sigma_S[:, i, j].imag, '+')
                 if i == 0:
                     plt.plot(t.tau, Sigma_anal_00, '-', label='analytic')
                 else:
@@ -515,7 +419,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(
         
         topology = ((0, 3), (1, 4), (2, 5))
         if topology in results.keys():
-        #if True:
+
             t = results[topology]
 
             # -- Analytic soltuion
@@ -528,14 +432,6 @@ def test_oca_diagram_cf_block_sparse_and_dense(
 
             spgf_anal = ana.spgf_func_031425(t.tau, beta, e1)
             
-            #a = np.log(2) / beta
-            #G_anal = - np.exp(-a * t.tau)
-
-            #Sigma_anal = 0.5**3 * np.exp(-a * t.tau) * t.tau**4 / (2*3*4)
-            
-            #spgf_anal = 0.5**2 * np.exp(-a * beta) * (beta**2 - 2*beta*t.tau + t.tau**2) * t.tau**2 / 4
-            #spgf_BS_ref = -0.5**2 * np.exp(-a * beta) * (beta - t.tau) * t.tau**2 / 2 # -- Found in BS code
-
             plt.figure(figsize=(6, 6))
             subp = [2, 2, 1]
 
@@ -554,7 +450,6 @@ def test_oca_diagram_cf_block_sparse_and_dense(
                 plt.ylabel(r'$G(\tau)$')        
 
             if True:
-                #oplot(t.spgf_BSS, label=None)
                 for i,j in [(0, 0)]:
                 #for i,j in product(range(t.spgf_S.shape[-1]), repeat=2):
                     plt.subplot(*subp); subp[-1] += 1
@@ -562,7 +457,6 @@ def test_oca_diagram_cf_block_sparse_and_dense(
                     #plt.plot(t.tau, t.spgf_S[:, i, j].imag, '+-')
                     plt.plot(t.tau, t.spgf_BSS.data[:, i, j].real, 'x', label='BS numeric')
                     plt.plot(t.tau, spgf_anal, '-', label='analytic')
-                    #plt.plot(t.tau, spgf_BS_ref, '--', label='expression matching BS numeric')
                     plt.xlabel(r'$\tau$')
                     plt.ylabel(r'$g(\tau)$')
                     plt.legend()
@@ -572,8 +466,6 @@ def test_oca_diagram_cf_block_sparse_and_dense(
                 plt.subplot(*subp); subp[-1] += 1
                 plt.plot(t.tau, t.Sigma_S[:, i, j].real, '+', label='ZH numeric')
                 plt.plot(t.tau, t.Sigma_BSS.data[:, i, j].real, 'x', label='BS numeric')
-                #plt.plot(t.tau, t.Sigma_BSS[0][:, i, j].real, 'x')
-                #plt.plot(t.tau, t.Sigma_S[:, i, j].imag, '+')
                 if i == 0:
                     plt.plot(t.tau, Sigma_anal_00, '-', label='analytic')
                 else:

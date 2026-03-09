@@ -1,53 +1,17 @@
-
+import numpy as np
 
 from itertools import product
 
-import numpy as np
-from scipy.integrate import quad
-
-import triqs.utility.mpi as mpi
-
-from triqs.gf import Gf, MeshDLRImTime
+from triqs.gf import Gf, MeshDLRImTime, inverse, iOmega_n
 from triqs.operators.util.hamiltonians import h_int_kanamori, make_operator_real
 
-from adapol import anacont
-
-
 from triqs_xca.triqs_solver import TriqsSolver
-
 from triqs_xca.block_sparse_solver import BlockSparseSolver
-
 from triqs_xca.block_sparse_solver import hamiltonian_matrix, pseudo_particle_block_gf_to_dense
 
 
 class Dummy():
     def __init__(self): pass
-
-
-def Kw(w, v):
-    return 1 / ( v - w)
-
-
-def semicircular(x):
-    return 2 * np.sqrt(1 - x**2) / np.pi
-
-
-def make_Delta_with_cont_spec_mat( Z, rho, a=-1.0, b=1.0, eps=1e-12):
-    Delta = np.zeros((Z.shape[0]), dtype=np.complex128)
-
-    for n in range(len(Z)):
-        def f(w):
-            return Kw(w , Z[n]) * rho(w)
-
-        Delta[n] = quad(
-            f, a, b, epsabs=eps, epsrel=eps, complex_func=True
-        )[0]
-        
-    #T = np.eye(2)
-    r0 = 0.5
-    T = np.array([[1., r0], [r0, 1.]])
-
-    return Delta[:, None, None] * T[None, :, :]
 
 
 def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operators='none', verbose=False):
@@ -98,40 +62,13 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
     
     # -- Hybridization function and adapol fit
 
-    T = np.array([[1., r0], [r0, 1.]])
-    if True:
-        N = 55
-        Z = 1j *(np.linspace(-N, N, N + 1)) * np.pi / beta
-        #Delta = make_Delta_with_cont_spec_mat(Z, semicircular, a=a, b=b, eps=eps)
-        #Delta = (1./Z).reshape(len(Z), 1, 1)
-        #Delta = (1./Z)[:, None, None] * np.eye(2)[None, :, :]
-        #Delta = (1./Z)[:, None, None] * np.ones((2, 2))[None, :, :]
-        #Delta = (1./Z)[:, None, None] * T[None, :, :]
-        print(f'e1 = {e1}')
-        Delta = (1./(Z - e1))[:, None, None] * np.eye(2)[None, :, :]
-        Np = 4 # unused?
-        #exit()
-        
-        func, fitting_error, pol, weight = anacont(Delta, Z, tol=eps)
-        print(f'pol = {pol}')
-        print(f'weight = {weight}')
-        #exit()
-    else:
-        pol = np.array([0.])
-        weight = np.array([[[1.]]], dtype=complex)
-
     from triqs.gf import MeshDLRImFreq
 
     mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=lamb/beta, eps=eps)
     Delta_w = Gf(mesh=mesh_w, target_shape=[2]*2)
     iwn = np.array([ complex(x) for x in mesh_w ])
 
-    #Delta_w.data[:] = make_Delta_with_cont_spec_mat(iwn, semicircular, a=a, b=b, eps=eps)
-    #Delta_w.data[:, 0, 0] = 1./iwn
-    #Delta_w.data[:] = 1./iwn[:, None, None] * np.eye(2)[None, :, :]
-    #Delta_w.data[:] = 1./iwn[:, None, None] * np.ones((2, 2))[None, :, :]
-    #Delta_w.data[:] = 1./iwn[:, None, None] * T[None, :, :]
-    Delta_w.data[:] = (1./(iwn - e1))[:, None, None] * np.eye(2)[None, :, :]
+    Delta_w << inverse(iOmega_n - e1)
 
     from triqs.gf import make_gf_dlr_imtime, make_gf_dlr
 
@@ -155,13 +92,9 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
         conserved_operators=conserved_operators, # calling DiagramEvaluator with a list of operators segfaults!
         )
 
-    #BSS.set_hybridization(Delta_w)
-    BSS.set_hybridization_poles_and_coefficients(pol, weight)
+    BSS.Delta_tau['0'] << Delta_tau
 
-    print(pol.shape)
-    print(weight.shape)
-    
-    BSS.init_diagram_evaluator() # -- This calls the DiagramEvaluator constructor.
+    BSS.fit_hybridization(tol=eps)
 
 
     # -- Compare pseudo particle Green's function
@@ -184,6 +117,7 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
 
     results_by_order = dict()
     
+
     # -- Compare self-energy topologies
 
     from triqs_xca.diag import all_connected_pairings
@@ -199,8 +133,8 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
         d.Sigma_S = S.S.calc_Sigma(d.order)
         d.spgf_S = S.S.calc_spgf(d.order)
 
-        d.Sigma_BSS = pseudo_particle_block_gf_to_dense(BSS.pseudo_particle_self_energy(BSS.G, d.order), BSS.ad)
-        d.spgf_BSS = BSS.single_particle_greens_function(BSS.G, d.order)
+        d.Sigma_BSS = pseudo_particle_block_gf_to_dense(BSS.eval_pseudo_particle_self_energy(BSS.G, d.order), BSS.ad)
+        d.spgf_BSS = BSS.eval_single_particle_greens_function(BSS.G, d.order)
 
         results_by_order[order] = d
 
@@ -224,16 +158,12 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
 
             t2 = time.time()
 
-            d.Sigma_BSS = BSS.pseudo_particle_self_energy_topology(BSS.G, topology)
+            d.Sigma_BSS = BSS.eval_pseudo_particle_self_energy_topology(BSS.G, topology)
             d.Sigma_BSS = pseudo_particle_block_gf_to_dense(d.Sigma_BSS, BSS.ad)
 
             t3 = time.time()
 
             print(f'    Sigma time ZH ({t2 - t1} s) BS ({t3 - t2} s)')
-            
-            #Sigma_BSS_loop = pseudo_particle_block_gf_to_dense(
-            #    BSS.pseudo_particle_self_energy_topology_loop(topology), BSS.ad)
-            #np.testing.assert_array_almost_equal(d.Sigma_BSS.data, Sigma_BSS_loop.data)
             
             d.Sigma_diff = np.max(np.abs(d.Sigma_BSS.data - d.Sigma_S))
             print(f'    Sigma_diff = {d.Sigma_diff:2.2E}')
@@ -241,13 +171,10 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
             t1 = time.time()
             d.spgf_S = S.S.calc_spgf_toplogy(topology)
             t2 = time.time()
-            d.spgf_BSS = BSS.single_particle_greens_function_topology(BSS.G, topology) 
+            d.spgf_BSS = BSS.eval_single_particle_greens_function_topology(BSS.G, topology) 
             t3 = time.time()
 
             print(f'    spgf time ZH ({t2 - t1} s) BS ({t3 - t2} s)')
-            
-            #spgf_BSS_loop = BSS.single_particle_greens_function_topology_loop(topology)
-            #np.testing.assert_array_almost_equal(d.spgf_BSS.data, spgf_BSS_loop.data)
             
             d.spgf_diff = np.max(np.abs(d.spgf_BSS.data - d.spgf_S))
             print(f'    spgf_diff = {d.spgf_diff:2.2E}')
@@ -279,22 +206,18 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
 
         # -- Hybridization function
         plt.subplot(*subp); subp[-1] += 1
-        oplot(Delta_tau)
+        oplot(S.Delta_tau)
         plt.xlabel(r'$\tau$')
         plt.ylabel(r'$\Delta(\tau)$]')
         
         plt.subplot(*subp); subp[-1] += 1
-        for i,j in product(range(Delta.shape[-1]), repeat=2):
-            if not (Delta[:, i, j].real == 0.).all():
-                plt.plot(Z.imag, Delta[:, i, j].real, label=f'i,j = {i},{j}')
+        oplotr(Delta_w)
         plt.legend()
         plt.xlabel(r'$\omega_n$')
         plt.ylabel(r'Re[$\Delta(i\omega_n)$]')
 
         plt.subplot(*subp); subp[-1] += 1
-        for i,j in product(range(Delta.shape[-1]), repeat=2):
-            if not (Delta[:, i, j].imag == 0.).all():
-                plt.plot(Z.imag, Delta[:, i, j].imag, label=f'i,j = {i},{j}')
+        oploti(Delta_w)
         plt.legend()
         plt.ylabel(r'Im[$\Delta(i\omega_n)$]')
         plt.xlabel(r'$\omega_n$')

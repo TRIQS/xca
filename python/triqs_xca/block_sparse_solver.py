@@ -117,6 +117,10 @@ class BlockSparseSolver(object):
         self.hyb = Dummy()
         self.hyb.poles = poles
         self.hyb.coefficients = coefficients
+        print(f'hyb.poles = {self.hyb.poles}')
+        print(f'hyb.coefficients =\n{self.hyb.coefficients}')
+
+        self.init_diagram_evaluator() # FIXME! Evaluator takes hyb poles and coeffs in constructor
 
 
     def init_diagram_evaluator(self):
@@ -127,11 +131,16 @@ class BlockSparseSolver(object):
             self.d = DiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.ad)
 
 
-    def solve(self, max_order, tol=1e-7, maxiter=10, mix=1.):
+    def solve(self, max_order, tol=1e-7, maxiter=10, mix=1., delta_tol=None):
+
+        self.max_order = max_order
+        self.delta_tol = delta_tol if delta_tol is not None else 0.1 * tol
+
+        self.fit_hybridization(tol=tol)
 
         for iter in range(1, maxiter+1):
 
-            self.Sigma = self.pseudo_particle_self_energy(self.G, max_order)
+            self.Sigma = self.eval_pseudo_particle_self_energy(self.G, self.max_order)
             G_new = self.solve_dyson(self.Sigma, self.eta)
             G_new = self.normalize_pseudo_particle_gf(G_new)
             Z = self.partition_function_from_ppgf(G_new)
@@ -145,6 +154,8 @@ class BlockSparseSolver(object):
             if diff_G < tol:
                 print(f'Converged after {iter} iterations with diff_G = {diff_G:2.2E} < tol = {tol:2.2E}')
                 break
+
+        self.G_tau = self.eval_single_particle_greens_function(self.G, max_order=self.max_order)
 
 
     def normalize_pseudo_particle_gf(self, G):
@@ -208,33 +219,37 @@ class BlockSparseSolver(object):
         return G
 
 
-    def pseudo_particle_self_energy(self, G, max_order):
+    def pseudo_particle_self_energy(self):
+        return self.Sigma
+
+
+    def eval_pseudo_particle_self_energy(self, G, max_order):
 
         self.Sigma = self.get_zero_pseudo_particle_propagator()
 
         for order in range(1, max_order+1):
-            self.Sigma += self.pseudo_particle_self_energy_order(G, order)
+            self.Sigma += self.eval_pseudo_particle_self_energy_order(G, order)
 
         return self.Sigma
 
 
-    def pseudo_particle_self_energy_order(self, G, order):
+    def eval_pseudo_particle_self_energy_order(self, G, order):
 
         Sigma = self.get_zero_pseudo_particle_propagator()
         
         for sign, topology in all_connected_pairings(order):
             topology = np.array(topology, dtype=np.int32)
-            Sigma +=  pow(-1, order) * sign * self.pseudo_particle_self_energy_topology(G, topology) # FIXME! Signs
+            Sigma +=  pow(-1, order) * sign * self.eval_pseudo_particle_self_energy_topology(G, topology) # FIXME! Signs
             
         return Sigma
     
     
-    def pseudo_particle_self_energy_topology(self, G, topology):
+    def eval_pseudo_particle_self_energy_topology(self, G, topology):
         order = len(topology)
         return pow(-1, order+1) * self.d.compute_self_energy(G, topology) # FIXME! Sign convention.
 
 
-    def pseudo_particle_self_energy_topology_loop(self, G, topology):
+    def eval_pseudo_particle_self_energy_topology_loop(self, G, topology):
 
         order = len(topology)
         Sigma = self.get_zero_pseudo_particle_propagator()
@@ -255,27 +270,31 @@ class BlockSparseSolver(object):
         return spgf
 
 
-    def single_particle_greens_function(self, G, max_order):
+    def single_particle_greens_function(self, max_order):
+        return self.eval_single_particle_greens_function(self.G, max_order=max_order)
+
+
+    def eval_single_particle_greens_function(self, G, max_order):
         self.spgf = self.get_zero_single_particle_greens_function()
 
         for order in range(1, max_order+1):
-            self.spgf += self.single_particle_greens_function_order(G, order)
+            self.spgf += self.eval_single_particle_greens_function_order(G, order)
         
         return self.spgf
 
 
-    def single_particle_greens_function_order(self, G, order):
+    def eval_single_particle_greens_function_order(self, G, order):
 
         spgf = self.get_zero_single_particle_greens_function()
 
         for sign, topology in all_connected_pairings(order):
             topology = np.array(topology, dtype=np.int32)
-            spgf += pow(-1, order) * sign * self.single_particle_greens_function_topology(G, topology)
+            spgf += pow(-1, order) * sign * self.eval_single_particle_greens_function_topology(G, topology)
 
         return spgf
 
 
-    def single_particle_greens_function_topology(self, G, topology):
+    def eval_single_particle_greens_function_topology(self, G, topology):
 
         spgf = self.get_zero_single_particle_greens_function()
 
@@ -284,7 +303,7 @@ class BlockSparseSolver(object):
         return spgf
 
 
-    def single_particle_greens_function_topology_loop(self, G, topology):
+    def eval_single_particle_greens_function_topology_loop(self, G, topology):
         spgf = self.get_zero_single_particle_greens_function()
 
         for n in range(self.d.get_num_single_ptcle_gf_backbones(topology)):
