@@ -28,7 +28,7 @@ namespace triqs_xca::hyb {
      * @param[in] hyb_coeffs pole coefficients of the hybridization
      */
     Hybridization(const triqs::mesh::dlr_imtime &tau_mesh, 
-      nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs); 
+      nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs, double refl_sign=1.0); 
 
     void multiply_kernel_on_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, int v_ix, int l_ix, double sign=1.0);
     void multiply_kernels_on_edge(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, int e_ix);

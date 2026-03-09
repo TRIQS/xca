@@ -127,19 +127,16 @@ PyMethodDef c2py::tp_methods<triqs_xca::block_sparse::DiagramEvaluator>[] = {
    {nullptr, nullptr, 0, nullptr} // Sentinel
 };
 
-constexpr auto doc_member_0  = R"DOC()DOC";
-constexpr auto doc_member_1  = R"DOC()DOC";
-constexpr auto doc_member_2  = R"DOC()DOC";
-constexpr auto doc_member_3  = R"DOC()DOC";
-constexpr auto doc_member_4  = R"DOC()DOC";
-constexpr auto doc_member_5  = R"DOC()DOC";
-constexpr auto doc_member_6  = R"DOC()DOC";
-constexpr auto doc_member_7  = R"DOC()DOC";
-constexpr auto doc_member_8  = R"DOC()DOC";
-constexpr auto doc_member_9  = R"DOC()DOC";
-constexpr auto doc_member_10 = R"DOC()DOC";
-constexpr auto doc_member_11 = R"DOC()DOC";
-constexpr auto doc_member_12 = R"DOC()DOC";
+constexpr auto doc_member_0 = R"DOC()DOC";
+constexpr auto doc_member_1 = R"DOC()DOC";
+constexpr auto doc_member_2 = R"DOC()DOC";
+constexpr auto doc_member_3 = R"DOC()DOC";
+constexpr auto doc_member_4 = R"DOC()DOC";
+constexpr auto doc_member_5 = R"DOC()DOC";
+constexpr auto doc_member_6 = R"DOC()DOC";
+constexpr auto doc_member_7 = R"DOC()DOC";
+constexpr auto doc_member_8 = R"DOC()DOC";
+constexpr auto doc_member_9 = R"DOC()DOC";
 
 // ----- Method table ----
 
@@ -150,16 +147,11 @@ constinit PyGetSetDef c2py::tp_getset<triqs_xca::block_sparse::DiagramEvaluator>
    c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::n, triqs_xca::block_sparse::DiagramEvaluator>("n", doc_member_2),
    c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::q, triqs_xca::block_sparse::DiagramEvaluator>("q", doc_member_3),
    c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::Nmax, triqs_xca::block_sparse::DiagramEvaluator>("Nmax", doc_member_4),
-   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::hyb, triqs_xca::block_sparse::DiagramEvaluator>("hyb", doc_member_5),
-   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::hyb_reflect, triqs_xca::block_sparse::DiagramEvaluator>("hyb_reflect",
-                                                                                                                                   doc_member_6),
-   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::hyb_poles, triqs_xca::block_sparse::DiagramEvaluator>("hyb_poles",
-                                                                                                                                 doc_member_7),
-   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::T, triqs_xca::block_sparse::DiagramEvaluator>("T", doc_member_8),
-   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::U, triqs_xca::block_sparse::DiagramEvaluator>("U", doc_member_9),
-   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::GKt, triqs_xca::block_sparse::DiagramEvaluator>("GKt", doc_member_10),
-   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::Tkaps, triqs_xca::block_sparse::DiagramEvaluator>("Tkaps", doc_member_11),
-   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::Tmu, triqs_xca::block_sparse::DiagramEvaluator>("Tmu", doc_member_12),
+   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::T, triqs_xca::block_sparse::DiagramEvaluator>("T", doc_member_5),
+   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::U, triqs_xca::block_sparse::DiagramEvaluator>("U", doc_member_6),
+   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::GKt, triqs_xca::block_sparse::DiagramEvaluator>("GKt", doc_member_7),
+   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::Tkaps, triqs_xca::block_sparse::DiagramEvaluator>("Tkaps", doc_member_8),
+   c2py::getsetdef_from_member<&triqs_xca::block_sparse::DiagramEvaluator::Tmu, triqs_xca::block_sparse::DiagramEvaluator>("Tmu", doc_member_9),
 
    {nullptr, nullptr, nullptr, nullptr, nullptr}};
 

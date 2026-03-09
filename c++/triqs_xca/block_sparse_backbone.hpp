@@ -3,6 +3,7 @@
 
 #include <triqs/atom_diag/atom_diag.hpp>
 
+#include "triqs_xca/hyb.hpp"
 #include "triqs_xca/backbone.hpp"
 #include "triqs_xca/block_sparse.hpp"
 
@@ -81,9 +82,7 @@ class DiagramEvaluator {
   int n;                               // number of orbitals
   int q;                               // number of symmetry sets
   int Nmax;                            // maximum block size in the Green's function
-  nda::array<dcomplex, 3> hyb;         // hybridization function at imaginary time nodes
-  nda::array<dcomplex, 3> hyb_reflect; // hybridization function at imaginary time nodes (reversed)
-  nda::vector<double> hyb_poles;       // hybridization poles
+  C2PY_IGNORE hyb::Hybridization hyb; // Hybridization object containing hyb and related information
   nda::array<dcomplex, 3> T;           // array for storing intermediate result
   nda::array<dcomplex, 3> U;           // array for storing intermediate result (tau-beta side of correlator diagram)
   nda::array<dcomplex, 3> GKt;         // array for storing result of edge computation
@@ -151,7 +150,8 @@ class DiagramEvaluator {
    */
   C2PY_IGNORE DiagramEvaluator(
     double beta, double Lambda, double eps, 
-    nda::array_const_view<dcomplex, 3> hyb, nda::vector_const_view<double> hyb_poles, 
+    nda::vector_const_view<double> hyb_poles, 
+    nda::array_const_view<dcomplex, 3> hyb_coeffs,
     BlockOpSymQuartet &Fq);
 
   virtual ~DiagramEvaluator() = default;

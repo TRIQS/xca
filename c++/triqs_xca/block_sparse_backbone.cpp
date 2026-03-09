@@ -17,8 +17,8 @@ using nda::linalg::matmul;
 using triqs_xca::atom_diag::get_operators;
 
 DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps, 
-                                   nda::array_const_view<dcomplex, 3> hyb,
                                    nda::vector_const_view<double> hyb_poles, 
+                                   nda::array_const_view<dcomplex, 3> hyb_coeffs,
                                    BlockOpSymQuartet &Fq)
    : 
      tau_mesh(triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda / beta, eps)),
@@ -32,9 +32,7 @@ DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps,
      q(nda::max_element(Fq.sym_set_labels) + 1),
      //Nmax(Gt.get_max_block_size()), // get from Fq instead
      Nmax(nda::max_element(Fq.Fs[0].get_block_sizes())), // Possibly dangerous if Fs[0] has no block in the larges sector..?
-     hyb(hyb),
-     hyb_reflect(itops.reflect(hyb)),
-     hyb_poles(beta * hyb_poles),
+     hyb(tau_mesh, hyb_poles, hyb_coeffs),
      // allocate arrays
      T(nda::zeros<dcomplex>(r, Nmax, Nmax)),
      U(nda::zeros<dcomplex>(r, Nmax, Nmax)),
@@ -60,9 +58,7 @@ DiagramEvaluator::DiagramEvaluator(
      q(nda::max_element(Fq.sym_set_labels) + 1),
      //Nmax(Gt.get_max_block_size()),
      Nmax(nda::max_element(Fq.Fs[0].get_block_sizes())), // Possibly dangerous if Fs[0] has no block in the larges sector..?
-     hyb(hyb::coefs2vals(beta, itops, hyb_coeffs, hyb_poles)),
-     hyb_reflect(itops.reflect(hyb)),
-     hyb_poles(beta * hyb_poles),
+     hyb(tau_mesh, hyb_poles, hyb_coeffs),
      // allocate arrays
      T(nda::zeros<dcomplex>(r, Nmax, Nmax)),
      U(nda::zeros<dcomplex>(r, Nmax, Nmax)),
@@ -105,16 +101,10 @@ void DiagramEvaluator::multiply_left_vertex(nda::array_view<dcomplex, 3> T_buf, 
   nda::array_view<dcomplex, 3> T_vp = T_buf(_, range(0, block_dims(v_ix + 1)), range(0, n_col_r));
 
   // Multiply with the operator matrix F from the left
-
   for (int t = 0; t < r; t++) T_vp(t, _, _) = matmul(F, T_v(t, _, _));
 
   // Multiply with scalar K(\tau) factor of the pole with index l_ix
-
-  int Ksign = backbone.get_vertex_Ksign(v_ix); // sign on K
-
-  if (Ksign != 0) {
-    for (int t = 0; t < r; t++) T_vp(t, _, _) *= cppdlr::k_it(dlr_it(t), Ksign * hyb_poles(l_ix));
-  }
+  hyb.multiply_kernel_on_vertex(T_vp, backbone, v_ix, l_ix);
 }
 
 void DiagramEvaluator::integrate_left_edge(nda::array_view<dcomplex, 3> T_buf, BlockDiagOpFun &Gt, Backbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
@@ -125,30 +115,17 @@ void DiagramEvaluator::integrate_left_edge(nda::array_view<dcomplex, 3> T_buf, B
   int n_col_r = e_ix < vct0 ? block_dims(1) : block_dims(0);
 
   nda::array_view<dcomplex, 3> GKt_ep = GKt(_, range(0, block_dims(e_ix + 1)), range(0, block_dims(e_ix + 1)));
-
   GKt_ep = Gt.get_block(b_ix);
 
-  for (int x = 0; x < m - 1; x++) {
-    int Ksign = backbone.get_edge(e_ix, x); // sign on K
-    if (Ksign != 0) {
-      for (int t = 0; t < r; t++) GKt_ep(t, _, _) *= cppdlr::k_it(dlr_it(t), Ksign * hyb_poles(backbone.get_pole_ind(x)));
-    }
-  }
-  nda::array_view<dcomplex, 3> T_ep = T_buf(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r));
+  hyb.multiply_kernels_on_edge(GKt_ep, backbone, e_ix);
   
+  nda::array_view<dcomplex, 3> T_ep = T_buf(_, range(0, block_dims(e_ix + 1)), range(0, n_col_r));
   T_ep = itops.convolve(beta, itops.vals2coefs(GKt_ep), itops.vals2coefs(T_ep), cppdlr::TIME_ORDERED);
 }
 
 void DiagramEvaluator::multiply_prefactor(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone) {
   // Apply total prefactor comprised of inverse powers of the kernel evaluated at tau=0 and the current hybridization poles
-  int m = backbone.m;
-  for (int m_ix = 0; m_ix < m - 1; m_ix++) {
-    int exp = backbone.get_prefactor_Kexp(m_ix);
-    if (exp != 0) {
-      int Ksign = backbone.get_prefactor_Ksign(m_ix);
-      T_buf *= std::pow(cppdlr::k_it(0, Ksign * hyb_poles(backbone.get_pole_ind(m_ix))), -exp);
-    }
-  }
+  hyb.multiply_kernels_prefactor(T_buf, backbone);
 }
 
 // ========== Private self-energy routines ==========
@@ -182,8 +159,9 @@ void DiagramEvaluator::multiply_left_vertex_and_right_zero_vertex(nda::array_vie
     Tmu_v = 0;
     // Multiply with hybridization function
     for (int kap = 0; kap < Fq.sym_set_sizes(p_kap); kap++) {
-      nda::array_const_view<dcomplex, 1> hyb_oo = is_forward ? hyb(_, Fq.sym_set_to_orb(p_mu, mu), Fq.sym_set_to_orb(p_kap, kap)) :
-                                                               hyb_reflect(_, Fq.sym_set_to_orb(p_mu, mu), Fq.sym_set_to_orb(p_kap, kap));
+      nda::array_const_view<dcomplex, 1> hyb_oo = is_forward ? 
+        hyb.values(_, Fq.sym_set_to_orb(p_mu, mu), Fq.sym_set_to_orb(p_kap, kap)) :
+        hyb.values_reflect(_, Fq.sym_set_to_orb(p_mu, mu), Fq.sym_set_to_orb(p_kap, kap));
       for (int t = 0; t < r; t++) Tmu_v(t, _, _) += hyb_sign * hyb_oo(t) * Tkaps_v(kap, t, _, _);
     }
     // Apply F_mu operator from the left at vertex connected to tau = 0
@@ -197,7 +175,7 @@ void DiagramEvaluator::find_path_self_energy(BlockDiagOpFun &Gt, Backbone &backb
   int m = backbone.m; // Diagram order
   int vct0 = backbone.get_topology(0, 1); // vertex connected to zero
 
-  backbone.set_flat_index(f_ix, hyb_poles); // set directions, pole indices, and orbital indices from a single integer index
+  backbone.set_flat_index(f_ix, hyb.poles); // set directions, pole indices, and orbital indices from a single integer index
 
   /*  Example of block_dims for m = 2 (OCA): each number is an index of block_dims, and each square represents a block of a matrix 
           3            3            2            2            1            1            0
@@ -276,7 +254,7 @@ void DiagramEvaluator::find_path_self_energy(BlockDiagOpFun &Gt, Backbone &backb
 
 void DiagramEvaluator::eval_self_energy(BlockDiagOpFun &Gt, Backbone &backbone, int f_ix) {
   int m        = backbone.m;
-  int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), m - 1));
+  int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb.poles.size(), m - 1));
   if (f_ix < 0 || f_ix >= f_ix_max) { throw std::runtime_error("DiagramEvaluator::eval_self_energy: f_ix out of range"); }
 
   nda::vector<int> ind_path(2 * m - 1);   // tracks block indices of factors for computing a particular block of the self-energy
@@ -292,7 +270,7 @@ void DiagramEvaluator::eval_self_energy(BlockDiagOpFun &Gt, Backbone &backbone) 
   nda::vector<int> block_dims(2 * m + 1); // tracks the dimensions of the blocks in these factors
 
   // loop over all flat indices
-  int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), m - 1));
+  int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb.poles.size(), m - 1));
   for (int f_ix = 0; f_ix < f_ix_max; f_ix++) { find_path_self_energy(Gt, backbone, f_ix, ind_path, block_dims); }
   Sigma.set_zero_block_indices(); // set zero_block_indices according to current blocks
 }
@@ -423,15 +401,9 @@ void DiagramEvaluator::multiply_right_vertex(nda::array_view<dcomplex, 3> U_buf,
   nda::array_view<dcomplex, 3> U_vp = U_buf(_, range(0, n_row_l), range(0, block_dims(v_ix + 1)));
 
   // Multiply with the operator matrix F from the right
-
   for (int t = 0; t < r; t++) U_v(t, _, _) = matmul(U_vp(t, _, _), F);
 
-  // K factor
-
-  int Ksign = backbone.get_vertex_Ksign(v_ix);
-  if (Ksign != 0) {
-    for (int t = 0; t < r; t++) U_v(t, _, _) *= cppdlr::k_it(dlr_it(t), -Ksign * hyb_poles(l_ix)); // extra sign for K(t) -> K(beta - t)
-  }
+  hyb.multiply_kernel_on_vertex(U_v, backbone, v_ix, l_ix, -1.0);
 }
 
 void DiagramEvaluator::integrate_right_edge(nda::array_view<dcomplex, 3> U_buf, BlockDiagOpFun &Gt, CorrelatorBackbone &backbone, int e_ix,
@@ -445,12 +417,7 @@ void DiagramEvaluator::integrate_right_edge(nda::array_view<dcomplex, 3> U_buf, 
 
   GKt_ep = Gt.get_block(b_ix);
 
-  for (int x = 0; x < m - 1; x++) {
-    int Ksign = backbone.get_edge(e_ix, x);
-    if (Ksign != 0) {
-      for (int t = 0; t < r; t++) GKt_ep(t, _, _) *= cppdlr::k_it(dlr_it(t), Ksign * hyb_poles(backbone.get_pole_ind(x)));
-    }
-  }
+  hyb.multiply_kernels_on_edge(GKt_ep, backbone, e_ix);
 
   nda::array_view<dcomplex, 3> U_e = U_buf(_, range(0, n_row_l), range(0, block_dims(e_ix + 1)));
   
@@ -459,7 +426,7 @@ void DiagramEvaluator::integrate_right_edge(nda::array_view<dcomplex, 3> U_buf, 
 
 nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(BlockDiagOpFun &Gt, CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops) {
   int m        = backbone.m;
-  int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), m - 1));
+  int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb.poles.size(), m - 1));
 
   nda::array<dcomplex, 3> correlator(r, mu_ops.size(), kap_ops.size()), Tmuop(r, Nmax, Nmax);
   correlator = 0;
@@ -488,7 +455,7 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(BlockDiagOpFun &Gt, Co
 
   nda::vector<int> ind_path_end(3), block_dims_end(4);
 
-  backbone.set_flat_index(f_ix, hyb_poles); // set directions, pole indices, and orbital indices from a single integer index
+  backbone.set_flat_index(f_ix, hyb.poles); // set directions, pole indices, and orbital indices from a single integer index
 
   /*  Example of block_dims for m = 2 (OCA): each number is an index of block_dims, and each square represents a block of a matrix 
             4            3            3            2            2            1            1            0
@@ -660,19 +627,19 @@ void DiagramEvaluator::reset() {
 
 int DiagramEvaluator::get_num_self_energy_backbones(nda::array_const_view<int, 2> topology) {
   Backbone backbone(topology, n);
-  return static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), backbone.m - 1));
+  return static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb.poles.size(), backbone.m - 1));
 }
 
 void DiagramEvaluator::print_self_energy_backbone(nda::array_const_view<int, 2> topology, int f_ix) {
   Backbone backbone(topology, n);
-  backbone.set_flat_index(f_ix, hyb_poles);
+  backbone.set_flat_index(f_ix, hyb.poles);
   std::cout << "Self-energy backbone for f_ix = " << f_ix << ":\n";
   std::cout << backbone << std::endl;
 }
 
 int DiagramEvaluator::get_num_single_ptcle_gf_backbones(nda::array_const_view<int, 2> topology) {
   CorrelatorBackbone backbone(topology, n);
-  return static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb_poles.size(), backbone.m - 1));
+  return static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb.poles.size(), backbone.m - 1));
 }
 
 std::vector<BlockOp> DiagramEvaluator::setup_mu_ops_for_single_ptcle_gf() {
@@ -747,7 +714,7 @@ nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(
 
 void DiagramEvaluator::print_single_ptcle_gf_backbone(nda::array_const_view<int, 2> topology, int f_ix) {
   CorrelatorBackbone backbone(topology, n);
-  backbone.set_flat_index(f_ix, hyb_poles);
+  backbone.set_flat_index(f_ix, hyb.poles);
   std::cout << "Single-particle Green's function backbone for f_ix = " << f_ix << ":\n";
   std::cout << backbone << std::endl;
 }

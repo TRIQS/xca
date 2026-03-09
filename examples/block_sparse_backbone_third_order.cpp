@@ -276,7 +276,7 @@ int main() {
   auto hyb_coeffs               = itops.vals2coefs(Deltat); // hybridization DLR coeffs
   auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs);
 
-  auto D = DiagramEvaluator(beta, Lambda, eps, Deltat, nda::make_regular(dlr_rf / beta), Fq); // create DiagramEvaluator object
+  auto D = DiagramEvaluator(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), hyb_coeffs, Fq); // create DiagramEvaluator object
 
   auto Deltadlr                            = itops.vals2coefs(Deltat); //obtain dlr coefficient of Delta(t)
   nda::vector<double> dlr_rf_reflect       = -dlr_rf;

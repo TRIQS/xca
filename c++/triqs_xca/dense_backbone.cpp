@@ -24,7 +24,7 @@ namespace triqs_xca::dense {
       beta(beta),
       itops(itops), 
       dlr_it(itops.get_itnodes()),
-      hyb(tau_mesh, nda::make_regular(hyb_poles / beta), hyb_coeffs), // Scaling of poles by beta?
+      hyb(tau_mesh, nda::make_regular(hyb_poles / beta), hyb_coeffs, -1.0), // Scaling of poles by beta?
       Fset(Fset), 
       r(itops.rank()), 
       n(hyb_coeffs.extent(1)),
@@ -47,7 +47,7 @@ namespace triqs_xca::dense {
       beta(tau_mesh.beta()),
       itops(tau_mesh.dlr_it()),
       dlr_it(itops.get_itnodes()),
-      hyb(tau_mesh, hyb_poles, hyb_coeffs),
+      hyb(tau_mesh, hyb_poles, hyb_coeffs, -1.0),
       Fset(get_operators_dense(ad, hyb_coeffs)),
       r(itops.rank()),
       n(ad.get_fops().size()), // number of fermion flavours (spin-orbitals)

@@ -15,13 +15,14 @@ namespace triqs_xca::hyb {
     Hybridization::Hybridization(
         const triqs::mesh::dlr_imtime &tau_mesh, 
         nda::vector_const_view<double> hyb_poles, 
-        nda::array_const_view<dcomplex, 3> hyb_coeffs) 
+        nda::array_const_view<dcomplex, 3> hyb_coeffs,
+        double refl_sign) 
      : 
      tau_mesh(tau_mesh), 
      poles(hyb_poles * tau_mesh.beta()), 
      coeffs(hyb_coeffs),
      values(coefs2vals(tau_mesh.beta(), tau_mesh.dlr_it(), hyb_coeffs, hyb_poles)),
-     values_reflect(-tau_mesh.dlr_it().reflect(values)) // Follow sign convention of block_sparse_backbone for reflected hybridization function.
+     values_reflect(refl_sign * tau_mesh.dlr_it().reflect(values)) // Follow sign convention of block_sparse_backbone for reflected hybridization function.
      {};    
 
     void Hybridization::multiply_kernel_on_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, int v_ix, int l_ix, double sign) {
