@@ -21,6 +21,7 @@ set(all_tests
   block_sparse_api
   block_sparse_api_one_fermion
   block_sparse_api_two_fermions
+  block_sparse_self_cons
   bug_bs_one_fermion
   )
 

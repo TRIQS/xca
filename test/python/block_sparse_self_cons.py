@@ -19,7 +19,7 @@ def test_block_sparse_self_cons(verbose=False):
     w_max = 10.0 * beta
     tol = 1e-10
 
-    order = 1
+    order = 4
     maxiter = 100
 
     gf_struct = [['0', 1]]
@@ -61,7 +61,10 @@ def test_block_sparse_self_cons(verbose=False):
     g_S = S.G_tau['0']
 
 
-    BSS = BlockSparseSolver(H, beta, w_max, eps, gf_struct, conserved_operators=[])
+    BSS = BlockSparseSolver(
+        H, beta, w_max, eps, gf_struct, 
+        #conserved_operators=[],
+        )
     
     BSS.Delta_tau['0'] << Delta_tau
     
@@ -124,4 +127,4 @@ def test_block_sparse_self_cons(verbose=False):
 
 if __name__ == '__main__':
 
-    test_block_sparse_self_cons(verbose=True)
+    test_block_sparse_self_cons(verbose=False)
