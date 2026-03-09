@@ -91,67 +91,33 @@ namespace triqs_xca::dense {
       int l_ix = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(v_ix));
       // backbone.get_vertex_hyb_ind(v_ix) = i, where i is the # of primes on l
       // l_ix = value of l with i primes
-
-      bool has_bar = backbone.has_vertex_bar(v_ix);
-      bool has_dag = backbone.has_vertex_dag(v_ix);
-
-      auto F_selector = [&]() {
-        if (has_bar)
-          return has_dag ? Fset.F_dag_bars(o_ix, l_ix, _, _) : Fset.F_bars_refl(o_ix, l_ix, _, _);
-        else
-          return has_dag ? Fset.F_dags(o_ix, _, _) : Fset.Fs(o_ix, _, _);
-      };
-
-      nda::array_const_view<dcomplex, 2> F = F_selector();
-
+      auto F = Fset.get_operator(backbone, v_ix, o_ix, l_ix);
       for (int t = 0; t < r; t++) T_buf(t, _, _) = matmul(F, T_buf(t, _, _));
-
-      // K factor
-      int bv      = backbone.get_vertex_Ksign(v_ix); // sign on K
-      double pole = hyb.poles(l_ix);
-      if (bv != 0) {
-        for (int t = 0; t < r; t++) { T_buf(t, _, _) = cppdlr::k_it(dlr_it(t), bv * pole) * T_buf(t, _, _); }
-      }
+      hyb.multiply_kernel_on_vertex(T_buf, backbone, v_ix, l_ix);
     }
 
     void DenseDiagramEvaluator::integrate_left_edge(nda::array_view<dcomplex, 3> T_buf, nda::array_const_view<dcomplex, 3> Gt, Backbone &backbone, int e_ix) {
-      GKt   = Gt;
-      int m = backbone.m;
-      for (int x = 0; x < m - 1; x++) {
-        int be      = backbone.get_edge(e_ix, x); // sign on K
-        double pole = hyb.poles(backbone.get_pole_ind(x));
-        if (be != 0) {
-          for (int t = 0; t < r; t++) { GKt(t, _, _) = cppdlr::k_it(dlr_it(t), be * pole) * GKt(t, _, _); }
-        }
-      }
+      GKt = Gt;
+      hyb.multiply_kernels_on_edge(GKt, backbone, e_ix);
       T_buf = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T_buf), cppdlr::TIME_ORDERED);
     }
 
     void DenseDiagramEvaluator::multiply_prefactor(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone) {
-      int m = backbone.m;
-      // Multiply by prefactor
-      for (int m_ix = 0; m_ix < m - 1; m_ix++) {     // loop over hybridization indices
-        int exp = backbone.get_prefactor_Kexp(m_ix); // exponent on K for this hybridization index
-        if (exp != 0) {
-          int Ksign = backbone.get_prefactor_Ksign(m_ix);     // sign on K for this hybridization index
-          double om = hyb.poles(backbone.get_pole_ind(m_ix)); // DLR frequency for this value of this hybridization index
-          for (int q = 0; q < exp; q++) T_buf /= cppdlr::k_it(0, Ksign * om);
-        }
-      }
+      hyb.multiply_kernels_prefactor(T_buf, backbone);
     }
 
-    void DenseDiagramEvaluator::multiply_left_vertex_and_right_zero_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, int vtc0) {
+    void DenseDiagramEvaluator::multiply_left_vertex_and_right_zero_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, int vct0) {
 
-      bool is_forward = backbone.has_vertex_dag(vtc0);
-
-      auto F_selector = [&](bool forward, int ix) { return forward ? Fset.Fs(ix, _, _) : Fset.F_dags(ix, _, _); };
+      bool is_forward = backbone.has_vertex_dag(vct0);
+      nda::array_const_view<dcomplex, 3> hyb_too = is_forward ? hyb.values : hyb.values_reflect;
 
       // Save compute by precomputing Tkaps = T_buf * F_kap for all kappa, since this is needed for each mu
       // at the cost of storing an n x r x N x N array (Tkaps) instead of an r x N x N array
 
       for (int kap = 0; kap < n; kap++) {
-        nda::array_const_view<dcomplex, 2> F_kap = F_selector(is_forward, kap);
-        for (int t = 0; t < r; t++) { Tkaps(kap, t, _, _) = matmul(T_buf(t, _, _), F_kap); }
+        nda::array_const_view<dcomplex, 2> F_kap = Fset.get_operator(backbone, 0, kap);
+        for (int t = 0; t < r; t++) 
+          Tkaps(kap, t, _, _) = matmul(T_buf(t, _, _), F_kap);
       }
 
       T_buf = 0;
@@ -159,11 +125,13 @@ namespace triqs_xca::dense {
       for (int mu = 0; mu < n; mu++) {
         Tmu = 0;
         for (int kap = 0; kap < n; kap++) {
-          nda::array_const_view<dcomplex, 1> hyb_oo = is_forward ? hyb.values(_, mu, kap) : hyb.values_reflect(_, mu, kap);
-          for (int t = 0; t < r; t++) { Tmu(t, _, _) += hyb_oo(t) * Tkaps(kap, t, _, _); }
+          nda::array_const_view<dcomplex, 1> hyb_t = hyb_too(_, mu, kap);
+          for (int t = 0; t < r; t++) 
+            Tmu(t, _, _) += hyb_t(t) * Tkaps(kap, t, _, _);
         }
-        nda::array_const_view<dcomplex, 2> F_mu = F_selector(!is_forward, mu);
-        for (int t = 0; t < r; t++) { T_buf(t, _, _) += matmul(F_mu, Tmu(t, _, _)); }
+        nda::array_const_view<dcomplex, 2> F_mu = Fset.get_operator(backbone, vct0, mu);
+        for (int t = 0; t < r; t++) 
+          T_buf(t, _, _) += matmul(F_mu, Tmu(t, _, _));
       }
     }
 
@@ -220,44 +188,18 @@ namespace triqs_xca::dense {
     }
 
     void DenseDiagramEvaluator::multiply_right_vertex(nda::array_view<dcomplex, 3> U_buf, Backbone &backbone, int v_ix) {
-
       int o_ix = backbone.get_vertex_orb(v_ix); // orbital index
       int l_ix = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(v_ix));
-
       // backbone.get_vertex_hyb_ind(v_ix) = i, where i is the # of primes on l
       // l_ix = value of l with i primes
-
-      bool has_bar = backbone.has_vertex_bar(v_ix);
-      bool has_dag = backbone.has_vertex_dag(v_ix);
-
-      auto F_selector = [&]() {
-        if (has_bar)
-          return has_dag ? Fset.F_dag_bars(o_ix, l_ix, _, _) : Fset.F_bars_refl(o_ix, l_ix, _, _);
-        else
-          return has_dag ? Fset.F_dags(o_ix, _, _) : Fset.Fs(o_ix, _, _);
-      };
-
-      nda::array_const_view<dcomplex, 2> F = F_selector();
-
+      auto F = Fset.get_operator(backbone, v_ix, o_ix, l_ix);
       for (int t = 0; t < r; t++) U_buf(t, _, _) = matmul(U_buf(t, _, _), F);
-
-      // K factor
-      int Ksign = backbone.get_vertex_Ksign(v_ix); // sign on K
-      if (Ksign != 0) {
-        for (int t = 0; t < r; t++) U_buf(t, _, _) *= cppdlr::k_it(dlr_it(t), -Ksign * hyb.poles(l_ix));
-      }
+      hyb.multiply_kernel_on_vertex(U_buf, backbone, v_ix, l_ix, -1.0);
     }
 
     void DenseDiagramEvaluator::integrate_right_edge(nda::array_view<dcomplex, 3> U_buf, nda::array_const_view<dcomplex, 3> Gt, Backbone &backbone, int e_ix) {
-      GKt   = Gt;
-      int m = backbone.m;
-      for (int x = 0; x < m - 1; x++) {
-        int Ksign = backbone.get_edge(e_ix, x); // sign on K
-        if (Ksign != 0) {
-          double pole = hyb.poles(backbone.get_pole_ind(x));
-          for (int t = 0; t < r; t++) GKt(t, _, _) *= cppdlr::k_it(dlr_it(t), Ksign * pole);
-        }
-      }
+      GKt = Gt;
+      hyb.multiply_kernels_on_edge(GKt, backbone, e_ix);
       U_buf = itops.convolve(beta, itops.vals2coefs(U_buf), itops.vals2coefs(GKt), cppdlr::TIME_ORDERED);
     }
 
