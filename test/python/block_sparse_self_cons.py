@@ -56,7 +56,7 @@ def test_block_sparse_self_cons(verbose=False):
     Sigma_S = Gf(mesh=tau_mesh, target_shape=[S.S.G_iaa.shape[-1]]*2)
     Sigma_S.data[:] = S.S.Sigma_iaa
 
-    g_S = S.G_tau['0']
+    g_S = S.G_tau
 
 
     BSS = BlockSparseSolver(
@@ -81,6 +81,9 @@ def test_block_sparse_self_cons(verbose=False):
 
     Sigma_diff = np.max(np.abs(Sigma_BSS.data - Sigma_S.data))
     print(f'Sigma_diff = {Sigma_diff:2.2E}')
+
+    g_diff = np.max(np.abs(g_BSS['0'].data - g_S['0'].data))
+    print(f'g_diff = {g_diff:2.2E}')
 
     from triqs.plot.mpl_interface import oplot, plt, oplotr, oploti
     from triqs.gf import make_gf_imtime
@@ -114,7 +117,7 @@ def test_block_sparse_self_cons(verbose=False):
 
     np.testing.assert_array_almost_equal(G_BSS.data, G_S.data)
     np.testing.assert_array_almost_equal(Sigma_BSS.data, Sigma_S.data)
-    np.testing.assert_array_almost_equal(g_BSS.data, g_S.data)
+    np.testing.assert_array_almost_equal(g_BSS['0'].data, g_S['0'].data)
 
 
 if __name__ == '__main__':

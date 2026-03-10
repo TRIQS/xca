@@ -58,7 +58,7 @@ def test_block_sparse_self_cons(verbose=False):
             print(f'DMFT converged in {iter} iterations with g_diff = {g_diff:2.2E}')
             break
 
-    g_S = S.G_tau['0']
+    g_S = S.G_tau
 
     G_S = Gf(mesh=tau_mesh, target_shape=[S.S.G_iaa.shape[-1]]*2)
     G_S.data[:] = S.S.G_iaa.data
@@ -82,7 +82,7 @@ def test_block_sparse_self_cons(verbose=False):
 
         g_BSS = BSS.G_tau
 
-        g_diff = np.max(np.abs(g_BSS.data - BSS.Delta_tau['0'].data))
+        g_diff = np.max(np.abs(g_BSS['0'].data - BSS.Delta_tau['0'].data))
         print(f'iter = {iter}, g_diff = {g_diff:2.2E}')
 
         BSS.Delta_tau << g_BSS
@@ -104,7 +104,7 @@ def test_block_sparse_self_cons(verbose=False):
     Sigma_diff = np.max(np.abs(Sigma_BSS.data - Sigma_S.data))
     print(f'Sigma_diff = {Sigma_diff:2.2E}')
 
-    g_diff = np.max(np.abs(g_BSS.data - g_S.data))
+    g_diff = np.max(np.abs(g_BSS['0'].data - g_S['0'].data))
     print(f'g_diff = {g_diff:2.2E}')
 
     from triqs.plot.mpl_interface import oplot, plt, oplotr, oploti
@@ -139,7 +139,7 @@ def test_block_sparse_self_cons(verbose=False):
 
     np.testing.assert_array_almost_equal(G_BSS.data, G_S.data)
     np.testing.assert_array_almost_equal(Sigma_BSS.data, Sigma_S.data)
-    np.testing.assert_array_almost_equal(g_BSS.data, g_S.data)
+    np.testing.assert_array_almost_equal(g_BSS['0'].data, g_S['0'].data)
 
 
 if __name__ == '__main__':

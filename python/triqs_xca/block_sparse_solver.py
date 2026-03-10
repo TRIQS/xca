@@ -106,7 +106,7 @@ class BlockSparseSolver(object):
         sidx = 0
         for b, g in G:
             size = g.target_shape[0]
-            g.data[:] = g_dense.data[:, sidx:sidx+size, sidx:sidx+size]
+            g.data[:] = G_dense.data[:, sidx:sidx+size, sidx:sidx+size]
             sidx += size
 
         return G
@@ -155,7 +155,8 @@ class BlockSparseSolver(object):
                 print(f'Converged after {iter} iterations with diff_G = {diff_G:2.2E} < tol = {tol:2.2E}')
                 break
 
-        self.G_tau = self.eval_single_particle_greens_function(self.G, max_order=self.max_order)
+        G_tau = self.eval_single_particle_greens_function(self.G, max_order=self.max_order)
+        self.G_tau = self.__from_dense_to_blockgf(G_tau, self.gf_struct)
 
 
     def normalize_pseudo_particle_gf(self, G):
