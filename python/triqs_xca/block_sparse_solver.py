@@ -7,6 +7,7 @@ from triqs.gf import Gf, MeshDLRImTime, BlockGf, make_gf_dlr, make_gf_dlr_imfreq
 from triqs.atom_diag import AtomDiag
 
 from adapol.anacont import anacont_triqs
+from adapol.fit_utils_dlr import polefitting_dlr
 
 from .diag import all_connected_pairings
 
@@ -69,12 +70,25 @@ class BlockSparseSolver(object):
 
         self.tol_adapol = self.eps if tol is None else tol
 
-        Delta_iw = make_gf_dlr_imfreq(self.Delta_tau)
+        #Delta_iw = make_gf_dlr_imfreq(self.Delta_tau)
+        #Delta_iw_dense = self.__from_blockgf_to_dense(Delta_iw)
+        ##_, fit_error, poles, pole_weights = anacont_triqs(Delta_iw_dense, tol=self.tol_adapol, debug=True)
+        #_, fit_error, poles_ref, pole_weights_ref = anacont_triqs(Delta_iw_dense, tol=self.tol_adapol, debug=True)
 
-        Delta_iw_dense = self.__from_blockgf_to_dense(Delta_iw)
+        Delta_dlr = make_gf_dlr(self.Delta_tau)
+        Delta_dlr_dense = self.__from_blockgf_to_dense(Delta_dlr)
+        w_dlr = np.array([ float(x) for x in Delta_dlr.mesh ])
+        
+        pole_weights, poles, fit_error = polefitting_dlr(
+            Delta_dlr_dense.data, w_dlr, self.beta, eps=self.tol_adapol, statistics="Fermion", verbose=True)
 
-        _, fit_error, poles, pole_weights = anacont_triqs(Delta_iw_dense, tol=self.tol_adapol, debug=True)
+        pole_weights *= -1. # FIXME! Why is this necessary? Is there a sign convention issue in polefitting_dlr?
 
+        #print(f'poles     = {poles}')
+        #print(f'poles_ref = {poles_ref}')
+        #print(f'pole_weights     =\n{pole_weights}')
+        #print(f'pole_weights_ref =\n{pole_weights_ref}')
+        
         self.set_hybridization_poles_and_coefficients(poles, pole_weights)
 
         self.hyb.fit_error = fit_error
