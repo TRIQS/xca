@@ -21,7 +21,7 @@ def from_blockgf_to_dense(G):
     return G_dense
 
 
-def adapol_fit_test(do_xca_calc=False):
+def adapol_fit_test(do_xca_calc=True):
 
     beta = 3.0
     mu = 0.0
@@ -32,8 +32,8 @@ def adapol_fit_test(do_xca_calc=False):
 
     order = 1
     maxiter = 100
-    ppsc_tol = 1e-10
-    adapol_tol = ppsc_tol * 0.1
+    ppsc_tol = 1e-14
+    adapol_tol = 1e-10
 
     if do_xca_calc:
 
@@ -60,6 +60,8 @@ def adapol_fit_test(do_xca_calc=False):
 
         BSS.Delta_tau << BSS.G_tau # Bethe self-consistency
 
+        BSS.fit_hybridization(tol=adapol_tol)
+
         if False:
             from triqs.plot.mpl_interface import oplot, plt, oplotr, oploti
             oplot(BSS.Delta_tau)
@@ -73,16 +75,17 @@ def adapol_fit_test(do_xca_calc=False):
 
         w_dlr = np.array([ float(x) for x in Delta_dlr.mesh ])
         Delta_dlr_data = Delta_dlr_dense.data[:, 0, 0].real
+
     else:
-        Delta_dlr_data = np.array([-2.86683935e-03,  8.02671773e-03, -7.53810685e-03,  5.63069933e-03,
-       -1.65680793e-02,  2.65568726e-02, -2.20817213e-02,  2.10244425e-02,
-       -2.40316988e-02,  2.84880798e-02, -2.49181086e-02,  1.65740549e-02,
-       -2.78187845e-02,  5.86409625e-02, -1.46482819e-01,  6.52016460e-01,
-        3.17584815e-01, -1.02574535e-02,  2.63134169e-01, -2.26991536e-01,
-        1.40082365e-01, -6.32787320e-02,  5.89301555e-02, -2.72543568e-02,
-        5.06048731e-03, -3.91212770e-03,  5.10645480e-03, -4.69187715e-03,
-        2.92578287e-03, -1.68198597e-03,  1.71677378e-03, -1.70860218e-03,
-        5.83535952e-04])
+        Delta_dlr_data = np.array([-2.87059648e-03,  8.03697280e-03, -7.54738032e-03,  5.63683166e-03,
+       -1.65833193e-02,  2.65791603e-02, -2.20980377e-02,  2.10371505e-02,
+       -2.40439486e-02,  2.84997872e-02, -2.49267923e-02,  1.65782606e-02,
+       -2.78233831e-02,  5.86472915e-02, -1.46491003e-01,  6.52025753e-01,
+        3.17576895e-01, -1.02506149e-02,  2.63118605e-01, -2.26965298e-01,
+        1.40062175e-01, -6.32622719e-02,  5.89104167e-02, -2.72432219e-02,
+        5.05731934e-03, -3.90840782e-03,  5.09995648e-03, -4.68438177e-03,
+        2.91969618e-03, -1.67744675e-03,  1.71064218e-03, -1.70190617e-03,
+        5.81097236e-04])
         w_dlr = np.array([-8.99518258e+01, -8.76796367e+01, -8.44163957e+01, -7.47323880e+01,
        -6.31104678e+01, -5.75485045e+01, -5.05836043e+01, -4.11676404e+01,
        -3.44857852e+01, -2.74998349e+01, -2.30970360e+01, -1.65071074e+01,
@@ -93,9 +96,10 @@ def adapol_fit_test(do_xca_calc=False):
         6.60284296e+01,  7.47323880e+01,  8.44163957e+01,  8.76796367e+01,
         8.99518258e+01])
 
-    print(repr(Delta_dlr_data))
-    print(repr(w_dlr))
-    
+
+    print('Delta_dlr_data =\n', repr(Delta_dlr_data))
+    print('w_dlr =\n', repr(w_dlr))
+
     print('='*72)
     print('='*72)
     print('--> Calling adapol.fit_utils_dlr.polefitting_dlr')
