@@ -13,7 +13,7 @@ def test_block_sparse_self_cons(verbose=False):
     e1 = 1.2
     
     eps = 1e-12
-    w_max = 10.0 * beta
+    w_max = 10.0
     tol = 1e-10
 
     order = 1

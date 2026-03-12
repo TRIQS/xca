@@ -116,9 +116,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(
     mu = 0.0
     
     eps = 1e-12
-    lamb = 200.0 * beta
-    
-    w_max = lamb / beta
+    w_max = 10.0
 
     # -- Local Hamiltonian
     
@@ -141,7 +139,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(
     
     print(f'conserved_operators = {conserved_operators}')    
     
-    mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=lamb/beta, eps=eps)
+    mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=w_max, eps=eps)
     Delta_w = Gf(mesh=mesh_w, target_shape=[1]*2)
 
     Delta_w << inverse(iOmega_n - e1)

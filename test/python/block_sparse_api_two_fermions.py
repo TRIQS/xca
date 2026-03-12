@@ -33,8 +33,7 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
     U = 3.0
 
     eps = 1e-12
-    lamb = 20.0 * beta
-    w_max = lamb / beta
+    w_max = 20.0
 
     # -- Local Hamiltonian
     
@@ -64,7 +63,7 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
 
     from triqs.gf import MeshDLRImFreq
 
-    mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=lamb/beta, eps=eps)
+    mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=w_max, eps=eps)
     Delta_w = Gf(mesh=mesh_w, target_shape=[2]*2)
     iwn = np.array([ complex(x) for x in mesh_w ])
 

@@ -61,8 +61,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     mu = 4.0
 
     eps = 1e-12
-    lamb = 5.0 * beta
-    w_max = lamb / beta
+    w_max = 5.0
 
     # -- Local Hamiltonian
     
@@ -86,7 +85,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     
     # -- Hybridization function and adapol fit
 
-    mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=lamb/beta, eps=eps)
+    mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=w_max, eps=eps)
     Delta_w = Gf(mesh=mesh_w, target_shape=[2]*2)
     iwn = np.array([ complex(x) for x in mesh_w ])
     Delta_w.data[:] = make_Delta_with_cont_spec_mat(iwn, semicircular, a=a, b=b, r0=r0, eps=eps)[:, :2, :2]

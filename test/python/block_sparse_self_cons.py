@@ -13,25 +13,17 @@ def test_block_sparse_self_cons(verbose=False):
     mu = 0.0
     e1 = 1.2
     
-    eps = 1e-12
-    w_max = 10.0 * beta
-    tol = 1e-10
+    eps = 1e-10
+    w_max = 10.0
+    tol = 1e-6
 
     order = 4
     maxiter = 100
 
     gf_struct = [['0', 1]]
-    fops = [ ('0', 0) ]
-
-    #gf_struct = [['0', 1], ['1', 1]]
-    #fops = [ ('0', 0), ('1', 0) ]
 
     from triqs.operators import n
-    
-    #N_op = n('0', 0) + n('1', 0)
-    N_op = n('0', 0)
-    
-    H = -mu * N_op
+    H = -mu * n('0', 0)
 
     mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=w_max, eps=eps)
     Delta_w = Gf(mesh=mesh_w, target_shape=[1, 1])
@@ -42,10 +34,11 @@ def test_block_sparse_self_cons(verbose=False):
     tau_mesh = Delta_tau.mesh
 
     S = TriqsSolver(beta=beta, gf_struct=gf_struct, eps=eps, w_max=w_max)
+
     S.Delta_tau['0'] << Delta_tau
-    #S.Delta_tau['1'] << Delta_tau
+
     S.solve(h_int=H, order=order, maxiter=maxiter, tol=tol, 
-            compress_hybridization=True, update_eta_exact=False)
+            compress_hybridization=True, update_eta_exact=True)
 
     print(f'S.S.eta = {S.S.eta:2.2E}')
     print(f'S.S.dmu = {S.S.dmu:2.2E}')
@@ -59,10 +52,7 @@ def test_block_sparse_self_cons(verbose=False):
     g_S = S.G_tau
 
 
-    BSS = BlockSparseSolver(
-        H, beta, w_max, eps, gf_struct, 
-        #conserved_operators=[],
-        )
+    BSS = BlockSparseSolver(H, beta, w_max, eps, gf_struct)
     
     BSS.Delta_tau['0'] << Delta_tau
  
