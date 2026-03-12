@@ -17,6 +17,17 @@ from . import DiagramEvaluator
 from .dense import DenseDiagramEvaluator
 
 
+def is_root():
+    return mpi.is_master_node()
+
+
+def scatter_array_over_ranks(arr):
+    size = mpi.size
+    rank = mpi.rank
+    arr_rank = np.array_split(np.array(arr), size, axis=0)[rank]
+    return arr_rank
+
+
 class BlockSparseSolver(object):
     
     def __init__(self, H_loc, beta, w_max, eps, gf_struct, conserved_operators=None):
@@ -46,7 +57,7 @@ class BlockSparseSolver(object):
 
         self.use_dense_solver = (self.conserved_operators == []) # Without symmetries, use the dense solver
 
-        print_atom_diag_info(self.ad)
+        if is_root(): print_atom_diag_info(self.ad)
 
         self.G0 = atomic_pseudo_particle_greens_function(self.ad, self.beta, self.mesh_tau)
         self.G = self.G0.copy()
@@ -59,11 +70,12 @@ class BlockSparseSolver(object):
 
         self.dysons = [DysonItPPSC(self.beta, ito, G0_block.data) for _, G0_block in self.G0]
 
-        print(logo())
-        print()
-        print(f'use_dense_solver = {self.use_dense_solver}')
-        print(f'conserved_operators = {self.conserved_operators}')
-        print()
+        if is_root():
+            print(logo())
+            print()
+            print(f'use_dense_solver = {self.use_dense_solver}')
+            print(f'conserved_operators = {self.conserved_operators}')
+            print()
     
 
     def fit_hybridization(self, tol=None, use_polefitting_dlr=False):
@@ -133,8 +145,9 @@ class BlockSparseSolver(object):
         self.hyb = Dummy()
         self.hyb.poles = poles
         self.hyb.coefficients = coefficients
-        print(f'hyb.poles = {self.hyb.poles}')
-        print(f'hyb.coefficients =\n{self.hyb.coefficients}')
+        if is_root():
+            print(f'hyb.poles = {self.hyb.poles}')
+            print(f'hyb.coefficients =\n{self.hyb.coefficients}')
 
         self.init_diagram_evaluator() # FIXME! Evaluator takes hyb poles and coeffs in constructor
 
@@ -170,12 +183,12 @@ class BlockSparseSolver(object):
 
             diff_G = max_abs_diff_BlockGf(G_new, self.G)
 
-            print(f'iter = {iter}, diff_G = {diff_G:2.2E}, Z-1 = {Z-1:2.2E}')
+            if is_root(): print(f'iter = {iter}, diff_G = {diff_G:2.2E}, Z-1 = {Z-1:2.2E}')
 
             self.G = mix * G_new + (1 - mix) * self.G
 
             if diff_G < tol:
-                print(f'Converged after {iter} iterations with diff_G = {diff_G:2.2E} < tol = {tol:2.2E}')
+                if is_root(): print(f'Converged after {iter} iterations with diff_G = {diff_G:2.2E} < tol = {tol:2.2E}')
                 break
 
         G_tau = self.eval_single_particle_greens_function(self.G, max_order=self.max_order)
@@ -200,8 +213,9 @@ class BlockSparseSolver(object):
 
         Z_new = self.partition_function_from_ppgf(G_new)
 
-        print(f'Updated eta = {self.eta:2.2E} to normalize Z = {Z:2.2E} to 1.')
-        print(f'After normalization, Z_new-1 = {Z_new-1:2.2E}')
+        if is_root():
+            print(f'Updated eta = {self.eta:2.2E} to normalize Z = {Z:2.2E} to 1.')
+            print(f'After normalization, Z_new-1 = {Z_new-1:2.2E}')
 
         self.eta += deta
 
@@ -263,7 +277,8 @@ class BlockSparseSolver(object):
         
         for sign, topology in all_connected_pairings(order):
             topology = np.array(topology, dtype=np.int32)
-            Sigma +=  pow(-1, order) * sign * self.eval_pseudo_particle_self_energy_topology(G, topology) # FIXME! Signs
+            Sigma +=  pow(-1, order) * sign * \
+                self.eval_pseudo_particle_self_energy_topology_loop(G, topology) # FIXME! Signs
             
         return Sigma
     
@@ -274,12 +289,17 @@ class BlockSparseSolver(object):
 
 
     def eval_pseudo_particle_self_energy_topology_loop(self, G, topology):
-
         order = len(topology)
         Sigma = self.get_zero_pseudo_particle_propagator()
 
-        for n in range(self.d.get_num_self_energy_backbones(topology)):
+        n_max = self.d.get_num_self_energy_backbones(topology)
+        n_vec = scatter_array_over_ranks(np.arange(n_max))
+
+        for n in n_vec:
             Sigma += pow(-1, order+1) * self.d.compute_self_energy(G, topology, n) # FIXME! Sign convention.
+
+        for bidx, sigma_b in Sigma:
+            sigma_b.data[:] = mpi.all_reduce(sigma_b.data)
 
         return Sigma
     
@@ -313,7 +333,8 @@ class BlockSparseSolver(object):
 
         for sign, topology in all_connected_pairings(order):
             topology = np.array(topology, dtype=np.int32)
-            spgf += pow(-1, order) * sign * self.eval_single_particle_greens_function_topology(G, topology)
+            spgf += pow(-1, order) * sign * \
+                self.eval_single_particle_greens_function_topology_loop(G, topology)
 
         return spgf
 
@@ -330,8 +351,13 @@ class BlockSparseSolver(object):
     def eval_single_particle_greens_function_topology_loop(self, G, topology):
         spgf = self.get_zero_single_particle_greens_function()
 
-        for n in range(self.d.get_num_single_ptcle_gf_backbones(topology)):
+        n_max = self.d.get_num_single_ptcle_gf_backbones(topology)
+        n_vec = scatter_array_over_ranks(np.arange(n_max))
+
+        for n in n_vec:
             spgf.data[:] += self.d.compute_single_ptcle_gf(G, topology, n) # FIXME! return triqs::gfs::gf
+
+        spgf.data[:] = mpi.all_reduce(spgf.data)
 
         return spgf
 
