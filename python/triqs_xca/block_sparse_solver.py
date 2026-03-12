@@ -66,23 +66,25 @@ class BlockSparseSolver(object):
         print()
     
 
-    def fit_hybridization(self, tol=None):
+    def fit_hybridization(self, tol=None, use_polefitting_dlr=False):
 
         self.tol_adapol = self.eps if tol is None else tol
 
-        #Delta_iw = make_gf_dlr_imfreq(self.Delta_tau)
-        #Delta_iw_dense = self.__from_blockgf_to_dense(Delta_iw)
-        ##_, fit_error, poles, pole_weights = anacont_triqs(Delta_iw_dense, tol=self.tol_adapol, debug=True)
-        #_, fit_error, poles_ref, pole_weights_ref = anacont_triqs(Delta_iw_dense, tol=self.tol_adapol, debug=True)
+        if use_polefitting_dlr:
+            Delta_dlr = make_gf_dlr(self.Delta_tau)
+            Delta_dlr_dense = self.__from_blockgf_to_dense(Delta_dlr)
+            w_dlr = np.array([ float(x) for x in Delta_dlr.mesh ])
+            
+            pole_weights, poles, fit_error = polefitting_dlr(
+                Delta_dlr_dense.data, w_dlr, self.beta, eps=self.tol_adapol, statistics="Fermion", verbose=True)
 
-        Delta_dlr = make_gf_dlr(self.Delta_tau)
-        Delta_dlr_dense = self.__from_blockgf_to_dense(Delta_dlr)
-        w_dlr = np.array([ float(x) for x in Delta_dlr.mesh ])
-        
-        pole_weights, poles, fit_error = polefitting_dlr(
-            Delta_dlr_dense.data, w_dlr, self.beta, eps=self.tol_adapol, statistics="Fermion", verbose=True)
+            pole_weights *= -1. # FIXME! Why is this necessary? Is there a sign convention issue in polefitting_dlr?
 
-        pole_weights *= -1. # FIXME! Why is this necessary? Is there a sign convention issue in polefitting_dlr?
+        else:
+            Delta_iw = make_gf_dlr_imfreq(self.Delta_tau)
+            Delta_iw_dense = self.__from_blockgf_to_dense(Delta_iw)
+            _, fit_error, poles, pole_weights = anacont_triqs(Delta_iw_dense, tol=self.tol_adapol, debug=True)
+            #_, fit_error, poles_ref, pole_weights_ref = anacont_triqs(Delta_iw_dense, tol=self.tol_adapol, debug=True)
 
         #print(f'poles     = {poles}')
         #print(f'poles_ref = {poles_ref}')
@@ -155,6 +157,13 @@ class BlockSparseSolver(object):
         for iter in range(1, maxiter+1):
 
             self.Sigma = self.eval_pseudo_particle_self_energy(self.G, self.max_order)
+
+            if False:
+            #if iter == 1:
+                self.eta = self.beta * get_max_abs_trapz_block_gf(self.Sigma) / 2
+                #self.eta = self.beta * get_max_abs_block_gf(self.Sigma)
+                print(f'self.eta = {self.eta} (initialized to max abs trapz value of self-energy)')
+
             G_new = self.solve_dyson(self.Sigma, self.eta)
             G_new = self.normalize_pseudo_particle_gf(G_new)
             Z = self.partition_function_from_ppgf(G_new)
@@ -469,6 +478,32 @@ def pseudo_particle_block_gf_to_dense(block_gf, ad):
         dense_gf.data[bidx] = block_gf[sidx].data
 
     return dense_gf    
+
+
+def get_max_abs_trapz_block_gf(G):
+
+    max_abs = -float('inf')
+    for b, g in G:
+        g_dlr = make_gf_dlr(g)
+        beta = g.mesh.beta
+
+        max_abs_block = np.max(np.abs(np.diag(g_dlr(0.) + g_dlr(beta)))) / 2
+
+        if max_abs_block > max_abs:
+            max_abs = max_abs_block
+
+    return max_abs
+
+
+def get_max_abs_block_gf(G):
+
+    max_abs = -float('inf')
+    for b, g in G:
+        max_abs_block = np.max(np.abs(g.data))
+        if max_abs_block > max_abs:
+            max_abs = max_abs_block
+
+    return max_abs
 
 
 def trace_dlr_imtime_BlockGf(G_dlr_imtime_BlockGf):
