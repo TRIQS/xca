@@ -3,10 +3,11 @@ import numpy as np
 
 import triqs.utility.mpi as mpi
 
-from triqs.gf import Gf, MeshDLRImTime, BlockGf
+from triqs.gf import Gf, MeshDLRImTime, BlockGf, make_gf_dlr, make_gf_dlr_imfreq
 from triqs.atom_diag import AtomDiag
 
-from adapol import anacont as adapol_anacont
+from adapol.anacont import anacont_triqs
+from adapol.fit_utils_dlr import polefitting_dlr
 
 from .diag import all_connected_pairings
 
@@ -16,30 +17,49 @@ from . import DiagramEvaluator
 from .dense import DenseDiagramEvaluator
 
 
+def is_root():
+    return mpi.is_master_node()
+
+
+def scatter_array_over_ranks(arr):
+    size = mpi.size
+    rank = mpi.rank
+    arr_rank = np.array_split(np.array(arr), size, axis=0)[rank]
+    return arr_rank
+
+
 class BlockSparseSolver(object):
     
-    def __init__(self, H_loc, fundamental_operators, beta, w_max, eps, conserved_operators=[], dense=False):
+    def __init__(self, H_loc, beta, w_max, eps, gf_struct, conserved_operators=None):
 
         self.H_loc = H_loc
-        self.fundamental_operators = fundamental_operators
+        self.gf_struct = gf_struct
         self.beta = beta
         self.w_max = w_max
         self.eps = eps
         self.conserved_operators = conserved_operators
-        self.dense = dense
+
+        self.fundamental_operators = fundamental_operators_from_gf_struct(gf_struct)
 
         self.eta = 0. # Pseudo particle chemical potential (shift of the pseudo particle energies).
 
         self.mesh_tau = MeshDLRImTime(beta=self.beta, statistic='Fermion', w_max=self.w_max, eps=self.eps)
 
-        self.ad = AtomDiag(self.H_loc, self.fundamental_operators, self.conserved_operators)
-        print_atom_diag_info(self.ad)
+        self.Delta_tau = BlockGf(mesh=self.mesh_tau, gf_struct=self.gf_struct)
 
-        if self.dense:
-            self.G0 = atomic_pseudo_particle_greens_function_dense(self.ad, self.beta, self.mesh_tau)
+        if self.conserved_operators is None:
+            # Uses autopartition algorithm for symmetry discovery, when no conserved operators are provided. 
+            # This is the default, and recommended, usage.
+            self.ad = AtomDiag(self.H_loc, self.fundamental_operators) 
+            self.conserved_operators = 'automatic'
         else:
-            self.G0 = atomic_pseudo_particle_greens_function(self.ad, self.beta, self.mesh_tau)
+            self.ad = AtomDiag(self.H_loc, self.fundamental_operators, self.conserved_operators)
 
+        self.use_dense_solver = (self.conserved_operators == []) # Without symmetries, use the dense solver
+
+        if is_root(): print_atom_diag_info(self.ad)
+
+        self.G0 = atomic_pseudo_particle_greens_function(self.ad, self.beta, self.mesh_tau)
         self.G = self.G0.copy()
         self.Sigma = self.get_zero_pseudo_particle_propagator()
 
@@ -48,28 +68,76 @@ class BlockSparseSolver(object):
         from .pycppdlr import ImTimeOps
         ito = ImTimeOps(w_max * beta, build_dlr_rf(w_max * beta, eps)) 
 
-        G0 = [(0, self.G0)] if self.dense else self.G0
-        self.dysons = [DysonItPPSC(self.beta, ito, G0_block.data) for _, G0_block in G0]
+        self.dysons = [DysonItPPSC(self.beta, ito, G0_block.data) for _, G0_block in self.G0]
 
-        print(logo())
-        print()
-        print(f'dense = {self.dense}')
-        if dense:
-            print('conserved_operators dissregarded (dense solver does not exploit symmetries)')
-        else:
+        if is_root():
+            print(logo())
+            print()
+            print(f'use_dense_solver = {self.use_dense_solver}')
             print(f'conserved_operators = {self.conserved_operators}')
-        print()
+            print()
     
 
-    def set_hybridization(self, Delta_iw, eps=None): # FIXME! Delta_tau on DLR mesh
+    def fit_hybridization(self, tol=None, use_polefitting_dlr=False):
 
-        self.tol_adapol = self.eps if eps is None else eps
+        self.tol_adapol = self.eps if tol is None else tol
 
-        iwn = np.array([ complex(iw) for iw in Delta_iw.mesh ])
+        if use_polefitting_dlr:
+            Delta_dlr = make_gf_dlr(self.Delta_tau)
+            Delta_dlr_dense = self.__from_blockgf_to_dense(Delta_dlr)
+            w_dlr = np.array([ float(x) for x in Delta_dlr.mesh ])
+            
+            pole_weights, poles, fit_error = polefitting_dlr(
+                Delta_dlr_dense.data, w_dlr, self.beta, eps=self.tol_adapol, statistics="Fermion", verbose=True)
+
+            pole_weights *= -1. # FIXME! Why is this necessary? Is there a sign convention issue in polefitting_dlr?
+
+        else:
+            Delta_iw = make_gf_dlr_imfreq(self.Delta_tau)
+            Delta_iw_dense = self.__from_blockgf_to_dense(Delta_iw)
+            _, fit_error, poles, pole_weights = anacont_triqs(Delta_iw_dense, tol=self.tol_adapol, debug=True)
+            #_, fit_error, poles_ref, pole_weights_ref = anacont_triqs(Delta_iw_dense, tol=self.tol_adapol, debug=True)
+
+        #print(f'poles     = {poles}')
+        #print(f'poles_ref = {poles_ref}')
+        #print(f'pole_weights     =\n{pole_weights}')
+        #print(f'pole_weights_ref =\n{pole_weights_ref}')
         
-        func, fitting_error, pol, weight = adapol_anacont(Delta_iw.data, iwn, tol=self.tol_adapol)
+        self.set_hybridization_poles_and_coefficients(poles, pole_weights)
+
+        self.hyb.fit_error = fit_error
+
+
+    def __from_blockgf_to_dense(self, G):
+
+        for b, g in G:
+            assert( len(g.target_shape) == 2)
+            assert( g.target_shape[0] == g.target_shape[1] )
+
+        norb = sum([ g.target_shape[0] for b, g in G ])
         
-        self.set_hybridization_poles_and_coefficients(pol, weight)
+        G_dense = Gf(mesh=G.mesh, target_shape=[norb]*2)
+        
+        sidx = 0
+        for b, g in G:
+            size = g.target_shape[0]
+            G_dense.data[:, sidx:sidx+size, sidx:sidx+size] = g.data
+            sidx += size
+
+        return G_dense
+
+
+    def __from_dense_to_blockgf(self, G_dense, gf_struct):
+
+        G = BlockGf(mesh=G_dense.mesh, gf_struct=gf_struct)
+
+        sidx = 0
+        for b, g in G:
+            size = g.target_shape[0]
+            g.data[:] = G_dense.data[:, sidx:sidx+size, sidx:sidx+size]
+            sidx += size
+
+        return G
 
 
     def set_hybridization_poles_and_coefficients(self, poles, coefficients):
@@ -77,96 +145,167 @@ class BlockSparseSolver(object):
         self.hyb = Dummy()
         self.hyb.poles = poles
         self.hyb.coefficients = coefficients
+        if is_root():
+            print(f'hyb.poles = {self.hyb.poles}')
+            print(f'hyb.coefficients =\n{self.hyb.coefficients}')
+
+        self.init_diagram_evaluator() # FIXME! Evaluator takes hyb poles and coeffs in constructor
 
 
     def init_diagram_evaluator(self):
         
-        if self.dense:
-            self.d = DenseDiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.G, self.ad)
+        if self.use_dense_solver:
+            self.d = DenseDiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.ad)
         else:
-            self.d = DiagramEvaluator(
-                self.beta, self.w_max * self.beta, self.eps, # -- Todo: Get this info from self.G
-                self.hyb.poles, self.hyb.coefficients,
-                self.G, self.ad)
+            self.d = DiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.ad)
+
+
+    def solve(self, max_order, tol=1e-7, maxiter=10, mix=1., delta_tol=None):
+
+        self.max_order = max_order
+        self.delta_tol = delta_tol if delta_tol is not None else 0.1 * tol
+
+        self.fit_hybridization(tol=tol)
+
+        for iter in range(1, maxiter+1):
+
+            self.Sigma = self.eval_pseudo_particle_self_energy(self.G, self.max_order)
+
+            if False:
+            #if iter == 1:
+                self.eta = self.beta * get_max_abs_trapz_block_gf(self.Sigma) / 2
+                #self.eta = self.beta * get_max_abs_block_gf(self.Sigma)
+                print(f'self.eta = {self.eta} (initialized to max abs trapz value of self-energy)')
+
+            G_new = self.solve_dyson(self.Sigma, self.eta)
+            G_new = self.normalize_pseudo_particle_gf(G_new)
+            Z = self.partition_function_from_ppgf(G_new)
+
+            diff_G = max_abs_diff_BlockGf(G_new, self.G)
+
+            if is_root(): print(f'iter = {iter}, diff_G = {diff_G:2.2E}, Z-1 = {Z-1:2.2E}')
+
+            self.G = mix * G_new + (1 - mix) * self.G
+
+            if diff_G < tol:
+                if is_root(): print(f'Converged after {iter} iterations with diff_G = {diff_G:2.2E} < tol = {tol:2.2E}')
+                break
+
+        G_tau = self.eval_single_particle_greens_function(self.G, max_order=self.max_order)
+        self.G_tau = self.__from_dense_to_blockgf(G_tau, self.gf_struct)
+
+
+    def normalize_pseudo_particle_gf(self, G):
+        """ Normalize the pseudo particle Green's function by updating the pseudo particle chemical potential eta, such that the partition function Z is equal to 1. """
+
+        Z = self.partition_function_from_ppgf(G)
+
+        deta = np.log(np.abs(Z)) / self.beta
+
+        def energy_shift_ppgf(G, deta):
+            G_new = G.copy()
+            tau = np.array([ float(t) for t in G.mesh ])
+            for bidx, g in G_new:
+                g.data[:] *= np.exp(-tau * deta)[:, None, None]
+            return G_new
+
+        G_new = energy_shift_ppgf(G, deta)
+
+        Z_new = self.partition_function_from_ppgf(G_new)
+
+        if is_root():
+            print(f'Updated eta = {self.eta:2.2E} to normalize Z = {Z:2.2E} to 1.')
+            print(f'After normalization, Z_new-1 = {Z_new-1:2.2E}')
+
+        self.eta += deta
+
+        return G_new
 
 
     def pseudo_particle_greens_function(self):
         return self.G
 
 
-    def partition_function(self):
+    def partition_function_from_ppgf(self, G):
+        """ Partition function of the impurity model, computed from the pseudo particle Green's function as
 
-        def trace(g_dlr): return -np.trace(g_dlr(self.beta))
-
-        def block_trace(G_dlr_blockgf):
-            return sum([trace(g) for _, g in G_dlr_blockgf])
-
-        from triqs.gf import make_gf_dlr
-        G_dlr = make_gf_dlr(self.G)
-
-        Z = block_trace(G_dlr) if type(G_dlr) is BlockGf else trace(G_dlr)
-
+        ..math::
+            Z = -\\mathrm{Tr}[ G(\\tau=\\beta) ]
+        
+        """
+        
+        Z = -trace_dlr_imtime_BlockGf(G)
         assert(Z.imag < 1e-12)
         Z = Z.real
 
         return Z
 
 
+    def partition_function(self):
+        return self.partition_function_from_ppgf(self.G)
+
+
     def solve_dyson(self, Sigma, eta):
 
-        if self.dense:
-            assert type(Sigma) is Gf, 'Sigma must be a Gf for dense solver'
-        else:
-            assert type(Sigma) is BlockGf, 'Sigma must be a BlockGf for block_sparse solver'
+        assert type(Sigma) is BlockGf, 'Sigma must be a BlockGf'
 
         G = self.get_zero_pseudo_particle_propagator()
-        G_b = [G] if self.dense else G
-        Sigma_b = [(0, Sigma)] if self.dense else Sigma
 
-        for dyson, (bidx, sigma) in zip(self.dysons, Sigma_b):
-            G_b[bidx].data[:] = dyson.solve(sigma.data, eta)
+        for dyson, (bidx, sigma_b) in zip(self.dysons, Sigma):
+            G[bidx].data[:] = dyson.solve(sigma_b.data, eta)
 
         return G
 
 
-    def pseudo_particle_self_energy(self, max_order):
+    def pseudo_particle_self_energy(self):
+        return self.Sigma
+
+
+    def eval_pseudo_particle_self_energy(self, G, max_order):
+
         self.Sigma = self.get_zero_pseudo_particle_propagator()
+
         for order in range(1, max_order+1):
-            self.Sigma += self.pseudo_particle_self_energy_order(order)
+            self.Sigma += self.eval_pseudo_particle_self_energy_order(G, order)
 
         return self.Sigma
-            
-    def pseudo_particle_self_energy_order(self, order):
+
+
+    def eval_pseudo_particle_self_energy_order(self, G, order):
 
         Sigma = self.get_zero_pseudo_particle_propagator()
         
         for sign, topology in all_connected_pairings(order):
-            print(f'topology = {topology}')
             topology = np.array(topology, dtype=np.int32)
-            Sigma +=  pow(-1, order) * sign * self.pseudo_particle_self_energy_topology(topology)
+            Sigma +=  pow(-1, order) * sign * \
+                self.eval_pseudo_particle_self_energy_topology_loop(G, topology) # FIXME! Signs
             
         return Sigma
     
     
-    def pseudo_particle_self_energy_topology(self, topology):
-        return self.d.compute_self_energy(topology)
+    def eval_pseudo_particle_self_energy_topology(self, G, topology):
+        order = len(topology)
+        return pow(-1, order+1) * self.d.compute_self_energy(G, topology) # FIXME! Sign convention.
 
 
-    def pseudo_particle_self_energy_topology_loop(self, topology):
-
+    def eval_pseudo_particle_self_energy_topology_loop(self, G, topology):
+        order = len(topology)
         Sigma = self.get_zero_pseudo_particle_propagator()
 
-        for n in range(self.d.get_num_self_energy_backbones(topology)):
-            Sigma += self.d.compute_self_energy(topology, n)
+        n_max = self.d.get_num_self_energy_backbones(topology)
+        n_vec = scatter_array_over_ranks(np.arange(n_max))
+
+        for n in n_vec:
+            Sigma += pow(-1, order+1) * self.d.compute_self_energy(G, topology, n) # FIXME! Sign convention.
+
+        for bidx, sigma_b in Sigma:
+            sigma_b.data[:] = mpi.all_reduce(sigma_b.data)
 
         return Sigma
     
 
     def get_zero_pseudo_particle_propagator(self):
-        if self.dense:
-            return zero_pseudo_particle_propagator_dense(self.ad, self.mesh_tau)
-        else:
-            return zero_pseudo_particle_propagator(self.ad, self.mesh_tau)
+        return zero_pseudo_particle_propagator(self.ad, self.mesh_tau)
 
 
     def get_zero_single_particle_greens_function(self):
@@ -176,46 +315,51 @@ class BlockSparseSolver(object):
 
 
     def single_particle_greens_function(self, max_order):
-        print('--> single_particle_greens_function')
-        print(f'max_order = {max_order}')
+        return self.eval_single_particle_greens_function(self.G, max_order=max_order)
+
+
+    def eval_single_particle_greens_function(self, G, max_order):
         self.spgf = self.get_zero_single_particle_greens_function()
-        print(self.spgf)
 
         for order in range(1, max_order+1):
-            self.spgf += self.single_particle_greens_function_order(order)
+            self.spgf += self.eval_single_particle_greens_function_order(G, order)
         
         return self.spgf
 
 
-    def single_particle_greens_function_order(self, order):
-        print('--> single_particle_greens_function_order')
-        print(f'order = {order}')
+    def eval_single_particle_greens_function_order(self, G, order):
 
         spgf = self.get_zero_single_particle_greens_function()
 
         for sign, topology in all_connected_pairings(order):
-            print(f'topology = {topology}')
             topology = np.array(topology, dtype=np.int32)
-            spgf += pow(-1, order) * sign * self.single_particle_greens_function_topology(topology)
+            spgf += pow(-1, order) * sign * \
+                self.eval_single_particle_greens_function_topology_loop(G, topology)
 
         return spgf
 
 
-    def single_particle_greens_function_topology(self, topology):
-        spgf = self.get_zero_single_particle_greens_function()
-        spgf.data[:] = self.d.compute_single_ptcle_gf(topology)
-        return spgf
+    def eval_single_particle_greens_function_topology(self, G, topology):
 
-
-    def single_particle_greens_function_topology_loop(self, topology):
         spgf = self.get_zero_single_particle_greens_function()
 
-        for n in range(self.d.get_num_single_ptcle_gf_backbones(topology)):
-            spgf.data[:] += self.d.compute_single_ptcle_gf(topology, n)
+        spgf.data[:] = self.d.compute_single_ptcle_gf(G, topology) # FIXME! return triqs::gfs::gf
 
         return spgf
 
 
+    def eval_single_particle_greens_function_topology_loop(self, G, topology):
+        spgf = self.get_zero_single_particle_greens_function()
+
+        n_max = self.d.get_num_single_ptcle_gf_backbones(topology)
+        n_vec = scatter_array_over_ranks(np.arange(n_max))
+
+        for n in n_vec:
+            spgf.data[:] += self.d.compute_single_ptcle_gf(G, topology, n) # FIXME! return triqs::gfs::gf
+
+        spgf.data[:] = mpi.all_reduce(spgf.data)
+
+        return spgf
 
 
 def logo():
@@ -321,7 +465,7 @@ def atomic_pseudo_particle_greens_function(ad, beta, mesh_tau):
     return G_tau
 
 
-def print_atom_diag_info(ad):
+def print_atom_diag_info(ad, verbose=False):
 
     print(r"""   _____    __                   ________   .___    _____     ________
   /  _  \ _/  |_  ____    _____  \______ \  |   |  /  _  \   /  _____/
@@ -331,17 +475,22 @@ def print_atom_diag_info(ad):
         \/                    \/         \/              \/         \/  """)
 
     print(ad)
-    print(f'full_hilbert_space_dim = {ad.full_hilbert_space_dim}')
-    print(f'n_subspaces = {ad.n_subspaces}')
-    print(f'get_subspace_dims = {ad.get_subspace_dims()}')
-    print(f'fops = {ad.fops}')
-    print(f'quantum_numbers = {ad.quantum_numbers}')
-    print(f'fock_states = {ad.fock_states}')
-    print(f'unitary_matrics = {ad.unitary_matrices}')
-    print(f'gs_energy = {ad.gs_energy}')
-    print(f'energies = {ad.energies}')
-    print(f'energies + gs_energy = {[ e + ad.gs_energy for e in ad.energies]}')
+    if verbose:
+        print(f'full_hilbert_space_dim = {ad.full_hilbert_space_dim}')
+        print(f'n_subspaces = {ad.n_subspaces}')
+        print(f'get_subspace_dims = {ad.get_subspace_dims()}')
+        print(f'fops = {ad.fops}')
+        print(f'quantum_numbers = {ad.quantum_numbers}')
+        print(f'fock_states = {ad.fock_states}')
+        print(f'unitary_matrics = {ad.unitary_matrices}')
+        print(f'gs_energy = {ad.gs_energy}')
+        print(f'energies = {ad.energies}')
+        print(f'energies + gs_energy = {[ e + ad.gs_energy for e in ad.energies]}')
     print('-'*72)
+
+
+def max_abs_diff_BlockGf(G1, G2):
+    return np.max([ np.max(np.abs(g1.data - g2.data)) for (_, g1), (_, g2) in zip(G1, G2) ])
 
 
 def pseudo_particle_block_gf_to_dense(block_gf, ad):
@@ -355,3 +504,46 @@ def pseudo_particle_block_gf_to_dense(block_gf, ad):
         dense_gf.data[bidx] = block_gf[sidx].data
 
     return dense_gf    
+
+
+def get_max_abs_trapz_block_gf(G):
+
+    max_abs = -float('inf')
+    for b, g in G:
+        g_dlr = make_gf_dlr(g)
+        beta = g.mesh.beta
+
+        max_abs_block = np.max(np.abs(np.diag(g_dlr(0.) + g_dlr(beta)))) / 2
+
+        if max_abs_block > max_abs:
+            max_abs = max_abs_block
+
+    return max_abs
+
+
+def get_max_abs_block_gf(G):
+
+    max_abs = -float('inf')
+    for b, g in G:
+        max_abs_block = np.max(np.abs(g.data))
+        if max_abs_block > max_abs:
+            max_abs = max_abs_block
+
+    return max_abs
+
+
+def trace_dlr_imtime_BlockGf(G_dlr_imtime_BlockGf):
+
+    G_dlr_coeff_BlockGf = make_gf_dlr(G_dlr_imtime_BlockGf)
+
+    def block_trace(g_dlr_coeff): 
+        return np.trace(g_dlr_coeff(g_dlr_coeff.mesh.beta))
+
+    return np.sum([block_trace(g) for _, g in G_dlr_coeff_BlockGf])
+
+
+def fundamental_operators_from_gf_struct(gf_struct):
+    fundamental_operators = []
+    for s, n in gf_struct:
+        fundamental_operators += [ (s, i) for i in range(n) ]
+    return fundamental_operators

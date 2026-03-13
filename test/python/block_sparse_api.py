@@ -1,22 +1,14 @@
+import time
 
+import numpy as np
 
 from itertools import product
 
-import numpy as np
-from scipy.integrate import quad
-
-import triqs.utility.mpi as mpi
-
-from triqs.gf import Gf, MeshDLRImTime
+from triqs.gf import Gf, MeshDLRImFreq, make_gf_dlr_imtime
 from triqs.operators.util.hamiltonians import h_int_kanamori, make_operator_real
 
-from adapol import anacont
-
-
 from triqs_xca.triqs_solver import TriqsSolver
-
 from triqs_xca.block_sparse_solver import BlockSparseSolver
-
 from triqs_xca.block_sparse_solver import hamiltonian_matrix, pseudo_particle_block_gf_to_dense
 
 
@@ -39,6 +31,7 @@ def make_Delta_with_cont_spec_mat( Z, rho, a=-1.0, b=1.0, r0=0.5, eps=1e-12):
             return Kw(w , Z[n]) * rho(w)
 
         # f = lambda w: Kw(w-en[i],Z[n])*rho(w)
+        from scipy.integrate import quad
         Delta[n] = quad(
             f, a, b, epsabs=eps, epsrel=eps, complex_func=True
         )[0]
@@ -68,16 +61,13 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     mu = 4.0
 
     eps = 1e-12
-    lamb = 5.0 * beta
-    w_max = lamb / beta
+    w_max = 5.0
 
     # -- Local Hamiltonian
     
     n_orb = 2
     spin_names = ('up', 'dn')
     gf_struct = [['up', 2], ['dn', 2]]
-
-    fops = [ (sn, on) for sn, on in product(spin_names, range(n_orb)) ]
 
     from triqs.operators import n
     
@@ -95,38 +85,25 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     
     # -- Hybridization function and adapol fit
 
-    N = 55
-    Z = 1j *(np.linspace(-N, N, N + 1)) * np.pi / beta
-    Delta = make_Delta_with_cont_spec_mat(Z, semicircular, a=a, b=b, r0=r0, eps=eps)
-    Np = 4 # unused?
-    func, fitting_error, pol, weight = anacont(Delta, Z, tol=eps)
-
-    from triqs.gf import MeshDLRImFreq
-
-    mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=lamb/beta, eps=eps)
+    mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=w_max, eps=eps)
     Delta_w = Gf(mesh=mesh_w, target_shape=[2]*2)
     iwn = np.array([ complex(x) for x in mesh_w ])
     Delta_w.data[:] = make_Delta_with_cont_spec_mat(iwn, semicircular, a=a, b=b, r0=r0, eps=eps)[:, :2, :2]
 
-    from triqs.gf import make_gf_dlr_imtime, make_gf_dlr
-
     Delta_tau = make_gf_dlr_imtime(Delta_w)
-    Delta_dlr = make_gf_dlr(Delta_w)
 
     
     # -- Block sparse solver
 
     BSS = BlockSparseSolver(
-        H, fops, beta, w_max, eps,
-        #conserved_operators=[],
-        #conserved_operators=[N_up + N_dn],
+        H, beta, w_max, eps, gf_struct=gf_struct,
         conserved_operators=[N_up, N_dn],
         )
 
-    #BSS.set_hybridization(Delta_w)
-    BSS.set_hybridization_poles_and_coefficients(pol, weight)
+    BSS.Delta_tau['up'] << Delta_tau
+    BSS.Delta_tau['dn'] << Delta_tau
 
-    BSS.init_diagram_evaluator()
+    BSS.fit_hybridization(tol=eps)
 
     
     # -- Dense solver
@@ -172,8 +149,6 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
              
             topology = np.array(topology, dtype=np.int32)
 
-            import time
-
             t1 = time.time()
             
             d.Sigma_S = S.S.calc_Sigma_topology(topology)
@@ -181,18 +156,11 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
             t2 = time.time()
 
             d.Sigma_BSS = pseudo_particle_block_gf_to_dense(
-                BSS.pseudo_particle_self_energy_topology(topology), BSS.ad)
-
-            #d.Sigma_BSS.data[:] *= sign # FIXME! Different sign convention?!?
-            d.Sigma_BSS.data[:] *= -pow(-1, d.order) # FIXME! Different sign convention?!?
+                BSS.eval_pseudo_particle_self_energy_topology(BSS.G, topology), BSS.ad)
 
             t3 = time.time()
 
             print(f'    Sigma time ZH ({t2 - t1} s) BS ({t3 - t2} s)')
-            
-            #Sigma_BSS_loop = pseudo_particle_block_gf_to_dense(
-            #    BSS.pseudo_particle_self_energy_topology_loop(topology), BSS.ad)
-            #np.testing.assert_array_almost_equal(d.Sigma_BSS.data, Sigma_BSS_loop.data)
             
             d.Sigma_diff = np.max(np.abs(d.Sigma_BSS.data - d.Sigma_S))
             print(f'    Sigma_diff = {d.Sigma_diff:2.2E}')
@@ -200,13 +168,10 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
             t1 = time.time()
             d.spgf_S = S.S.calc_spgf_toplogy(topology)
             t2 = time.time()
-            d.spgf_BSS = BSS.single_particle_greens_function_topology(topology)
+            d.spgf_BSS = BSS.eval_single_particle_greens_function_topology(BSS.G, topology)
             t3 = time.time()
 
             print(f'    spgf time ZH ({t2 - t1} s) BS ({t3 - t2} s)')
-            
-            #spgf_BSS_loop = BSS.single_particle_greens_function_topology_loop(topology)
-            #np.testing.assert_array_almost_equal(d.spgf_BSS.data, spgf_BSS_loop.data)
             
             d.spgf_diff = np.max(np.abs(d.spgf_BSS.data - d.spgf_S))
             print(f'    spgf_diff = {d.spgf_diff:2.2E}')
@@ -239,17 +204,13 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
         # -- Hybridization function
         
         plt.subplot(*subp); subp[-1] += 1
-        for i,j in product(range(4), repeat=2):
-            if not (Delta[:, i, j].real == 0.).all():
-                plt.plot(Z.imag, Delta[:, i, j].real, label=f'i,j = {i},{j}')
+        oplotr(Delta_w)
         plt.legend()
         plt.xlabel(r'$\omega_n$')
         plt.ylabel(r'Re[$\Delta(i\omega_n)$]')
 
         plt.subplot(*subp); subp[-1] += 1
-        for i,j in product(range(4), repeat=2):
-            if not (Delta[:, i, j].imag == 0.).all():
-                plt.plot(Z.imag, Delta[:, i, j].imag, label=f'i,j = {i},{j}')
+        oploti(Delta_w)
         plt.legend()
         plt.ylabel(r'Im[$\Delta(i\omega_n)$]')
         plt.xlabel(r'$\omega_n$')

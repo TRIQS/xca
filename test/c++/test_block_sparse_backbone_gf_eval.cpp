@@ -40,7 +40,7 @@ TEST(BSGFBackbone, NCA) {
 
   nda::array<int, 2> topology = {{0, 1}};
   auto B                      = CorrelatorBackbone(topology, n);
-  DiagramEvaluator D(beta, Lambda, eps, Deltat, nda::make_regular(dlr_rf / beta), Gt, Fq);
+  DiagramEvaluator D(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), itops.vals2coefs(Deltat), Fq);
   // for now, convert Fq.Fs and Fq.F_dags to vectors of BlockOp
   std::vector<BlockOp> mu_ops, kap_ops;
   for (int i = 0; i < Fq.Fs[0].get_size_sym_set(); ++i) {
@@ -66,7 +66,7 @@ TEST(BSGFBackbone, NCA) {
   }
 
   auto start                            = std::chrono::high_resolution_clock::now();
-  auto NCA_result_gf                    = D.eval_correlator(B, mu_ops, kap_ops);
+  auto NCA_result_gf                    = D.eval_correlator(Gt, B, mu_ops, kap_ops);
   auto end                              = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = end - start;
   std::cout << "NCA correlator evaluation took " << elapsed.count() << " seconds.\n";
@@ -74,8 +74,8 @@ TEST(BSGFBackbone, NCA) {
   // compare to dense backbone result
   auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
   auto Fset                               = DenseFSet(Fs_dense, F_dags_dense, itops.vals2coefs(Deltat));
-  auto C                                  = DenseDiagramEvaluator(beta, eps, itops, Deltat, Deltat_refl, dlr_rf, Gt_dense, Fset);
-  auto NCA_result_gf_dense                = C.eval_correlator(B, Fs_dense, F_dags_dense);
+  auto C                                  = DenseDiagramEvaluator(beta, eps, itops, dlr_rf, itops.vals2coefs(Deltat), Fset);
+  auto NCA_result_gf_dense                = C.eval_correlator(Gt_dense, B, Fs_dense, F_dags_dense);
 
   ASSERT_LE(nda::max_element(nda::abs(NCA_result_gf - NCA_result_gf_dense)), 1.0e-15);
 }
@@ -95,7 +95,7 @@ TEST(BSGFBackbone, OCA_BDOF_construct) {
 
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = CorrelatorBackbone(topology, n);
-  DiagramEvaluator D(beta, Lambda, eps, Deltat, nda::make_regular(dlr_rf / beta), Gt, Fq);
+  DiagramEvaluator D(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), itops.vals2coefs(Deltat), Fq);
   // for now, convert Fq.Fs and Fq.F_dags to vectors of BlockOp
   std::vector<BlockOp> mu_ops, kap_ops;
   for (int i = 0; i < Fq.Fs[0].get_size_sym_set(); ++i) {
@@ -121,7 +121,7 @@ TEST(BSGFBackbone, OCA_BDOF_construct) {
   }
 
   auto start                            = std::chrono::high_resolution_clock::now();
-  auto OCA_result_gf                    = D.eval_correlator(B, mu_ops, kap_ops);
+  auto OCA_result_gf                    = D.eval_correlator(Gt, B, mu_ops, kap_ops);
   auto end                              = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = end - start;
   std::cout << "OCA correlator evaluation took " << elapsed.count() << " seconds.\n";
@@ -129,8 +129,8 @@ TEST(BSGFBackbone, OCA_BDOF_construct) {
   // compare to dense backbone result
   auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
   auto Fset                               = DenseFSet(Fs_dense, F_dags_dense, itops.vals2coefs(Deltat));
-  auto C                                  = DenseDiagramEvaluator(beta, eps, itops, Deltat, Deltat_refl, dlr_rf, Gt_dense, Fset);
-  auto OCA_result_gf_dense                = C.eval_correlator(B, Fs_dense, F_dags_dense);
+  auto C                                  = DenseDiagramEvaluator(beta, eps, itops, dlr_rf, itops.vals2coefs(Deltat), Fset);
+  auto OCA_result_gf_dense                = C.eval_correlator(Gt_dense, B, Fs_dense, F_dags_dense);
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_result_gf - OCA_result_gf_dense)), 1.0e-15);
 }
@@ -207,9 +207,9 @@ TEST(Backbone, spin_flip_fermion) {
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = CorrelatorBackbone(topology, nn);
-  DiagramEvaluator D(beta, Lambda, eps, hyb, nda::make_regular(dlr_rf / beta), Gt, Fq);
+  DiagramEvaluator D(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), hyb_coeffs, Fq);
   auto start                            = std::chrono::high_resolution_clock::now();
-  auto OCA_result_gf                    = D.eval_correlator(B, mu_ops, kap_ops);
+  auto OCA_result_gf                    = D.eval_correlator(Gt, B, mu_ops, kap_ops);
   auto end                              = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = end - start;
   std::cout << "OCA correlator evaluation took " << elapsed.count() << " seconds.\n";
@@ -218,8 +218,8 @@ TEST(Backbone, spin_flip_fermion) {
   auto H_mat               = get_full_h_atomic(ad);
   auto Gt_dense            = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
   auto Fset                = get_operators_dense(ad, hyb_coeffs);
-  auto C                   = DenseDiagramEvaluator(beta, eps, itops, hyb, hyb_refl, dlr_rf, Gt_dense, Fset);
-  auto OCA_result_gf_dense = C.eval_correlator(B, Fset.Fs, Fset.F_dags);
+  auto C                   = DenseDiagramEvaluator(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
+  auto OCA_result_gf_dense = C.eval_correlator(Gt_dense, B, Fset.Fs, Fset.F_dags);
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_result_gf - OCA_result_gf_dense)), 1.0e-15);
 }
@@ -307,9 +307,9 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = CorrelatorBackbone(topology, nn);
-  DiagramEvaluator D(beta, Lambda, eps, hyb, nda::make_regular(dlr_rf / beta), Gt, Fq);
+  DiagramEvaluator D(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), hyb_coeffs, Fq);
   auto start                            = std::chrono::high_resolution_clock::now();
-  auto OCA_result_gf                    = D.eval_correlator(B, mu_ops, kap_ops);
+  auto OCA_result_gf                    = D.eval_correlator(Gt, B, mu_ops, kap_ops);
   auto end                              = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = end - start;
   std::cout << "OCA correlator evaluation took " << elapsed.count() << " seconds.\n";
@@ -318,8 +318,8 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
   auto H_mat               = get_full_h_atomic(ad);
   auto Gt_dense            = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
   auto Fset                = get_operators_dense(ad, hyb_coeffs);
-  auto C                   = DenseDiagramEvaluator(beta, eps, itops, hyb, hyb_refl, dlr_rf, Gt_dense, Fset);
-  auto OCA_result_gf_dense = C.eval_correlator(B, Fset.Fs, Fset.F_dags);
+  auto C                   = DenseDiagramEvaluator(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
+  auto OCA_result_gf_dense = C.eval_correlator(Gt_dense, B, Fset.Fs, Fset.F_dags);
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_result_gf - OCA_result_gf_dense)), 1.0e-15);
 }
@@ -418,9 +418,9 @@ TEST(Backbone, OCA_semicircle_bath_aaa) {
     kap_ops.push_back(kap_op);
   }
 
-  auto D      = DiagramEvaluator(beta, Lambda, eps, hyb, nda::make_regular(hyb_poles / beta), Gt, Fq);
+  auto D      = DiagramEvaluator(beta, Lambda, eps, nda::make_regular(hyb_poles / beta), hyb_coeffs, Fq);
   start       = std::chrono::high_resolution_clock::now();
-  auto OCA_gf = D.eval_correlator(B, mu_ops, kap_ops);
+  auto OCA_gf = D.eval_correlator(Gt, B, mu_ops, kap_ops);
   end         = std::chrono::high_resolution_clock::now();
 
   elapsed = end - start;
@@ -481,21 +481,21 @@ TEST(Backbone, OCA_py_constructors) {
 
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
-  DiagramEvaluator D(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), hyb_coeffs, G0_ppsc, ad);
-  auto OCA_gf = D.compute_single_ptcle_gf(topology);
+  DiagramEvaluator D(nda::make_regular(dlr_rf / beta), hyb_coeffs, G0_ppsc[0].mesh(), ad);
+  auto OCA_gf = D.compute_single_ptcle_gf(G0_ppsc, topology);
 
   // compare against constructing Gt, Fq manually
   auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs);
-  DiagramEvaluator D2(beta, Lambda, eps, Deltat, nda::make_regular(dlr_rf / beta), Gt, Fq);
-  auto OCA_gf_2 = D2.compute_single_ptcle_gf(topology);
+  DiagramEvaluator D2(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), hyb_coeffs, Fq);
+  auto OCA_gf_2 = D2.compute_single_ptcle_gf(Gt, topology);
 
   // compare against single index gf evaluator
-  DiagramEvaluator D3(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), hyb_coeffs, G0_ppsc, ad);
+  DiagramEvaluator D3(nda::make_regular(dlr_rf / beta), hyb_coeffs, G0_ppsc[0].mesh(), ad);
   auto OCA_gf_3 = nda::make_regular(0 * OCA_gf);
-  for (int f = 0; f < D.get_num_single_ptcle_gf_backbones(topology); ++f) { OCA_gf_3 += D3.compute_single_ptcle_gf(topology, f); }
+  for (int f = 0; f < D.get_num_single_ptcle_gf_backbones(topology); ++f) { OCA_gf_3 += D3.compute_single_ptcle_gf(G0_ppsc, topology, f); }
 
-  ASSERT_LE(nda::max_element(nda::abs(D.hyb - D2.hyb)), eps);
-  ASSERT_EQ(D.hyb_poles, D2.hyb_poles);
+  ASSERT_LE(nda::max_element(nda::abs(D.hyb.values - D2.hyb.values)), eps);
+  ASSERT_EQ(D.hyb.poles, D2.hyb.poles);
   ASSERT_LE(nda::max_element(nda::abs(OCA_gf - OCA_gf_2)), 1.0e-10);
   ASSERT_LE(nda::max_element(nda::abs(OCA_gf - OCA_gf_3)), 1.0e-10);
 }
@@ -541,8 +541,8 @@ TEST(Backbone, one_fermion_third_order_const_hyb) {
 
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 3}, {1, 4}, {2, 5}};
-  DiagramEvaluator D(beta, Lambda, eps, hyb_poles, hyb_coeffs, G0_ppsc, ad);
-  auto third_order_gf     = D.compute_single_ptcle_gf(topology);
+  DiagramEvaluator D(hyb_poles, hyb_coeffs, G0_ppsc[0].mesh(), ad);
+  auto third_order_gf     = D.compute_single_ptcle_gf(G0_ppsc, topology);
   auto third_order_gf_ana = nda::zeros<double>(r);
   double halfbeta         = beta / 2.0;
   double halfbetasq       = halfbeta * halfbeta;
@@ -593,8 +593,8 @@ TEST(Backbone, one_fermion_third_order_hyb_one_pole) {
 
   // third order single particle gf
   nda::array<int, 2> topology = {{0, 3}, {1, 4}, {2, 5}};
-  DiagramEvaluator D(beta, Lambda, eps, hyb_poles, hyb_coeffs, G0_ppsc, ad);
-  auto third_order_gf     = D.compute_single_ptcle_gf(topology);
+  DiagramEvaluator D(hyb_poles, hyb_coeffs, G0_ppsc[0].mesh(), ad);
+  auto third_order_gf     = D.compute_single_ptcle_gf(G0_ppsc, topology);
   auto third_order_gf_ana = nda::zeros<double>(r);
   double om               = hyb_poles(0);
   for (int i = 0; i < r; ++i) {
@@ -648,8 +648,8 @@ TEST(Backbone, one_fermion_third_order_semic_hyb) {
   auto dlr_it = itops.get_itnodes();
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 3}, {1, 4}, {2, 5}};
-  DiagramEvaluator D(beta, Lambda, eps, hyb_poles, hyb_coeffs, G0_ppsc, ad);
-  auto third_order_gf = D.compute_single_ptcle_gf(topology);
+  DiagramEvaluator D(hyb_poles, hyb_coeffs, G0_ppsc[0].mesh(), ad);
+  auto third_order_gf = D.compute_single_ptcle_gf(G0_ppsc, topology);
   std::cout << "r = " << r << "\n";
   std::cout << std::setprecision(16) << "third_order_gf = " << third_order_gf(_, 0, 0) << std::endl;
 

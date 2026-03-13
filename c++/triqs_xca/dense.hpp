@@ -1,6 +1,8 @@
 #pragma once
 #include <nda/nda.hpp>
 
+#include "triqs_xca/backbone.hpp"
+
 namespace triqs_xca::dense {
 
     using nda::dcomplex;
@@ -10,7 +12,15 @@ namespace triqs_xca::dense {
      * @brief Container for (linear combinations of) creation and annihilation operators in dense storage
      */
     class DenseFSet {
-      public:
+      private:
+
+      static constexpr auto _ = nda::range::all;
+
+      int N; // number of many-body states
+      int n; // number of fermion flavours (spin-orbitals)
+      int p; // number of hybridization poles
+
+      public:      
       nda::array<dcomplex, 3> Fs;
       nda::array<dcomplex, 3> F_dags;
       nda::array<dcomplex, 4> F_dag_bars;
@@ -25,6 +35,15 @@ namespace triqs_xca::dense {
       DenseFSet(nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags, nda::array_const_view<dcomplex, 3> hyb_coeffs);
 
       std::size_t get_num_orb_inds() const;
+
+      /**
+       * @brief Update the hybridization
+       * @param[in] hyb_coeffs DLR coefficients of hybridization
+       */
+      void update_hybridization(nda::array_const_view<dcomplex, 3> hyb_coeffs);
+
+      nda::array_const_view<dcomplex, 2> get_operator(Backbone &backbone, int v_ix, int o_ix, int l_ix) const;
+      nda::array_const_view<dcomplex, 2> get_operator(Backbone &backbone, int v_ix, int o_ix) const;
     };
 
 } // namespace triqs_xca::dense

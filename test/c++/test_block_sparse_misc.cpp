@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <triqs_xca/hyb.hpp>
+
 #include "block_sparse_utils.hpp"
 
 using nda::range;
@@ -9,7 +11,6 @@ using cppdlr::_;
 using cppdlr::build_dlr_rf;
 using cppdlr::imtime_ops;
 
-using triqs_xca::block_sparse::aaa_coefs2vals;
 using triqs_xca::block_sparse::nonint_gf_BDOF;
 
 TEST(BlockSparseMisc, compute_nonint_gf) {
@@ -68,7 +69,7 @@ TEST(BlockSparseMisc, compute_nonint_gf) {
   ASSERT_LE(nda::max_element(nda::abs(Gt_mat(_, range(15, 16), range(15, 16)) - Gt.get_block(4))), 1e-13);
 }
 
-TEST(BlockSparseMisc, aaa_coefs2vals) {
+TEST(BlockSparseMisc, hyb_coefs2vals) {
   // example hybridization function
   nda::vector<dcomplex> hyb00{-0.4997496184487105, -0.4867352379479528, -0.4603465101833711, -0.4239204950540695, -0.3716597467714097,
                               -0.2884886574148449, -0.2479810727230272, -0.2065525284769785, -0.1635819676241178, -0.1326995066858671,
@@ -96,7 +97,7 @@ TEST(BlockSparseMisc, aaa_coefs2vals) {
   double beta   = 8.0;
   double Lambda = 10.0 * beta;
   double eps    = 1.0e-6;
-  auto hyb      = aaa_coefs2vals(beta, Lambda, eps, coefs, poles);
+  auto hyb      = triqs_xca::hyb::coefs2vals(beta, Lambda, eps, coefs, poles);
   ASSERT_LE(nda::max_element(nda::abs(hyb - hyb_py)), eps);
 }
 

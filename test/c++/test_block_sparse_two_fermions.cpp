@@ -2,6 +2,7 @@
 
 #include <triqs_xca/atom_diag_utils.hpp>
 
+#include <triqs_xca/hyb.hpp>
 #include <triqs_xca/dense_backbone.hpp>
 #include <triqs_xca/block_sparse_backbone.hpp>
 
@@ -18,8 +19,6 @@ using cppdlr::build_dlr_rf;
 using cppdlr::imtime_ops;
 
 using triqs_xca::dense::DenseDiagramEvaluator;
-
-using triqs_xca::block_sparse::aaa_coefs2vals;
 
 using triqs_xca::block_sparse::DiagramEvaluator;
 
@@ -64,12 +63,12 @@ TEST(two_fermions, one_hyb_pole) {
 
   // compute single-particle Green's function for the two-fermion system with one hybridization pole
   auto G_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
-  DiagramEvaluator D(beta, Lambda, eps, hyb_poles, hyb_coeffs, G_ppsc, ad);
+  DiagramEvaluator D(hyb_poles, hyb_coeffs, G_ppsc[0].mesh(), ad);
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
-  auto spgf                   = D.compute_single_ptcle_gf(topology);
+  auto spgf                   = D.compute_single_ptcle_gf(G_ppsc, topology);
 
   // compare to call to dense code
-  auto hyb          = aaa_coefs2vals(beta, Lambda, eps, hyb_coeffs, hyb_poles);
+  auto hyb          = triqs_xca::hyb::coefs2vals(beta, Lambda, eps, hyb_coeffs, hyb_poles);
   auto dlr_rf       = build_dlr_rf(Lambda, eps);
   auto itops        = imtime_ops(Lambda, dlr_rf);
   auto hyb_refl     = itops.reflect(hyb);
@@ -83,10 +82,10 @@ TEST(two_fermions, one_hyb_pole) {
   }
   auto Fset = get_operators_dense(ad, hyb_coeffs);
   hyb_poles = nda::make_regular(beta * hyb_poles);
-  DenseDiagramEvaluator D_dense(beta, eps, itops, hyb, hyb_refl, hyb_poles, G_ppsc_dense, Fset);
+  DenseDiagramEvaluator D_dense(beta, eps, itops,hyb_poles, hyb_coeffs, Fset);
   auto mu_ops  = Fset.Fs;
   auto kap_ops = Fset.F_dags;
   CorrelatorBackbone B(topology, norb);
-  auto spgf_dense = D_dense.eval_correlator(B, mu_ops, kap_ops);
+  auto spgf_dense = D_dense.eval_correlator(G_ppsc_dense, B, mu_ops, kap_ops);
   ASSERT_LE(nda::max_element(nda::abs(spgf - spgf_dense)), 1.0e-15);
 }

@@ -54,7 +54,4 @@ print(coefficients.shape)
 
 from triqs_xca import DiagramEvaluator
 
-d = DiagramEvaluator(
-    beta, w_max * beta, eps, # -- Todo: Get this info from self.G
-    poles, coefficients,
-    G_ppsc, ad)
+d = DiagramEvaluator(poles, coefficients, mesh_tau, ad)

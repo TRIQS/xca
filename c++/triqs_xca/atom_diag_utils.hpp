@@ -89,6 +89,14 @@ std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const triqs_atom_d
 DenseFSet get_operators_dense(const triqs_atom_diag &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs);
 
 /**
+ * @brief Get creation and annihilation operators from an AtomDiag object in dense storage
+ * @param[in] ad AtomDiag object
+ * @param[in] hyb_coeffs Hybridization SOE coefficients
+ * @return tuple with Fs and Fdags in dense storage
+ */
+std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> get_operators_dense(const triqs_atom_diag &ad);
+
+/**
  * @brief Get a dense tensor in the full Hilbert resticted to one atom_diag subspace
  * @param[in] tensor_full Full tensor in the Hilbert space
  * @param[in] subspace_index Index of the subspace

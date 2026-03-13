@@ -41,8 +41,8 @@ TEST(DenseGFBackbone, NCA) {
   nda::array<int, 2> topology = {{0, 1}};
   int n                       = 4;
   auto B                      = CorrelatorBackbone(topology, 4);
-  auto C                      = DenseDiagramEvaluator(beta, eps, itops, Deltat, Deltat_refl, dlr_rf, Gt_dense, Fset);
-  auto gf                     = C.eval_correlator(B, Fs_dense, F_dags_dense);
+  auto C                      = DenseDiagramEvaluator(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
+  auto gf                     = C.eval_correlator(Gt_dense, B, Fs_dense, F_dags_dense);
 
   // compare against manually-computed NCA result
   auto NCA_gf_dense_result = NCA_gf_dense(Gt_dense, Gt_refl_dense, Fs_dense, F_dags_dense);
@@ -85,8 +85,8 @@ TEST(DenseGFBackbone, OCA) {
   // initialize Backbone and DiagramEvaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = CorrelatorBackbone(topology, n);
-  auto C                      = DenseDiagramEvaluator(beta, eps, itops, Deltat, hyb_refl, dlr_rf, Gt_dense, Fset);
-  auto gf                     = C.eval_correlator(B, Fs_dense, F_dags_dense);
+  auto C                      = DenseDiagramEvaluator(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
+  auto gf                     = C.eval_correlator(Gt_dense, B, Fs_dense, F_dags_dense);
 
   // compare against manually-computed OCA result
   auto OCA_gf_dense_result = OCA_gf_dense(hyb_coeffs, hyb_refl_coeffs, dlr_rf, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
@@ -165,8 +165,8 @@ TEST(DenseBAckbone, OCA_semicircle_bath_aaa) {
   // initialize Backbone and DiagramEvaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = CorrelatorBackbone(topology, n);
-  auto C                      = DenseDiagramEvaluator(beta, eps, itops, hyb, hyb_refl, hyb_poles, Gt_dense, Fset);
-  auto gf                     = C.eval_correlator(B, Fs_dense, F_dags_dense);
+  auto C                      = DenseDiagramEvaluator(beta, eps, itops, hyb_poles, hyb_coeffs, Fset);
+  auto gf                     = C.eval_correlator(Gt_dense, B, Fs_dense, F_dags_dense);
 
   // compare against manually-computed OCA result
   auto OCA_dense_gf_result = OCA_gf_dense(hyb_coeffs, hyb_refl_coeffs, hyb_poles, itops, beta, Gt_dense, Fs_dense, F_dags_dense);

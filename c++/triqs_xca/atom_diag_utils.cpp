@@ -309,19 +309,24 @@ std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const triqs_atom_d
   return std::make_tuple(Fq, sym_set_labels);
 }
 
-DenseFSet get_operators_dense(const triqs_atom_diag &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
+std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> get_operators_dense(const triqs_atom_diag &ad) {
 
-  int norb = hyb_coeffs.extent(1);
+  int norb = ad.get_fops().size();
   int N = ad.get_full_hilbert_space_dim();
 
   // Get full operator matrices
   nda::array<dcomplex, 3> Fs{norb, N, N};
   nda::array<dcomplex, 3> Fdags{norb, N, N};
 
-  for (int oidx = 0; oidx < hyb_coeffs.extent(1); ++oidx) {    
+  for (int oidx = 0; oidx < norb; ++oidx) {
     Fs(oidx, _, _)    = get_full_operator_matrix(ad, oidx, false);
     Fdags(oidx, _, _) = get_full_operator_matrix(ad, oidx, true);
   }
+  return {Fs, Fdags};
+}
+
+DenseFSet get_operators_dense(const triqs_atom_diag &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
+  auto [Fs, Fdags] = get_operators_dense(ad);
   return {Fs, Fdags, hyb_coeffs};
 }
 
@@ -330,7 +335,6 @@ nda::array<dcomplex, 3> get_tensor_in_atom_diag_subspace(
   // Permute a tensor from the full Hilbert space to the Fock state ordered basis
 
   int r = tensor_full.extent(0);
-  int N = tensor_full.extent(1);
 
   std::vector<unsigned long> H_perm;
   auto fock_states = ad.get_fock_states(subspace_index);

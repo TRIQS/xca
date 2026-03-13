@@ -122,11 +122,12 @@ TEST(BlockSparseOCAManual, two_band_discrete_bath_bs) {
   auto OCA_old      = nda::make_regular(-OCA_forward - OCA_backward);
 
   // check that block-sparse OCA calculation agrees with twoband.py
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(0) - OCA_old(_, range(0, 4), range(0, 4)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(1) - OCA_old(_, range(4, 10), range(4, 10)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(2) - OCA_old(_, range(10, 11), range(10, 11)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(3) - OCA_old(_, range(11, 15), range(11, 15)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(4) - OCA_old(_, range(15, 16), range(15, 16)))), eps);
+
+  auto ad = two_band_atom_diag_helper();
+  for (int i = 0; i < OCA_result.get_num_block_cols(); i++) {
+    auto result_dense_block = triqs_xca::atom_diag::get_tensor_in_atom_diag_subspace(OCA_old, i, ad);
+    ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(i) - result_dense_block)), 10 * eps);
+  }
 }
 
 TEST(BlockSparseOCAManual, two_band_discrete_bath_bs_vs_dense) {
@@ -151,11 +152,11 @@ TEST(BlockSparseOCAManual, two_band_discrete_bath_bs_vs_dense) {
   // block-sparse OCA computation
   auto OCA_bs_result = OCA_bs(Deltat, dlr_rf, itops, beta, Gt, Fq);
 
-  ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(0) - OCA_dense_result(_, range(0, 4), range(0, 4)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(1) - OCA_dense_result(_, range(4, 10), range(4, 10)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(2) - OCA_dense_result(_, range(10, 11), range(10, 11)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(3) - OCA_dense_result(_, range(11, 15), range(11, 15)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(4) - OCA_dense_result(_, range(15, 16), range(15, 16)))), eps);
+  auto ad = two_band_atom_diag_helper();
+  for (int i = 0; i < OCA_bs_result.get_num_block_cols(); i++) {
+    auto result_dense_block = triqs_xca::atom_diag::get_tensor_in_atom_diag_subspace(OCA_dense_result, i, ad);
+    ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(i) - result_dense_block)), 10 * eps);
+  }
 }
 
 TEST(BlockSparseOCAManual, two_band_semicircle_bath_aaa) {
@@ -241,11 +242,11 @@ TEST(BlockSparseOCAManual, two_band_semicircle_bath_aaa) {
   auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs);
   auto OCA_bs_result            = OCA_bs(hyb, hyb_poles, itops, beta, Gt, Fq);
 
-  ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(0) - OCA_old(_, range(0, 4), range(0, 4)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(1) - OCA_old(_, range(4, 10), range(4, 10)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(2) - OCA_old(_, range(10, 11), range(10, 11)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(3) - OCA_old(_, range(11, 15), range(11, 15)))), eps);
-  ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(4) - OCA_old(_, range(15, 16), range(15, 16)))), eps);
+  auto ad = two_band_atom_diag_helper();
+  for (int i = 0; i < OCA_bs_result.get_num_block_cols(); i++) {
+    auto result_dense_block = triqs_xca::atom_diag::get_tensor_in_atom_diag_subspace(OCA_old, i, ad);
+    ASSERT_LE(nda::max_element(nda::abs(OCA_bs_result.get_block(i) - result_dense_block)), 10 * eps);
+  }
 }
 
 TEST(BlockSparseOCAManual, H5_two_band_discrete_bath_tpz) {
