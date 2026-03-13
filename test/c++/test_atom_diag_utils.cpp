@@ -9,14 +9,14 @@ using cppdlr::build_dlr_rf;
 using cppdlr::imtime_ops;
 using cppdlr::k_it;
 
-using triqs::operators::n;
 using triqs::operators::c;
 using triqs::operators::c_dag;
+using triqs::operators::n;
 
-using triqs_xca::atom_diag::get_operators;
 using triqs_xca::atom_diag::get_full_h_atomic;
 using triqs_xca::atom_diag::get_full_operator_matrix;
 using triqs_xca::atom_diag::get_hamiltonian_blocks;
+using triqs_xca::atom_diag::get_operators;
 
 /**
  * @brief Creates a two-orbital Hamiltonian with spin and constructs the atom_diag object.
@@ -49,7 +49,7 @@ triqs::atom_diag::atom_diag<false> make_two_orbital_ad(int norb = 2, double mu =
  * @brief Builds DLR hybridization coefficients for the two-orbital model.
  *
  * Constructs a 4x4 hybridization function Delta(tau) on the DLR grid from two bath levels
- * e = {-2.3, 2.3} with hopping t=1.0 and inter-orbital coupling s=0.5, at beta=2.0
+ * e = {-3.3, 2.3} with hopping t=1.0 and inter-orbital coupling s=0.5, at beta=2.0
  * and DLR cutoff Lambda=20. Returns the DLR coefficients of Delta(tau).
  */
 nda::array<dcomplex, 3> make_hyb_coeffs() {
@@ -59,7 +59,7 @@ nda::array<dcomplex, 3> make_hyb_coeffs() {
   double Lambda = 10 * beta;
   double eps    = 1.0e-6;
   int norb      = 2;
-  nda::array<double, 1> e{-2.3 * t, 2.3 * t};
+  nda::array<double, 1> e{-3.3 * t, 2.3 * t};
 
   auto dlr_rf        = build_dlr_rf(Lambda, eps);
   auto itops         = imtime_ops(Lambda, dlr_rf);
@@ -200,7 +200,6 @@ TEST(AtomDiagUtils, hamiltonian_blocks) {
   // --- atom_diag setup ---
   auto ad = make_two_orbital_ad();
 
-  // --- Get Hamiltonian blocks ---
   auto h_tuple    = get_hamiltonian_blocks(ad);
   auto blocks     = std::get<0>(h_tuple);
   auto block_inds = std::get<1>(h_tuple);
@@ -264,7 +263,7 @@ TEST(AtomDiagUtils, operators) {
   block_starts.push_back(N); // add end index for easy slicing
 
   // Permute expected matrices into ad subspace ordering
-  long nflav = expected_c_mats_fock.extent(0);
+  long nflav              = expected_c_mats_fock.extent(0);
   auto expected_c_mats    = nda::zeros<double>(nflav, (long)N, (long)N);
   auto expected_cdag_mats = nda::zeros<double>(nflav, (long)N, (long)N);
   for (int oidx = 0; oidx < nflav; ++oidx) {
@@ -290,8 +289,8 @@ TEST(AtomDiagUtils, operators) {
         if (b_ix != -1) {
           auto block = Fset.get_block(i);
           for (size_t k = 0; k < orb_indices.size(); ++k) {
-            auto expected_block = expected_mats(orb_indices[k], range(block_starts[b_ix], block_starts[b_ix + 1]),
-                                                range(block_starts[i], block_starts[i + 1]));
+            auto expected_block =
+               expected_mats(orb_indices[k], range(block_starts[b_ix], block_starts[b_ix + 1]), range(block_starts[i], block_starts[i + 1]));
             ASSERT_LE(nda::max_element(nda::abs(block(k, _, _) - expected_block)), 1e-13);
           }
         } else {
@@ -315,8 +314,8 @@ TEST(AtomDiagUtils, operators) {
           auto block = Fset.get_block(i);
           for (size_t k = 0; k < orb_indices.size(); ++k) {
             for (long l = 0; l < p; ++l) {
-              auto expected_block = expected_mats(orb_indices[k], l, range(block_starts[b_ix], block_starts[b_ix + 1]),
-                                                  range(block_starts[i], block_starts[i + 1]));
+              auto expected_block =
+                 expected_mats(orb_indices[k], l, range(block_starts[b_ix], block_starts[b_ix + 1]), range(block_starts[i], block_starts[i + 1]));
               ASSERT_LE(nda::max_element(nda::abs(block(k, l, _, _) - expected_block)), 1e-13);
             }
           }
@@ -336,7 +335,7 @@ TEST(AtomDiagUtils, operators) {
   // --- Expected F_dag_bars and F_bars_refl ---
   // Precompute position of each orbital within its symmetry set
   std::vector<int> orbital_position(nflav);
-  for (auto & sym_set_orbital : sym_set_orbitals) {
+  for (auto &sym_set_orbital : sym_set_orbitals) {
     for (size_t pos = 0; pos < sym_set_orbital.size(); ++pos) { orbital_position[sym_set_orbital[pos]] = pos; }
   }
 
@@ -344,7 +343,7 @@ TEST(AtomDiagUtils, operators) {
   //   where mapped_k = sym_set_orbitals[set_of(m)][position_of(k)]
   // exp_F_bars_refl(k, l, :, :) = sum_m hyb(l, k, m) * c(mapped_m, :, :)
   //   where mapped_m = sym_set_orbitals[set_of(k)][position_of(m)]
-  long p = hyb_coeffs.extent(0);
+  long p               = hyb_coeffs.extent(0);
   auto exp_F_dag_bars  = nda::zeros<dcomplex>(nflav, p, (long)N, (long)N);
   auto exp_F_bars_refl = nda::zeros<dcomplex>(nflav, p, (long)N, (long)N);
   for (int m = 0; m < nflav; ++m) {

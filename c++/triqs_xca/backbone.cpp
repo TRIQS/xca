@@ -110,7 +110,6 @@ void Backbone::set_pole_inds(nda::vector_const_view<int> pole_inds_vec, nda::vec
         prefactor_Kexps(i - 1)  = topology(i, 1) - topology(i, 0) - 1;
       }
     } else { // line i is backward
-      // Work with the reflected hybridization, which has poles and weights that are the negative of the forward hybridization
       if (hyb_poles(pole_inds(i - 1)) >= 0) {
         // step 4(a)
         // place K^+_l F^dag_pi at the right vertex
