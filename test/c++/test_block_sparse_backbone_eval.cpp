@@ -172,8 +172,8 @@ TEST(Backbone, one_fermion_three_order_const_hyb) {
 
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 3}, {1, 4}, {2, 5}};
-  DiagramEvaluator D(beta, Lambda, eps, hyb_poles, hyb_coeffs, G0_ppsc, ad);
-  auto third_order_se     = D.compute_self_energy(topology);
+  DiagramEvaluator D(hyb_poles, hyb_coeffs, G0_ppsc[0].mesh(), ad);
+  auto third_order_se     = D.compute_self_energy(G0_ppsc, topology);
   auto third_order_se_ana = nda::zeros<double>(r);
   double t                = 0;
   double bt4              = 0;
@@ -226,8 +226,8 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
 
   // NCA: set up backbone and diagram evaluator
   nda::array<int, 2> topology1 = {{0, 1}};
-  DiagramEvaluator D(beta, Lambda, eps, hyb_poles, hyb_coeffs, G0_ppsc, ad);
-  auto nca_se     = D.compute_self_energy(topology1);
+  DiagramEvaluator D(hyb_poles, hyb_coeffs, G0_ppsc[0].mesh(), ad);
+  auto nca_se     = D.compute_self_energy(G0_ppsc, topology1);
   auto nca_se_ana = nda::zeros<double>(r, 2);
   double t        = 0;
   double om       = hyb_poles(0);
@@ -243,13 +243,13 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
 
   // OCA
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
-  auto oca_se                  = D.compute_self_energy(topology2);
+  auto oca_se                  = D.compute_self_energy(G0_ppsc, topology2);
   ASSERT_LE(nda::max_element(nda::abs(oca_se[0].data()(_, 0, 0))), eps);
   ASSERT_LE(nda::max_element(nda::abs(oca_se[1].data()(_, 0, 0))), eps);
 
   // third order
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
-  auto third_order_se          = D.compute_self_energy(topology3);
+  auto third_order_se          = D.compute_self_energy(G0_ppsc, topology3);
   auto third_order_se_ana      = nda::zeros<double>(r, 2);
   double denom                 = om * (exp(beta * om) + 1);
   denom                        = denom * denom * denom;
