@@ -9,9 +9,9 @@
 
 #include "block_sparse_utils.hpp"
 
-using triqs::operators::n;
 using triqs::operators::c;
 using triqs::operators::c_dag;
+using triqs::operators::n;
 
 using triqs_xca::dense::DenseDiagramEvaluator;
 using triqs_xca::dense::DenseFSet;
@@ -19,11 +19,11 @@ using triqs_xca::dense::DenseFSet;
 using triqs_xca::block_sparse::BlockOp;
 using triqs_xca::block_sparse::DiagramEvaluator;
 
-using triqs_xca::atom_diag::get_operators;
-using triqs_xca::atom_diag::get_operators_dense;
+using triqs_xca::atom_diag::ad_to_atom_prop;
 using triqs_xca::atom_diag::get_full_h_atomic;
 using triqs_xca::atom_diag::get_hamiltonian_blocks;
-using triqs_xca::atom_diag::ad_to_atom_prop;
+using triqs_xca::atom_diag::get_operators;
+using triqs_xca::atom_diag::get_operators_dense;
 
 TEST(BSGFBackbone, NCA) {
   int n         = 4;

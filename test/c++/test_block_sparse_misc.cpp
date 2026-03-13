@@ -109,9 +109,9 @@ TEST(BlockSparseMisc, block_gf_to_BDOF) {
   auto iw_dlr_mesh  = triqs::mesh::dlr_imfreq(beta, triqs::mesh::Fermion, Lambda, eps);
   auto tau_dlr_mesh = triqs::mesh::dlr_imtime(iw_dlr_mesh);
 
-  auto g = triqs::gfs::block_gf<triqs::mesh::dlr_imtime>{{"bl0", "bl1"}, {
-    triqs::gfs::gf<triqs::mesh::dlr_imtime>{{tau_dlr_mesh}, {2, 2}}, 
-    triqs::gfs::gf<triqs::mesh::dlr_imtime>{{tau_dlr_mesh}, {3, 3}}}};
+  auto g = triqs::gfs::block_gf<triqs::mesh::dlr_imtime>{
+     {"bl0", "bl1"},
+     {triqs::gfs::gf<triqs::mesh::dlr_imtime>{{tau_dlr_mesh}, {2, 2}}, triqs::gfs::gf<triqs::mesh::dlr_imtime>{{tau_dlr_mesh}, {3, 3}}}};
 
   // Initialize bl0 (2x2 block)
   for (auto tau : g[0].mesh()) { g[0][tau] = nda::matrix<dcomplex>{{1e-17, 0}, {0, 1e-17}}; }

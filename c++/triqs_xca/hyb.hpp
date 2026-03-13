@@ -15,7 +15,7 @@ namespace triqs_xca::hyb {
     public:
     triqs::mesh::dlr_imtime tau_mesh; // imaginary time mesh
 
-    nda::vector<double> poles;      // hybridization poles    
+    nda::vector<double> poles;      // hybridization poles
     nda::array<dcomplex, 3> coeffs; // hybridization (matrix) coefficients
 
     nda::array<dcomplex, 3> values;         // hybridization function at imaginary time nodes
@@ -27,15 +27,15 @@ namespace triqs_xca::hyb {
      * @param[in] hyb_poles poles of the hybridization
      * @param[in] hyb_coeffs pole coefficients of the hybridization
      */
-    Hybridization(const triqs::mesh::dlr_imtime &tau_mesh, 
-      nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs, double refl_sign=1.0); 
+    Hybridization(const triqs::mesh::dlr_imtime &tau_mesh, nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
+                  double refl_sign = 1.0);
 
-    void multiply_kernel_on_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, int v_ix, int l_ix, double sign=1.0);
+    void multiply_kernel_on_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, int v_ix, int l_ix, double sign = 1.0);
     void multiply_kernels_on_edge(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, int e_ix);
     void multiply_kernels_prefactor(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone);
   };
 
-/**
+  /**
  * @brief Convert hybridization coefficients to values at DLR imaginary time nodes
  * @param[in] beta inverse temperature
  * @param[in] Lambda DLR cutoff parameter
@@ -43,19 +43,19 @@ namespace triqs_xca::hyb {
  * @param[in] coefs DLR coefficients
  * @param[in] poles DLR poles
  */
-nda::array<dcomplex, 3> coefs2vals(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> coefs,
-                                       nda::vector_const_view<double> poles);
+  nda::array<dcomplex, 3> coefs2vals(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> coefs,
+                                     nda::vector_const_view<double> poles);
 
-/**
+  /**
  * @brief Convert hybridization coefficients to values at DLR imaginary time nodes
  * @param[in] itos cppdlr imaginary time object
  * @param[in] coefs DLR coefficients
  * @param[in] poles DLR poles
  */
-nda::array<dcomplex, 3> coefs2vals(double beta, const cppdlr::imtime_ops &itops, nda::array_const_view<dcomplex, 3> coefs,
-                                       nda::vector_const_view<double> poles);
+  nda::array<dcomplex, 3> coefs2vals(double beta, const cppdlr::imtime_ops &itops, nda::array_const_view<dcomplex, 3> coefs,
+                                     nda::vector_const_view<double> poles);
 
-/**
+  /**
  * @brief Get hybridization coefficients of reflection
  * @param[in] beta inverse temperature
  * @param[in] Lambda DLR cutoff parameter
@@ -63,6 +63,6 @@ nda::array<dcomplex, 3> coefs2vals(double beta, const cppdlr::imtime_ops &itops,
  * @param[in] coefs DLR values at imaginary time nodes
  * @param[in] poles DLR imaginary time nodes
  */
-nda::array<dcomplex, 3> reflect(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> coefs,
-                                    nda::vector_const_view<double> poles);  
+  nda::array<dcomplex, 3> reflect(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> coefs,
+                                  nda::vector_const_view<double> poles);
 } // namespace triqs_xca::hyb

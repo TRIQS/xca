@@ -21,8 +21,8 @@ using cppdlr::k_it;
 
 using triqs_xca::block_sparse::BlockOp;
 
-using triqs_xca::block_sparse::OCA_dense;
 using triqs_xca::block_sparse::eval_eq;
+using triqs_xca::block_sparse::OCA_dense;
 
 TEST(BlockSparseOCAManual, single_exponential) {
   // DLR parameters

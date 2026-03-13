@@ -6,8 +6,8 @@
 
 #include "block_sparse_utils.hpp"
 
-using nda::range;
 using nda::dcomplex;
+using nda::range;
 using nda::linalg::matmul;
 
 using cppdlr::_;

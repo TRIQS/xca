@@ -16,9 +16,9 @@ using cppdlr::k_it;
 
 using triqs_xca::block_sparse::BlockOpSymSet;
 
+using triqs_xca::block_sparse::eval_eq;
 using triqs_xca::block_sparse::OCA_gf_dense;
 using triqs_xca::block_sparse::OCA_gf_tpz;
-using triqs_xca::block_sparse::eval_eq;
 
 TEST(DenseOCAGF, single_exponential) {
   double beta        = 1.0;

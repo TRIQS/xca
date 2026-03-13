@@ -8,8 +8,8 @@ using nda::linalg::matmul;
 using cppdlr::_;
 using cppdlr::build_dlr_rf;
 using cppdlr::imtime_ops;
-using cppdlr::rel2abs;
 using cppdlr::k_it;
+using cppdlr::rel2abs;
 
 using triqs_xca::block_sparse::BlockOpSymSet;
 using triqs_xca::block_sparse::nonint_gf_BDOF;
@@ -126,9 +126,9 @@ std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> discrete_bath_spin_
 }
 
 triqs::operators::many_body_operator_real make_kanamori_interaction(int n_orb, double U, double J, double mu) {
-  using triqs::operators::n;
   using triqs::operators::c;
   using triqs::operators::c_dag;
+  using triqs::operators::n;
   triqs::operators::many_body_operator_real H;
   double U_prime = U - 2 * J;
   for (int o = 0; o < n_orb; o++) H -= mu * (n("up", o) + n("do", o));
@@ -136,10 +136,10 @@ triqs::operators::many_body_operator_real make_kanamori_interaction(int n_orb, d
   for (int o1 = 0; o1 < n_orb; o1++) {
     for (int o2 = 0; o2 < n_orb; o2++) {
       if (o1 != o2) {
-        H += 0.5 * U_prime * (n("up", o1) * n("do", o2) + n("do", o1) * n("up", o2)); // opposite spin
+        H += 0.5 * U_prime * (n("up", o1) * n("do", o2) + n("do", o1) * n("up", o2));       // opposite spin
         H += 0.5 * (U_prime - J) * (n("up", o1) * n("up", o2) + n("do", o1) * n("do", o2)); // equal spin
-        H += -J * c_dag("up", o1) * c("do", o1) * c_dag("do", o2) * c("up", o2); // spin-flip
-        H += -J * c_dag("up", o1) * c_dag("do", o1) * c("up", o2) * c("do", o2); // pair-hopping
+        H += -J * c_dag("up", o1) * c("do", o1) * c_dag("do", o2) * c("up", o2);            // spin-flip
+        H += -J * c_dag("up", o1) * c_dag("do", o1) * c("up", o2) * c("do", o2);            // pair-hopping
       }
     }
   }
@@ -162,10 +162,10 @@ triqs::atom_diag::fundamental_operator_set get_fundamental_operator_set(int n_or
 
 triqs::atom_diag::atom_diag<false> two_band_atom_diag_helper() {
   // Kanamori interaction with n_orb = 2, U = 2.0, J = 0.2, and mu = (3*U - 5*J)/2 - 1.5
-  auto H_kana = make_kanamori_interaction(2, 2.0, 0.2, (3 * 2.0 - 5 * 0.2) / 2 - 1.5);
+  auto H_kana  = make_kanamori_interaction(2, 2.0, 0.2, (3 * 2.0 - 5 * 0.2) / 2 - 1.5);
   auto fop_set = get_fundamental_operator_set(2);
   auto N_tot   = make_total_density_operator(2);
-  auto ad = triqs::atom_diag::atom_diag<false>(H_kana, fop_set, {N_tot});
+  auto ad      = triqs::atom_diag::atom_diag<false>(H_kana, fop_set, {N_tot});
   return ad;
 }
 
@@ -176,9 +176,9 @@ std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>, nda::array<dcomplex
   auto const &dlr_it = itops.get_itnodes();
   auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
 
-  auto ad = two_band_atom_diag_helper();
-  auto H_dense = triqs_xca::atom_diag::get_full_h_atomic(ad); 
-  auto Gt_dense = Hmat_to_Gtmat(H_dense, beta, dlr_it_abs);
+  auto ad                       = two_band_atom_diag_helper();
+  auto H_dense                  = triqs_xca::atom_diag::get_full_h_atomic(ad);
+  auto Gt_dense                 = Hmat_to_Gtmat(H_dense, beta, dlr_it_abs);
   auto [Fs_dense, F_dags_dense] = triqs_xca::atom_diag::get_operators_dense(ad);
 
   return std::make_tuple(Gt_dense, Fs_dense, F_dags_dense);
@@ -191,10 +191,10 @@ std::tuple<BlockDiagOpFun, BlockOpSymQuartet, nda::vector<int>> two_band_helper(
   auto const &dlr_it = itops.get_itnodes();
   auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
 
-  auto ad = two_band_atom_diag_helper();
+  auto ad                       = two_band_atom_diag_helper();
   auto [H_blocks, H_block_inds] = triqs_xca::atom_diag::get_hamiltonian_blocks(ad);
-  auto Gt = nonint_gf_BDOF(H_blocks, H_block_inds, beta, dlr_it_abs); // pseudo-particle Green's function
-  auto [Fq, sym_set_labels] = triqs_xca::atom_diag::get_operators(ad, hyb_coeffs);
+  auto Gt                       = nonint_gf_BDOF(H_blocks, H_block_inds, beta, dlr_it_abs); // pseudo-particle Green's function
+  auto [Fq, sym_set_labels]     = triqs_xca::atom_diag::get_operators(ad, hyb_coeffs);
 
   return std::make_tuple(Gt, Fq, sym_set_labels);
 }

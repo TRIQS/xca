@@ -208,7 +208,7 @@ TEST(DenseBackbone, OCA_semicircle_bath_aaa) {
   auto Fset                   = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs);
   auto D                      = DenseDiagramEvaluator(beta, eps, itops, hyb_poles, hyb_coeffs, Fset);
   D.eval_self_energy(Gt_dense, B); // evaluate OCA diagram
-  auto OCA_result = D.Sigma; // get the result from the DiagramEvaluator
+  auto OCA_result = D.Sigma;       // get the result from the DiagramEvaluator
 
   // compare with the dense result
   ASSERT_LE(nda::max_element(nda::abs(OCA_result - OCA_dense_result)), 2 * eps);

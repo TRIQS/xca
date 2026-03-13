@@ -45,7 +45,7 @@ TEST(Backbone, indexing) {
   int r         = dlr_rf.size(); // r = 36
 
   // Indices for a particular backbone diagram
-  nda::vector<int> fb{1, 1, 0}; // 0-2 line is forward, 1-4 line is forward, 3-5 line is backward
+  nda::vector<int> fb{1, 1, 0};      // 0-2 line is forward, 1-4 line is forward, 3-5 line is backward
   nda::vector<int> pole_inds{3, 19}; // values of l, l'. omega_l < 0 and omega_l` > 0
   nda::vector<int> orb_inds{1, 3, 1, 2, 3, 2};
 
@@ -116,9 +116,7 @@ TEST(Backbone, indexing) {
   nda::array<int, 2> exp_edges{2 * B.m - 1, B.m - 1};
   exp_edges = 0;
   for (int e = 0; e < 2 * B.m - 1; e++) {
-    for (int p = 0; p < B.m - 1; p++) {
-      ASSERT_EQ(B.get_edge(e, p), exp_edges(e, p));
-    }
+    for (int p = 0; p < B.m - 1; p++) { ASSERT_EQ(B.get_edge(e, p), exp_edges(e, p)); }
   }
 
   // --- Check that prefactor is correct ---
@@ -323,8 +321,8 @@ TEST(Backbone, OCA_BDOF_construct) {
   // D3.eval_self_energy(B);
   auto OCA_trivial_bs_gf = D3.compute_self_energy(Gt_triv, topology);
   end                    = std::chrono::high_resolution_clock::now();
-  auto OCA_trivial_bs = BlockDiagOpFun(OCA_trivial_bs_gf);
-  elapsed             = end - start;
+  auto OCA_trivial_bs    = BlockDiagOpFun(OCA_trivial_bs_gf);
+  elapsed                = end - start;
 
   auto ad = two_band_atom_diag_helper();
   for (int i = 0; i < OCA_result.get_num_block_cols(); i++) {
@@ -332,11 +330,10 @@ TEST(Backbone, OCA_BDOF_construct) {
     auto result_dense_block = triqs_xca::atom_diag::get_tensor_in_atom_diag_subspace(OCA_dense_result, i, ad);
     ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(i) - result_dense_block)), 10 * eps);
 
-    auto result_trivial_bs_block = 
-      triqs_xca::atom_diag::get_tensor_in_atom_diag_subspace(OCA_trivial_bs.get_block(0), i, ad);
+    auto result_trivial_bs_block = triqs_xca::atom_diag::get_tensor_in_atom_diag_subspace(OCA_trivial_bs.get_block(0), i, ad);
     ASSERT_LE(nda::max_element(nda::abs(OCA_result.get_block(i) - result_trivial_bs_block)), 10 * eps);
-  }  
- }
+  }
+}
 
 TEST(Backbone, spin_flip_fermion) {
   double beta   = 2.0;
@@ -388,13 +385,13 @@ TEST(Backbone, spin_flip_fermion) {
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = Backbone(topology, nn);
-  DiagramEvaluator D(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), hyb_coeffs,Fq);
+  DiagramEvaluator D(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), hyb_coeffs, Fq);
   auto start = std::chrono::high_resolution_clock::now();
   // D.eval_self_energy(B);
   auto result_gf                         = D.compute_self_energy(Gt, topology);
   auto end                               = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> duration = end - start;
-  auto result = BlockDiagOpFun(result_gf);
+  auto result                            = BlockDiagOpFun(result_gf);
 
   // get dense Gt, field operators
   auto H_mat    = get_full_h_atomic(ad);
