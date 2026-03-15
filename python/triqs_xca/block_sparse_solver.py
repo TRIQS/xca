@@ -83,12 +83,17 @@ class BlockSparseSolver(object):
         self.tol_adapol = self.eps if tol is None else tol
 
         if use_polefitting_dlr:
-            Delta_dlr = make_gf_dlr(self.Delta_tau)
-            Delta_dlr_dense = self.__from_blockgf_to_dense(Delta_dlr)
-            w_dlr = np.array([ float(x) for x in Delta_dlr.mesh ])
+            #Delta_dlr = make_gf_dlr(self.Delta_tau)
+            #Delta_dlr_dense = self.__from_blockgf_to_dense(Delta_dlr)
+            #w_dlr = np.array([ float(x) for x in Delta_dlr.mesh ])
             
-            pole_weights, poles, fit_error = polefitting_dlr(
-                Delta_dlr_dense.data, w_dlr, self.beta, eps=self.tol_adapol, statistics="Fermion", verbose=True)
+            #pole_weights, poles, fit_error = polefitting_dlr(
+            #    Delta_dlr_dense.data, w_dlr, self.beta, eps=self.tol_adapol, statistics="Fermion", verbose=True)
+
+            from adapol.fit_utils_dlr import polefitting_dlr_triqs
+            Delta_tau_dense = self.__from_blockgf_to_dense(self.Delta_tau)
+            pole_weights, poles, fit_error = polefitting_dlr_triqs(
+                Delta_tau_dense, eps=self.tol_adapol, statistics="Fermion", verbose=True)
 
             pole_weights *= -1. # FIXME! Why is this necessary? Is there a sign convention issue in polefitting_dlr?
 
@@ -153,11 +158,12 @@ class BlockSparseSolver(object):
 
 
     def init_diagram_evaluator(self):
-        
+        if is_root(): print(f'Initializing diagram evaluator with use_dense_solver = {self.use_dense_solver}')
         if self.use_dense_solver:
             self.d = DenseDiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.ad)
         else:
             self.d = DiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.ad)
+        if is_root(): print(f'done.')
 
 
     def solve(self, max_order, tol=1e-7, maxiter=10, mix=1., delta_tol=None):
@@ -213,9 +219,7 @@ class BlockSparseSolver(object):
 
         Z_new = self.partition_function_from_ppgf(G_new)
 
-        if is_root():
-            print(f'Updated eta = {self.eta:2.2E} to normalize Z = {Z:2.2E} to 1.')
-            print(f'After normalization, Z_new-1 = {Z_new-1:2.2E}')
+        if is_root(): print(f'  Update eta = {self.eta:2.2E}, Z = {Z:2.2E}, Z_new-1 = {Z_new-1:+2.2E}')
 
         self.eta += deta
 
