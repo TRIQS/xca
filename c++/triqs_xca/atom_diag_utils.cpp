@@ -123,7 +123,7 @@ namespace triqs_xca::atom_diag {
     auto dlr_it_abs = cppdlr::rel2abs(dlr_it);
     std::vector<nda::array<T, 3>> ap_blocks(H_block_inds.size());
     for (int i = 0; i < H_block_inds.size(); ++i) {
-      ap_blocks[i] = nda::array<T, 2>(r, H_blocks[i].extent(0), H_blocks[i].extent(1));
+      ap_blocks[i] = nda::array<T, 3>(r, H_blocks[i].extent(0), H_blocks[i].extent(1));
       auto Gt_temp = nda::make_regular(0 * H_blocks[i]);
       for (int t = 0; t < r; t++) {
         for (int j = 0; j < H_blocks[i].extent(0); j++) { Gt_temp(j, j) = -exp(-beta * dlr_it_abs(t) * (H_evals[i](j) + eta_0)); }
