@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include <itertools/itertools.hpp>
+
 #include "triqs_xca/atom_diag_utils.hpp"
 
 #include "triqs_xca/block_sparse_backbone.hpp"
@@ -718,5 +720,26 @@ void DiagramEvaluator::print_single_ptcle_gf_backbone(nda::array_const_view<int,
   std::cout << "Single-particle Green's function backbone for f_ix = " << f_ix << ":\n";
   std::cout << backbone << std::endl;
 }
+
+
+dcomplex DiagramEvaluator::compute_expectation_value(
+  triqs::operators::many_body_operator_real const &op, 
+  triqs::atom_diag::atom_diag<false> const &ad, 
+  triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc) {
+
+  auto op_blocks = ad.get_op_mat(op);
+
+  dcomplex sum = 0;
+
+  //for( const auto [op_mat, g] : itertools::zip(op_blocks, G_ppsc) ) {
+  for( auto bidx : range(op_blocks.block_mat.size()) ) {
+    assert( op_blocks.connection[bidx] == bidx );
+    auto g_dlr = make_gf_dlr(G_ppsc[bidx]);
+    sum += -trace(matmul(op_blocks.block_mat[bidx], g_dlr(beta)));
+  }
+
+  return sum;
+}
+
 
 } // namespace triqs_xca::block_sparse

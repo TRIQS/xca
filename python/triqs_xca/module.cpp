@@ -2,6 +2,7 @@
 
 #include <c2py/c2py.hpp>
 #include <triqs/atom_diag.hpp>
+#include <triqs/operators.hpp>
 
 #include "triqs_xca/block_sparse_backbone.hpp"
 
