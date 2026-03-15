@@ -4,6 +4,8 @@
 #include <nda/nda.hpp>
 
 #include <triqs/gfs.hpp>
+#include <triqs/operators.hpp>
+#include <triqs/atom_diag/atom_diag.hpp>
 
 #include <cppdlr/dlr_imtime.hpp>
 
@@ -349,5 +351,37 @@ namespace triqs_xca::block_sparse {
  * @param[in] eps DLR epsilon parameter
  */
   triqs::gfs::block_gf<triqs::mesh::dlr_imtime> BDOF_to_block_gf(BlockDiagOpFun const &BDOF, double beta, double Lambda, double eps);
+
+  /**
+   * @brief Compute the expectation value of the 2nd quantized operator op, <O> = -Tr[O G(\beta)]
+   * using the AtomDiag instance ad to generate a block representation
+   * and tracing with the many-body density matrix of the pseudo particle Green's function G_ppsc
+   * @param[in] op 2nd quantization operator
+   * @param[in] ad AtomDiag object
+   * @param[in] G_ppsc Pseudo-particle Green's function
+   * @return Expectation value -Tr[G(\beta) O]
+   */
+  dcomplex expectation_value(
+    triqs::operators::many_body_operator_real const &op, 
+    triqs::atom_diag::atom_diag<false> const &ad, 
+    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc); 
+
+  /**
+   * @brief Compute the Volterra "convolution" of two pseudo-particle Green's functions
+   * @param[in] G1 Left Green's function
+   * @param[in] G2 Right Green's function
+   * @return Convolution (G1 * G2)(\tau)
+   */
+  triqs::gfs::block_gf<triqs::mesh::dlr_imtime> convolve_ppsc(
+    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G1, 
+    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G2);
+
+  /**
+   * @brief Take the trace of a pseudo-particle Green's function
+   * @param[in] G Pseudo-particle Green's function
+   * @returns Trace Tr[G(\beta)]
+   */
+  dcomplex trace(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G);
+
 
 } // namespace triqs_xca::block_sparse

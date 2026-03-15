@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include <itertools/itertools.hpp>
+
 #include <cppdlr/dlr_imtime.hpp>
 
 #include "triqs_xca/block_sparse.hpp"
@@ -9,6 +11,7 @@ namespace triqs_xca::block_sparse {
   using cppdlr::_;
 
   using nda::linalg::matmul;
+  using nda::range;
 
   /////////////// BlockDiagOpFun (BDOF) class ///////////////
   BlockDiagOpFun::BlockDiagOpFun(std::vector<nda::array<dcomplex, 3>> &blocks, nda::vector_const_view<int> zero_block_indices)
@@ -705,5 +708,56 @@ namespace triqs_xca::block_sparse {
     }
     return {gf_vec};
   }
+
+  dcomplex expectation_value(
+    triqs::operators::many_body_operator_real const &op, 
+    triqs::atom_diag::atom_diag<false> const &ad, 
+    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc) {
+
+    auto op_blocks = ad.get_op_mat(op);
+    auto beta = G_ppsc[0].mesh().beta();
+
+    dcomplex sum = 0;
+
+    for( auto bidx : range(op_blocks.block_mat.size()) ) {
+      assert( op_blocks.connection[bidx] == bidx );
+      auto g_dlr = make_gf_dlr(G_ppsc[bidx]);
+      sum += -trace(matmul(op_blocks.block_mat[bidx], g_dlr(beta)));
+    }
+
+  return sum;
+  }
+
+  triqs::gfs::block_gf<triqs::mesh::dlr_imtime> convolve_ppsc(
+    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G1, 
+    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G2) {
+
+    assert( G1[0].mesh() == G2[0].mesh() );
+
+    auto mesh = G1[0].mesh();
+    auto beta = mesh.beta();
+    auto itops = mesh.dlr_it();
+
+    std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> gg_vec;
+
+    for ( auto [g1, g2] : itertools::zip(G1, G2)) {
+      auto gg = itops.convolve(beta, itops.vals2coefs(g1.data()), itops.vals2coefs(g2.data()), cppdlr::TIME_ORDERED);
+      gg_vec.emplace_back(triqs::gfs::gf<triqs::mesh::dlr_imtime>(mesh, gg));
+    }
+
+    return {gg_vec};
+  }
+
+  dcomplex trace(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G) {
+
+    dcomplex trace = 0;
+    for( auto g : G) {
+      double beta = g.mesh().beta();
+      auto g_dlr = make_gf_dlr(g);
+      trace += nda::trace(g_dlr(beta));
+    }
+    return trace;
+  }
+
 
 } // namespace triqs_xca::block_sparse

@@ -17,7 +17,7 @@ namespaces = ""
 #    if reject_names and reject_names matches Qname : skip X
 #    else keep X.
 #
-match_names = "DiagramEvaluator" 
+match_names = "(DiagramEvaluator|expectation_value|convolve_ppsc|trace)" 
 reject_names = ""
 
 # Only keep elements declared in files matching the pattern

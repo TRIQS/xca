@@ -124,14 +124,6 @@ class DiagramEvaluator {
 
   void print_single_ptcle_gf_backbone(nda::array_const_view<int, 2> topology,
                                       int f_ix); // print the backbone corresponding to a given flat index for debugging
-
-  
-  // compute expectation value of a many-body operator using the pseudo-particle Green's function
-  dcomplex compute_expectation_value(
-    triqs::operators::many_body_operator_real const &op, 
-    triqs::atom_diag::atom_diag<false> const &ad, 
-    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc); 
-  
  
   /**
    * @brief Constructor for DiagramEvaluator
