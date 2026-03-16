@@ -16,15 +16,23 @@ struct FermionModelData {
     BlockDiagOpFun G_bdof;
 };
 
+struct OneFermionModelData {
+    nda::array<dcomplex, 3> hyb_coeffs;
+    nda::vector<double> hyb_poles;
+    triqs::atom_diag::atom_diag<false> ad;
+    triqs::gfs::block_gf<triqs::mesh::dlr_imtime> G0_ppsc;
+    BlockDiagOpFun G0_bdof;
+};
+
 /**
  * @brief Helper function for setting up the one-fermion test model with trivial atomic Hamiltonian H = 0
  * @param[in] beta Inverse temperature
  * @param[in] Lambda DLR cutoff parameter
  * @param[in] eps DLR epsilon parameter
  * @param[in] hyb_pole Pole value for the single-pole hybridization decomposition
- * @return FermionModelData containing hybridization coefficients/poles, atom_diag object, and non-interacting propagators
+ * @return OneFermionModelData containing hybridization coefficients/poles, atom_diag object, and non-interacting propagators
  */
-FermionModelData one_fermion_model_helper(double beta, double Lambda, double eps, double hyb_pole = 0.0);
+OneFermionModelData one_fermion_model_helper(double beta, double Lambda, double eps, double hyb_pole = 0.0);
 
 /**
  * @brief Helper function for setting up a two-fermion model with interaction U * n0 * n1 and one-pole hybridization

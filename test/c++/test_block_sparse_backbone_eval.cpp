@@ -18,6 +18,7 @@ using triqs::atom_diag::fundamental_operator_set;
 using triqs::operators::c;
 using triqs::operators::c_dag;
 using triqs::operators::many_body_operator_complex;
+using triqs::operators::many_body_operator_real;
 using triqs::operators::n;
 
 using triqs_xca::dense::DenseDiagramEvaluator;
@@ -152,8 +153,8 @@ TEST(Backbone, one_fermion_three_orders_const_hyb) {
   auto &hyb_coeffs       = one_fermion_model.hyb_coeffs;
   auto &hyb_poles        = one_fermion_model.hyb_poles;
   auto &ad               = one_fermion_model.ad;
-  auto &G0_ppsc          = one_fermion_model.G_ppsc;
-  auto &G0_bdof          = one_fermion_model.G_bdof;
+  auto &G0_ppsc          = one_fermion_model.G0_ppsc;
+  auto &G0_bdof          = one_fermion_model.G0_bdof;
 
   // Check that G0_ppsc is correct by comparing to analytical expression
   auto dlr_it = itops.get_itnodes();
@@ -217,8 +218,8 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
   auto &hyb_coeffs       = one_fermion_model.hyb_coeffs;
   auto &hyb_poles        = one_fermion_model.hyb_poles;
   auto &ad               = one_fermion_model.ad;
-  auto &G0_ppsc          = one_fermion_model.G_ppsc;
-  auto &G0_bdof          = one_fermion_model.G_bdof;
+  auto &G0_ppsc          = one_fermion_model.G0_ppsc;
+  auto &G0_bdof          = one_fermion_model.G0_bdof;
   auto dlr_it = itops.get_itnodes();
   auto G0_ana = nda::zeros<double>(r);
   for (int i = 0; i < r; ++i) {

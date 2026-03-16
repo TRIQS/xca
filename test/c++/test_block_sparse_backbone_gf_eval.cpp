@@ -45,7 +45,7 @@ TEST(Backbone, one_fermion_three_orders_const_hyb) {
   auto &hyb_coeffs       = one_fermion_model.hyb_coeffs;
   auto &hyb_poles        = one_fermion_model.hyb_poles;
   auto &ad               = one_fermion_model.ad;
-  auto &G0_ppsc          = one_fermion_model.G_ppsc;
+  auto &G0_ppsc          = one_fermion_model.G0_ppsc;
   auto dlr_it            = itops.get_itnodes();
 
   // Set up diagram evaluator for single-particle Green's function evalution
@@ -97,7 +97,7 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
   auto &hyb_coeffs       = one_fermion_model.hyb_coeffs;
   auto &hyb_poles        = one_fermion_model.hyb_poles;
   auto &ad               = one_fermion_model.ad;
-  auto &G0_ppsc          = one_fermion_model.G_ppsc;
+  auto &G0_ppsc          = one_fermion_model.G0_ppsc;
   auto dlr_it            = itops.get_itnodes();
 
   // Set up diagram evaluator for single-particle Green's function evalution
@@ -119,9 +119,9 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
 
   // ----- third-order test -----
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
-  auto third_order_gf          = D.compute_single_ptcle_gf(G0_ppsc, topology3);
-  auto third_order_gf_ana      = nda::zeros<double>(r);
-  double om                    = hyb_poles(0);
+  auto third_order_gf     = D.compute_single_ptcle_gf(G0_ppsc, topology3);
+  auto third_order_gf_ana = nda::zeros<double>(r);
+  double om               = hyb_poles(0);
   for (int i = 0; i < r; ++i) {
     double t              = rel2abs(dlr_it(i)); // t = tau / beta
     third_order_gf_ana(i) = -(t + (exp(-om * t) - 1.0) / om) * (t - beta + (exp(om * (beta - t)) - 1.0) / om)
