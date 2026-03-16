@@ -14,6 +14,34 @@ using cppdlr::rel2abs;
 using triqs_xca::block_sparse::BlockOpSymSet;
 using triqs_xca::block_sparse::nonint_gf_BDOF;
 
+OneFermionModelData one_fermion_model_helper(double beta, double Lambda, double eps, double hyb_pole) {
+  // Helper function for setting up one-fermion tests with H = 0 and a one-pole hybridization decomposition.
+  int p    = 1;
+  int norb = 1;
+  nda::array<dcomplex, 3> hyb_coeffs(p, norb, norb);
+  hyb_coeffs = 1.0;
+
+  nda::vector<double> hyb_poles(p);
+  hyb_poles = hyb_pole;
+
+  using triqs::operators::many_body_operator_real;
+  using triqs::operators::n;
+  many_body_operator_real H;
+  double mu = 0.0;
+  many_body_operator_real N;
+  N = n("0", 0);
+  H = -mu * N;
+
+  triqs::atom_diag::fundamental_operator_set fop_set;
+  fop_set.insert("0", 0);
+  auto ad = triqs::atom_diag::atom_diag<false>(H, fop_set);
+
+  auto G0_ppsc = triqs_xca::atom_diag::ad_to_atom_prop(ad, beta, Lambda, eps);
+  auto G0_bdof = BlockDiagOpFun(G0_ppsc);
+
+  return {.hyb_coeffs=hyb_coeffs, .hyb_poles=hyb_poles, .ad=ad, .G0_ppsc=G0_ppsc, .G0_bdof=G0_bdof};
+}
+
 nda::array<dcomplex, 3> Hmat_to_Gtmat(nda::array<dcomplex, 2> Hmat, double beta, nda::array<double, 1> dlr_it_abs) {
   // Helper function for computing the non-interacting Green's function from the Hamiltonian, both in dense storage
 

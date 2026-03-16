@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <nda/algorithms.hpp>
 #include <triqs_xca/atom_diag_utils.hpp>
 
 #include <triqs_xca/dense_backbone.hpp>
@@ -24,6 +25,110 @@ using triqs_xca::atom_diag::get_full_h_atomic;
 using triqs_xca::atom_diag::get_hamiltonian_blocks;
 using triqs_xca::atom_diag::get_operators;
 using triqs_xca::atom_diag::get_operators_dense;
+
+/**
+ * @brief Test computation of several diagrams for a spinless fermion with a constant hybridization
+ *
+ * @details This tests the evaluation of the first-, second-, and third-order single-particle Green's functions diagrams.
+ */
+TEST(Backbone, one_fermion_three_orders_const_hyb) {
+  // Generate DLR imaginary-time object
+  double beta   = 2.0;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-10;
+  auto dlr_rf   = build_dlr_rf(Lambda, eps);
+  auto itops    = imtime_ops(Lambda, dlr_rf);
+  int r         = itops.rank();
+
+  auto one_fermion_model = one_fermion_model_helper(beta, Lambda, eps);
+  auto &hyb_coeffs       = one_fermion_model.hyb_coeffs;
+  auto &hyb_poles        = one_fermion_model.hyb_poles;
+  auto &ad               = one_fermion_model.ad;
+  auto &G0_ppsc          = one_fermion_model.G0_ppsc;
+  auto dlr_it            = itops.get_itnodes();
+
+  // Set up diagram evaluator for single-particle Green's function evalution
+  DiagramEvaluator D(hyb_poles, hyb_coeffs, G0_ppsc[0].mesh(), ad);
+
+  // ----- NCA test -----
+  nda::array<int, 2> topology1 = {{0, 1}};
+  auto nca_gf                  = D.compute_single_ptcle_gf(G0_ppsc, topology1);
+  auto nca_gf_ana              = nda::ones<dcomplex>(r);
+  nca_gf_ana                   = nca_gf_ana / 2;
+  // Compare computed and expected NCA
+  ASSERT_LE(nda::max_element(nda::abs(nca_gf(_, 0, 0) - nca_gf_ana)), eps);
+
+  // ----- OCA test -----
+  nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
+  auto oca_gf                  = D.compute_single_ptcle_gf(G0_ppsc, topology2);
+  // OCA contribution should be identically zero
+  ASSERT_LE(nda::max_element(nda::abs(oca_gf)), eps);
+
+  // ----- third-order test -----
+  nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
+  auto third_order_gf          = D.compute_single_ptcle_gf(G0_ppsc, topology3);
+  auto third_order_gf_ana      = nda::zeros<double>(r);
+  double halfbeta              = beta / 2.0;
+  double halfbetasq            = halfbeta * halfbeta;
+  double halfbeta4             = halfbetasq * halfbetasq;
+  for (int i = 0; i < r; ++i) {
+    double t              = rel2abs(dlr_it(i)); // t = tau / beta
+    third_order_gf_ana(i) = halfbeta4 * (1.0 - t) * (1.0 - t) * t * t / 2.0;
+  }
+  ASSERT_LE(nda::max_element(nda::abs(third_order_gf(_, 0, 0) - third_order_gf_ana)), eps);
+}
+
+/**
+ * @brief Test computation of several diagrams for a spinless fermion with a hybridization formed from a single pole
+ *
+ * @details This tests the evaluation of the first-, second-, and third-order single-particle Green's functions diagrams.
+ */
+TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
+  // Generate DLR imaginary-time object
+  double beta   = 1.0;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-10;
+  auto dlr_rf   = build_dlr_rf(Lambda, eps);
+  auto itops    = imtime_ops(Lambda, dlr_rf);
+  int r         = itops.rank();
+
+  auto one_fermion_model = one_fermion_model_helper(beta, Lambda, eps, 0.8);
+  auto &hyb_coeffs       = one_fermion_model.hyb_coeffs;
+  auto &hyb_poles        = one_fermion_model.hyb_poles;
+  auto &ad               = one_fermion_model.ad;
+  auto &G0_ppsc          = one_fermion_model.G0_ppsc;
+  auto dlr_it            = itops.get_itnodes();
+
+  // Set up diagram evaluator for single-particle Green's function evalution
+  DiagramEvaluator D(hyb_poles, hyb_coeffs, G0_ppsc[0].mesh(), ad);
+
+  // ----- NCA test -----
+  nda::array<int, 2> topology1 = {{0, 1}};
+  auto nca_gf                  = D.compute_single_ptcle_gf(G0_ppsc, topology1);
+  auto nca_gf_ana              = nda::ones<dcomplex>(r);
+  nca_gf_ana                   = nca_gf_ana / 2;
+  // Compare computed and expected NCA
+  ASSERT_LE(nda::max_element(nda::abs(nca_gf(_, 0, 0) - nca_gf_ana)), eps);
+
+  // ----- OCA test -----
+  nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
+  auto oca_gf                  = D.compute_single_ptcle_gf(G0_ppsc, topology2);
+  // OCA contribution should be identically zero
+  ASSERT_LE(nda::max_element(nda::abs(oca_gf)), eps);
+
+  // ----- third-order test -----
+  nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
+  auto third_order_gf     = D.compute_single_ptcle_gf(G0_ppsc, topology3);
+  auto third_order_gf_ana = nda::zeros<double>(r);
+  double om               = hyb_poles(0);
+  for (int i = 0; i < r; ++i) {
+    double t              = rel2abs(dlr_it(i)); // t = tau / beta
+    third_order_gf_ana(i) = (t + (exp(-om * t) - 1.0) / om) * (t - beta + (exp(om * (beta - t)) - 1.0) / om)
+       / (2 * om * om * (1 + exp(-beta * om)) * (exp(beta * om) + 1));
+  }
+
+  ASSERT_LE(nda::max_element(nda::abs(third_order_gf(_, 0, 0) - third_order_gf_ana)), eps);
+}
 
 TEST(BSGFBackbone, NCA) {
   int n         = 4;
@@ -498,112 +603,6 @@ TEST(Backbone, OCA_py_constructors) {
   ASSERT_EQ(D.hyb.poles, D2.hyb.poles);
   ASSERT_LE(nda::max_element(nda::abs(OCA_gf - OCA_gf_2)), 1.0e-10);
   ASSERT_LE(nda::max_element(nda::abs(OCA_gf - OCA_gf_3)), 1.0e-10);
-}
-
-TEST(Backbone, one_fermion_third_order_const_hyb) {
-  double beta   = 4.0;
-  double Lambda = 20.0 * beta;
-  double eps    = 1.0e-6;
-
-  // DLR generation
-  auto dlr_rf = build_dlr_rf(Lambda, eps);
-  auto itops  = imtime_ops(Lambda, dlr_rf);
-  int r       = itops.rank();
-
-  // trivial hybridization, Delta = -1/2
-  nda::array<dcomplex, 3> hyb(r, 1, 1);
-  hyb      = -0.5;
-  int p    = 1;
-  int norb = 1;
-  nda::array<dcomplex, 3> hyb_coeffs(p, norb, norb);
-  hyb_coeffs = 1.0;
-  nda::vector<double> hyb_poles(p);
-  hyb_poles = 0.0;
-
-  // trivial atomic Hamiltonian, H = 0
-  triqs::operators::many_body_operator_real H;
-  double mu = 0.0;
-  triqs::operators::many_body_operator_real N;
-  N = n("0", 0);
-  H = -mu * N;
-  triqs::atom_diag::fundamental_operator_set fop_set;
-  fop_set.insert("0", 0);
-  triqs::atom_diag::atom_diag<false> ad(H, fop_set);
-  auto G0_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
-  BlockDiagOpFun G0_bdof(G0_ppsc);
-  auto dlr_it = itops.get_itnodes();
-  auto G0_ana = nda::zeros<double>(r);
-  for (int i = 0; i < r; ++i) {
-    double t  = rel2abs(dlr_it(i));
-    G0_ana(i) = -exp(-t * std::numbers::ln2);
-  }
-  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) { ASSERT_LE(nda::max_element(nda::abs(G0_bdof.get_block(b)(_, 0, 0) - G0_ana)), eps); }
-
-  // set up backbone and diagram evaluator
-  nda::array<int, 2> topology = {{0, 3}, {1, 4}, {2, 5}};
-  DiagramEvaluator D(hyb_poles, hyb_coeffs, G0_ppsc[0].mesh(), ad);
-  auto third_order_gf     = D.compute_single_ptcle_gf(G0_ppsc, topology);
-  auto third_order_gf_ana = nda::zeros<double>(r);
-  double halfbeta         = beta / 2.0;
-  double halfbetasq       = halfbeta * halfbeta;
-  double halfbeta4        = halfbetasq * halfbetasq;
-  for (int i = 0; i < r; ++i) {
-    double t              = rel2abs(dlr_it(i)); // t = tau / beta
-    third_order_gf_ana(i) = halfbeta4 * (1.0 - t) * (1.0 - t) * t * t / 2.0;
-  }
-  ASSERT_LE(nda::max_element(nda::abs(third_order_gf(_, 0, 0) - third_order_gf_ana)), eps);
-}
-
-TEST(Backbone, one_fermion_third_order_hyb_one_pole) {
-  double beta   = 1.0;
-  double Lambda = 20.0 * beta;
-  double eps    = 1.0e-10;
-
-  // DLR generation
-  auto dlr_rf = build_dlr_rf(Lambda, eps);
-  auto itops  = imtime_ops(Lambda, dlr_rf);
-  int r       = itops.rank();
-
-  // hybridization with one pole
-  int p    = 1;
-  int norb = 1;
-  nda::array<dcomplex, 3> hyb_coeffs(p, norb, norb);
-  hyb_coeffs = 1.0;
-  nda::vector<double> hyb_poles(p);
-  hyb_poles = 0.8;
-
-  // trivial atomic Hamiltonian, H = 0
-  triqs::operators::many_body_operator_real H;
-  double mu = 0.0;
-  triqs::operators::many_body_operator_real N;
-  N = n("0", 0);
-  H = -mu * N;
-  triqs::atom_diag::fundamental_operator_set fop_set;
-  fop_set.insert("0", 0);
-  triqs::atom_diag::atom_diag<false> ad(H, fop_set);
-  auto G0_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
-  BlockDiagOpFun G0_bdof(G0_ppsc);
-  auto dlr_it = itops.get_itnodes();
-  auto G0_ana = nda::zeros<double>(r);
-  for (int i = 0; i < r; ++i) {
-    double t  = rel2abs(dlr_it(i));
-    G0_ana(i) = -exp(-t * std::numbers::ln2);
-  }
-  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) { ASSERT_LE(nda::max_element(nda::abs(G0_bdof.get_block(b)(_, 0, 0) - G0_ana)), eps); }
-
-  // third order single particle gf
-  nda::array<int, 2> topology = {{0, 3}, {1, 4}, {2, 5}};
-  DiagramEvaluator D(hyb_poles, hyb_coeffs, G0_ppsc[0].mesh(), ad);
-  auto third_order_gf     = D.compute_single_ptcle_gf(G0_ppsc, topology);
-  auto third_order_gf_ana = nda::zeros<double>(r);
-  double om               = hyb_poles(0);
-  for (int i = 0; i < r; ++i) {
-    double t              = rel2abs(dlr_it(i)); // t = tau / beta
-    third_order_gf_ana(i) = (t + (exp(-om * t) - 1.0) / om) * (t - beta + (exp(om * (beta - t)) - 1.0) / om)
-       / (2 * om * om * (1 + exp(-beta * om)) * (exp(beta * om) + 1));
-  }
-
-  ASSERT_LE(nda::max_element(nda::abs(third_order_gf(_, 0, 0) - third_order_gf_ana)), eps);
 }
 
 /*

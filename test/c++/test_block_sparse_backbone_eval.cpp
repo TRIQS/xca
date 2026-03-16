@@ -11,8 +11,12 @@
 
 #include "block_sparse_utils.hpp"
 
+using triqs::atom_diag::atom_diag;
+using triqs::atom_diag::fundamental_operator_set;
+
 using triqs::operators::c;
 using triqs::operators::c_dag;
+using triqs::operators::many_body_operator_real;
 using triqs::operators::n;
 
 using triqs_xca::dense::DenseDiagramEvaluator;
@@ -129,37 +133,28 @@ TEST(Backbone, indexing) {
   }
 }
 
-TEST(Backbone, one_fermion_three_order_const_hyb) {
+/**
+ * @brief Test computation of several diagrams for a spinless fermion with a constant hybridization
+ *
+ * @details This tests the evaluation of the first-, second-, and third-order self-energy diagrams.
+ */
+TEST(Backbone, one_fermion_three_orders_const_hyb) {
+  // Generate DLR imaginary-time object
   double beta   = 2.0;
   double Lambda = 20.0 * beta;
-  double eps    = 1.0e-6;
+  double eps    = 1.0e-10;
+  auto dlr_rf   = build_dlr_rf(Lambda, eps);
+  auto itops    = imtime_ops(Lambda, dlr_rf);
+  int r         = itops.rank();
 
-  // DLR generation
-  auto dlr_rf = build_dlr_rf(Lambda, eps);
-  auto itops  = imtime_ops(Lambda, dlr_rf);
-  int r       = itops.rank();
+  auto one_fermion_model = one_fermion_model_helper(beta, Lambda, eps);
+  auto &hyb_coeffs       = one_fermion_model.hyb_coeffs;
+  auto &hyb_poles        = one_fermion_model.hyb_poles;
+  auto &ad               = one_fermion_model.ad;
+  auto &G0_ppsc          = one_fermion_model.G0_ppsc;
+  auto &G0_bdof          = one_fermion_model.G0_bdof;
 
-  // trivial hybridization, Delta = -1/2
-  nda::array<dcomplex, 3> hyb(r, 1, 1);
-  hyb      = -0.5;
-  int p    = 1;
-  int norb = 1;
-  nda::array<dcomplex, 3> hyb_coeffs(p, norb, norb);
-  hyb_coeffs = 1.0;
-  nda::vector<double> hyb_poles(p);
-  hyb_poles = 0.0;
-
-  // trivial atomic Hamiltonian, H = 0
-  triqs::operators::many_body_operator_real H;
-  double mu = 0.0;
-  triqs::operators::many_body_operator_real N;
-  N = n("0", 0);
-  H = -mu * N;
-  triqs::atom_diag::fundamental_operator_set fop_set;
-  fop_set.insert("0", 0);
-  triqs::atom_diag::atom_diag<false> ad(H, fop_set);
-  auto G0_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
-  BlockDiagOpFun G0_bdof(G0_ppsc);
+  // Check that G0_ppsc is correct by comparing to analytical expression
   auto dlr_it = itops.get_itnodes();
   auto G0_ana = nda::zeros<double>(r);
   for (int i = 0; i < r; ++i) {
@@ -168,13 +163,30 @@ TEST(Backbone, one_fermion_three_order_const_hyb) {
   }
   for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) { ASSERT_LE(nda::max_element(nda::abs(G0_bdof.get_block(b)(_, 0, 0) - G0_ana)), eps); }
 
-  // set up backbone and diagram evaluator
-  nda::array<int, 2> topology = {{0, 3}, {1, 4}, {2, 5}};
+  // Set up diagram evaluator for self-energy evaluation
   DiagramEvaluator D(hyb_poles, hyb_coeffs, G0_ppsc[0].mesh(), ad);
-  auto third_order_se     = D.compute_self_energy(G0_ppsc, topology);
-  auto third_order_se_ana = nda::zeros<double>(r);
-  double t                = 0;
-  double bt4              = 0;
+
+  // ----- NCA test -----
+  nda::array<int, 2> topology1 = {{0, 1}};
+  auto nca_se                  = D.compute_self_energy(G0_ppsc, topology1);
+  auto nca_se_ana              = nda::zeros<double>(r);
+  nca_se_ana                   = -G0_ana / 2; // self-energy NCA contribution computed analytically
+  // Compare computed and expected NCA
+  ASSERT_LE(nda::max_element(nda::abs(nca_se[0].data()(_, 0, 0) - nca_se_ana)), eps);
+  ASSERT_LE(nda::max_element(nda::abs(nca_se[1].data()(_, 0, 0) - nca_se_ana)), eps);
+
+  // ----- OCA test -----
+  nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
+  auto oca_se                  = D.compute_self_energy(G0_ppsc, topology2);
+  // OCA contribution should be identically zero
+  for (int i = 0; i < 2; ++i) { ASSERT_LE(nda::max_element(nda::abs(oca_se[i].data()(_, 0, 0))), eps); }
+
+  // ----- third-order test -----
+  nda::array<int, 2> topology = {{0, 3}, {1, 4}, {2, 5}};
+  auto third_order_se         = D.compute_self_energy(G0_ppsc, topology);
+  auto third_order_se_ana     = nda::zeros<double>(r);
+  double t                    = 0;
+  double bt4                  = 0;
   for (int i = 0; i < r; ++i) {
     t                     = rel2abs(dlr_it(i)); // t = tau / beta
     bt4                   = beta * t;
@@ -185,35 +197,27 @@ TEST(Backbone, one_fermion_three_order_const_hyb) {
   ASSERT_LE(nda::max_element(nda::abs(third_order_se[0].data()(_, 0, 0) - third_order_se_ana)), eps);
 }
 
+/**
+ * @brief Test computation of several diagrams for a spinless fermion with a hybridization formed from a single pole
+ *
+ * @details This tests the evaluation of the first-, second-, and third-order self-energy diagrams.
+ */
 TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
   double beta   = 1.0;
   double Lambda = 20.0 * beta;
   double eps    = 1.0e-10;
 
-  // DLR generation
+  // Generate DLR imaginary-time object
   auto dlr_rf = build_dlr_rf(Lambda, eps);
   auto itops  = imtime_ops(Lambda, dlr_rf);
   int r       = itops.rank();
 
-  // hybridization with one pole
-  int p    = 1;
-  int norb = 1;
-  nda::array<dcomplex, 3> hyb_coeffs(p, norb, norb);
-  hyb_coeffs = 1.0;
-  nda::vector<double> hyb_poles(p);
-  hyb_poles = 0.8;
-
-  // trivial atomic Hamiltonian, H = 0
-  triqs::operators::many_body_operator_real H;
-  double mu = 0.0;
-  triqs::operators::many_body_operator_real N;
-  N = n("0", 0);
-  H = -mu * N;
-  triqs::atom_diag::fundamental_operator_set fop_set;
-  fop_set.insert("0", 0);
-  triqs::atom_diag::atom_diag<false> ad(H, fop_set);
-  auto G0_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
-  BlockDiagOpFun G0_bdof(G0_ppsc);
+  auto one_fermion_model = one_fermion_model_helper(beta, Lambda, eps, 0.8);
+  auto &hyb_coeffs       = one_fermion_model.hyb_coeffs;
+  auto &hyb_poles        = one_fermion_model.hyb_poles;
+  auto &ad               = one_fermion_model.ad;
+  auto &G0_ppsc          = one_fermion_model.G0_ppsc;
+  auto &G0_bdof          = one_fermion_model.G0_bdof;
   auto dlr_it = itops.get_itnodes();
   auto G0_ana = nda::zeros<double>(r);
   for (int i = 0; i < r; ++i) {
