@@ -16,6 +16,9 @@ from .dlr_dyson_ppsc import DysonItPPSC
 from . import DiagramEvaluator
 from .dense import DenseDiagramEvaluator
 
+from .module import trace
+from .module import convolve_ppsc as conv
+
 
 def is_root():
     return mpi.is_master_node()
@@ -40,7 +43,14 @@ class BlockSparseSolver(object):
         self.conserved_operators = conserved_operators
 
         self.fundamental_operators = fundamental_operators_from_gf_struct(gf_struct)
+        self.use_dense_solver = (self.conserved_operators == []) # Without symmetries, use the dense solver
 
+        if is_root():
+            print(logo())
+            print()
+            print(f'use_dense_solver = {self.use_dense_solver}')
+            print(f'conserved_operators = {self.conserved_operators}')
+        
         self.eta = 0. # Pseudo particle chemical potential (shift of the pseudo particle energies).
 
         self.mesh_tau = MeshDLRImTime(beta=self.beta, statistic='Fermion', w_max=self.w_max, eps=self.eps)
@@ -55,9 +65,9 @@ class BlockSparseSolver(object):
         else:
             self.ad = AtomDiag(self.H_loc, self.fundamental_operators, self.conserved_operators)
 
-        self.use_dense_solver = (self.conserved_operators == []) # Without symmetries, use the dense solver
-
-        if is_root(): print_atom_diag_info(self.ad)
+        if is_root(): 
+            print(f'mesh: {self.mesh_tau}')
+            print_atom_diag_info(self.ad)
 
         self.G0 = atomic_pseudo_particle_greens_function(self.ad, self.beta, self.mesh_tau)
         self.G = self.G0.copy()
@@ -69,13 +79,6 @@ class BlockSparseSolver(object):
         ito = ImTimeOps(w_max * beta, build_dlr_rf(w_max * beta, eps)) 
 
         self.dysons = [DysonItPPSC(self.beta, ito, G0_block.data) for _, G0_block in self.G0]
-
-        if is_root():
-            print(logo())
-            print()
-            print(f'use_dense_solver = {self.use_dense_solver}')
-            print(f'conserved_operators = {self.conserved_operators}')
-            print()
     
 
     def fit_hybridization(self, tol=None, use_polefitting_dlr=False):
@@ -364,6 +367,138 @@ class BlockSparseSolver(object):
         spgf.data[:] = mpi.all_reduce(spgf.data)
 
         return spgf
+
+
+    def Z_alpha(self, alpha, eta):
+        r""" Partition function with Sigma scaled by alpha 
+        Solving
+        
+        .. math::
+            (1 - G_0\ast*(\alpha \cdot \Sigma - \eta)\ast*)G = G_0
+
+            Z_\alpha = - \textrm{Tr} \left[ G_\alpha (\beta) \right]
+        
+        """
+        if type(eta) == np.ndarray: eta = eta.item()
+        
+        Sigma = self.pseudo_particle_self_energy()
+        Ga = self.solve_dyson(alpha * Sigma, eta)
+        Za = self.partition_function_from_ppgf(Ga).real
+        return Za    
+
+
+    def dZ_alpha_deta(self, alpha, eta):
+        r""" Derivative of partition function Z_\alpha with respect to
+        the pseudo-particle chemical potential eta. 
+        
+        .. math::
+            \frac{d Z_\alpha}{d \eta} = - \textr{Tr} \left[G_\alpha G_\alpha \right]
+        """
+        if type(eta) == np.ndarray: eta = eta.item()
+
+        Sigma = self.pseudo_particle_self_energy()
+        G = self.solve_dyson(alpha * Sigma, eta)
+        dZ_deta = -trace(conv(G, G)).real
+        return dZ_deta
+
+
+    def deta_dalpha(self, alpha, eta):
+        r""" Analytic derivative of :math:`\eta(\alpha)`
+
+        .. math::
+            \frac{d \eta}{d \alpha} = 
+                - \textr{Tr} \left[ G_\alpha \ast \Sigma \ast G_\alpha \right]
+                / \textrm{Tr} \left[ G_\alpha \ast G_\alpha \right]
+
+        """
+        Sigma = self.pseudo_particle_self_energy()
+        Ga = self.solve_dyson(alpha * Sigma, eta)
+        TrGaGa = -trace(conv(Ga, Ga)).real
+        TrGaSigmaGa = -trace(conv(Ga, conv(Sigma, Ga)))
+        deta_dalpha = - TrGaSigmaGa / TrGaGa
+        return deta_dalpha.real
+
+
+    def d2eta_dalpha_deta(self, alpha, eta):
+        r""" Higher order derivative (used for stiff ODE solver)
+        
+        .. math:: 
+            \frac{d}{d\eta} \left (\frac{d \eta}{d \alpha})
+            =
+            - \textr{Tr} \left[ G^2_\alpha \ast \Sigma \ast G_\alpha \right]
+            / \textrm{Tr} \left[ G_\alpha \ast G_\alpha \right]
+            +
+            \textr{Tr} \left[ G_\alpha \ast \Sigma \ast G^2_\alpha \right]
+            / \textrm{Tr} \left[ G_\alpha \ast G_\alpha \right]
+            - 
+            2 \textrm{Tr} \left[ G_\alpha \ast G_\alpha \ast G_\alpha \right]
+            / \textrm{Tr} \left[ G_\alpha \ast G_\alpha \right]^2
+
+        """
+
+        Sigma = self.pseudo_particle_self_energy()
+
+        Ga = self.solve_dyson(alpha * Sigma, eta)
+        
+        Ga2 = conv(Ga, Ga)
+        Ga3 = conv(Ga, Ga2)
+        
+        TrGa2 = -trace(Ga2)
+        TrGa3 = -trace(Ga3)
+
+        TrGa2SigmaGa = -trace(conv(Ga2, conv(Sigma, Ga)))
+        TrGaSigmaGa2 = -trace(conv(Ga, conv(Sigma, Ga2)))
+        
+        d2eta_dalpha_deta = -(TrGa2SigmaGa + TrGaSigmaGa2)/TrGa2 + 2*TrGa3/TrGa2**2
+        
+        return d2eta_dalpha_deta.real
+    
+    
+    def solve_ppsc_chempot_adiabatic_ode(self, tol=1e-9, method='LSODA'):
+
+        func = lambda t, y : self.deta_dalpha(t, y[0])
+        jac = lambda t, y : np.array([self.d2eta_dalpha_deta(t, y[0])]).reshape(1, 1)
+
+        from scipy.integrate import solve_ivp
+
+        sol = solve_ivp(
+            func, (0., 1.), 
+            np.array([0.]), 
+            jac=jac,
+            atol=tol, 
+            method=method,
+            dense_output=True,
+            )
+        
+        self.eta = sol.y[0, -1]
+        self.G = self.solve_dyson(self.Sigma, self.eta)
+        self.Z = self.partition_function_from_ppgf(self.G)
+        
+        print(f'PPSC: Chempot eta from adiabatic ODE: Z-1={self.Z-1:+2.2E}')
+        return sol
+
+    def solve_ppsc_chempot_newton(self, tol=1e-9):
+
+        f = lambda eta : self.Z_alpha(1., eta) - 1
+        fprime = lambda eta : self.dZ_alpha_deta(1., eta)
+
+        from scipy.optimize import root_scalar
+
+        sol = root_scalar(
+            f, x0=self.eta, 
+            fprime=fprime,
+            method='newton',
+            xtol=tol,
+            )
+        
+        self.eta = sol.root
+
+        self.G = self.solve_dyson(self.Sigma, self.eta)
+        Z = self.partition_function()
+
+        print(f'PPSC: Newton eta = {self.eta:+2.2E} Z-1={Z-1:+2.2E}')
+
+        return sol
 
 
 def logo():
