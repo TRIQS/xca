@@ -340,7 +340,7 @@ namespace triqs_xca::block_sparse {
  * @param[in] beta inverse temperature
  * @param[in] dlr_it_abs imaginary time nodes in absolute format
  */
-  BlockDiagOpFun nonint_gf_BDOF(std::vector<nda::array<double, 2>> H_blocks, nda::vector<int> H_block_inds, double beta,
+  BlockDiagOpFun nonint_gf_BDOF(std::vector<nda::array<dcomplex, 2>> H_blocks, nda::vector<int> H_block_inds, double beta,
                                 nda::vector_const_view<double> dlr_it_abs);
 
   /**

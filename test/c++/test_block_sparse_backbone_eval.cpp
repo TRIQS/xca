@@ -16,7 +16,7 @@ using triqs::atom_diag::fundamental_operator_set;
 
 using triqs::operators::c;
 using triqs::operators::c_dag;
-using triqs::operators::many_body_operator_real;
+using triqs::operators::many_body_operator_complex;
 using triqs::operators::n;
 
 using triqs_xca::dense::DenseDiagramEvaluator;
@@ -356,7 +356,7 @@ TEST(Backbone, spin_flip_fermion) {
   auto hyb_refl_coeffs = hyb_coeffs;
 
   // set up Hamiltonian
-  triqs::operators::many_body_operator_real H;
+  triqs::operators::many_body_operator_complex H;
   triqs::atom_diag::fundamental_operator_set fop_set;
 
   double mu = 0.25;
@@ -369,12 +369,12 @@ TEST(Backbone, spin_flip_fermion) {
   for (int i = 0; i < norb; i++) { fop_set.insert("up", i); }
 
   // Construct particle number operator
-  triqs::operators::many_body_operator_real N;
+  triqs::operators::many_body_operator_complex N;
   for (int kap = 0; kap < norb; ++kap) { N += n("up", kap) + n("do", kap); }
-  std::vector<triqs::operators::many_body_operator_real> sym_ops = {N};
+  std::vector<triqs::operators::many_body_operator_complex> sym_ops = {N};
 
   // create atom_diag object
-  triqs::atom_diag::atom_diag<false> ad(H, fop_set, sym_ops);
+  triqs::atom_diag::atom_diag<true> ad(H, fop_set, sym_ops);
 
   // get blocks of Hamiltonian and compute noninteracting Green's function
   auto [H_blocks, H_block_inds] = get_hamiltonian_blocks(ad);
@@ -432,7 +432,7 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
   auto hyb_refl_coeffs = hyb_coeffs;
 
   // set up Hamiltonian
-  triqs::operators::many_body_operator_real H;
+  triqs::operators::many_body_operator_complex H;
   triqs::atom_diag::fundamental_operator_set fop_set;
 
   double mu = 0.25;
@@ -445,7 +445,7 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
   for (int i = 0; i < norb; i++) { fop_set.insert("up", i); }
 
   // create atom_diag object
-  triqs::atom_diag::atom_diag<false> ad(H, fop_set);
+  triqs::atom_diag::atom_diag<true> ad(H, fop_set);
 
   // get blocks of Hamiltonian and compute noninteracting Green's function
   auto [H_blocks, H_block_inds] = get_hamiltonian_blocks(ad);
@@ -612,7 +612,7 @@ TEST(Backbone, spin_flip_fermion_aaa) {
   hyb_poles = hyb_poles * beta;
 
   // set up Hamiltonian
-  triqs::operators::many_body_operator_real H;
+  triqs::operators::many_body_operator_complex H;
   triqs::atom_diag::fundamental_operator_set fop_set;
 
   double mu = 0.25;
@@ -625,12 +625,12 @@ TEST(Backbone, spin_flip_fermion_aaa) {
   for (int i = 0; i < norb; i++) { fop_set.insert("up", i); }
 
   // Construct particle number operator
-  triqs::operators::many_body_operator_real N;
+  triqs::operators::many_body_operator_complex N;
   for (int kap = 0; kap < norb; ++kap) { N += n("up", kap) + n("do", kap); }
-  std::vector<triqs::operators::many_body_operator_real> sym_ops = {N};
+  std::vector<triqs::operators::many_body_operator_complex> sym_ops = {N};
 
   // create atom_diag object
-  triqs::atom_diag::atom_diag<false> ad(H, fop_set, sym_ops);
+  triqs::atom_diag::atom_diag<true> ad(H, fop_set, sym_ops);
 
   // get blocks of Hamiltonian and compute noninteracting Green's function
   auto dlr_it         = itops.get_itnodes();
@@ -712,7 +712,7 @@ TEST(Backbone, spin_flip_fermion_all_sym_aaa) {
   hyb_poles = hyb_poles * beta;
 
   // set up Hamiltonian
-  triqs::operators::many_body_operator_real H;
+  triqs::operators::many_body_operator_complex H;
   triqs::atom_diag::fundamental_operator_set fop_set;
 
   double mu = 0.25;
@@ -725,7 +725,7 @@ TEST(Backbone, spin_flip_fermion_all_sym_aaa) {
   for (int i = 0; i < norb; i++) { fop_set.insert("up", i); }
 
   // create atom_diag object
-  triqs::atom_diag::atom_diag<false> ad(H, fop_set);
+  triqs::atom_diag::atom_diag<true> ad(H, fop_set);
 
   // get blocks of Hamiltonian and compute noninteracting Green's function
   auto [H_blocks, H_block_inds] = get_hamiltonian_blocks(ad);
@@ -781,7 +781,7 @@ TEST(Backbone, OCA_gf_construct) {
   auto hyb_coeffs                         = itops.vals2coefs(Deltat); // hybridization DLR coeffs
 
   // set up Kanamori Hamiltonian
-  triqs::operators::many_body_operator_real H;
+  triqs::operators::many_body_operator_complex H;
   triqs::atom_diag::fundamental_operator_set fop_set;
   int norb = 2;
   double U = 2.0;
@@ -803,12 +803,12 @@ TEST(Backbone, OCA_gf_construct) {
   for (int i = 0; i < norb; i++) { fop_set.insert("up", i); }
 
   // Construct particle number operator and atom_diag object
-  triqs::operators::many_body_operator_real N;
+  triqs::operators::many_body_operator_complex N;
   for (int kap = 0; kap < norb; ++kap) { N += n("up", kap) + n("do", kap); }
   double mu = (3 * U - 5 * J) / 2 - 1.5;
   H -= mu * N;
-  std::vector<triqs::operators::many_body_operator_real> sym_ops = {N};
-  triqs::atom_diag::atom_diag<false> ad(H, fop_set, sym_ops);
+  std::vector<triqs::operators::many_body_operator_complex> sym_ops = {N};
+  triqs::atom_diag::atom_diag<true> ad(H, fop_set, sym_ops);
   nda::vector<long> block_sizes(ad.n_subspaces());
   for (int i = 0; i < ad.n_subspaces(); ++i) { block_sizes(i) = ad.get_fock_states(i).size(); }
 
@@ -852,7 +852,7 @@ TEST(Backbone, manual_loop) {
   auto hyb_coeffs                         = itops.vals2coefs(Deltat); // hybridization DLR coeffs
 
   // set up Kanamori Hamiltonian
-  triqs::operators::many_body_operator_real H;
+  triqs::operators::many_body_operator_complex H;
   triqs::atom_diag::fundamental_operator_set fop_set;
   int norb = 2;
   double U = 2.0;
@@ -874,12 +874,12 @@ TEST(Backbone, manual_loop) {
   for (int i = 0; i < norb; i++) { fop_set.insert("up", i); }
 
   // Construct particle number operator and atom_diag object
-  triqs::operators::many_body_operator_real N;
+  triqs::operators::many_body_operator_complex N;
   for (int kap = 0; kap < norb; ++kap) { N += n("up", kap) + n("do", kap); }
   double mu = (3 * U - 5 * J) / 2 - 1.5;
   H -= mu * N;
-  std::vector<triqs::operators::many_body_operator_real> sym_ops = {N};
-  triqs::atom_diag::atom_diag<false> ad(H, fop_set, sym_ops);
+  std::vector<triqs::operators::many_body_operator_complex> sym_ops = {N};
+  triqs::atom_diag::atom_diag<true> ad(H, fop_set, sym_ops);
   nda::vector<long> block_sizes(ad.n_subspaces());
   for (int i = 0; i < ad.n_subspaces(); ++i) { block_sizes(i) = ad.get_fock_states(i).size(); }
 

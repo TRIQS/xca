@@ -4,6 +4,7 @@
 
 #include <triqs/gfs.hpp>
 #include <triqs/atom_diag/atom_diag.hpp>
+#include <triqs/utility/first_include.hpp>
 
 #include "triqs_xca/dense.hpp"
 #include "triqs_xca/block_sparse.hpp"
@@ -12,7 +13,10 @@ namespace triqs_xca::atom_diag {
 
 using cppdlr::imtime_ops;
 
-using triqs_atom_diag = triqs::atom_diag::atom_diag<false>; // true for complex valued Hamiltonians
+template <bool IsComplex>
+using triqs_atom_diag_t = triqs::atom_diag::atom_diag<IsComplex>;
+
+using triqs_atom_diag = triqs_atom_diag_t<true>; // Default: complex valued Hamiltonians
 
 using triqs_xca::dense::DenseFSet;
 
@@ -24,7 +28,7 @@ using triqs_xca::block_sparse::BlockOpSymSet;
  * @brief Utility function to get full Hamiltonian matrix from an AtomDiag object.
  * @param[in] ad AtomDiag object
  */
-nda::matrix<double> get_full_h_atomic(const triqs_atom_diag &ad);
+nda::matrix<dcomplex> get_full_h_atomic(const triqs_atom_diag &ad);
 
 /**
  * @brief Utility function to get full operator matrix from an AtomDiag object.
@@ -32,14 +36,15 @@ nda::matrix<double> get_full_h_atomic(const triqs_atom_diag &ad);
  * @param[in] oidx operator index
  * @param[in] is_creation true for creation operator, false for annihilation operator
  */
-nda::matrix<double> get_full_operator_matrix(const triqs_atom_diag &ad, int oidx, bool is_creation);
+nda::matrix<dcomplex> get_full_operator_matrix(const triqs_atom_diag_t<true> &ad, int oidx, bool is_creation);
+nda::matrix<dcomplex> get_full_operator_matrix(const triqs_atom_diag_t<false> &ad, int oidx, bool is_creation);
 
 /**
  * @brief Get symmetry blocks of Hamiltonian from an AtomDiag object
  * @param[in] ad AtomDiag object
  * @return Tuple of vectors of Hamiltonian blocks and block indices
  */
-std::tuple<std::vector<nda::array<double, 2>>, nda::vector<long>> get_hamiltonian_blocks(const triqs_atom_diag &ad);
+std::tuple<std::vector<nda::array<dcomplex, 2>>, nda::vector<long>> get_hamiltonian_blocks(const triqs_atom_diag &ad);
 
 /**
  * @brief Exponentiate Hamiltonian blocks to get atomic propagator blocks
@@ -50,7 +55,7 @@ std::tuple<std::vector<nda::array<double, 2>>, nda::vector<long>> get_hamiltonia
  * @return Vector of atomic propagator blocks
  */
 template <typename T>
-std::vector<nda::array<T, 3>> H_to_atom_prop_blocks(std::vector<nda::array<double, 2>> &H_blocks, nda::vector_const_view<long> H_block_inds,
+std::vector<nda::array<T, 3>> H_to_atom_prop_blocks(std::vector<nda::array<dcomplex, 2>> &H_blocks, nda::vector_const_view<long> H_block_inds,
                                                     double beta, imtime_ops &itops);
 
 /**
@@ -78,7 +83,8 @@ triqs::gfs::block_gf<triqs::mesh::dlr_imtime> ad_to_atom_prop(const triqs_atom_d
  * @param[in] hyb_coeffs Hybridization SOE coefficients
  * @return Tuple of BlockOpSymSet objects
  */
-std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const triqs_atom_diag &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs);
+std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const triqs_atom_diag_t<true> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs);
+std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const triqs_atom_diag_t<false> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs);
 
 /**
  * @brief Get creation and annihilation operators from an AtomDiag object in dense storage
@@ -86,7 +92,8 @@ std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const triqs_atom_d
  * @param[in] hyb_coeffs Hybridization SOE coefficients
  * @return DenseFSet object
  */
-DenseFSet get_operators_dense(const triqs_atom_diag &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs);
+DenseFSet get_operators_dense(const triqs_atom_diag_t<true> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs);
+DenseFSet get_operators_dense(const triqs_atom_diag_t<false> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs);
 
 /**
  * @brief Get creation and annihilation operators from an AtomDiag object in dense storage
@@ -94,7 +101,8 @@ DenseFSet get_operators_dense(const triqs_atom_diag &ad, nda::array_const_view<d
  * @param[in] hyb_coeffs Hybridization SOE coefficients
  * @return tuple with Fs and Fdags in dense storage
  */
-std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> get_operators_dense(const triqs_atom_diag &ad);
+std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> get_operators_dense(const triqs_atom_diag_t<true> &ad);
+std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> get_operators_dense(const triqs_atom_diag_t<false> &ad);
 
 /**
  * @brief Get a dense tensor in the full Hilbert resticted to one atom_diag subspace

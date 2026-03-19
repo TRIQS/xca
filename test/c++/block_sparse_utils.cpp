@@ -24,17 +24,17 @@ FermionModelData one_fermion_model_helper(double beta, double Lambda, double eps
   nda::vector<double> hyb_poles(p);
   hyb_poles = hyb_pole;
 
-  using triqs::operators::many_body_operator_real;
+  using triqs::operators::many_body_operator_complex;
   using triqs::operators::n;
-  many_body_operator_real H;
+  many_body_operator_complex H;
   double mu = 0.0;
-  many_body_operator_real N;
+  many_body_operator_complex N;
   N = n("0", 0);
   H = -mu * N;
 
   triqs::atom_diag::fundamental_operator_set fop_set;
   fop_set.insert("0", 0);
-  auto ad = triqs::atom_diag::atom_diag<false>(H, fop_set);
+  auto ad = triqs::atom_diag::atom_diag<true>(H, fop_set);
 
   auto G_ppsc = triqs_xca::atom_diag::ad_to_atom_prop(ad, beta, Lambda, eps);
   auto G_bdof = BlockDiagOpFun(G_ppsc);
@@ -44,10 +44,10 @@ FermionModelData one_fermion_model_helper(double beta, double Lambda, double eps
 
 FermionModelData two_fermion_model_helper(double beta, double Lambda, double eps, double U, double mu, double hyb_pole) {
   // Helper function for setting up two-fermion tests with H = -mu * (n0 + n1) + U * n0 * n1 and one-pole hybridization.
-  using triqs::operators::many_body_operator_real;
+  using triqs::operators::many_body_operator_complex;
   using triqs::operators::n;
 
-  many_body_operator_real H;
+  many_body_operator_complex H;
   auto N0  = n("0", 0);
   auto N1  = n("1", 0);
   auto Nop = N0 + N1;
@@ -57,8 +57,8 @@ FermionModelData two_fermion_model_helper(double beta, double Lambda, double eps
   fop_set.insert("0", 0);
   fop_set.insert("1", 0);
 
-  std::vector<many_body_operator_real> sym_ops = {Nop};
-  auto ad                                       = triqs::atom_diag::atom_diag<false>(H, fop_set, sym_ops);
+  std::vector<many_body_operator_complex> sym_ops = {Nop};
+  auto ad                                         = triqs::atom_diag::atom_diag<true>(H, fop_set, sym_ops);
 
   int p    = 1;
   int norb = 2;
@@ -186,11 +186,11 @@ std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> discrete_bath_spin_
   return std::make_tuple(Deltat, Deltat_refl);
 }
 
-triqs::operators::many_body_operator_real make_kanamori_interaction(int n_orb, double U, double J, double mu) {
+triqs::operators::many_body_operator_complex make_kanamori_interaction(int n_orb, double U, double J, double mu) {
   using triqs::operators::c;
   using triqs::operators::c_dag;
   using triqs::operators::n;
-  triqs::operators::many_body_operator_real H;
+  triqs::operators::many_body_operator_complex H;
   double U_prime = U - 2 * J;
   for (int o = 0; o < n_orb; o++) H -= mu * (n("up", o) + n("do", o));
   for (int o = 0; o < n_orb; o++) H += U * n("up", o) * n("do", o);
@@ -207,9 +207,9 @@ triqs::operators::many_body_operator_real make_kanamori_interaction(int n_orb, d
   return H;
 }
 
-triqs::operators::many_body_operator_real make_total_density_operator(int n_orb) {
+triqs::operators::many_body_operator_complex make_total_density_operator(int n_orb) {
   using triqs::operators::n;
-  triqs::operators::many_body_operator_real N_tot;
+  triqs::operators::many_body_operator_complex N_tot;
   for (int o = 0; o < n_orb; o++) N_tot += n("up", o) + n("do", o);
   return N_tot;
 }
@@ -221,12 +221,12 @@ triqs::atom_diag::fundamental_operator_set get_fundamental_operator_set(int n_or
   return fop_set;
 }
 
-triqs::atom_diag::atom_diag<false> two_band_atom_diag_helper() {
+triqs::atom_diag::atom_diag<true> two_band_atom_diag_helper() {
   // Kanamori interaction with n_orb = 2, U = 2.0, J = 0.2, and mu = (3*U - 5*J)/2 - 1.5
   auto H_kana  = make_kanamori_interaction(2, 2.0, 0.2, (3 * 2.0 - 5 * 0.2) / 2 - 1.5);
   auto fop_set = get_fundamental_operator_set(2);
   auto N_tot   = make_total_density_operator(2);
-  auto ad      = triqs::atom_diag::atom_diag<false>(H_kana, fop_set, {N_tot});
+  auto ad      = triqs::atom_diag::atom_diag<true>(H_kana, fop_set, {N_tot});
   return ad;
 }
 

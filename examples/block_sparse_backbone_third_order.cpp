@@ -11,8 +11,8 @@ using nda::linalg::matmul;
 using cppdlr::_;
 using cppdlr::build_dlr_rf;
 using cppdlr::imtime_ops;
-using cppdlr::rel2abs;
 using cppdlr::k_it;
+using cppdlr::rel2abs;
 
 using triqs_xca::block_sparse::nonint_gf_BDOF;
 
@@ -202,12 +202,12 @@ std::tuple<BlockDiagOpFun, BlockOpSymQuartet, nda::vector<int>> two_band_helper(
   int num_blocks = 5; // number of blocks of Hamiltonian
 
   // Hamiltonian
-  std::vector<nda::array<double, 2>> H_blocks(num_blocks); // Hamiltonian in sparse storage
-  H_blocks[0]                   = nda::make_regular(-1 * nda::eye<double>(4));
+  std::vector<nda::array<dcomplex, 2>> H_blocks(num_blocks); // Hamiltonian in sparse storage
+  H_blocks[0]                   = nda::make_regular(-1 * nda::eye<dcomplex>(4));
   H_blocks[1]                   = {{-0.6, 0, 0, 0, 0, 0},   {0, 8.27955e-19, 0, 0, 0.2, 0}, {0, 0, -0.4, 0.2, 0, 0},
                                    {0, 0, 0.2, -0.4, 0, 0}, {0, 0.2, 0, 0, 8.27955e-19, 0}, {0, 0, 0, 0, 0, -0.6}};
   H_blocks[2]                   = {{0}};
-  H_blocks[3]                   = nda::make_regular(2 * nda::eye<double>(4));
+  H_blocks[3]                   = nda::make_regular(2 * nda::eye<dcomplex>(4));
   H_blocks[4]                   = {{6}};
   nda::vector<int> H_block_inds = {0, 0, -1, 0, 0};
 
@@ -297,25 +297,25 @@ int main() {
 
     // Compute third-order contribution using DiagramEvaluator
     auto Sigma_third_gf = D.compute_self_energy(Gt, topologies(i, _, _));
-    third_order_se  = BlockDiagOpFun(Sigma_third_gf);
+    third_order_se      = BlockDiagOpFun(Sigma_third_gf);
     D.reset(); // reset the DiagramEvaluator for the next topology
 
     // Compute third-order contribution using old code
     nda::array<dcomplex, 3> se_old(r, N, N);
     se_old = 0;
-    fb(1)   = 0;
-    fb(2)   = 0;
+    fb(1)  = 0;
+    fb(2)  = 0;
     se_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense,
-                                  fb, true);
+                                 fb, true);
     fb(1) = 1;
     se_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense,
-                                  fb, true);
+                                 fb, true);
     fb(2) = 1;
     se_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense,
-                                  fb, true);
+                                 fb, true);
     fb(1) = 0;
     se_old += Sigma_Diagram_calc(Delta_F, Delta_F_reflect, topologies(i, _, _), Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense,
-                                  fb, true);
+                                 fb, true);
 
     std::cout << "max error in block 0: " << nda::max_element(nda::abs(se_old(_, range(0, 4), range(0, 4)) - third_order_se.get_block(0)))
               << std::endl;
@@ -340,5 +340,4 @@ int main() {
     auto spgf_old = G_Diagram_calc_sum_all(Delta_F, Delta_F_reflect, topologies(i, _, _), Gt_dense, itops, beta, Fs_dense, F_dags_dense);
     std::cout << "max error: " << nda::max_element(nda::abs(spgf_old - third_order_spgf)) << std::endl;
   }
-
 }

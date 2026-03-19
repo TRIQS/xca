@@ -11,7 +11,7 @@ using triqs_xca::block_sparse::BlockOpSymQuartet;
 struct FermionModelData {
     nda::array<dcomplex, 3> hyb_coeffs;
     nda::vector<double> hyb_poles;
-    triqs::atom_diag::atom_diag<false> ad;
+    triqs::atom_diag::atom_diag<true> ad;
     triqs::gfs::block_gf<triqs::mesh::dlr_imtime> G_ppsc;
     BlockDiagOpFun G_bdof;
 };
@@ -69,9 +69,9 @@ std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> discrete_bath_spin_
 
 /**
  * @brief Helper function for setting up the two-band model's atom_diag object
- * @return triqs::atom_diag::atom_diag<false> object representing the two-band model's atomic Hamiltonian
+ * @return triqs::atom_diag::atom_diag<true> object representing the two-band model's atomic Hamiltonian
  */
-triqs::atom_diag::atom_diag<false> two_band_atom_diag_helper();
+triqs::atom_diag::atom_diag<true> two_band_atom_diag_helper();
 
 /**
  * @brief Helper function for setting up the two-band model in dense storage

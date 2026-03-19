@@ -26,13 +26,13 @@ TEST(BlockSparseMisc, compute_nonint_gf) {
   int r              = itops.rank();
 
   // the following variables can be read from the output of benchmarks/atom_diag_to_text.py
-  int num_blocks = 5;                                      // number of blocks in Hamiltonian
-  std::vector<nda::array<double, 2>> H_blocks(num_blocks); // Hamiltonian in sparse storage
-  H_blocks[0]                           = nda::make_regular(-1 * nda::eye<double>(4));
+  int num_blocks = 5;                                        // number of blocks in Hamiltonian
+  std::vector<nda::array<dcomplex, 2>> H_blocks(num_blocks); // Hamiltonian in sparse storage
+  H_blocks[0]                           = nda::make_regular(-1 * nda::eye<dcomplex>(4));
   H_blocks[1]                           = {{-0.6, 0, 0, 0, 0, 0},   {0, 8.27955e-19, 0, 0, 0.2, 0}, {0, 0, -0.4, 0.2, 0, 0},
                                            {0, 0, 0.2, -0.4, 0, 0}, {0, 0.2, 0, 0, 8.27955e-19, 0}, {0, 0, 0, 0, 0, -0.6}};
   H_blocks[2]                           = {{0}};
-  H_blocks[3]                           = nda::make_regular(2 * nda::eye<double>(4));
+  H_blocks[3]                           = nda::make_regular(2 * nda::eye<dcomplex>(4));
   H_blocks[4]                           = {{6}};
   nda::vector<int> H_block_inds         = {0, 0, -1, 0, 0};
   auto H_dense                          = nda::zeros<dcomplex>(16, 16); // Hamiltonian in dense storage

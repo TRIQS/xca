@@ -47,8 +47,34 @@ DiagramEvaluator::DiagramEvaluator(
   nda::vector_const_view<double> hyb_poles,
   nda::array_const_view<dcomplex, 3> hyb_coeffs, 
   triqs::mesh::dlr_imtime tau_mesh,
-  triqs::atom_diag::atom_diag<false> const &ad)
+  triqs::atom_diag::atom_diag<true> const &ad)
    : 
+     tau_mesh(tau_mesh),
+     itops(tau_mesh.dlr_it()),
+     dlr_it(itops.get_itnodes()),
+     Fq(std::get<0>(get_operators(ad, hyb_coeffs))),
+     Sigma({}, {}),
+     beta(tau_mesh.beta()),
+     r(itops.rank()),
+     n(ad.get_fops().size()), // number of fermion flavours (spin-orbitals)
+     q(nda::max_element(Fq.sym_set_labels) + 1),
+     //Nmax(Gt.get_max_block_size()),
+     Nmax(nda::max_element(Fq.Fs[0].get_block_sizes())), // Possibly dangerous if Fs[0] has no block in the larges sector..?
+     hyb(tau_mesh, hyb_poles, hyb_coeffs),
+     // allocate arrays
+     T(nda::zeros<dcomplex>(r, Nmax, Nmax)),
+     U(nda::zeros<dcomplex>(r, Nmax, Nmax)),
+     GKt(nda::zeros<dcomplex>(r, Nmax, Nmax)),
+     Tkaps(nda::zeros<dcomplex>(n, r, Nmax, Nmax)), // Largest memory footprint, speeding up multiply_left_vertex_and_right_zero_vertex
+     Tmu(nda::zeros<dcomplex>(r, Nmax, Nmax))
+     {}
+
+DiagramEvaluator::DiagramEvaluator(
+  nda::vector_const_view<double> hyb_poles,
+  nda::array_const_view<dcomplex, 3> hyb_coeffs,
+  triqs::mesh::dlr_imtime tau_mesh,
+  triqs::atom_diag::atom_diag<false> const &ad)
+   :
      tau_mesh(tau_mesh),
      itops(tau_mesh.dlr_it()),
      dlr_it(itops.get_itnodes()),

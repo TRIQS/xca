@@ -137,6 +137,10 @@ class DiagramEvaluator {
    */
   DiagramEvaluator(
     nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
+    triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<true> const &ad);
+
+  DiagramEvaluator(
+    nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
     triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<false> const &ad);
 
   /**

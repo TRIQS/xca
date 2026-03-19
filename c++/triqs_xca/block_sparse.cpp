@@ -643,7 +643,7 @@ namespace triqs_xca::block_sparse {
     return BlockDiagOpFun(diag_blocks, zero_block_indices);
   }
 
-  BlockDiagOpFun nonint_gf_BDOF(std::vector<nda::array<double, 2>> H_blocks, nda::vector<int> H_block_inds, double beta,
+  BlockDiagOpFun nonint_gf_BDOF(std::vector<nda::array<dcomplex, 2>> H_blocks, nda::vector<int> H_block_inds, double beta,
                                 nda::vector_const_view<double> dlr_it_abs) {
 
     int num_block_cols = H_block_inds.size();
@@ -652,14 +652,14 @@ namespace triqs_xca::block_sparse {
 
     int r = dlr_it_abs.size();
 
-    double tr_exp_minusbetaH = 0;
-    std::vector<nda::array<double, 1>> H_evals(num_block_cols);
-    std::vector<nda::array<double, 2>> H_evecs(num_block_cols);
+    dcomplex tr_exp_minusbetaH = 0;
+    std::vector<nda::array<dcomplex, 1>> H_evals(num_block_cols);
+    std::vector<nda::array<dcomplex, 2>> H_evecs(num_block_cols);
     for (int i = 0; i < num_block_cols; i++) {
       if (H_block_inds(i) != -1) {
         if (H_block_sizes(i) == 1) {
-          H_evals[i] = nda::array<double, 1>{H_blocks[i](0, 0)};
-          H_evecs[i] = nda::array<double, 2>{{1}};
+          H_evals[i] = nda::array<dcomplex, 1>{H_blocks[i](0, 0)};
+          H_evecs[i] = nda::array<dcomplex, 2>{{1}};
         } else {
           auto H_block_eig = nda::linalg::eigh(H_blocks[i]);
           H_evals[i]       = std::get<0>(H_block_eig);
@@ -667,8 +667,8 @@ namespace triqs_xca::block_sparse {
         }
         tr_exp_minusbetaH += nda::sum(exp(-beta * H_evals[i]));
       } else {
-        H_evals[i] = nda::zeros<double>(H_block_sizes(i));
-        H_evecs[i] = nda::eye<double>(H_block_sizes(i));
+        H_evals[i] = nda::zeros<dcomplex>(H_block_sizes(i));
+        H_evecs[i] = nda::eye<dcomplex>(H_block_sizes(i));
         tr_exp_minusbetaH += 1.0 * H_block_sizes(i); // 0 entry in the diagonal
       }
     }
