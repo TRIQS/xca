@@ -45,7 +45,7 @@ TEST(Backbone, one_fermion_three_orders_const_hyb) {
   auto &hyb_coeffs       = one_fermion_model.hyb_coeffs;
   auto &hyb_poles        = one_fermion_model.hyb_poles;
   auto &ad               = one_fermion_model.ad;
-  auto &G0_ppsc          = one_fermion_model.G0_ppsc;
+  auto &G0_ppsc          = one_fermion_model.G_ppsc;
   auto dlr_it            = itops.get_itnodes();
 
   // Set up diagram evaluator for single-particle Green's function evalution
@@ -97,7 +97,7 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
   auto &hyb_coeffs       = one_fermion_model.hyb_coeffs;
   auto &hyb_poles        = one_fermion_model.hyb_poles;
   auto &ad               = one_fermion_model.ad;
-  auto &G0_ppsc          = one_fermion_model.G0_ppsc;
+  auto &G0_ppsc          = one_fermion_model.G_ppsc;
   auto dlr_it            = itops.get_itnodes();
 
   // Set up diagram evaluator for single-particle Green's function evalution

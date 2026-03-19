@@ -14,7 +14,7 @@ using cppdlr::rel2abs;
 using triqs_xca::block_sparse::BlockOpSymSet;
 using triqs_xca::block_sparse::nonint_gf_BDOF;
 
-OneFermionModelData one_fermion_model_helper(double beta, double Lambda, double eps, double hyb_pole) {
+FermionModelData one_fermion_model_helper(double beta, double Lambda, double eps, double hyb_pole) {
   // Helper function for setting up one-fermion tests with H = 0 and a one-pole hybridization decomposition.
   int p    = 1;
   int norb = 1;
@@ -36,18 +36,18 @@ OneFermionModelData one_fermion_model_helper(double beta, double Lambda, double 
   fop_set.insert("0", 0);
   auto ad = triqs::atom_diag::atom_diag<false>(H, fop_set);
 
-  auto G0_ppsc = triqs_xca::atom_diag::ad_to_atom_prop(ad, beta, Lambda, eps);
-  auto G0_bdof = BlockDiagOpFun(G0_ppsc);
+  auto G_ppsc = triqs_xca::atom_diag::ad_to_atom_prop(ad, beta, Lambda, eps);
+  auto G_bdof = BlockDiagOpFun(G_ppsc);
 
-  return {.hyb_coeffs = hyb_coeffs, .hyb_poles = hyb_poles, .ad = ad, .G0_ppsc = G0_ppsc, .G0_bdof = G0_bdof};
+  return {.hyb_coeffs = hyb_coeffs, .hyb_poles = hyb_poles, .ad = ad, .G_ppsc = G_ppsc, .G_bdof = G_bdof};
 }
 
 FermionModelData two_fermion_model_helper(double beta, double Lambda, double eps, double U, double mu, double hyb_pole) {
   // Helper function for setting up two-fermion tests with H = -mu * (n0 + n1) + U * n0 * n1 and one-pole hybridization.
-  using triqs::operators::many_body_operator_complex;
+  using triqs::operators::many_body_operator_real;
   using triqs::operators::n;
 
-  many_body_operator_complex H;
+  many_body_operator_real H;
   auto N0  = n("0", 0);
   auto N1  = n("1", 0);
   auto Nop = N0 + N1;
@@ -57,8 +57,8 @@ FermionModelData two_fermion_model_helper(double beta, double Lambda, double eps
   fop_set.insert("0", 0);
   fop_set.insert("1", 0);
 
-  std::vector<many_body_operator_complex> sym_ops = {Nop};
-  auto ad                                         = triqs::atom_diag::atom_diag<true>(H, fop_set, sym_ops);
+  std::vector<many_body_operator_real> sym_ops = {Nop};
+  auto ad                                       = triqs::atom_diag::atom_diag<false>(H, fop_set, sym_ops);
 
   int p    = 1;
   int norb = 2;
