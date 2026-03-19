@@ -20,6 +20,8 @@ from .dense import DenseDiagramEvaluator
 from .module import trace
 from .module import convolve_ppsc as conv
 
+from .ase.utils.timing import Timer, timer
+
 
 def is_root():
     return mpi.is_master_node()
@@ -34,7 +36,7 @@ def scatter_array_over_ranks(arr):
 
 class BlockSparseSolver(object):
     
-    def __init__(self, H_loc, beta, w_max, eps, gf_struct, conserved_operators='automatic'):
+    def __init__(self, H_loc, beta, w_max, eps, gf_struct, conserved_operators='automatic', timer=None):
 
         self.H_loc = H_loc
         self.gf_struct = gf_struct
@@ -45,6 +47,8 @@ class BlockSparseSolver(object):
 
         self.fundamental_operators = fundamental_operators_from_gf_struct(gf_struct)
         self.use_dense_solver = (self.conserved_operators == []) # Without symmetries, use the dense solver
+
+        self.timer = timer if timer is not None else Timer()
 
         if is_root():
             print(logo())
@@ -85,6 +89,7 @@ class BlockSparseSolver(object):
         self.dysons = [DysonItPPSC(self.beta, ito, G0_block.data) for _, G0_block in self.G0]
     
 
+    @timer('Fit hybridization')
     def fit_hybridization(self, tol=None, use_polefitting_dlr=False):
 
         self.tol_adapol = self.eps if tol is None else tol
@@ -161,9 +166,8 @@ class BlockSparseSolver(object):
             #print(f'hyb.poles = {self.hyb.poles}')
             #print(f'hyb.coefficients =\n{self.hyb.coefficients}')
 
-        self.init_diagram_evaluator() # FIXME! Evaluator takes hyb poles and coeffs in constructor
 
-
+    @timer('Diagram Evaluator init')
     def init_diagram_evaluator(self):
         if is_root(): print(f'Initializing diagram evaluator with use_dense_solver = {self.use_dense_solver}')
         if self.use_dense_solver:
@@ -179,6 +183,7 @@ class BlockSparseSolver(object):
         self.delta_tol = delta_tol if delta_tol is not None else 0.1 * tol
 
         self.fit_hybridization(tol=tol)
+        self.init_diagram_evaluator() # FIXME! Evaluator takes hyb poles and coeffs in constructor
 
         for iter in range(1, maxiter+1):
 
@@ -213,6 +218,9 @@ class BlockSparseSolver(object):
 
         G_tau = self.eval_single_particle_greens_function(self.G, max_order=self.max_order)
         self.G_tau = self.__from_dense_to_blockgf(G_tau, self.gf_struct)
+
+        if is_root():
+            print(); self.timer.write()
 
 
     def normalize_pseudo_particle_gf(self, G):
@@ -263,6 +271,7 @@ class BlockSparseSolver(object):
         return self.partition_function_from_ppgf(self.G)
 
 
+    @timer('Dyson')
     def solve_dyson(self, Sigma, eta):
 
         assert type(Sigma) is BlockGf, 'Sigma must be a BlockGf'
@@ -279,6 +288,7 @@ class BlockSparseSolver(object):
         return self.Sigma
 
 
+    @timer('Sigma')
     def eval_pseudo_particle_self_energy(self, G, max_order):
 
         self.Sigma = self.get_zero_pseudo_particle_propagator()
@@ -336,6 +346,7 @@ class BlockSparseSolver(object):
         return self.eval_single_particle_greens_function(self.G, max_order=max_order)
 
 
+    @timer('Single-particle Gf')
     def eval_single_particle_greens_function(self, G, max_order):
         self.spgf = self.get_zero_single_particle_greens_function()
 
@@ -468,6 +479,7 @@ class BlockSparseSolver(object):
         return d2eta_dalpha_deta.real
     
     
+    @timer('PPSC chempot ODE')
     def solve_ppsc_chempot_adiabatic_ode(self, tol=1e-9, method='DOP853'):
 
         func = lambda t, y : self.deta_dalpha(t, y[0])
@@ -492,6 +504,7 @@ class BlockSparseSolver(object):
         return sol
 
 
+    @timer('PPSC chempot Newton')
     def solve_ppsc_chempot_newton(self, tol=1e-9):
 
         f = lambda eta : self.Z_alpha(1., eta) - 1
@@ -550,7 +563,7 @@ class BlockSparseSolver(object):
 
     
     def __skip_keys(self):
-        return ['d', 'dysons', 'ad']
+        return ['d', 'dysons', 'ad', 'timer']
 
 
     def __reduce_to_dict__(self):

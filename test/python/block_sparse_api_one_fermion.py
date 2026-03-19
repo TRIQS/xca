@@ -167,7 +167,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(
     BSS.Delta_tau['0'] << Delta_tau
 
     BSS.fit_hybridization(tol=eps)
-
+    BSS.init_diagram_evaluator()
 
     # -- Compare pseudo particle Green's function
 
