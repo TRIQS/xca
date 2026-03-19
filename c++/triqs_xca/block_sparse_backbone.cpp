@@ -137,7 +137,6 @@ void DiagramEvaluator::multiply_left_vertex(nda::array_view<dcomplex, 3> T_buf, 
 
 void DiagramEvaluator::integrate_left_edge(nda::array_view<dcomplex, 3> T_buf, BlockDiagOpFun &Gt, Backbone &backbone, int e_ix, nda::vector_const_view<int> ind_path,
                                            nda::vector_const_view<int> block_dims) {
-  int m       = backbone.m;
   int b_ix    = ind_path(e_ix); // block index for the edge e_ix
   int vct0    = backbone.get_topology(0, 1);
   int n_col_r = e_ix < vct0 ? block_dims(1) : block_dims(0);
@@ -437,7 +436,6 @@ void DiagramEvaluator::multiply_right_vertex(nda::array_view<dcomplex, 3> U_buf,
 void DiagramEvaluator::integrate_right_edge(nda::array_view<dcomplex, 3> U_buf, BlockDiagOpFun &Gt, CorrelatorBackbone &backbone, int e_ix,
                                             nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims) {
 
-  int m       = backbone.m;
   int b_ix    = ind_path(e_ix);             // block index for the edge e_ix
   int n_row_l = block_dims(2 * backbone.m); // number of rows for the left-hand side of the diagram
 
