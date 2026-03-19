@@ -8,12 +8,12 @@ using nda::dcomplex;
 using triqs_xca::block_sparse::BlockDiagOpFun;
 using triqs_xca::block_sparse::BlockOpSymQuartet;
 
-struct OneFermionModelData {
+struct FermionModelData {
     nda::array<dcomplex, 3> hyb_coeffs;
     nda::vector<double> hyb_poles;
     triqs::atom_diag::atom_diag<false> ad;
-    triqs::gfs::block_gf<triqs::mesh::dlr_imtime> G0_ppsc;
-    BlockDiagOpFun G0_bdof;
+    triqs::gfs::block_gf<triqs::mesh::dlr_imtime> G_ppsc;
+    BlockDiagOpFun G_bdof;
 };
 
 /**
@@ -22,9 +22,22 @@ struct OneFermionModelData {
  * @param[in] Lambda DLR cutoff parameter
  * @param[in] eps DLR epsilon parameter
  * @param[in] hyb_pole Pole value for the single-pole hybridization decomposition
- * @return OneFermionModelData containing hybridization coefficients/poles, atom_diag object, and non-interacting propagators
+ * @return FermionModelData containing hybridization coefficients/poles, atom_diag object, and non-interacting propagators
  */
-OneFermionModelData one_fermion_model_helper(double beta, double Lambda, double eps, double hyb_pole = 0.0);
+FermionModelData one_fermion_model_helper(double beta, double Lambda, double eps, double hyb_pole = 0.0);
+
+/**
+ * @brief Helper function for setting up a two-fermion model with interaction U * n0 * n1 and one-pole hybridization
+ * @param[in] beta Inverse temperature
+ * @param[in] Lambda DLR cutoff parameter
+ * @param[in] eps DLR epsilon parameter
+ * @param[in] U Interaction strength
+ * @param[in] mu Chemical potential
+ * @param[in] hyb_pole Pole value for the single-pole hybridization decomposition
+ * @return FermionModelData containing hybridization coefficients/poles, atom_diag object, and non-interacting propagator
+ */
+FermionModelData two_fermion_model_helper(double beta, double Lambda, double eps, double U = 3.0, double mu = 0.0,
+                                          double hyb_pole = -1.5);
 
 /**
  * @brief Convert a Hamiltonian matrix to a non-interacting Green's function matrix in dense storage

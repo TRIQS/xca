@@ -25,44 +25,87 @@ using triqs_xca::block_sparse::DiagramEvaluator;
 using triqs_xca::atom_diag::ad_to_atom_prop;
 using triqs_xca::atom_diag::get_operators_dense;
 
-TEST(two_fermions, one_hyb_pole) {
+/**
+ * @brief Test evaluation of the self-energy for a two-fermion system with a constant hybridization function
+ *
+ * @details This tests the evaluation of the first-, second-, and third-order self-energy diagrams.
+ */
+TEST(two_fermions, const_hyb) {
+  // Generate DLR imaginary-time object
+  double beta   = 2.0;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-12;
+  auto dlr_rf   = build_dlr_rf(Lambda, eps);
+  auto itops    = imtime_ops(Lambda, dlr_rf);
+  int r         = itops.rank();
 
+  // Two-fermion setup with one pole at zero gives the constant-hybridization test case
+  auto two_fermion_model = two_fermion_model_helper(beta, Lambda, eps, 0.0, 0.0, 0.0);
+  auto &hyb_coeffs       = two_fermion_model.hyb_coeffs;
+  auto &hyb_poles        = two_fermion_model.hyb_poles;
+  auto &ad               = two_fermion_model.ad;
+  auto &G_ppsc           = two_fermion_model.G_ppsc;
+  auto &G_bdof           = two_fermion_model.G_bdof;
+
+  // Check that G_ppsc is correct by comparing to analytical expression
+  auto dlr_it = itops.get_itnodes();
+  auto G0_ana = nda::zeros<double>(r);
+  double ln4  = std::numbers::ln2 * 2;
+  for (int i = 0; i < r; ++i) {
+    double t  = rel2abs(dlr_it(i));
+    G0_ana(i) = -exp(-t * ln4);
+  }
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) { ASSERT_LE(nda::max_element(nda::abs(G_bdof.get_block(b)(_, 0, 0) - G0_ana)), eps); }
+
+  // Set up diagram evaluator for self-energy evaluation
+  DiagramEvaluator D(hyb_poles, hyb_coeffs, G_ppsc[0].mesh(), ad);
+
+  // ----- NCA test -----
+  nda::array<int, 2> topology1 = {{0, 1}};
+  auto nca_se                  = D.compute_self_energy(G_ppsc, topology1);
+  auto nca_se_ana              = nda::zeros<double>(r);
+  nca_se_ana                   = -G0_ana;
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) { ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data()(_, 0, 0) - nca_se_ana)), eps); }
+
+  // ----- OCA test -----
+  nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
+  auto oca_se                  = D.compute_self_energy(G_ppsc, topology2);
+  auto oca_se_ana              = nda::zeros<double>(r);
+  for (int i = 0; i < r; ++i) {
+    double t      = rel2abs(dlr_it(i)); // t = tau / beta
+    oca_se_ana(i) = -0.25 * exp(-t * ln4) * t * t * beta * beta;
+  }
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) { ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data()(_, 0, 0) - oca_se_ana)), eps); }
+
+  // ----- third-order test -----
+  nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
+  auto third_order_se          = D.compute_self_energy(G_ppsc, topology3);
+  auto third_order_se_ana      = nda::zeros<double>(r);
+  for (int i = 0; i < r; ++i) {
+    double t              = rel2abs(dlr_it(i)); // t = tau / beta
+    third_order_se_ana(i) = 1.0 / 96 * exp(-t * ln4) * pow(t, 4) * pow(beta, 4);
+  }
+  // third_order_se has three blocks: 1x1, 2x2, and 1x1. Check that all diagonal entries equal the analytical expression
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) {
+    ASSERT_LE(nda::max_element(nda::abs(third_order_se[b].data()(_, 0, 0) - third_order_se_ana)), eps);
+  }
+  ASSERT_LE(nda::max_element(nda::abs(third_order_se[1].data()(_, 1, 1) - third_order_se_ana)), eps);
+}
+
+TEST(two_fermions, one_hyb_pole) {
   double beta   = 2.0;
   double Lambda = 20.0 * beta;
   double eps    = 1.0e-12;
 
-  // set up Hamiltonian
-  triqs::operators::many_body_operator_real H;
-  triqs::atom_diag::fundamental_operator_set fop_set;
-  double mu = 0.0;
-  double U  = 3.0;
-  auto N0   = n("0", 0);
-  auto N1   = n("1", 0);
-  auto Nop  = N0 + N1;
-  H         = -mu * Nop + U * N0 * N1;
-  fop_set.insert("0", 0);
-  fop_set.insert("1", 0);
+  auto two_fermion_model = two_fermion_model_helper(beta, Lambda, eps);
+  auto &hyb_coeffs       = two_fermion_model.hyb_coeffs;
+  auto &hyb_poles        = two_fermion_model.hyb_poles;
+  auto &ad               = two_fermion_model.ad;
+  auto &G_ppsc           = two_fermion_model.G_ppsc;
 
-  // conserved operators
-  std::vector<triqs::operators::many_body_operator_real> sym_ops = {Nop};
-  // std::vector<triqs::operators::many_body_operator_real> sym_ops = {N0, N1};
-
-  // atom_diag object
-  triqs::atom_diag::atom_diag<false> ad(H, fop_set, sym_ops);
-
-  // hybridization with one pole
-  int p    = 1;
   int norb = 2;
-  nda::array<dcomplex, 3> hyb_coeffs(p, norb, norb);
-  hyb_coeffs(0, _, _) = nda::eye(2);
-  // double r0 = 0.5;
-  // hyb_coeffs(0, 0, 1) = r0;
-  // hyb_coeffs(0, 1, 0) = r0;
-  nda::vector<double> hyb_poles(p);
-  hyb_poles = -1.5;
 
   // compute single-particle Green's function for the two-fermion system with one hybridization pole
-  auto G_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
   DiagramEvaluator D(hyb_poles, hyb_coeffs, G_ppsc[0].mesh(), ad);
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto spgf                   = D.compute_single_ptcle_gf(G_ppsc, topology);
