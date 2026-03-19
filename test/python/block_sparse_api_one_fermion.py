@@ -134,7 +134,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(
     conserved_operators = dict(
         none=[],
         total_density=[N_op],
-        automatic=None,
+        automatic='automatic',
         )[conserved_operators]
     
     print(f'conserved_operators = {conserved_operators}')    

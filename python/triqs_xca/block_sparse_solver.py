@@ -34,7 +34,7 @@ def scatter_array_over_ranks(arr):
 
 class BlockSparseSolver(object):
     
-    def __init__(self, H_loc, beta, w_max, eps, gf_struct, conserved_operators=None):
+    def __init__(self, H_loc, beta, w_max, eps, gf_struct, conserved_operators='automatic'):
 
         self.H_loc = H_loc
         self.gf_struct = gf_struct
@@ -56,13 +56,16 @@ class BlockSparseSolver(object):
 
         self.mesh_tau = MeshDLRImTime(beta=self.beta, statistic='Fermion', w_max=self.w_max, eps=self.eps)
 
-        self.Delta_tau = BlockGf(mesh=self.mesh_tau, gf_struct=self.gf_struct)
+        self.Delta_tau = BlockGf(mesh=self.mesh_tau, gf_struct=self.gf_struct, name='Delta_tau')
 
-        if self.conserved_operators is None:
+        print(f'self.H_loc = {self.H_loc}')
+        print(f'self.fundamental_operators = {self.fundamental_operators}')
+        print(f'self.conserved_operators = {self.conserved_operators}')
+
+        if self.conserved_operators == 'automatic':
             # Uses autopartition algorithm for symmetry discovery, when no conserved operators are provided. 
             # This is the default, and recommended, usage.
             self.ad = AtomDiag(self.H_loc, self.fundamental_operators) 
-            self.conserved_operators = 'automatic'
         else:
             self.ad = AtomDiag(self.H_loc, self.fundamental_operators, self.conserved_operators)
 
@@ -151,9 +154,8 @@ class BlockSparseSolver(object):
 
     def set_hybridization_poles_and_coefficients(self, poles, coefficients):
 
-        self.hyb = Dummy()
-        self.hyb.poles = poles
-        self.hyb.coefficients = coefficients
+        self.hyb = PoleRepresentation(poles, coefficients)
+
         if is_root():
             print(f'hyb poles = {len(self.hyb.poles)}')
             #print(f'hyb.poles = {self.hyb.poles}')
@@ -514,6 +516,64 @@ class BlockSparseSolver(object):
         return sol
 
 
+    def __eq__(self, obj):
+
+        for key in self.__dict__.keys():
+            if key not in obj.__dict__.keys():
+                if key != 'd': # -- Skip the diagram evaluator
+                    return False
+        
+        for key in self.__dict__.keys():
+            if key not in self.__skip_keys():
+                a = getattr(self, key)
+                b = getattr(obj, key)                
+                if type(a) == np.ndarray:
+                    if not np.array_equal(a, b):
+                        print(f'BlockSparseSolver: __eq__: attribute {key} differ')
+                        return False
+                elif type(a) is Gf:
+                    if not np.array_equal(a.data, b.data):
+                        print(f'BlockSparseSolver: __eq__: attribute {key} differ')
+                        return False
+                elif type(a) is BlockGf:
+                    for bidx, g in a:
+                        g_b = b[bidx]
+                        if not np.array_equal(g.data, g_b.data):
+                            print(f'BlockSparseSolver: __eq__: attribute {key} differ in block {bidx}')
+                            return False
+                else:
+                    if not a == b:
+                        print(f'BlockSparseSolver: __eq__: attribute {key} differ')
+                        return False
+
+        return True
+
+    
+    def __skip_keys(self):
+        return ['d', 'dysons', 'ad']
+
+
+    def __reduce_to_dict__(self):
+        d = self.__dict__.copy()
+        keys = set(d.keys()).intersection(self.__skip_keys())
+        for key in keys: del d[key]
+        return d
+
+
+    @classmethod
+    def __factory_from_dict__(cls, name, d):
+        arg_keys = ['H_loc', 'beta', 'w_max', 'eps', 'gf_struct', 'conserved_operators']
+        #argv_keys = ['verbose']
+        argv_keys = []
+        #verbose = d['verbose']
+        #d['verbose'] = False # -- Suppress printouts on reconstruction from dict
+        ret = cls(*[ d[key] for key in arg_keys ],
+                  **{ key : d[key] for key in argv_keys })
+        ret.__dict__.update(d)
+        #ret.verbose = verbose
+        return ret
+
+
 def logo():
     """ https://patorjk.com/software/taag/#p=display&f=Red+Phoenix&t=XCA """
     return r"""____  ____________     _____
@@ -524,9 +584,30 @@ def logo():
       \_/        \/         \/  [github.com/TRIQS/xca]"""
 
 
-class Dummy(object):
-    def __init__(self):
-        pass
+class PoleRepresentation(object):
+    def __init__(self, poles, coefficients):
+        self.poles = poles
+        self.coefficients = coefficients
+
+
+    def __eq__(self, obj):
+        return np.array_equal(self.poles, obj.poles) and \
+            np.array_equal(self.coefficients, obj.coefficients)
+
+
+    def __reduce_to_dict__(self):
+        d = self.__dict__.copy()
+        return d
+
+
+    @classmethod
+    def __factory_from_dict__(cls, name, d):
+        arg_keys = ['poles', 'coefficients']
+        argv_keys = []
+        ret = cls(*[ d[key] for key in arg_keys ],
+                  **{ key : d[key] for key in argv_keys })
+        ret.__dict__.update(d)
+        return ret
 
 
 def hamiltonian_matrix(ad):
@@ -717,3 +798,10 @@ def fundamental_operators_from_gf_struct(gf_struct):
     for s, n in gf_struct:
         fundamental_operators += [ (s, i) for i in range(n) ]
     return fundamental_operators
+
+
+# -- Register Solver in Triqs formats
+
+from h5.formats import register_class
+register_class(BlockSparseSolver)
+register_class(PoleRepresentation)

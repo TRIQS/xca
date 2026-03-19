@@ -751,6 +751,7 @@ class Solver(object):
     def __eq__(self, obj):
 
         if obj.__dict__.keys() != self.__dict__.keys():
+            print('BlockSparseSolver: __eq__: dict keys differ')
             return False
         
         for key in self.__dict__.keys():
@@ -758,6 +759,7 @@ class Solver(object):
                 a = getattr(self, key)
                 b = getattr(obj, key)                
                 if not np.equal(a, b).all():
+                    print(f'BlockSparseSolver: __eq__: attribute {key} differ')
                     return False
 
         return True

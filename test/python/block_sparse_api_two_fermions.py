@@ -54,7 +54,7 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
         none=[],
         total_density=[N_op],
         individual_density=[N_0, N_1],
-        automatic=None,
+        automatic='automatic',
         )[conserved_operators]
     
     print(f'conserved_operators = {conserved_operators}')

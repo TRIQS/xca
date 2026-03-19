@@ -14,6 +14,7 @@ set(all_tests
   test_diag
   unitary_invariance
   h5_io
+  h5_io_bs
   dense
   triqs_solver
   one_spinful_fermion
