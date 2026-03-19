@@ -1,5 +1,6 @@
-
 import numpy as np
+
+from collections import defaultdict
 
 import triqs.utility.mpi as mpi
 
@@ -154,8 +155,9 @@ class BlockSparseSolver(object):
         self.hyb.poles = poles
         self.hyb.coefficients = coefficients
         if is_root():
-            print(f'hyb.poles = {self.hyb.poles}')
-            print(f'hyb.coefficients =\n{self.hyb.coefficients}')
+            print(f'hyb poles = {len(self.hyb.poles)}')
+            #print(f'hyb.poles = {self.hyb.poles}')
+            #print(f'hyb.coefficients =\n{self.hyb.coefficients}')
 
         self.init_diagram_evaluator() # FIXME! Evaluator takes hyb poles and coeffs in constructor
 
@@ -180,19 +182,26 @@ class BlockSparseSolver(object):
 
             self.Sigma = self.eval_pseudo_particle_self_energy(self.G, self.max_order)
 
-            if False:
-            #if iter == 1:
-                self.eta = self.beta * get_max_abs_trapz_block_gf(self.Sigma) / 2
-                #self.eta = self.beta * get_max_abs_block_gf(self.Sigma)
-                print(f'self.eta = {self.eta} (initialized to max abs trapz value of self-energy)')
+            #G_new = self.solve_dyson(self.Sigma, self.eta)
+            #G_new = self.normalize_pseudo_particle_gf(G_new)
+
+            self.solve_ppsc_chempot_newton(tol=10*self.eps)
 
             G_new = self.solve_dyson(self.Sigma, self.eta)
-            G_new = self.normalize_pseudo_particle_gf(G_new)
+            Z = self.partition_function_from_ppgf(G_new)
+
+            if np.abs(Z - 1) > 10*self.eps:
+                if is_root(): print(f'solve_ppsc_chempot_adiabatic_ode')
+                self.solve_ppsc_chempot_adiabatic_ode(tol=10*self.eps)
+                self.solve_ppsc_chempot_newton(tol=10*self.eps)
+            
+            G_new = self.solve_dyson(self.Sigma, self.eta)
+
             Z = self.partition_function_from_ppgf(G_new)
 
             diff_G = max_abs_diff_BlockGf(G_new, self.G)
 
-            if is_root(): print(f'iter = {iter}, diff_G = {diff_G:2.2E}, Z-1 = {Z-1:2.2E}')
+            if is_root(): print(f'iter = {iter}, diff_G = {diff_G:2.2E}, Z-1 = {Z-1:+2.2E}')
 
             self.G = mix * G_new + (1 - mix) * self.G
 
@@ -382,7 +391,7 @@ class BlockSparseSolver(object):
         if type(eta) == np.ndarray: eta = eta.item()
         
         Sigma = self.pseudo_particle_self_energy()
-        Ga = self.solve_dyson(alpha * Sigma, eta)
+        Ga = self.solve_dyson(alpha**2 * Sigma, eta)
         Za = self.partition_function_from_ppgf(Ga).real
         return Za    
 
@@ -397,7 +406,7 @@ class BlockSparseSolver(object):
         if type(eta) == np.ndarray: eta = eta.item()
 
         Sigma = self.pseudo_particle_self_energy()
-        G = self.solve_dyson(alpha * Sigma, eta)
+        G = self.solve_dyson(alpha**2 * Sigma, eta)
         dZ_deta = -trace(conv(G, G)).real
         return dZ_deta
 
@@ -412,10 +421,10 @@ class BlockSparseSolver(object):
 
         """
         Sigma = self.pseudo_particle_self_energy()
-        Ga = self.solve_dyson(alpha * Sigma, eta)
+        Ga = self.solve_dyson(alpha**2 * Sigma, eta)
         TrGaGa = -trace(conv(Ga, Ga)).real
         TrGaSigmaGa = -trace(conv(Ga, conv(Sigma, Ga)))
-        deta_dalpha = - TrGaSigmaGa / TrGaGa
+        deta_dalpha = - 2 * alpha * TrGaSigmaGa / TrGaGa
         return deta_dalpha.real
 
 
@@ -436,9 +445,11 @@ class BlockSparseSolver(object):
 
         """
 
+        print('--> d2eta_dalpha_deta')
+
         Sigma = self.pseudo_particle_self_energy()
 
-        Ga = self.solve_dyson(alpha * Sigma, eta)
+        Ga = self.solve_dyson(alpha**2 * Sigma, eta)
         
         Ga2 = conv(Ga, Ga)
         Ga3 = conv(Ga, Ga2)
@@ -446,15 +457,16 @@ class BlockSparseSolver(object):
         TrGa2 = -trace(Ga2)
         TrGa3 = -trace(Ga3)
 
-        TrGa2SigmaGa = -trace(conv(Ga2, conv(Sigma, Ga)))
-        TrGaSigmaGa2 = -trace(conv(Ga, conv(Sigma, Ga2)))
+        TrGaSigmaGa  = -trace(conv(Ga,  conv(Sigma, Ga )))
+        TrGa2SigmaGa = -trace(conv(Ga2, conv(Sigma, Ga )))
+        TrGaSigmaGa2 = -trace(conv(Ga,  conv(Sigma, Ga2)))
         
-        d2eta_dalpha_deta = -(TrGa2SigmaGa + TrGaSigmaGa2)/TrGa2 + 2*TrGa3/TrGa2**2
+        d2eta_dalpha_deta = -2*alpha * ((TrGa2SigmaGa + TrGaSigmaGa2)/TrGa2 - 2*TrGaSigmaGa*TrGa3/TrGa2**2)
         
         return d2eta_dalpha_deta.real
     
     
-    def solve_ppsc_chempot_adiabatic_ode(self, tol=1e-9, method='LSODA'):
+    def solve_ppsc_chempot_adiabatic_ode(self, tol=1e-9, method='DOP853'):
 
         func = lambda t, y : self.deta_dalpha(t, y[0])
         jac = lambda t, y : np.array([self.d2eta_dalpha_deta(t, y[0])]).reshape(1, 1)
@@ -464,18 +476,19 @@ class BlockSparseSolver(object):
         sol = solve_ivp(
             func, (0., 1.), 
             np.array([0.]), 
-            jac=jac,
+            #jac=jac,
             atol=tol, 
             method=method,
             dense_output=True,
             )
         
         self.eta = sol.y[0, -1]
-        self.G = self.solve_dyson(self.Sigma, self.eta)
-        self.Z = self.partition_function_from_ppgf(self.G)
+        G = self.solve_dyson(self.Sigma, self.eta)
+        Z = self.partition_function_from_ppgf(G)
         
-        print(f'PPSC: Chempot eta from adiabatic ODE: Z-1={self.Z-1:+2.2E}')
+        if is_root(): print(f'PPSC: Chempot eta from adiabatic ODE: Z-1={Z-1:+2.2E}')
         return sol
+
 
     def solve_ppsc_chempot_newton(self, tol=1e-9):
 
@@ -493,10 +506,10 @@ class BlockSparseSolver(object):
         
         self.eta = sol.root
 
-        self.G = self.solve_dyson(self.Sigma, self.eta)
-        Z = self.partition_function()
+        G = self.solve_dyson(self.Sigma, self.eta)
+        Z = self.partition_function_from_ppgf(G)
 
-        print(f'PPSC: Newton eta = {self.eta:+2.2E} Z-1={Z-1:+2.2E}')
+        #if is_root(): print(f'PPSC: Newton eta = {self.eta:+2.2E} Z-1 = {Z-1:+2.2E}')
 
         return sol
 
@@ -606,26 +619,44 @@ def atomic_pseudo_particle_greens_function(ad, beta, mesh_tau):
 
 def print_atom_diag_info(ad, verbose=False):
 
-    print(r"""   _____    __                   ________   .___    _____     ________
-  /  _  \ _/  |_  ____    _____  \______ \  |   |  /  _  \   /  _____/
- /  /_\  \\   __\/  _ \  /     \  |    |  \ |   | /  /_\  \ /   \  ___
-/    |    \|  | (  <_> )|  Y Y  \ |    `   \|   |/    |    \\    \_\  \
-\____|__  /|__|  \____/ |__|_|  //_______  /|___|\____|__  / \______  /
-        \/                    \/         \/              \/         \/  """)
+    if False:
+        print(r"""   _____    __                   ________   .___    _____     ________
+    /  _  \ _/  |_  ____    _____  \______ \  |   |  /  _  \   /  _____/
+    /  /_\  \\   __\/  _ \  /     \  |    |  \ |   | /  /_\  \ /   \  ___
+    /    |    \|  | (  <_> )|  Y Y  \ |    `   \|   |/    |    \\    \_\  \
+    \____|__  /|__|  \____/ |__|_|  //_______  /|___|\____|__  / \______  /
+            \/                    \/         \/              \/         \/  """)
 
-    print(ad)
+    print(f'Triqs: AtomDiag')
+    print(f'full_hilbert_space_dim = {ad.full_hilbert_space_dim}')
+    print(f'n_subspaces = {ad.n_subspaces}')
+
+    hist = defaultdict(int)
+    for dim in ad.get_subspace_dims():
+        hist[dim] += 1
+
+    subspace_dims = np.array(list(hist.keys()))
+    num_subspaces_per_dim = np.array(list(hist.values()))
+
+    sidx = np.argsort(subspace_dims)
+
+    print(f'subspace_dims = {subspace_dims[sidx]}')
+    print(f'num_subspaces_per_dim = {num_subspaces_per_dim[sidx]}')
+
+    print(f'gs_energy = {ad.gs_energy}')
+    emin = np.min([np.min(x) for x in ad.energies])
+    emax = np.max([np.max(x) for x in ad.energies])
+    print(f'energies min/max = {emin:+2.2E} / {emax:+2.2E}')
+
     if verbose:
-        print(f'full_hilbert_space_dim = {ad.full_hilbert_space_dim}')
-        print(f'n_subspaces = {ad.n_subspaces}')
-        print(f'get_subspace_dims = {ad.get_subspace_dims()}')
+        print(f'subspace_dims = {ad.get_subspace_dims()}')
         print(f'fops = {ad.fops}')
         print(f'quantum_numbers = {ad.quantum_numbers}')
         print(f'fock_states = {ad.fock_states}')
         print(f'unitary_matrics = {ad.unitary_matrices}')
-        print(f'gs_energy = {ad.gs_energy}')
         print(f'energies = {ad.energies}')
         print(f'energies + gs_energy = {[ e + ad.gs_energy for e in ad.energies]}')
-    print('-'*72)
+        print(ad)
 
 
 def max_abs_diff_BlockGf(G1, G2):

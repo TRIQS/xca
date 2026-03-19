@@ -62,6 +62,7 @@ def test_block_sparse_self_cons(verbose=False):
     # to alpha = 1 and eta for Sigma!
 
     sol = S.solve_ppsc_chempot_adiabatic_ode(tol=10*eps)
+    #sol = S.solve_ppsc_chempot_adiabatic_ode_3rd(tol=10*eps)
     S.solve_ppsc_chempot_newton(tol=10*eps)
     
     sol.Za = np.array([ S.Z_alpha(alpha, eta) \
@@ -75,8 +76,9 @@ def test_block_sparse_self_cons(verbose=False):
     Zs = np.array([ S.Z_alpha(1., eta) for eta in etas ]).T
     dZ_detas = np.array([ S.dZ_alpha_deta(1., eta) for eta in etas ]).T
 
-    deta_dalpha = np.array([ S.deta_dalpha(0., eta) for eta in etas ])
-    d2eta_dalpha_deta = np.array([ S.d2eta_dalpha_deta(0., eta) for eta in etas ])
+    afix = 0.01
+    deta_dalpha = np.array([ S.deta_dalpha(afix, eta) for eta in etas ])
+    d2eta_dalpha_deta = np.array([ S.d2eta_dalpha_deta(afix, eta) for eta in etas ])
 
     etas_f = np.linspace(np.max(sol.y[0]) * 0.995, np.max(sol.y[0]) * 1.005, num=400)
 
@@ -146,7 +148,7 @@ def test_block_sparse_self_cons(verbose=False):
 
     plt.subplot(*subp); subp[-1] += 1
     plt.plot(etas, d2eta_dalpha_deta, '.')
-    plt.plot(etas, d2eta_dalpha_deta/2, 'x')
+    #plt.plot(etas, d2eta_dalpha_deta/2, 'x')
     #plt.plot(etas, d2eta_dalpha_deta - d2eta_dalpha_deta[0], 'x')
     plt.plot(etas_f, spl_d2eta_dalpha_deta(etas_f), '-')
     plt.ylabel(r'$d/d\eta ( d\eta / d\alpha )$')
