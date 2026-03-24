@@ -111,14 +111,14 @@ def test_block_sparse_self_cons(verbose=False):
     g_diff = np.max(np.abs(g_BSS['0'].data - g_S['0'].data))
     print(f'g_diff = {g_diff:2.2E}')
 
-    from triqs.plot.mpl_interface import oplot, plt, oplotr, oploti
-    from triqs.gf import make_gf_imtime
-
-    G_BSS_tau = make_gf_imtime(G_BSS, n_tau=400)
-    Sigma_BSS_tau = make_gf_imtime(Sigma_BSS, n_tau=400)
-    g_BSS_tau = make_gf_imtime(g_BSS, n_tau=400)
-
     if verbose:
+        from triqs.plot.mpl_interface import oplot, plt, oplotr, oploti
+        from triqs.gf import make_gf_imtime
+
+        G_BSS_tau = make_gf_imtime(G_BSS, n_tau=400)
+        Sigma_BSS_tau = make_gf_imtime(Sigma_BSS, n_tau=400)
+        g_BSS_tau = make_gf_imtime(g_BSS, n_tau=400)
+
         plt.figure(figsize=(8, 9))
 
         subp = [2, 2, 1]
