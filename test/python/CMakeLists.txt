@@ -25,6 +25,7 @@ set(all_tests
   block_sparse_self_cons
   block_sparse_bethe
   bug_bs_one_fermion
+  volterra_integral
   )
 
 foreach(test ${all_tests})
