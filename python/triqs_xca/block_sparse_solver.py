@@ -607,7 +607,7 @@ def logo():
 class PoleRepresentation(object):
     def __init__(self, poles, coefficients):
         self.poles = poles
-        self.coefficients = coefficients
+        self.coefficients = np.asarray(coefficients, order='C', copy=True)
 
 
     def __eq__(self, obj):
