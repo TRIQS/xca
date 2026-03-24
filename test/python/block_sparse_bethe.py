@@ -14,12 +14,13 @@ def test_block_sparse_self_cons(verbose=False):
     
     eps = 1e-12
     w_max = 10.0
-    tol = 1e-10
+    ppsc_tol = 1e-8
 
     order = 1
     maxiter = 100
     dmft_maxiter = 100
-    dmft_tol = 1e-8
+    dmft_tol = 1e-6
+    delta_tol = 1e-8
 
     gf_struct = [['0', 1]]
 
@@ -43,7 +44,7 @@ def test_block_sparse_self_cons(verbose=False):
 
     for iter in range(1, dmft_maxiter+1):
 
-        S.solve(h_int=H, order=order, maxiter=maxiter, tol=tol, 
+        S.solve(h_int=H, order=order, maxiter=maxiter, tol=ppsc_tol, 
                 compress_hybridization=True, update_eta_exact=False)
 
         print(f'S.S.eta = {S.S.eta:2.2E}')
@@ -78,7 +79,10 @@ def test_block_sparse_self_cons(verbose=False):
  
     for iter in range(1, dmft_maxiter+1):
 
-        BSS.solve(max_order=order, tol=tol, maxiter=maxiter)
+        BSS.solve(
+            max_order=order, tol=ppsc_tol, 
+            delta_tol=delta_tol,
+            maxiter=maxiter)
 
         g_BSS = BSS.G_tau
 
