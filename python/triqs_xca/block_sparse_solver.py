@@ -62,21 +62,21 @@ class BlockSparseSolver(object):
 
         self.Delta_tau = BlockGf(mesh=self.mesh_tau, gf_struct=self.gf_struct, name='Delta_tau')
 
-        print(f'self.H_loc = {self.H_loc}')
-        print(f'self.fundamental_operators = {self.fundamental_operators}')
-        print(f'self.conserved_operators = {self.conserved_operators}')
-
+        self.timer.start('AtomDiag')
         if self.conserved_operators == 'automatic':
             # Uses autopartition algorithm for symmetry discovery, when no conserved operators are provided. 
             # This is the default, and recommended, usage.
             self.ad = AtomDiag(self.H_loc, self.fundamental_operators) 
         else:
             self.ad = AtomDiag(self.H_loc, self.fundamental_operators, self.conserved_operators)
+        self.timer.stop()
 
         if is_root(): 
             print(f'mesh: {self.mesh_tau}')
             print_atom_diag_info(self.ad)
 
+        self.timer.start('Dyson')
+        self.timer.start('setup')
         self.G0 = atomic_pseudo_particle_greens_function(self.ad, self.beta, self.mesh_tau)
         self.G = self.G0.copy()
         self.Sigma = self.get_zero_pseudo_particle_propagator()
@@ -88,11 +88,13 @@ class BlockSparseSolver(object):
 
         self.dysons = [DysonItPPSC(self.beta, ito, G0_block.data) for _, G0_block in self.G0]
     
+        self.timer.stop()
+        self.timer.stop()
 
     @timer('Fit hybridization')
-    def fit_hybridization(self, tol=None, use_polefitting_dlr=False):
+    def fit_hybridization(self, tol=None, use_polefitting_dlr=True, verbose=False):
 
-        self.tol_adapol = self.eps if tol is None else tol
+        self.tol_adapol = 100 * self.eps if tol is None else tol
 
         if use_polefitting_dlr:
             #Delta_dlr = make_gf_dlr(self.Delta_tau)
@@ -105,7 +107,7 @@ class BlockSparseSolver(object):
             from adapol.fit_utils_dlr import polefitting_dlr_triqs
             Delta_tau_dense = self.__from_blockgf_to_dense(self.Delta_tau)
             pole_weights, poles, fit_error = polefitting_dlr_triqs(
-                Delta_tau_dense, eps=self.tol_adapol, statistics="Fermion", verbose=True)
+                Delta_tau_dense, eps=self.tol_adapol, statistics="Fermion", verbose=verbose)
 
             pole_weights *= -1. # FIXME! Why is this necessary? Is there a sign convention issue in polefitting_dlr?
 
@@ -119,7 +121,7 @@ class BlockSparseSolver(object):
         #print(f'poles_ref = {poles_ref}')
         #print(f'pole_weights     =\n{pole_weights}')
         #print(f'pole_weights_ref =\n{pole_weights_ref}')
-        
+        print(f'tol = {tol}, self.tol_adapol = {self.tol_adapol:2.2E}, fit_error = {fit_error:2.2E}')
         self.set_hybridization_poles_and_coefficients(poles, pole_weights)
 
         self.hyb.fit_error = fit_error
@@ -181,8 +183,10 @@ class BlockSparseSolver(object):
 
         self.max_order = max_order
         self.delta_tol = delta_tol if delta_tol is not None else 0.1 * tol
+        
+        print(f'delta_tol = {delta_tol}, self.delta_tol = {self.delta_tol:2.2E}')
 
-        self.fit_hybridization(tol=tol)
+        self.fit_hybridization(tol=self.delta_tol)
         self.init_diagram_evaluator() # FIXME! Evaluator takes hyb poles and coeffs in constructor
 
         for iter in range(1, maxiter+1):
@@ -192,6 +196,7 @@ class BlockSparseSolver(object):
             #G_new = self.solve_dyson(self.Sigma, self.eta)
             #G_new = self.normalize_pseudo_particle_gf(G_new)
 
+            self.timer.start('Dyson')
             self.solve_ppsc_chempot_newton(tol=10*self.eps)
 
             G_new = self.solve_dyson(self.Sigma, self.eta)
@@ -205,6 +210,7 @@ class BlockSparseSolver(object):
             G_new = self.solve_dyson(self.Sigma, self.eta)
 
             Z = self.partition_function_from_ppgf(G_new)
+            self.timer.stop()
 
             diff_G = max_abs_diff_BlockGf(G_new, self.G)
 
@@ -271,7 +277,6 @@ class BlockSparseSolver(object):
         return self.partition_function_from_ppgf(self.G)
 
 
-    @timer('Dyson')
     def solve_dyson(self, Sigma, eta):
 
         assert type(Sigma) is BlockGf, 'Sigma must be a BlockGf'
@@ -294,7 +299,8 @@ class BlockSparseSolver(object):
         self.Sigma = self.get_zero_pseudo_particle_propagator()
 
         for order in range(1, max_order+1):
-            self.Sigma += self.eval_pseudo_particle_self_energy_order(G, order)
+            with self.timer(f'Order {order}'):
+                self.Sigma += self.eval_pseudo_particle_self_energy_order(G, order)
 
         return self.Sigma
 
@@ -351,7 +357,8 @@ class BlockSparseSolver(object):
         self.spgf = self.get_zero_single_particle_greens_function()
 
         for order in range(1, max_order+1):
-            self.spgf += self.eval_single_particle_greens_function_order(G, order)
+            with self.timer(f'Order {order}'):
+                self.spgf += self.eval_single_particle_greens_function_order(G, order)
         
         return self.spgf
 
@@ -479,7 +486,7 @@ class BlockSparseSolver(object):
         return d2eta_dalpha_deta.real
     
     
-    @timer('PPSC chempot ODE')
+    @timer('ODE normalization')
     def solve_ppsc_chempot_adiabatic_ode(self, tol=1e-9, method='DOP853'):
 
         func = lambda t, y : self.deta_dalpha(t, y[0])
@@ -504,7 +511,7 @@ class BlockSparseSolver(object):
         return sol
 
 
-    @timer('PPSC chempot Newton')
+    @timer('Newton normalization')
     def solve_ppsc_chempot_newton(self, tol=1e-9):
 
         f = lambda eta : self.Z_alpha(1., eta) - 1
@@ -721,7 +728,7 @@ def print_atom_diag_info(ad, verbose=False):
     \____|__  /|__|  \____/ |__|_|  //_______  /|___|\____|__  / \______  /
             \/                    \/         \/              \/         \/  """)
 
-    print(f'Triqs: AtomDiag')
+    print(f'Triqs: AtomDiag {type(ad)}')
     print(f'full_hilbert_space_dim = {ad.full_hilbert_space_dim}')
     print(f'n_subspaces = {ad.n_subspaces}')
 
