@@ -2,7 +2,7 @@
 # Name of the module will be package_name.module_filename
 package_name = "triqs_xca"
 
-# The documentation string of the module. 
+# The documentation string of the module.
 documentation = ""
 
 # List of namespaces as a space separated string e.g. "A A::B"
@@ -11,13 +11,13 @@ documentation = ""
 namespaces = ""
 
 # Match/reject elements according to a regex (LLVM regex)
-# If match_names/match_names are both set, the algorithm is 
+# If match_names/match_names are both set, the algorithm is
 #  for X of fully qualified name qname
 #    if match_names and match_names does not match Qname : skip X
 #    if reject_names and reject_names matches Qname : skip X
 #    else keep X.
 #
-match_names = "(DiagramEvaluator|expectation_value|convolve_ppsc|trace)" 
+match_names = "(DiagramEvaluator|expectation_value|convolve_ppsc|trace)"
 reject_names = ""
 
 # Only keep elements declared in files matching the pattern

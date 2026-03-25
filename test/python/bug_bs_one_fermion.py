@@ -52,6 +52,6 @@ coefficients = np.array([ [[1.0]],  [[0.1]] ], dtype=complex)
 print(poles.shape)
 print(coefficients.shape)
 
-from triqs_xca import DiagramEvaluator
+from triqs_xca.block_sparse import DiagramEvaluator
 
 d = DiagramEvaluator(poles, coefficients, mesh_tau, ad)

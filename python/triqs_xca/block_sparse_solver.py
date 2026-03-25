@@ -14,11 +14,11 @@ from .diag import all_connected_pairings
 
 from .dlr_dyson_ppsc import DysonItPPSC
 
-from . import DiagramEvaluator
+from .block_sparse import DiagramEvaluator
 from .dense import DenseDiagramEvaluator
 
-from .module import trace
-from .module import convolve_ppsc as conv
+from .block_sparse import trace
+from .block_sparse import convolve_ppsc as conv
 
 from .ase.utils.timing import Timer, timer
 

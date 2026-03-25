@@ -26,7 +26,7 @@ template <> constexpr bool c2py::is_wrapped<triqs_xca::block_sparse::DiagramEval
 
 // ==================== module classes =====================
 
-template <> inline constexpr auto c2py::tp_name<triqs_xca::block_sparse::DiagramEvaluator> = "triqs_xca.module.DiagramEvaluator";
+template <> inline constexpr auto c2py::tp_name<triqs_xca::block_sparse::DiagramEvaluator> = "triqs_xca.block_sparse.DiagramEvaluator";
 static auto init_0                                                                         = c2py::dispatcher_c_kw_t{
    c2py::c_constructor<triqs_xca::block_sparse::DiagramEvaluator, nda::vector_const_view<double>, nda::array_const_view<nda::dcomplex, 3>,
                                                                                                triqs::mesh::dlr_imtime, const triqs::atom_diag::atom_diag<1> &>("hyb_poles", "hyb_coeffs", "tau_mesh", "ad"),
@@ -247,7 +247,7 @@ static PyMethodDef module_methods[] = {
 //// module doc directly in the code or "" if not present...
 /// Or mandatory ?
 static struct PyModuleDef module_def = {PyModuleDef_HEAD_INIT,
-                                        "module",          /* name of module */
+                                        "block_sparse",    /* name of module */
                                         R"RAWDOC()RAWDOC", /* module documentation, may be NULL */
                                         -1, /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
                                         module_methods,
@@ -258,9 +258,9 @@ static struct PyModuleDef module_def = {PyModuleDef_HEAD_INIT,
 
 //--------------------- module init function -----------------------------
 
-extern "C" __attribute__((visibility("default"))) PyObject *PyInit_module() {
+extern "C" __attribute__((visibility("default"))) PyObject *PyInit_block_sparse() {
 
-  if (not c2py::check_python_version("module")) return NULL;
+  if (not c2py::check_python_version("block_sparse")) return NULL;
 
   // import numpy iff 'numpy/arrayobject.h' included
 #ifdef Py_ARRAYOBJECT_H
