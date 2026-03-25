@@ -23,11 +23,11 @@ F4 = 0.3
 
 mu = (45*F0 - 70/49*F2 - 630/441*F4) / 10. # For half-filling of the d-shell
 
-eps = 1e-6
+eps = 1e-3
 #w_max = 75.0 * F0 # 10 electrons with energy scale 75 * F0
 w_max = 40.
 
-ppsc_tol = 1e-4
+ppsc_tol = 1e-2
 ppsc_maxiter = 10
 
 # --
@@ -43,17 +43,22 @@ from triqs.operators import n
 N_tot = sum( n(spin, oidx) for spin in spin_names for oidx in range(n_orb) )
 H += - mu * N_tot
 
+from triqs.gf import SemiCircular
 from triqs.gf import MeshDLRImFreq, Gf, make_gf_dlr_imtime, iOmega_n, inverse
 
 mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=w_max, eps=eps)
 Delta_w = Gf(mesh=mesh_w, target_shape=[n_orb]*2)
 
-Delta_w << inverse(iOmega_n)
+#Delta_w << inverse(iOmega_n)
+Delta_w << SemiCircular(half_bandwidth=1.0)
 Delta_tau = make_gf_dlr_imtime(Delta_w)
 
 from triqs_xca.block_sparse_solver import BlockSparseSolver
 
-S = BlockSparseSolver(H, beta, w_max, eps, gf_struct)
+S = BlockSparseSolver(
+    H, beta, w_max, eps, gf_struct, 
+    conserved_operators=[N_tot],
+    )
 
 S.Delta_tau['up'] << Delta_tau
 S.Delta_tau['do'] << Delta_tau
