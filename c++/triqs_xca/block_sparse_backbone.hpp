@@ -135,13 +135,10 @@ class DiagramEvaluator {
    * @param[in] G_ppsc pseudo-particle Green's function at imaginary time nodes
    * @param[in] ad atom_diag object with Hamiltonian and field operators
    */
+  template<bool isComplex> 
   DiagramEvaluator(
     nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-    triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<true> const &ad);
-
-  DiagramEvaluator(
-    nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-    triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<false> const &ad);
+    triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<isComplex> const &ad);
 
   /**
    * @brief Old constructor for DiagramEvaluator

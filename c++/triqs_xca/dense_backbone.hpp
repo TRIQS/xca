@@ -130,11 +130,9 @@ namespace triqs_xca::dense {
        * @param[in] tau_mesh TRIQS imagnary time DLR mesh
        * @param[in] ad TRIQS atom_diag object with Hamiltonian and field operators
        */
+    template<bool isComplex>
     DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs, triqs::mesh::dlr_imtime tau_mesh,
-                          triqs::atom_diag::atom_diag<true> const &ad);
-
-   DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs, triqs::mesh::dlr_imtime tau_mesh,
-                    triqs::atom_diag::atom_diag<false> const &ad);
+                          triqs::atom_diag::atom_diag<isComplex> const &ad);
 
     virtual ~DenseDiagramEvaluator() = default;
   };

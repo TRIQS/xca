@@ -61,7 +61,7 @@ ad : {par_6}
                {c2py::python_typename<nda::vector_const_view<double>>()},
                {c2py::python_typename<nda::array_const_view<nda::dcomplex, 3>>()},
                {},
-               {c2py::python_typename<const triqs::atom_diag::atom_diag<1> &>()}});
+               {c2py::python_typename<const triqs::atom_diag::atom_diag<1> &>(), c2py::python_typename<const triqs::atom_diag::atom_diag<0> &>()}});
 // compute_self_energy
 static auto const fun_0 = c2py::dispatcher_f_kw_t{
    c2py::cmethod([](triqs_xca::block_sparse::DiagramEvaluator &self, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc,

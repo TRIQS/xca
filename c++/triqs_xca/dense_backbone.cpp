@@ -35,8 +35,9 @@ namespace triqs_xca::dense {
        Tkaps(nda::zeros<dcomplex>(n, r, N, N)), // Largest memory footprint, speeding up multiply_left_vertex_and_right_zero_vertex
        Tmu(nda::zeros<dcomplex>(r, N, N)) {}
 
+  template<bool isComplex>
   DenseDiagramEvaluator::DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-                                               triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<true> const &ad)
+                                               triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<isComplex> const &ad)
      : tau_mesh(tau_mesh),
        beta(tau_mesh.beta()),
        itops(tau_mesh.dlr_it()),
@@ -54,24 +55,17 @@ namespace triqs_xca::dense {
        Tkaps(nda::zeros<dcomplex>(n, r, N, N)), // Largest memory footprint, speeding up multiply_left_vertex_and_right_zero_vertex
        Tmu(nda::zeros<dcomplex>(r, N, N)) {}
 
-  DenseDiagramEvaluator::DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-                                               triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<false> const &ad)
-     : tau_mesh(tau_mesh),
-       beta(tau_mesh.beta()),
-       itops(tau_mesh.dlr_it()),
-       dlr_it(itops.get_itnodes()),
-       hyb(tau_mesh, hyb_poles, hyb_coeffs, -1.0),
-       Fset(get_operators_dense(ad, hyb_coeffs)),
-       r(itops.rank()),
-       n(ad.get_fops().size()), // number of fermion flavours (spin-orbitals)
-       N(ad.get_full_hilbert_space_dim()),
-       // allocate arrays
-       Sigma(nda::zeros<dcomplex>(r, N, N)),
-       T(nda::zeros<dcomplex>(r, N, N)),
-       U(nda::zeros<dcomplex>(r, N, N)),
-       GKt(nda::zeros<dcomplex>(r, N, N)),
-       Tkaps(nda::zeros<dcomplex>(n, r, N, N)), // Largest memory footprint, speeding up multiply_left_vertex_and_right_zero_vertex
-       Tmu(nda::zeros<dcomplex>(r, N, N)) {}
+  template DenseDiagramEvaluator::DenseDiagramEvaluator(
+    nda::vector_const_view<double> hyb_poles,
+    nda::array_const_view<dcomplex, 3> hyb_coeffs,
+    triqs::mesh::dlr_imtime tau_mesh,
+    triqs::atom_diag::atom_diag<true> const &ad);
+
+  template DenseDiagramEvaluator::DenseDiagramEvaluator(
+    nda::vector_const_view<double> hyb_poles,
+    nda::array_const_view<dcomplex, 3> hyb_coeffs,
+    triqs::mesh::dlr_imtime tau_mesh,
+    triqs::atom_diag::atom_diag<false> const &ad);
 
   void DenseDiagramEvaluator::reset() {
     T     = 0;

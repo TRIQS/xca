@@ -10,4 +10,14 @@
 
 #include "pycppdlr.wrap.hxx"
 
+extern template
+triqs_xca::dense::DenseDiagramEvaluator::DenseDiagramEvaluator(
+    nda::vector_const_view<double>, nda::array_const_view<dcomplex, 3>,
+    triqs::mesh::dlr_imtime, triqs::atom_diag::atom_diag<true> const &);
+
+extern template
+triqs_xca::dense::DenseDiagramEvaluator::DenseDiagramEvaluator(
+    nda::vector_const_view<double>, nda::array_const_view<dcomplex, 3>,
+    triqs::mesh::dlr_imtime, triqs::atom_diag::atom_diag<false> const &);
+
 #include "dense.wrap.cxx"
