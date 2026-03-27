@@ -91,10 +91,10 @@ def solve_slater_condon_bethe_half_filling(
 if __name__ == '__main__':
 
     opts = dict(
-        beta=1.0,
+        beta=10.0,
         eps=1e-9,
         ppsc_tol=1e-4,
-        ppsc_maxiter=10,
+        ppsc_maxiter=0,
         order=1,
         )
 
