@@ -721,6 +721,7 @@ namespace triqs_xca::block_sparse {
 
     for( auto bidx : range(op_blocks.block_mat.size()) ) {
       assert( op_blocks.connection[bidx] == bidx );
+      if( op_blocks.block_mat[bidx].shape(0) == 0 ) continue; // skip empty blocks
       auto g_dlr = make_gf_dlr(G_ppsc[bidx]);
       sum += -trace(matmul(op_blocks.block_mat[bidx], g_dlr(beta)));
     }
