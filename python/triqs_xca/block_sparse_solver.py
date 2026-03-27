@@ -19,6 +19,7 @@ from .dense import DenseDiagramEvaluator
 
 from .block_sparse import trace
 from .block_sparse import convolve_ppsc as conv
+from .block_sparse import expectation_value
 
 from .ase.utils.timing import Timer, timer
 
@@ -191,13 +192,14 @@ class BlockSparseSolver(object):
 
         for iter in range(1, maxiter+1):
 
+            if is_root(): print(f'Sigma max_order = {self.max_order}')
             self.Sigma = self.eval_pseudo_particle_self_energy(self.G, self.max_order)
 
             #G_new = self.solve_dyson(self.Sigma, self.eta)
             #G_new = self.normalize_pseudo_particle_gf(G_new)
 
             self.timer.start('Dyson')
-            self.solve_ppsc_chempot_newton(tol=10*self.eps)
+            self.solve_ppsc_chempot_newton(xtol=10*self.eps, maxiter=10)
 
             G_new = self.solve_dyson(self.Sigma, self.eta)
             Z = self.partition_function_from_ppgf(G_new)
@@ -205,7 +207,7 @@ class BlockSparseSolver(object):
             if np.abs(Z - 1) > 10*self.eps:
                 if is_root(): print(f'solve_ppsc_chempot_adiabatic_ode')
                 self.solve_ppsc_chempot_adiabatic_ode(tol=10*self.eps)
-                self.solve_ppsc_chempot_newton(tol=10*self.eps)
+                self.solve_ppsc_chempot_newton(xtol=10*self.eps)
             
             G_new = self.solve_dyson(self.Sigma, self.eta)
 
@@ -266,8 +268,11 @@ class BlockSparseSolver(object):
         
         """
         
-        Z = -trace_dlr_imtime_BlockGf(G)
-        assert(Z.imag < 1e-12)
+        #Z = -trace_dlr_imtime_BlockGf(G)
+        Z = -trace(G)
+        print(f'partition_function_from_ppgf: Z = {Z}, eps = {self.eps}')
+        #assert(Z.imag < 1e-12)
+        #assert(Z.imag < 10 * self.eps)
         Z = Z.real
 
         return Z
@@ -277,6 +282,11 @@ class BlockSparseSolver(object):
         return self.partition_function_from_ppgf(self.G)
 
 
+    def expectation_value(self, operator):
+        return expectation_value(operator, self.ad, self.G)
+    
+
+    @timer('solve_dyson')
     def solve_dyson(self, Sigma, eta):
 
         assert type(Sigma) is BlockGf, 'Sigma must be a BlockGf'
@@ -284,7 +294,10 @@ class BlockSparseSolver(object):
         G = self.get_zero_pseudo_particle_propagator()
 
         for dyson, (bidx, sigma_b) in zip(self.dysons, Sigma):
+            #if is_root(): print(f'solve_dyson: block {bidx}, sigma_b.data.shape = {sigma_b.data.shape}')
+            #self.timer.start(f'Dyson block {bidx}')
             G[bidx].data[:] = dyson.solve(sigma_b.data, eta)
+            #self.timer.stop()
 
         return G
 
@@ -310,6 +323,7 @@ class BlockSparseSolver(object):
         Sigma = self.get_zero_pseudo_particle_propagator()
         
         for sign, topology in all_connected_pairings(order):
+            if is_root(): print(f'  eval_pseudo_particle_self_energy_order: order = {order}, topology = {topology}, sign = {sign}')
             topology = np.array(topology, dtype=np.int32)
             Sigma +=  pow(-1, order) * sign * \
                 self.eval_pseudo_particle_self_energy_topology_loop(G, topology) # FIXME! Signs
@@ -329,7 +343,13 @@ class BlockSparseSolver(object):
         n_max = self.d.get_num_self_energy_backbones(topology)
         n_vec = scatter_array_over_ranks(np.arange(n_max))
 
-        for n in n_vec:
+        if is_root():
+            from tqdm import tqdm
+            loop = tqdm
+        else:
+            loop = lambda x: x
+
+        for n in loop(n_vec):
             Sigma += pow(-1, order+1) * self.d.compute_self_energy(G, topology, n) # FIXME! Sign convention.
 
         for bidx, sigma_b in Sigma:
@@ -408,6 +428,9 @@ class BlockSparseSolver(object):
             Z_\alpha = - \textrm{Tr} \left[ G_\alpha (\beta) \right]
         
         """
+
+        if is_root(): print(f'Z_alpha: alpha = {alpha}, eta = {eta}')
+
         if type(eta) == np.ndarray: eta = eta.item()
         
         Sigma = self.pseudo_particle_self_energy()
@@ -423,12 +446,48 @@ class BlockSparseSolver(object):
         .. math::
             \frac{d Z_\alpha}{d \eta} = - \textr{Tr} \left[G_\alpha G_\alpha \right]
         """
+
+        if is_root(): print(f'dZ_alpha_deta: alpha = {alpha}, eta = {eta}')
+
         if type(eta) == np.ndarray: eta = eta.item()
 
         Sigma = self.pseudo_particle_self_energy()
         G = self.solve_dyson(alpha**2 * Sigma, eta)
         dZ_deta = -trace(conv(G, G)).real
         return dZ_deta
+
+
+    def Z_alpha_minus_one_and_derivative(self, alpha, eta):
+        r""" Compute Z_alpha - 1 and its derivative with respect to eta, for root finding in the Newton solver. """
+
+        if is_root(): print(f'Z_alpha_minus_one_and_derivative: alpha = {alpha}, eta = {eta}')
+
+        if type(eta) == np.ndarray: eta = eta.item()
+
+        Sigma = self.pseudo_particle_self_energy()
+        G = self.solve_dyson(alpha**2 * Sigma, eta)
+        Za = self.partition_function_from_ppgf(G).real
+        dZ_deta = -trace(conv(G, G)).real
+        return Za - 1, dZ_deta
+    
+
+    def Z_alpha_minus_one_and_derivative_and_2nd_derivative(self, alpha, eta):
+        r""" Compute Z_alpha - 1 and its derivatives with respect to eta, for root finding in the Newton solver. """
+
+        if is_root(): print(f'Z_alpha_minus_one_and_derivative_and_2nd_derivative: alpha = {alpha}, eta = {eta}')
+
+        if type(eta) == np.ndarray: eta = eta.item()
+
+        Sigma = self.pseudo_particle_self_energy()
+        G = self.solve_dyson(alpha**2 * Sigma, eta)
+        #Za = self.partition_function_from_ppgf(G).real
+        Za = -trace(G)
+        print(f'Za = {Za}')
+        Za = Za.real
+        G2 = conv(G, G)
+        dZ_deta = -trace(G2).real
+        d2Z_deta2 = -2 * trace(conv(G2, G)).real
+        return Za - 1, dZ_deta, d2Z_deta2
 
 
     def deta_dalpha(self, alpha, eta):
@@ -440,11 +499,14 @@ class BlockSparseSolver(object):
                 / \textrm{Tr} \left[ G_\alpha \ast G_\alpha \right]
 
         """
+        if is_root(): print(f'deta_dalpha: alpha = {alpha}, eta = {eta}')
         Sigma = self.pseudo_particle_self_energy()
         Ga = self.solve_dyson(alpha**2 * Sigma, eta)
         TrGaGa = -trace(conv(Ga, Ga)).real
         TrGaSigmaGa = -trace(conv(Ga, conv(Sigma, Ga)))
         deta_dalpha = - 2 * alpha * TrGaSigmaGa / TrGaGa
+        if is_root(): print(f'deta_dalpha: Za = {-trace(Ga)}')
+
         return deta_dalpha.real
 
 
@@ -487,7 +549,13 @@ class BlockSparseSolver(object):
     
     
     @timer('ODE normalization')
-    def solve_ppsc_chempot_adiabatic_ode(self, tol=1e-9, method='DOP853'):
+    def solve_ppsc_chempot_adiabatic_ode(
+        self, tol=1e-9, 
+        method='RK23',
+        #method='DOP853',
+        #method='RK45',
+        #method='LSODA',
+        ):
 
         func = lambda t, y : self.deta_dalpha(t, y[0])
         jac = lambda t, y : np.array([self.d2eta_dalpha_deta(t, y[0])]).reshape(1, 1)
@@ -497,7 +565,7 @@ class BlockSparseSolver(object):
         sol = solve_ivp(
             func, (0., 1.), 
             np.array([0.]), 
-            #jac=jac,
+            jac=jac,
             atol=tol, 
             method=method,
             dense_output=True,
@@ -512,18 +580,26 @@ class BlockSparseSolver(object):
 
 
     @timer('Newton normalization')
-    def solve_ppsc_chempot_newton(self, tol=1e-9):
+    def solve_ppsc_chempot_newton(self, **kwargs):
 
-        f = lambda eta : self.Z_alpha(1., eta) - 1
-        fprime = lambda eta : self.dZ_alpha_deta(1., eta)
-
+        if is_root(): print(f'PPSC: Starting root solver for eta with kwargs = {kwargs}')
+        
+        #f = lambda eta : self.Z_alpha(1., eta) - 1
+        #fprime = lambda eta : self.dZ_alpha_deta(1., eta)
+        #f = lambda eta : self.Z_alpha_minus_one_and_derivative(1., eta)
+        f = lambda eta : self.Z_alpha_minus_one_and_derivative_and_2nd_derivative(1., eta)
+        
         from scipy.optimize import root_scalar
 
         sol = root_scalar(
             f, x0=self.eta, 
-            fprime=fprime,
-            method='newton',
-            xtol=tol,
+            #fprime=fprime,
+            fprime=True,
+            fprime2=True,
+            #method='newton', # Newton's method, using the first derivative
+            method='halley', # Halley's cubic method, using the first and second derivatives
+            #xtol=tol,
+            **kwargs,
             )
         
         self.eta = sol.root
@@ -531,7 +607,7 @@ class BlockSparseSolver(object):
         G = self.solve_dyson(self.Sigma, self.eta)
         Z = self.partition_function_from_ppgf(G)
 
-        #if is_root(): print(f'PPSC: Newton eta = {self.eta:+2.2E} Z-1 = {Z-1:+2.2E}')
+        if is_root(): print(f'PPSC: Root solver done, eta = {self.eta:+2.2E} Z-1 = {Z-1:+2.2E}')
 
         return sol
 
