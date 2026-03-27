@@ -78,8 +78,8 @@ def solve_slater_condon_bethe_half_filling(
 
     S.l = l
     S.order = order
-    S.N_exp = S.expectation_value(N_tot)
-    print(f'N_exp = {S.N_exp}')
+    S.N_tot_exp = S.expectation_value(N_tot)
+    print(f'N_tot_exp = {S.N_tot_exp}')
 
     if is_root():
         filename = f'data_l_{S.l}_order_{S.order}_beta_{S.beta}.h5'
@@ -91,10 +91,10 @@ def solve_slater_condon_bethe_half_filling(
 if __name__ == '__main__':
 
     opts = dict(
-        beta=10.0,
+        beta=1.0,
         eps=1e-9,
         ppsc_tol=1e-4,
-        ppsc_maxiter=0,
+        ppsc_maxiter=10,
         order=1,
         )
 
