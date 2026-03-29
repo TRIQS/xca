@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <nda/basic_functions.hpp>
 #include <triqs_xca/atom_diag_utils.hpp>
 
 #include <triqs_xca/hyb.hpp>
@@ -30,7 +31,7 @@ using triqs_xca::atom_diag::get_operators_dense;
  *
  * @details This tests the evaluation of the first-, second-, and third-order self-energy diagrams.
  */
-TEST(two_fermions, const_hyb) {
+TEST(two_fermions, const_hyb_se) {
   // Generate DLR imaginary-time object
   double beta   = 2.0;
   double Lambda = 20.0 * beta;
@@ -90,6 +91,70 @@ TEST(two_fermions, const_hyb) {
     ASSERT_LE(nda::max_element(nda::abs(third_order_se[b].data()(_, 0, 0) - third_order_se_ana)), eps);
   }
   ASSERT_LE(nda::max_element(nda::abs(third_order_se[1].data()(_, 1, 1) - third_order_se_ana)), eps);
+}
+
+/**
+ * @brief Test evaluation of the single-particle Green's function for a two-fermion system with a constant hybridization function
+ *
+ * @details This tests the evaluation of the first-, second-, and third-order diagrams contributing to the single-particle Green's function.
+ */
+TEST(two_fermions, const_hyb_spgf) {
+  double beta   = 2.0;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-12;
+  auto dlr_rf   = build_dlr_rf(Lambda, eps);
+  auto itops    = imtime_ops(Lambda, dlr_rf);
+  int r         = itops.rank();
+
+  auto two_fermion_model = two_fermion_model_helper(beta, Lambda, eps, 0.0, 0.0, 0.0);
+  auto &hyb_coeffs       = two_fermion_model.hyb_coeffs;
+  auto &hyb_poles        = two_fermion_model.hyb_poles;
+  auto &ad               = two_fermion_model.ad;
+  auto &G_ppsc           = two_fermion_model.G_ppsc;
+
+  auto dlr_it = itops.get_itnodes();
+  auto G0_ana = nda::zeros<double>(r);
+  double ln4  = std::numbers::ln2 * 2;
+  for (int i = 0; i < r; ++i) {
+    double t  = rel2abs(dlr_it(i));
+    G0_ana(i) = -exp(-t * ln4);
+  }
+
+  // Set up diagram evaluator for single-particle Green's function evaluation
+  DiagramEvaluator D(hyb_poles, hyb_coeffs, G_ppsc[0].mesh(), ad);
+
+  // ----- NCA test -----
+  nda::array<int, 2> topology1 = {{0, 1}};
+  auto nca_spgf                = D.compute_single_ptcle_gf(G_ppsc, topology1);
+  auto nca_spgf_ana            = nda::zeros<double>(r, 2, 2);
+  nca_spgf_ana(_, 0, 0)        = 0.5;
+  nca_spgf_ana(_, 1, 1)        = 0.5;
+  ASSERT_LE(nda::max_element(nda::abs(nca_spgf - nca_spgf_ana)), eps);
+
+  // ----- OCA test -----
+  nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
+  auto oca_spgf                = D.compute_single_ptcle_gf(G_ppsc, topology2);
+  auto oca_spgf_ana            = nda::zeros<double>(r);
+  for (int i = 0; i < r; ++i) {
+    double t        = rel2abs(dlr_it(i)); // t = tau / beta
+    oca_spgf_ana(i) = 0.25 * (beta * beta * t - beta * beta * t * t);
+  }
+  ASSERT_LE(nda::max_element(nda::abs(oca_spgf(_, 0, 0) - oca_spgf_ana)), eps);
+  ASSERT_LE(nda::max_element(nda::abs(oca_spgf(_, 1, 1) - oca_spgf_ana)), eps);
+
+  // ----- third-order test -----
+  nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
+  auto third_order_spgf        = D.compute_single_ptcle_gf(G_ppsc, topology3);
+  auto third_order_spgf_ana    = nda::zeros<double>(r);
+  double beta4                 = beta * beta;
+  beta4                        = beta4 * beta4;
+  for (int i = 0; i < r; ++i) {
+    double t                = rel2abs(dlr_it(i)); // t = tau / beta
+    third_order_spgf_ana(i) = 0.5 * beta4 * t * t * (-t + 0.5 * (1 + t * t));
+  }
+  third_order_spgf_ana = third_order_spgf_ana / 16.0;
+  ASSERT_LE(nda::max_element(nda::abs(third_order_spgf(_, 0, 0) - 2 * third_order_spgf_ana)), eps);
+  ASSERT_LE(nda::max_element(nda::abs(third_order_spgf(_, 1, 1) - 2 * third_order_spgf_ana)), eps);
 }
 
 TEST(two_fermions, one_hyb_pole) {
