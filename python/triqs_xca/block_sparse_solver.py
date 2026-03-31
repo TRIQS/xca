@@ -180,8 +180,38 @@ class BlockSparseSolver(object):
         if is_root(): print(f'done.')
 
 
-    def solve(self, max_order, tol=1e-7, maxiter=10, mix=1., delta_tol=None):
+    def solve(self, max_order, tol=1e-7, maxiter=10, mix=1., delta_tol=None, normalization='classic'):
+        """ Solve the impurity problem using pseudo particle self-consistent perturbation theory (PP-SCPT).
+        
+        Parameters
+        ----------
+        max_order : int
+            Maximum order of the perturbation theory.
+        tol : float, optional
+            Tolerance for the convergence criterion.
+        maxiter : int, optional
+            Maximum number of iterations.
+        mix : float, optional
+            Mixing parameter for the self-consistent iteration.
+        delta_tol : float, optional
+            Tolerance for the hybridization function fitting.
+        normalization : str, optional
+            Normalization method for the pseudo particle Green's function. Default: 'classic'.
 
+        Returns
+        -------
+        None
+
+        Available normalization methods:
+        - 'classic': Classical normalization
+        - 'root': Root normalization
+        - 'ode+classic': ODE with classic normalization
+        - 'ode+root': ODE with root normalization
+        - 'odeG+classic': ODE on G with classic normalization
+        - 'odeG+root': ODE on G with root normalization
+        """
+
+        self.normalization = normalization
         self.max_order = max_order
         self.delta_tol = delta_tol if delta_tol is not None else 0.1 * tol
         
@@ -195,37 +225,57 @@ class BlockSparseSolver(object):
             if is_root(): print(f'Sigma max_order = {self.max_order}')
             self.Sigma = self.eval_pseudo_particle_self_energy(self.G, self.max_order)
 
-            #G_new = self.solve_dyson(self.Sigma, self.eta)
-            #G_new = self.normalize_pseudo_particle_gf(G_new)
-
             self.timer.start('Dyson')
-            self.solve_ppsc_chempot_newton(xtol=10*self.eps, maxiter=10)
 
-            G_new = self.solve_dyson(self.Sigma, self.eta)
-            Z = self.partition_function_from_ppgf(G_new)
+            if normalization == 'classic':
+                G_new = self.solve_dyson(self.Sigma, self.eta)
+                G_new = self.normalize_pseudo_particle_gf(G_new)
+                #G_new, Sigma_new = self.normalize_pseudo_particle_gf_and_sigma(G_new, self.Sigma)
 
-            if np.abs(Z - 1) > 10*self.eps:
-                if is_root(): print(f'solve_ppsc_chempot_adiabatic_ode')
-                self.solve_ppsc_chempot_adiabatic_ode(tol=10*self.eps)
+            elif normalization == 'root':
                 self.solve_ppsc_chempot_newton(xtol=10*self.eps)
-            
-            G_new = self.solve_dyson(self.Sigma, self.eta)
+                G_new = self.solve_dyson(self.Sigma, self.eta)
+
+            elif normalization == 'ode+root':
+                self.solve_ppsc_chempot_adiabatic_ode(tol=100*self.eps)               
+                self.solve_ppsc_chempot_newton(xtol=10*self.eps)
+                G_new = self.solve_dyson(self.Sigma, self.eta)
+
+            elif normalization == 'ode+classic':
+                self.solve_ppsc_chempot_adiabatic_ode(tol=100*self.eps)                                
+                G_new = self.solve_dyson(self.Sigma, self.eta)
+                G_new = self.normalize_pseudo_particle_gf(G_new)
+
+            elif normalization == 'odeG+root':
+                self.solve_ppsc_chempot_adiabatic_ode_G(tol=100*self.eps)               
+                self.solve_ppsc_chempot_newton(xtol=10*self.eps)
+                G_new = self.solve_dyson(self.Sigma, self.eta)
+
+            elif normalization == 'odeG+classic':
+                self.solve_ppsc_chempot_adiabatic_ode_G(tol=100*self.eps)                                
+                G_new = self.solve_dyson(self.Sigma, self.eta)
+                G_new = self.normalize_pseudo_particle_gf(G_new)
+
+            else:
+                raise NotImplementedError(f'Normalization method {normalization} not implemented.')
 
             Z = self.partition_function_from_ppgf(G_new)
             self.timer.stop()
 
-            diff_G = max_abs_diff_BlockGf(G_new, self.G)
+            self.diff_G = max_abs_diff_BlockGf(G_new, self.G)
 
-            if is_root(): print(f'iter = {iter}, diff_G = {diff_G:2.2E}, Z-1 = {Z-1:+2.2E}')
+            if is_root(): print(f'iter = {iter}, diff_G = {self.diff_G:2.2E}, Z-1 = {Z-1:+2.2E}')
 
             self.G = mix * G_new + (1 - mix) * self.G
 
-            if diff_G < tol:
-                if is_root(): print(f'Converged after {iter} iterations with diff_G = {diff_G:2.2E} < tol = {tol:2.2E}')
+            if self.diff_G < tol:
+                if is_root(): print(f'Converged after {iter} iterations with diff_G = {self.diff_G:2.2E} < tol = {tol:2.2E}')
                 break
 
         G_tau = self.eval_single_particle_greens_function(self.G, max_order=self.max_order)
         self.G_tau = self.__from_dense_to_blockgf(G_tau, self.gf_struct)
+
+        self.n_ppsc_iter = iter
 
         if is_root():
             print(); self.timer.write()
@@ -254,6 +304,32 @@ class BlockSparseSolver(object):
         self.eta += deta
 
         return G_new
+    
+
+    def normalize_pseudo_particle_gf_and_sigma(self, G, Sigma):
+        """ Normalize the pseudo particle Green's function by updating the pseudo particle chemical potential eta, such that the partition function Z is equal to 1. """
+
+        Z = self.partition_function_from_ppgf(G)
+
+        deta = np.log(np.abs(Z)) / self.beta
+
+        def energy_shift_ppgf(G, deta):
+            G_new = G.copy()
+            tau = np.array([ float(t) for t in G.mesh ])
+            for bidx, g in G_new:
+                g.data[:] *= np.exp(-tau * deta)[:, None, None]
+            return G_new
+
+        G_new = energy_shift_ppgf(G, deta)
+        Sigma_new = energy_shift_ppgf(Sigma, deta)
+
+        Z_new = self.partition_function_from_ppgf(G_new)
+
+        if is_root(): print(f'  Update eta = {self.eta:2.2E}, Z = {Z:2.2E}, Z_new-1 = {Z_new-1:+2.2E}')
+
+        self.eta += deta
+
+        return G_new, Sigma_new
 
 
     def pseudo_particle_greens_function(self):
@@ -429,13 +505,15 @@ class BlockSparseSolver(object):
         
         """
 
-        if is_root(): print(f'Z_alpha: alpha = {alpha}, eta = {eta}')
+        #if is_root(): print(f'Z_alpha: alpha = {alpha}, eta = {eta}')
 
         if type(eta) == np.ndarray: eta = eta.item()
         
         Sigma = self.pseudo_particle_self_energy()
-        Ga = self.solve_dyson(alpha**2 * Sigma, eta)
-        Za = self.partition_function_from_ppgf(Ga).real
+        #Ga = self.solve_dyson(alpha**2 * Sigma, eta)
+        Ga = self.solve_dyson(alpha * Sigma, eta)
+        Za = -trace(Ga)
+        #Za = self.partition_function_from_ppgf(Ga).real
         return Za    
 
 
@@ -452,7 +530,8 @@ class BlockSparseSolver(object):
         if type(eta) == np.ndarray: eta = eta.item()
 
         Sigma = self.pseudo_particle_self_energy()
-        G = self.solve_dyson(alpha**2 * Sigma, eta)
+        #G = self.solve_dyson(alpha**2 * Sigma, eta)
+        G = self.solve_dyson(alpha * Sigma, eta)
         dZ_deta = -trace(conv(G, G)).real
         return dZ_deta
 
@@ -465,7 +544,8 @@ class BlockSparseSolver(object):
         if type(eta) == np.ndarray: eta = eta.item()
 
         Sigma = self.pseudo_particle_self_energy()
-        G = self.solve_dyson(alpha**2 * Sigma, eta)
+        #G = self.solve_dyson(alpha**2 * Sigma, eta)
+        G = self.solve_dyson(alpha * Sigma, eta)
         Za = self.partition_function_from_ppgf(G).real
         dZ_deta = -trace(conv(G, G)).real
         return Za - 1, dZ_deta
@@ -479,7 +559,8 @@ class BlockSparseSolver(object):
         if type(eta) == np.ndarray: eta = eta.item()
 
         Sigma = self.pseudo_particle_self_energy()
-        G = self.solve_dyson(alpha**2 * Sigma, eta)
+        #G = self.solve_dyson(alpha**2 * Sigma, eta)
+        G = self.solve_dyson(alpha * Sigma, eta)
         #Za = self.partition_function_from_ppgf(G).real
         Za = -trace(G)
         print(f'Za = {Za}')
@@ -501,13 +582,24 @@ class BlockSparseSolver(object):
         """
         if is_root(): print(f'deta_dalpha: alpha = {alpha}, eta = {eta}')
         Sigma = self.pseudo_particle_self_energy()
-        Ga = self.solve_dyson(alpha**2 * Sigma, eta)
-        TrGaGa = -trace(conv(Ga, Ga)).real
+        #Ga = self.solve_dyson(alpha**2 * Sigma, eta)
+        Ga = self.solve_dyson(alpha * Sigma, eta)
+        TrGaGa = -trace(conv(Ga, Ga))
         TrGaSigmaGa = -trace(conv(Ga, conv(Sigma, Ga)))
-        deta_dalpha = - 2 * alpha * TrGaSigmaGa / TrGaGa
-        if is_root(): print(f'deta_dalpha: Za = {-trace(Ga)}')
+        #deta_dalpha = - 2 * alpha * TrGaSigmaGa / TrGaGa
+        deta_dalpha = - TrGaSigmaGa / TrGaGa
+        if is_root(): print(f'deta_dalpha: Za = {-trace(Ga)}, deta/dalpha = {deta_dalpha}')
 
-        return deta_dalpha.real
+        return deta_dalpha
+
+
+    def derivative_components(self, alpha, eta):
+        if is_root(): print(f'derivative_components: alpha = {alpha}, eta = {eta}')
+        Sigma = self.pseudo_particle_self_energy()
+        Ga = self.solve_dyson(alpha * Sigma, eta)
+        TrGaGa = -trace(conv(Ga, Ga))
+        TrGaSigmaGa = -trace(conv(Ga, conv(Sigma, Ga)))
+        return TrGaGa, TrGaSigmaGa
 
 
     def d2eta_dalpha_deta(self, alpha, eta):
@@ -526,12 +618,15 @@ class BlockSparseSolver(object):
             / \textrm{Tr} \left[ G_\alpha \ast G_\alpha \right]^2
 
         """
-
+    
+        #raise NotImplementedError('d2eta_dalpha_deta is not implemented yet, and may contain errors in the formula.')
+    
         print('--> d2eta_dalpha_deta')
 
         Sigma = self.pseudo_particle_self_energy()
 
-        Ga = self.solve_dyson(alpha**2 * Sigma, eta)
+        #Ga = self.solve_dyson(alpha**2 * Sigma, eta) # fix to alpha * Sigma
+        Ga = self.solve_dyson(alpha * Sigma, eta)
         
         Ga2 = conv(Ga, Ga)
         Ga3 = conv(Ga, Ga2)
@@ -542,8 +637,10 @@ class BlockSparseSolver(object):
         TrGaSigmaGa  = -trace(conv(Ga,  conv(Sigma, Ga )))
         TrGa2SigmaGa = -trace(conv(Ga2, conv(Sigma, Ga )))
         TrGaSigmaGa2 = -trace(conv(Ga,  conv(Sigma, Ga2)))
-        
-        d2eta_dalpha_deta = -2*alpha * ((TrGa2SigmaGa + TrGaSigmaGa2)/TrGa2 - 2*TrGaSigmaGa*TrGa3/TrGa2**2)
+
+        # Fix for alpha * Sigma
+        #d2eta_dalpha_deta = -2*alpha * ((TrGa2SigmaGa + TrGaSigmaGa2)/TrGa2 - 2*TrGaSigmaGa*TrGa3/TrGa2**2)
+        d2eta_dalpha_deta = -(TrGa2SigmaGa + TrGaSigmaGa2)/TrGa2 + 2*TrGaSigmaGa*TrGa3/TrGa2**2
         
         return d2eta_dalpha_deta.real
     
@@ -557,15 +654,15 @@ class BlockSparseSolver(object):
         #method='LSODA',
         ):
 
-        func = lambda t, y : self.deta_dalpha(t, y[0])
-        jac = lambda t, y : np.array([self.d2eta_dalpha_deta(t, y[0])]).reshape(1, 1)
+        func = lambda t, y : self.deta_dalpha(t, y[0]).real
+        jac = lambda t, y : np.array([self.d2eta_dalpha_deta(t, y[0])]).reshape(1, 1).real
 
         from scipy.integrate import solve_ivp
 
         sol = solve_ivp(
             func, (0., 1.), 
             np.array([0.]), 
-            jac=jac,
+            #jac=jac,
             atol=tol, 
             method=method,
             dense_output=True,
@@ -579,7 +676,80 @@ class BlockSparseSolver(object):
         return sol
 
 
-    @timer('Newton normalization')
+    @timer('ODE normalization G')
+    def solve_ppsc_chempot_adiabatic_ode_G(
+        self, tol=1e-9, 
+        method='RK23',
+        ):
+
+        def from_array(y):
+            G = self.get_zero_pseudo_particle_propagator()
+            idx = 0
+            for bidx, g in G:
+                size = np.prod(g.data.shape)
+                g.data[:] = y[idx:idx+size].reshape(g.data.shape)
+                idx += size
+            return G
+        
+        def to_array(G):
+            arr = []
+            for bidx, g in G:
+                arr.append(g.data.flatten())
+            return np.concatenate(arr)
+        
+        def get_eta(G0, G, S):
+            
+            TrG0G = trace(conv(G0, G))
+            TrG0SG  = trace(G - G0 - conv(G0, conv(S, G)))
+
+            eta = TrG0SG / TrG0G
+            return eta
+
+        def func(t, y):
+
+            G = from_array(y)
+
+            S = self.pseudo_particle_self_energy()
+        
+            GG = conv(G, G)
+            GSG = conv(G, conv(S, G))
+            
+            TrGG = trace(GG)
+            TrGSG  = trace(GSG)
+
+            dG = GSG - GG * TrGSG / TrGG
+
+            dy = to_array(dG)
+            
+            print(f'func: t = {t}, trace(G) = {trace(G)}, max(abs(dG)) = {np.max(np.abs(dy))}')
+
+            return dy
+
+        from scipy.integrate import solve_ivp
+
+        y0 = to_array(self.G0)
+
+        sol = solve_ivp(
+            func, (0., 1.), y0,
+            atol=tol, 
+            method=method,
+            dense_output=False,
+            )
+        
+
+        G = from_array(sol.y[:, -1])
+        self.eta = get_eta(self.G0, G, self.Sigma).real
+
+
+        G = self.solve_dyson(self.Sigma, self.eta)
+        Z = self.partition_function_from_ppgf(G)
+
+        if is_root(): print(f'PPSC: Chempot eta from adiabatic ODE: Z-1={Z-1:+2.2E}, eta = {self.eta:2.2E}')
+
+        return sol
+
+
+    @timer('Root normalization')
     def solve_ppsc_chempot_newton(self, **kwargs):
 
         if is_root(): print(f'PPSC: Starting root solver for eta with kwargs = {kwargs}')
@@ -610,6 +780,107 @@ class BlockSparseSolver(object):
         if is_root(): print(f'PPSC: Root solver done, eta = {self.eta:+2.2E} Z-1 = {Z-1:+2.2E}')
 
         return sol
+    
+
+    @timer('Bisection normalization')
+    def solve_ppsc_chempot_bisection(self, **kwargs):
+
+        if is_root(): print(f'PPSC: Starting bisection solver for eta with kwargs = {kwargs}')
+        
+        def func(eta):
+            Sigma = self.pseudo_particle_self_energy()
+            G = self.solve_dyson(Sigma, eta)
+
+            # Try to detect extreme limits by oscillations in Ga
+
+            def num_sign_changes_blockgf(G):
+                max_num_changes = 0
+                for bidx, g in G:
+                    g_diag = np.diagonal(g.data.real, axis1=1, axis2=2)
+                    num_changes = np.sum(np.abs(np.diff(np.sign(g_diag), axis=0)))
+                    max_num_changes = max(max_num_changes, num_changes)
+                return max_num_changes
+
+            def max_blockgf(G):
+                max_val = float('-inf')
+                for bidx, g in G:
+                    max_val = max(max_val, np.max(g.data.real))
+                return max_val
+
+            def min_blockgf(G):
+                min_val = float('inf')
+                for bidx, g in G:
+                    min_val = min(min_val, np.min(g.data.real))
+                return min_val
+
+            def max_tau0_blockgf(G):
+                max_val = float('-inf')
+                for bidx, g in G:
+                    max_val = max(max_val, np.max(np.diag(g.data[0].real)))
+                return max_val
+
+            def min_tau0_blockgf(G):
+                min_val = float('inf')
+                for bidx, g in G:
+                    min_val = min(min_val, np.min(np.diag(g.data[0].real)))
+                return min_val
+
+            Z = -trace(G)
+            val = Z.real - 1
+
+            # Are we in a trouble some regime?
+            #if np.abs(val) > 1e2 or np.abs(val) < 1e-2:
+            if max_blockgf(G) > 1. or min_blockgf(G) < -1.:
+                print(f'Warning: max(G) = {max_blockgf(G)}, min(G) = {min_blockgf(G)}')
+                print(f'Warning: max(G(tau0)) = {max_tau0_blockgf(G)}, min(G(tau0)) = {min_tau0_blockgf(G)}')
+                print(f'Warning: num_sign_changes = {num_sign_changes_blockgf(G)}')
+
+                #if max_tau0_blockgf(G) > -1. and min_tau0_blockgf(G) > -1.:
+                #    val = +1.
+                
+                #if max_tau0_blockgf(G) < -1. and min_tau0_blockgf(G) < -1.:
+                #    val = -1.
+
+                if max_blockgf(G) > 1.:
+                    val = -1.
+                
+                if max_blockgf(G) < 1.:
+                    val = +1.
+
+            print(f'func: eta = {eta}, Z = {Z}, max(G) = {max_blockgf(G)}, min(G) = {min_blockgf(G)}, val = {val}')
+
+            from triqs.plot.mpl_interface import oplot, plt, oplotr, oploti
+            oplot(G)
+            plt.show()
+
+
+            return val
+        
+        print(f'Pole energies = {np.max(np.abs(self.hyb.poles))}, max AD energy = {np.max(np.abs(self.ad.energies))}')
+
+        #E_max = 0.5 * np.max([np.max(self.hyb.poles), np.max(self.ad.energies)])
+        E_max = np.max(np.abs(self.ad.energies)) * 10
+        #E_min = np.min([np.min(self.hyb.poles), np.min(self.ad.energies)])
+        E_min = 0.
+
+        print(f'E_max = {E_max}, E_min = {E_min}')
+
+        from scipy.optimize import root_scalar
+
+        sol = root_scalar(
+            func, bracket=(E_min, E_max),
+            method='bisect',
+            **kwargs,
+            )
+        
+        self.eta = sol.root
+
+        G = self.solve_dyson(self.Sigma, self.eta)
+        Z = self.partition_function_from_ppgf(G)
+
+        if is_root(): print(f'PPSC: Bisection solver done, eta = {self.eta:+2.2E} Z-1 = {Z-1:+2.2E}')
+
+        return sol    
 
 
     def __eq__(self, obj):
