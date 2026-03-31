@@ -91,10 +91,10 @@ jobs:
         python3-scipy
         python3-ipython
 
-    #- name: Install ubuntu cvxpy dependency using pip
-    #  if: ${{ contains(matrix.os, 'ubuntu') }}
-    #  run: |
-    #    pip install cvxpy
+    - name: Install ubuntu cvxpy dependency using pip
+      if: ${{ contains(matrix.os, 'ubuntu') }}
+      run: |
+        pip install cvxpy
 
     - name: Set up virtualenv
       run: |
@@ -125,11 +125,6 @@ jobs:
       run: |
         git clone https://github.com/HugoStrand/pyed $HOME/pyed
         echo "PYTHONPATH=$HOME/pyed:$PYTHONPATH" >> $GITHUB_ENV
-
-    - name: Install adapol
-      run: |
-        git clone https://github.com/flatironinstitute/adapol.git $HOME/adapol --branch main
-        echo "PYTHONPATH=$HOME/adapol/src:$PYTHONPATH" >> $GITHUB_ENV
 
     - name: Build & Install TRIQS
       env:

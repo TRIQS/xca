@@ -4,6 +4,7 @@ numpy
 scipy
 sympy
 h5py
+cvxpy
 # For documentation builds we additionaly require
 #sphinx
 #numpydoc

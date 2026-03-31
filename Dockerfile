@@ -9,20 +9,15 @@ RUN apt-get update && apt-get install -y \
     libclang-19-dev \
     libomp-19-dev \
     libzstd-dev \
-    doxygen
-#    python3-pip # for pip install cvxpy
+    doxygen \
+    python3-pip
 
 # Install pyed
 RUN git clone https://github.com/HugoStrand/pyed $SRC/pyed
 ENV PYTHONPATH=$SRC/pyed:$PYTHONPATH
 
-## Install cvxpy
-#RUN pip install --no-cache-dir --break-system-packages cvxpy==1.5.4
-
-# Install adapol
-ADD https://api.github.com/repos/flatironinstitute/adapol/git/refs/heads/main adapol_version.json
-RUN git clone https://github.com/flatironinstitute/adapol.git $SRC/adapol --branch main
-ENV PYTHONPATH=$SRC/adapol/src:$PYTHONPATH
+# Install cvxpy
+RUN pip install --no-cache-dir --break-system-packages cvxpy==1.5.4
 
 COPY --chown=build . $SRC/$APPNAME
 RUN mkdir $BUILD/$APPNAME && chown build $BUILD/$APPNAME
