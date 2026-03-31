@@ -1,6 +1,6 @@
 import numpy as np
 
-from triqs.gf import inverse, iOmega_n, MeshDLRImFreq, Gf, make_gf_dlr_imtime
+from triqs.gf import inverse, iOmega_n, make_gf_dlr_imtime, make_gf_dlr_imfreq
 
 from triqs_xca.triqs_solver import TriqsSolver
 from triqs_xca.block_sparse_solver import BlockSparseSolver
@@ -13,63 +13,49 @@ def test_block_sparse_self_cons(verbose=False):
     mu = 0.0
     e1 = 1.2
     
-    eps = 1e-10
-    w_max = 10.0
-    tol = 1e-6
-
-    order = 4
-    maxiter = 100
+    eps = 1e-12
+    w_max = 100.0
+    #tol = 1e-6
 
     gf_struct = [['0', 1]]
 
     from triqs.operators import n
     H = -mu * n('0', 0)
-
-    mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=w_max, eps=eps)
-    Delta_w = Gf(mesh=mesh_w, target_shape=[1, 1])
-
-    Delta_w << inverse(iOmega_n - e1)
-    Delta_tau = make_gf_dlr_imtime(Delta_w)
-
-    tau_mesh = Delta_tau.mesh
     
     S = BlockSparseSolver(H, beta, w_max, eps, gf_struct)
 
-    S.Delta_tau['0'] << Delta_tau
+    Delta_w = make_gf_dlr_imfreq(S.Delta_tau['0'])
+    Delta_w << inverse(iOmega_n - e1)
+    S.Delta_tau['0'] << make_gf_dlr_imtime(Delta_w)
  
-    #S.solve(max_order=order, tol=tol, maxiter=maxiter)
-
-    max_order = 1
     S.fit_hybridization(tol=1e-9)
-    #Z = S.partition_function_from_ppgf(S.G)
-
-    S.Sigma = S.eval_pseudo_particle_self_energy(S.G, max_order)
-    eta = 0
+    S.init_diagram_evaluator()
+ 
+    S.Sigma = S.eval_pseudo_particle_self_energy(S.G, max_order=1)
 
     from triqs_xca.module import trace, convolve_ppsc
 
+    #sol = S.solve_ppsc_chempot_adiabatic_ode(tol=10*eps)
+
+    #sol_G = S.solve_ppsc_chempot_adiabatic_ode_G(tol=1e-2)
+    #S.solve_ppsc_chempot_newton(xtol=10*eps)
+
+    #exit()
+
+    sol = S.solve_ppsc_chempot_adiabatic_ode(tol=1e-14)
     
-    #from scipy.interpolate import InterpolatedUnivariateSpline
-    #Z = InterpolatedUnivariateSpline(etas, Zs)
-    #print(dir(Z))
 
-    # Testing derivative "flow" for 
-    # pseudo-particle chemical potential
-    # solving an ode
-    # deta / dalpha = f(eta, alpha, Sigma)
-    # where (1 G0*(alpha * Sigma - eta))G_alpha = G0
-    # starting from alpha = 0, eta = 0, Tr[G0] = -1
-    # to alpha = 1 and eta for Sigma!
-
-    sol = S.solve_ppsc_chempot_adiabatic_ode(tol=10*eps)
     #sol = S.solve_ppsc_chempot_adiabatic_ode_3rd(tol=10*eps)
-    S.solve_ppsc_chempot_newton(tol=10*eps)
+    S.solve_ppsc_chempot_newton(xtol=10*eps)
     
     sol.Za = np.array([ S.Z_alpha(alpha, eta) \
         for alpha, eta in zip(sol.t, sol.y[0])])
 
-    alphas = np.linspace(0, 1, num=400)
+    #alphas = np.linspace(0, 1, num=1000)
+    alphas = np.logspace(-5, 0, num=100)
     sol.Za_vec = np.array([ S.Z_alpha(t, sol.sol(t)[0]) for t in alphas ])
+    sol.TrGaGa, sol.TrGaSigmaGa = np.array([ S.derivative_components(t, sol.sol(t)[0]) for t in alphas ]).T
+    sol.deta_dalpha = np.array([ S.deta_dalpha(t, sol.sol(t)[0]) for t in alphas ])
 
     # Compute Z and dZ/deta vs eta
     etas = np.linspace(np.max(sol.y[0]) * 0.995, np.max(sol.y[0]) * 1.005, num=100)
@@ -88,9 +74,37 @@ def test_block_sparse_self_cons(verbose=False):
 
     from triqs.plot.mpl_interface import oplot, plt, oplotr, oploti
 
-    plt.figure(figsize=(8, 8))
+    plt.figure(figsize=(10, 8))
 
-    subp = [4, 2, 1]
+    subp = [6, 2, 1]
+
+    plt.subplot(*subp); subp[-1] += 1
+    plt.plot(alphas, sol.deta_dalpha.real, '-', label=r'$d\eta / d\alpha$')
+    plt.xlabel(r'$\alpha$')
+    plt.legend(loc='best')
+    plt.grid(True)
+
+    plt.subplot(*subp); subp[-1] += 1
+    plt.plot(alphas, sol.deta_dalpha.imag, '-', label=r'$d\eta / d\alpha$')
+    plt.xlabel(r'$\alpha$')
+    plt.legend(loc='best')
+    plt.grid(True)
+
+    plt.subplot(*subp); subp[-1] += 1
+    plt.plot(alphas, sol.TrGaGa.real, '-', label=r'$Tr(G_\alpha G_\alpha)$')
+    plt.plot(alphas, sol.TrGaSigmaGa.real, '-', label=r'$Tr(G_\alpha \Sigma G_\alpha)$')
+    plt.xlabel(r'$\alpha$')
+    #plt.ylim([-0.5, 1.5])
+    plt.legend(loc='best')
+    plt.grid(True)
+
+    plt.subplot(*subp); subp[-1] += 1
+    plt.plot(alphas, sol.TrGaGa.imag, '-', label=r'$Tr(G_\alpha G_\alpha)$')
+    plt.plot(alphas, sol.TrGaSigmaGa.imag, '-', label=r'$Tr(G_\alpha \Sigma G_\alpha)$')
+    plt.xlabel(r'$\alpha$')
+    #plt.ylim([-0.5, 1.5])
+    plt.legend(loc='best')
+    plt.grid(True)
 
     plt.subplot(*subp); subp[-1] += 1
     #plt.plot(alphas, Za_vec, '-')
