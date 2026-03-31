@@ -57,6 +57,14 @@ if(PythonSupport OR (NOT IS_SUBPROJECT AND Build_Documentation))
   )
 endif()
 
+# -- adapol --
+if(PythonSupport)
+  external_dependency(adapol
+    GIT_REPO https://github.com/flatironinstitute/adapol
+    GIT_TAG triqs_xca
+  )
+endif()
+
 # -- GTest --
 external_dependency(GTest
   GIT_REPO https://github.com/google/googletest
