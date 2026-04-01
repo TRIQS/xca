@@ -37,6 +37,7 @@ fastdiagram::fastdiagram(double beta, double lambda, imtime_ops itops, nda::arra
      n(F.shape(0)),
      r(itops.rank()),
      N(F.shape(1)),
+     P(0),
      dlr_rf(itops.get_rfnodes()),
      dlr_it(itops.get_itnodes()),
      dlr_it_actual(dlr_it),
