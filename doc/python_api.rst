@@ -68,6 +68,4 @@ Utilities
    :template: autosummary_module_template.rst
 
    triqs_xca.diag
-   triqs_xca.dimer
-   triqs_xca.dimer_new
 
