@@ -3,28 +3,27 @@
 .. _install:
 
 Install xca
-*******************
+***********
 
 Compiling xca from source
-===============================
+=========================
 
 Prerequisites
 -------------
 
-#. The :ref:`TRIQS <triqslibs:welcome>` library, see :ref:`TRIQS installation instructions. <triqslibs:triqs_install>`   
-   We are currently depending on the ``unstable`` development branch of TRIQS that has to be compiled from source. (*Note that the packaged versions of TRIQS are not supported.*)
+#. The :ref:`TRIQS <triqslibs:welcome>` library, see :ref:`TRIQS installation instructions. <triqslibs:triqs_install>`.
+   We are currently depending on the ``unstable`` development branch of TRIQS that has to be compiled from source. (*Note that the packaged versions of TRIQS are not yet supported.*)
+
    In the following, we assume that TRIQS is installed in the directory ``path_to_triqs``.
 
-#. The `pyed <https://github.com/HugoStrand/pyed>`_ package (PYED: Exact diagonalization for finite quantum systems) has to be available in the python environment. This can be tested by running::
+#. The `cvxpy <https://www.cvxpy.org/>`_ Python package is required at runtime (it is a dependency of the adapol library which is built automatically)::
 
-    $ python -c "import pyed.TriqsExactDiagonalization"
-
-.. note:: The ``pyed`` python module has to be installed manually. Trying to install it using ``pip`` will not work since there is another python module with the same name (doing something completely different) registered in the PIP package index.
+    $ pip install cvxpy
 
 Installation steps
 ------------------
 
-#. Download the source code of the latest stable version by cloning the ``TRIQS/xca`` repository from GitHub::
+#. Download the source code by cloning the ``TRIQS/xca`` repository from GitHub::
 
      $ git clone https://github.com/TRIQS/xca xca.src
 
@@ -45,22 +44,6 @@ Installation steps
      $ make
      $ make test
      $ make install
-
-Version compatibility
----------------------
-
-Keep in mind that the version of ``xca`` must be compatible with your TRIQS library version,
-see :ref:`TRIQS website <triqslibs:versions>`.
-In particular the Major and Minor Version numbers have to be the same.
-To use a particular version, go into the directory with the sources, and look at all available versions::
-
-     $ cd xca.src && git tag
-
-Checkout the version of the code that you want::
-
-     $ git checkout block_sparse
-
-and follow steps 2 to 4 above to compile the code.
 
 Custom CMake options
 --------------------

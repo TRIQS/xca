@@ -65,6 +65,14 @@ if(PythonSupport)
   )
 endif()
 
+# -- pyed --
+if(PythonSupport)
+  external_dependency(pyed
+    GIT_REPO https://github.com/Wentzell/pyed
+    GIT_TAG triqs_xca
+  )
+endif()
+
 # -- GTest --
 external_dependency(GTest
   GIT_REPO https://github.com/google/googletest

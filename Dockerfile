@@ -12,11 +12,7 @@ RUN apt-get update && apt-get install -y \
     doxygen \
     python3-pip
 
-# Install pyed
-RUN git clone https://github.com/HugoStrand/pyed $SRC/pyed
-ENV PYTHONPATH=$SRC/pyed:$PYTHONPATH
-
-# Install cvxpy
+# Install cvxpy (runtime dependency of adapol, both adapol and pyed are fetched by CMake)
 RUN pip install --no-cache-dir --break-system-packages cvxpy==1.5.4
 
 COPY --chown=build . $SRC/$APPNAME
