@@ -1,6 +1,6 @@
 [![build](https://github.com/TRIQS/xca/workflows/build/badge.svg)](https://github.com/TRIQS/xca/actions?query=workflow%3Abuild)
 
-## TRIQS Sum-Of-Exponentials bold HYBridization expansion impurity solver
+## TRIQS arbitrary Crossing Approximation (XCA) impurity solver
 
 Disclaimer: This code is under active development, with new features and documentation being
 added regularly. Until a stable release is announced, use at your own risk!
