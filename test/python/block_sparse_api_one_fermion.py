@@ -174,7 +174,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(
     G_S = S.S.G0_iaa
     
     G_BSS = BSS.pseudo_particle_greens_function()
-    G_BSS = pseudo_particle_block_gf_to_dense(G_BSS, BSS.ad)
+    G_BSS = pseudo_particle_block_gf_to_dense(G_BSS, BSS.atom_diag)
 
     G_diff = np.max(np.abs(G_BSS.data - G_S))
     print(f'G_diff = {G_diff:2.2E}')
@@ -185,7 +185,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(
     np.testing.assert_almost_equal(Z, 1.0)
 
     G_DYSON_BSS = BSS.solve_dyson(BSS.Sigma, BSS.eta) # Solving Dyson with zero self-energy
-    G_DYSON_BSS = pseudo_particle_block_gf_to_dense(G_DYSON_BSS, BSS.ad)
+    G_DYSON_BSS = pseudo_particle_block_gf_to_dense(G_DYSON_BSS, BSS.atom_diag)
     np.testing.assert_array_almost_equal(G_DYSON_BSS.data, G_S)
 
     # -- Compare self-energy topologies
@@ -204,7 +204,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(
         d.Sigma_S = S.S.calc_Sigma(d.order)
         d.spgf_S = S.S.calc_spgf(d.order)
 
-        d.Sigma_BSS = pseudo_particle_block_gf_to_dense(BSS.eval_pseudo_particle_self_energy(BSS.G, d.order), BSS.ad)
+        d.Sigma_BSS = pseudo_particle_block_gf_to_dense(BSS.eval_pseudo_particle_self_energy(BSS.G, d.order), BSS.atom_diag)
         d.spgf_BSS = BSS.eval_single_particle_greens_function(BSS.G, d.order)
 
         results_by_order[order] = d
@@ -229,14 +229,14 @@ def test_oca_diagram_cf_block_sparse_and_dense(
             t2 = time.time()
 
             d.Sigma_BSS = BSS.eval_pseudo_particle_self_energy_topology(BSS.G, topology)
-            d.Sigma_BSS = pseudo_particle_block_gf_to_dense(d.Sigma_BSS, BSS.ad)
+            d.Sigma_BSS = pseudo_particle_block_gf_to_dense(d.Sigma_BSS, BSS.atom_diag)
 
             t3 = time.time()
 
             print(f'    Sigma time ZH ({t2 - t1} s) BS ({t3 - t2} s)')
             
             #Sigma_BSS_loop = pseudo_particle_block_gf_to_dense(
-            #    BSS.pseudo_particle_self_energy_topology_loop(topology), BSS.ad)
+            #    BSS.pseudo_particle_self_energy_topology_loop(topology), BSS.atom_diag)
             #np.testing.assert_array_almost_equal(d.Sigma_BSS.data, Sigma_BSS_loop.data)
             
             d.Sigma_diff = np.max(np.abs(d.Sigma_BSS.data - d.Sigma_S))
@@ -483,7 +483,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(
         print('-'*72)
         print('Testing numerical agreement of block-sparse and dense implementations')
         print('-'*72)
-        H_mat = hamiltonian_matrix(BSS.ad)    
+        H_mat = hamiltonian_matrix(BSS.atom_diag)    
         np.testing.assert_array_almost_equal(H_mat, S.S.H_mat)
 
         np.testing.assert_array_almost_equal(G_BSS.data, G_S)

@@ -11,12 +11,11 @@ Compiling xca from source
 Prerequisites
 -------------
 
-#. The :ref:`TRIQS <triqslibs:welcome>` library, see :ref:`TRIQS installation instruction <triqslibs:triqs_install>`.
+#. The :ref:`TRIQS <triqslibs:welcome>` library, see :ref:`TRIQS installation instructions. <triqslibs:triqs_install>`   
+   We are currently depending on the ``unstable`` development branch of TRIQS that has to be compiled from source. (*Note that the packaged versions of TRIQS are not supported.*)
    In the following, we assume that TRIQS is installed in the directory ``path_to_triqs``.
    
-   We are currently depending on the `unstable` development branch of TRIQS that has to be compiled from source. (Note that the packaged versions of TRIQS are not supported.)
-   
-#. The `adapol <https://github.com/flatironinstitute/adapol>`_ package (Adaptive Pole Fitting for Quantum Many-Body Physics) has to be installed on the `triqs_xca` branch. This can be achieved using a local `pip` install, e.g.::
+#. The `Adapol <https://github.com/flatironinstitute/adapol>`_ package (Adaptive Pole Fitting for Quantum Many-Body Physics) has to be installed on the ``triqs_xca`` branch. This can be achieved using a local ``pip`` install, e.g.::
 
     $ git clone git@github.com:flatironinstitute/adapol.git --branch triqs_xca
     $ python -m pip install -e ./adapol
@@ -25,7 +24,7 @@ Prerequisites
 
     $ python -c "import pyed.TriqsExactDiagonalization"
 
-.. note:: The `pyed` python module has to be installed manually. Trying to install it using `pip` will not work since there is another python module with the same name (doing something completely different) registered in the PIP package index.
+.. note:: The ``pyed`` python module has to be installed manually. Trying to install it using ``pip`` will not work since there is another python module with the same name (doing something completely different) registered in the PIP package index.
 
 Installation steps
 ------------------
@@ -64,7 +63,7 @@ To use a particular version, go into the directory with the sources, and look at
 
 Checkout the version of the code that you want::
 
-     $ git checkout 2.1.0
+     $ git checkout block_sparse
 
 and follow steps 2 to 4 above to compile the code.
 
@@ -78,11 +77,13 @@ The compilation of ``xca`` can be configured using CMake-options::
 +-----------------------------------------------------------------+-----------------------------------------------+
 | Options                                                         | Syntax                                        |
 +=================================================================+===============================================+
-| Specify an installation path other than path_to_triqs           | -DCMAKE_INSTALL_PREFIX=path_to_xca         |
+| Specify an installation path other than path_to_triqs           | -DCMAKE_INSTALL_PREFIX=path_to_xca            |
 +-----------------------------------------------------------------+-----------------------------------------------+
 | Build in Debugging Mode                                         | -DCMAKE_BUILD_TYPE=Debug                      |
 +-----------------------------------------------------------------+-----------------------------------------------+
 | Disable testing (not recommended)                               | -DBuild_Tests=OFF                             |
 +-----------------------------------------------------------------+-----------------------------------------------+
 | Build the documentation                                         | -DBuild_Documentation=ON                      |
++-----------------------------------------------------------------+-----------------------------------------------+
+| Update the Python bindings (developers only)                    | -DUpdate_Python_Bindings=ON                   |
 +-----------------------------------------------------------------+-----------------------------------------------+

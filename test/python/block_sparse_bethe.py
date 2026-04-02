@@ -98,12 +98,12 @@ def test_block_sparse_self_cons(verbose=False):
 
     # -- compare
 
-    G_BSS = pseudo_particle_block_gf_to_dense(BSS.pseudo_particle_greens_function(), BSS.ad)
+    G_BSS = pseudo_particle_block_gf_to_dense(BSS.pseudo_particle_greens_function(), BSS.atom_diag)
 
     G_diff = np.max(np.abs(G_BSS.data - G_S.data))
     print(f'G_diff = {G_diff:2.2E}')
 
-    Sigma_BSS = pseudo_particle_block_gf_to_dense(BSS.pseudo_particle_self_energy(), BSS.ad)
+    Sigma_BSS = pseudo_particle_block_gf_to_dense(BSS.pseudo_particle_self_energy(), BSS.atom_diag)
 
     Sigma_diff = np.max(np.abs(Sigma_BSS.data - Sigma_S.data))
     print(f'Sigma_diff = {Sigma_diff:2.2E}')

@@ -1,22 +1,22 @@
 .. _welcome:
 
-The TRIQS Sum-Of-Exponentials bold HYBridization expansion impurity solver (triqs_xca)
+The TRIQS arbitrary Crossing Approximation (XCA) impurity solver
 *********
 
-.. sidebar:: triqs_xca |PROJECT_VERSION|
+.. sidebar:: triqs_xca/block_sparse |PROJECT_VERSION|
 
-   This is the homepage of triqs_xca |PROJECT_VERSION|.
+   This is the homepage of ``triqs_xca/block_sparse`` |PROJECT_VERSION|.
    For changes see the :doc:`changelog page <ChangeLog>`.
       
       .. image:: _static/logo_github.png
          :width: 75%
          :align: center
-         :target: https://github.com/triqs/xca
+         :target: https://github.com/triqs/xca/tree/block_sparse
 
 
-The TRIQS Sum-Of-Exponentials bold HYBridization expansion impurity solver (triqs_xca) can solve generic multiband Anderson impurity problems approximately by perturbative expansion in the coupling to the environment (a.k.a. the hybridization function :math:`\Delta(\tau)`).
+The TRIQS arbitrary Crossing Approximation (**XCA**) impurity solver ``triqs_xca`` can solve generic multiband Anderson impurity problems approximately by perturbative expansion in the coupling to the environment (a.k.a. the hybridization function :math:`\Delta(\tau)`).
 
-This implementation is leveraging the sum-of-exponentials (SOE) trick to acheive parametrically better computational complexity compared to direct integration and uses the Discrete Lehmann Representation (DLR) for representing response functions.
+This implementation is leveraging the sum-of-exponentials (SOE) trick to achieve parametrically better computational complexity compared to direct integration and uses the Discrete Lehmann Representation (DLR) for representing response functions.
 
 Learn how to use triqs_xca in the :ref:`documentation`.
 
@@ -31,8 +31,8 @@ We kindly ask you to cite the following method papers when using triqs_xca in yo
 .. [#cppdlr] `J. Kaye, H. U.R. Strand, N. Wentzell, J. Open Source Softw., 9(100), 6297, (2024) <https://doi.org/10.21105/joss.06297>`_
 .. [#dlr] `J. Kaye, K. Chen, O. Parcollet, Phys. Rev. B 105, 235115 (2021) <https://doi.org/10.1103/PhysRevB.105.235115>`_
 
-Note that this application uses the TRIQS library please also see its `citation page. <https://triqs.github.io/triqs/latest/about.html#citation>`_
-
+Note that this application uses the TRIQS library, please also see its `citation page <https://triqs.github.io/triqs/latest/about.html#citation>`_,
+as well as the Adapol package, see its `citation page. <https://flatironinstitute.github.io/adapol/latest/index.html#references>`_
     
 .. toctree::
    :maxdepth: 2

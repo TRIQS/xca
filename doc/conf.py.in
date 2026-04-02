@@ -57,7 +57,7 @@ rst_epilog = """
 version = version,
 )
 
-copyright = '2022-2025 Z. Huang, H. U.R. Strand, The Simons Foundation, authors: Z. Huang, H. U.R. Strand, J. Kaye, N. Wentzell'
+copyright = '2022-2026 H. U.R. Strand, Z. Huang, F. Rilloraza, The Simons Foundation, authors: J. Kaye, N. Wentzell'
 
 mathjax_path = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=default"
 templates_path = ['@CMAKE_CURRENT_SOURCE_DIR@/_templates']

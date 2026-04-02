@@ -122,7 +122,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
     G_S = S.S.G0_iaa
     
     G_BSS = pseudo_particle_block_gf_to_dense(
-        BSS.pseudo_particle_greens_function(), BSS.ad)
+        BSS.pseudo_particle_greens_function(), BSS.atom_diag)
 
     G_diff = np.max(np.abs(G_BSS.data - G_S))
     print(f'G_diff = {G_diff:2.2E}')
@@ -157,7 +157,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
             t2 = time.time()
 
             d.Sigma_BSS = pseudo_particle_block_gf_to_dense(
-                BSS.eval_pseudo_particle_self_energy_topology(BSS.G, topology), BSS.ad)
+                BSS.eval_pseudo_particle_self_energy_topology(BSS.G, topology), BSS.atom_diag)
 
             t3 = time.time()
 
@@ -280,7 +280,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
         plt.show()
 
 
-    H_mat = hamiltonian_matrix(BSS.ad)    
+    H_mat = hamiltonian_matrix(BSS.atom_diag)    
     np.testing.assert_array_almost_equal(H_mat, S.S.H_mat)
     
     np.testing.assert_array_almost_equal(G_BSS.data, G_S)

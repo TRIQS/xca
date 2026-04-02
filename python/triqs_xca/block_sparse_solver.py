@@ -5,7 +5,7 @@ from collections import defaultdict
 import triqs.utility.mpi as mpi
 
 from triqs.gf import Gf, MeshDLRImTime, BlockGf, make_gf_dlr, make_gf_dlr_imfreq
-from triqs.atom_diag import AtomDiag
+from triqs.atom_diag import AtomDiag, AtomDiagReal, AtomDiagComplex
 
 from adapol.anacont import anacont_triqs
 from adapol.fit_utils_dlr import polefitting_dlr
@@ -37,7 +37,7 @@ def scatter_array_over_ranks(arr):
 
 class BlockSparseSolver(object):
     
-    def __init__(self, H_loc, beta, w_max, eps, gf_struct, conserved_operators='automatic', timer=None):
+    def __init__(self, H_loc, beta, w_max, eps, gf_struct, conserved_operators='automatic', timer=None, atom_diag=None, verbose=True):
 
         self.H_loc = H_loc
         self.gf_struct = gf_struct
@@ -45,17 +45,20 @@ class BlockSparseSolver(object):
         self.w_max = w_max
         self.eps = eps
         self.conserved_operators = conserved_operators
+        self.verbose = verbose
 
         self.fundamental_operators = fundamental_operators_from_gf_struct(gf_struct)
         self.use_dense_solver = (self.conserved_operators == []) # Without symmetries, use the dense solver
 
         self.timer = timer if timer is not None else Timer()
 
-        if is_root():
+        if verbose and is_root():
             print(logo())
             print()
-            print(f'use_dense_solver = {self.use_dense_solver}')
-            print(f'conserved_operators = {self.conserved_operators}')
+            if self.use_dense_solver: 
+                print(f'use_dense_solver = {self.use_dense_solver}')
+            if self.conserved_operators != 'automatic': 
+                print(f'conserved_operators = {self.conserved_operators}')
         
         self.eta = 0. # Pseudo particle chemical potential (shift of the pseudo particle energies).
 
@@ -63,22 +66,25 @@ class BlockSparseSolver(object):
 
         self.Delta_tau = BlockGf(mesh=self.mesh_tau, gf_struct=self.gf_struct, name='Delta_tau')
 
-        self.timer.start('AtomDiag')
-        if self.conserved_operators == 'automatic':
+        self.timer.start('AtomDiag Init')
+        if atom_diag is not None:
+            self.atom_diag = atom_diag
+        elif self.conserved_operators == 'automatic':
             # Uses autopartition algorithm for symmetry discovery, when no conserved operators are provided. 
             # This is the default, and recommended, usage.
-            self.ad = AtomDiag(self.H_loc, self.fundamental_operators) 
+            self.atom_diag = AtomDiag(self.H_loc, self.fundamental_operators) 
         else:
-            self.ad = AtomDiag(self.H_loc, self.fundamental_operators, self.conserved_operators)
+            self.atom_diag = AtomDiag(self.H_loc, self.fundamental_operators, self.conserved_operators)
         self.timer.stop()
 
-        if is_root(): 
-            print(f'mesh: {self.mesh_tau}')
-            print_atom_diag_info(self.ad)
+        if verbose and is_root(): 
+            #print(f'mesh: {self.mesh_tau}')
+            print(f'beta = {beta}, w_max = {w_max}, eps = {eps}, N_DLR = {len(self.mesh_tau)}')
+            print_atom_diag_info(self.atom_diag)
 
         self.timer.start('Dyson')
-        self.timer.start('setup')
-        self.G0 = atomic_pseudo_particle_greens_function(self.ad, self.beta, self.mesh_tau)
+        self.timer.start('Setup')
+        self.G0 = atomic_pseudo_particle_greens_function(self.atom_diag, self.beta, self.mesh_tau)
         self.G = self.G0.copy()
         self.Sigma = self.get_zero_pseudo_particle_propagator()
 
@@ -92,8 +98,9 @@ class BlockSparseSolver(object):
         self.timer.stop()
         self.timer.stop()
 
-    @timer('Fit hybridization')
-    def fit_hybridization(self, tol=None, use_polefitting_dlr=True, verbose=False):
+
+    @timer('Adapol hybridization fit')
+    def fit_hybridization(self, tol=None, use_polefitting_dlr=True, verbose=True):
 
         self.tol_adapol = 100 * self.eps if tol is None else tol
 
@@ -108,7 +115,7 @@ class BlockSparseSolver(object):
             from adapol.fit_utils_dlr import polefitting_dlr_triqs
             Delta_tau_dense = self.__from_blockgf_to_dense(self.Delta_tau)
             pole_weights, poles, fit_error = polefitting_dlr_triqs(
-                Delta_tau_dense, eps=self.tol_adapol, statistics="Fermion", verbose=verbose)
+                Delta_tau_dense, eps=self.tol_adapol, statistics="Fermion", verbose=verbose > 1)
 
             pole_weights *= -1. # FIXME! Why is this necessary? Is there a sign convention issue in polefitting_dlr?
 
@@ -122,7 +129,14 @@ class BlockSparseSolver(object):
         #print(f'poles_ref = {poles_ref}')
         #print(f'pole_weights     =\n{pole_weights}')
         #print(f'pole_weights_ref =\n{pole_weights_ref}')
-        print(f'tol = {tol}, self.tol_adapol = {self.tol_adapol:2.2E}, fit_error = {fit_error:2.2E}')
+        #print(f'tol = {tol}, self.tol_adapol = {self.tol_adapol:2.2E}, fit_error = {fit_error:2.2E}')
+
+        if verbose and is_root():
+            if fit_error >= self.tol_adapol:
+                print(f'Adapol: WARNING! Fit error = {fit_error:2.2E} >= tol_adapol = {self.tol_adapol:2.2E}, N_poles = {len(poles)}')
+            else:
+                print(f'Adapol: Fit error = {fit_error:2.2E} < tol_adapol = {self.tol_adapol:2.2E}, N_poles = {len(poles)}')
+
         self.set_hybridization_poles_and_coefficients(poles, pole_weights)
 
         self.hyb.fit_error = fit_error
@@ -164,23 +178,23 @@ class BlockSparseSolver(object):
 
         self.hyb = PoleRepresentation(poles, coefficients)
 
-        if is_root():
-            print(f'hyb poles = {len(self.hyb.poles)}')
+        #if is_root():
+            #print(f'hyb poles = {len(self.hyb.poles)}')
             #print(f'hyb.poles = {self.hyb.poles}')
             #print(f'hyb.coefficients =\n{self.hyb.coefficients}')
 
 
-    @timer('Diagram Evaluator init')
+    @timer('DiagramEvaluator Init')
     def init_diagram_evaluator(self):
-        if is_root(): print(f'Initializing diagram evaluator with use_dense_solver = {self.use_dense_solver}')
+        #if is_root(): print(f'Initializing diagram evaluator with use_dense_solver = {self.use_dense_solver}')
         if self.use_dense_solver:
-            self.d = DenseDiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.ad)
+            self.d = DenseDiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.atom_diag)
         else:
-            self.d = DiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.ad)
-        if is_root(): print(f'done.')
+            self.d = DiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.atom_diag)
+        #if is_root(): print(f'done.')
 
 
-    def solve(self, max_order, tol=1e-7, maxiter=10, mix=1., delta_tol=None, normalization='classic'):
+    def solve(self, max_order, tol=1e-4, maxiter=10, mix=1., delta_tol=None, normalization='classic', verbose=True):
         """ Solve the impurity problem using pseudo particle self-consistent perturbation theory (PP-SCPT).
         
         Parameters
@@ -215,15 +229,15 @@ class BlockSparseSolver(object):
         self.max_order = max_order
         self.delta_tol = delta_tol if delta_tol is not None else 0.1 * tol
         
-        print(f'delta_tol = {delta_tol}, self.delta_tol = {self.delta_tol:2.2E}')
+        #if verbose and is_root(): print(f'delta_tol = {self.delta_tol:2.2E}')
 
-        self.fit_hybridization(tol=self.delta_tol)
+        self.fit_hybridization(tol=self.delta_tol, verbose=verbose)
         self.init_diagram_evaluator() # FIXME! Evaluator takes hyb poles and coeffs in constructor
 
         for iter in range(1, maxiter+1):
 
-            if is_root(): print(f'Sigma max_order = {self.max_order}')
-            self.Sigma = self.eval_pseudo_particle_self_energy(self.G, self.max_order)
+            #if is_root(): print(f'Sigma max_order = {self.max_order}')
+            self.Sigma = self.eval_pseudo_particle_self_energy(self.G, self.max_order, verbose=verbose > 1)
 
             self.timer.start('Dyson')
 
@@ -264,12 +278,12 @@ class BlockSparseSolver(object):
 
             self.diff_G = max_abs_diff_BlockGf(G_new, self.G)
 
-            if is_root(): print(f'iter = {iter}, diff_G = {self.diff_G:2.2E}, Z-1 = {Z-1:+2.2E}')
+            if verbose and is_root(): print(f'iter = {iter}, diff_G = {self.diff_G:2.2E}, Z-1 = {Z-1:+2.2E}, eta = {self.eta:2.2E}')
 
             self.G = mix * G_new + (1 - mix) * self.G
 
             if self.diff_G < tol:
-                if is_root(): print(f'Converged after {iter} iterations with diff_G = {self.diff_G:2.2E} < tol = {tol:2.2E}')
+                if verbose and is_root(): print(f'Converged after {iter} iterations with diff_G = {self.diff_G:2.2E} < tol = {tol:2.2E}')
                 break
 
         G_tau = self.eval_single_particle_greens_function(self.G, max_order=self.max_order)
@@ -277,7 +291,7 @@ class BlockSparseSolver(object):
 
         self.n_ppsc_iter = iter
 
-        if is_root():
+        if verbose and is_root():
             print(); self.timer.write()
 
 
@@ -299,7 +313,7 @@ class BlockSparseSolver(object):
 
         Z_new = self.partition_function_from_ppgf(G_new)
 
-        if is_root(): print(f'  Update eta = {self.eta:2.2E}, Z = {Z:2.2E}, Z_new-1 = {Z_new-1:+2.2E}')
+        #if is_root(): print(f'  Update eta = {self.eta:2.2E}, Z = {Z:2.2E}, Z_new-1 = {Z_new-1:+2.2E}')
 
         self.eta += deta
 
@@ -325,7 +339,7 @@ class BlockSparseSolver(object):
 
         Z_new = self.partition_function_from_ppgf(G_new)
 
-        if is_root(): print(f'  Update eta = {self.eta:2.2E}, Z = {Z:2.2E}, Z_new-1 = {Z_new-1:+2.2E}')
+        #if is_root(): print(f'  Update eta = {self.eta:2.2E}, Z = {Z:2.2E}, Z_new-1 = {Z_new-1:+2.2E}')
 
         self.eta += deta
 
@@ -343,15 +357,11 @@ class BlockSparseSolver(object):
             Z = -\\mathrm{Tr}[ G(\\tau=\\beta) ]
         
         """
-        
-        #Z = -trace_dlr_imtime_BlockGf(G)
         Z = -trace(G)
-        print(f'partition_function_from_ppgf: Z = {Z}, eps = {self.eps}')
+        #print(f'partition_function_from_ppgf: Z = {Z}, eps = {self.eps}')
         #assert(Z.imag < 1e-12)
         #assert(Z.imag < 10 * self.eps)
-        Z = Z.real
-
-        return Z
+        return Z.real
 
 
     def partition_function(self):
@@ -359,10 +369,10 @@ class BlockSparseSolver(object):
 
 
     def expectation_value(self, operator):
-        return expectation_value(operator, self.ad, self.G)
+        return expectation_value(operator, self.atom_diag, self.G)
     
 
-    @timer('solve_dyson')
+    @timer('Solve')
     def solve_dyson(self, Sigma, eta):
 
         assert type(Sigma) is BlockGf, 'Sigma must be a BlockGf'
@@ -383,26 +393,26 @@ class BlockSparseSolver(object):
 
 
     @timer('Sigma')
-    def eval_pseudo_particle_self_energy(self, G, max_order):
+    def eval_pseudo_particle_self_energy(self, G, max_order, verbose=False):
 
         self.Sigma = self.get_zero_pseudo_particle_propagator()
 
         for order in range(1, max_order+1):
             with self.timer(f'Order {order}'):
-                self.Sigma += self.eval_pseudo_particle_self_energy_order(G, order)
+                self.Sigma += self.__eval_pseudo_particle_self_energy_order(G, order, verbose=verbose)
 
         return self.Sigma
 
 
-    def eval_pseudo_particle_self_energy_order(self, G, order):
+    def __eval_pseudo_particle_self_energy_order(self, G, order, verbose=False):
 
         Sigma = self.get_zero_pseudo_particle_propagator()
         
         for sign, topology in all_connected_pairings(order):
-            if is_root(): print(f'  eval_pseudo_particle_self_energy_order: order = {order}, topology = {topology}, sign = {sign}')
+            if verbose and is_root(): print(f'SIGMA: O{order} topo {topology} sign {sign:+d}')
             topology = np.array(topology, dtype=np.int32)
             Sigma +=  pow(-1, order) * sign * \
-                self.eval_pseudo_particle_self_energy_topology_loop(G, topology) # FIXME! Signs
+                self.__eval_pseudo_particle_self_energy_topology_loop(G, topology, verbose=verbose) # FIXME! Signs
             
         return Sigma
     
@@ -412,20 +422,17 @@ class BlockSparseSolver(object):
         return pow(-1, order+1) * self.d.compute_self_energy(G, topology) # FIXME! Sign convention.
 
 
-    def eval_pseudo_particle_self_energy_topology_loop(self, G, topology):
+    def __eval_pseudo_particle_self_energy_topology_loop(self, G, topology, verbose=False):
         order = len(topology)
         Sigma = self.get_zero_pseudo_particle_propagator()
 
         n_max = self.d.get_num_self_energy_backbones(topology)
         n_vec = scatter_array_over_ranks(np.arange(n_max))
 
-        if is_root():
-            from tqdm import tqdm
-            loop = tqdm
-        else:
-            loop = lambda x: x
+        if verbose and is_root(): from tqdm import tqdm as loop
+        else: loop = lambda x: x
 
-        for n in loop(n_vec):
+        for n in loop(n_vec): # FIXME! Pass vector to C++ and let it loop there, to avoid Python overhead in the loop.
             Sigma += pow(-1, order+1) * self.d.compute_self_energy(G, topology, n) # FIXME! Sign convention.
 
         for bidx, sigma_b in Sigma:
@@ -435,7 +442,7 @@ class BlockSparseSolver(object):
     
 
     def get_zero_pseudo_particle_propagator(self):
-        return zero_pseudo_particle_propagator(self.ad, self.mesh_tau)
+        return zero_pseudo_particle_propagator(self.atom_diag, self.mesh_tau)
 
 
     def get_zero_single_particle_greens_function(self):
@@ -454,19 +461,19 @@ class BlockSparseSolver(object):
 
         for order in range(1, max_order+1):
             with self.timer(f'Order {order}'):
-                self.spgf += self.eval_single_particle_greens_function_order(G, order)
+                self.spgf += self.__eval_single_particle_greens_function_order(G, order)
         
         return self.spgf
 
 
-    def eval_single_particle_greens_function_order(self, G, order):
+    def __eval_single_particle_greens_function_order(self, G, order):
 
         spgf = self.get_zero_single_particle_greens_function()
 
         for sign, topology in all_connected_pairings(order):
             topology = np.array(topology, dtype=np.int32)
             spgf += pow(-1, order) * sign * \
-                self.eval_single_particle_greens_function_topology_loop(G, topology)
+                self.__eval_single_particle_greens_function_topology_loop(G, topology)
 
         return spgf
 
@@ -480,7 +487,7 @@ class BlockSparseSolver(object):
         return spgf
 
 
-    def eval_single_particle_greens_function_topology_loop(self, G, topology):
+    def __eval_single_particle_greens_function_topology_loop(self, G, topology):
         spgf = self.get_zero_single_particle_greens_function()
 
         n_max = self.d.get_num_single_ptcle_gf_backbones(topology)
@@ -856,11 +863,11 @@ class BlockSparseSolver(object):
 
             return val
         
-        print(f'Pole energies = {np.max(np.abs(self.hyb.poles))}, max AD energy = {np.max(np.abs(self.ad.energies))}')
+        print(f'Pole energies = {np.max(np.abs(self.hyb.poles))}, max AD energy = {np.max(np.abs(self.atom_diag.energies))}')
 
-        #E_max = 0.5 * np.max([np.max(self.hyb.poles), np.max(self.ad.energies)])
-        E_max = np.max(np.abs(self.ad.energies)) * 10
-        #E_min = np.min([np.min(self.hyb.poles), np.min(self.ad.energies)])
+        #E_max = 0.5 * np.max([np.max(self.hyb.poles), np.max(self.atom_diag.energies)])
+        E_max = np.max(np.abs(self.atom_diag.energies)) * 10
+        #E_min = np.min([np.min(self.hyb.poles), np.min(self.atom_diag.energies)])
         E_min = 0.
 
         print(f'E_max = {E_max}, E_min = {E_min}')
@@ -908,6 +915,14 @@ class BlockSparseSolver(object):
                         if not np.array_equal(g.data, g_b.data):
                             print(f'BlockSparseSolver: __eq__: attribute {key} differ in block {bidx}')
                             return False
+                elif type(a) in (AtomDiagReal, AtomDiagComplex):
+                    if not np.array_equal(a.energies, b.energies):
+                        print(f'BlockSparseSolver: __eq__: attribute {key}.energies differ')
+                        return False
+                    for sidx in range(a.n_subspaces):
+                        if not np.array_equal(a.unitary_matrices[sidx], b.unitary_matrices[sidx]):
+                            print(f'BlockSparseSolver: __eq__: attribute {key}.unitary_matrices differ in subspace {sidx}')
+                            return False
                 else:
                     if not a == b:
                         print(f'BlockSparseSolver: __eq__: attribute {key} differ')
@@ -917,7 +932,7 @@ class BlockSparseSolver(object):
 
     
     def __skip_keys(self):
-        return ['d', 'dysons', 'ad', 'timer']
+        return ['d', 'dysons', 'timer']
 
 
     def __reduce_to_dict__(self):
@@ -930,14 +945,13 @@ class BlockSparseSolver(object):
     @classmethod
     def __factory_from_dict__(cls, name, d):
         arg_keys = ['H_loc', 'beta', 'w_max', 'eps', 'gf_struct', 'conserved_operators']
-        #argv_keys = ['verbose']
-        argv_keys = []
-        #verbose = d['verbose']
-        #d['verbose'] = False # -- Suppress printouts on reconstruction from dict
+        argv_keys = ['atom_diag', 'verbose']
+        verbose = d['verbose']
+        d['verbose'] = False # -- Suppress printouts on reconstruction from dict
         ret = cls(*[ d[key] for key in arg_keys ],
                   **{ key : d[key] for key in argv_keys })
         ret.__dict__.update(d)
-        #ret.verbose = verbose
+        ret.verbose = verbose
         return ret
 
 
@@ -1075,9 +1089,6 @@ def print_atom_diag_info(ad, verbose=False):
     \____|__  /|__|  \____/ |__|_|  //_______  /|___|\____|__  / \______  /
             \/                    \/         \/              \/         \/  """)
 
-    print(f'Triqs: AtomDiag {type(ad)}')
-    print(f'full_hilbert_space_dim = {ad.full_hilbert_space_dim}')
-    print(f'n_subspaces = {ad.n_subspaces}')
 
     hist = defaultdict(int)
     for dim in ad.get_subspace_dims():
@@ -1087,17 +1098,26 @@ def print_atom_diag_info(ad, verbose=False):
     num_subspaces_per_dim = np.array(list(hist.values()))
 
     sidx = np.argsort(subspace_dims)
-
-    print(f'subspace_dims = {subspace_dims[sidx]}')
-    print(f'num_subspaces_per_dim = {num_subspaces_per_dim[sidx]}')
-
-    print(f'gs_energy = {ad.gs_energy}')
+    subspace_dims = subspace_dims[sidx]
+    num_subspaces_per_dim = num_subspaces_per_dim[sidx]
     emin = np.min([np.min(x) for x in ad.energies])
     emax = np.max([np.max(x) for x in ad.energies])
-    print(f'energies min/max = {emin:+2.2E} / {emax:+2.2E}')
 
+    print(f'{type(ad).__name__}: dim {ad.full_hilbert_space_dim} with ' + \
+        f'{ad.n_subspaces} subspaces dims {subspace_dims} freq {num_subspaces_per_dim} ' + \
+        f'E min/max {emin:+2.2E}/{emax:+2.2E}')
+    
     if verbose:
-        print(f'subspace_dims = {ad.get_subspace_dims()}')
+        print(f'full_hilbert_space_dim = {ad.full_hilbert_space_dim}')
+        print(f'n_subspaces = {ad.n_subspaces}')
+        #print(f'subspace_dims = {ad.get_subspace_dims()}')
+
+        print(f'subspace_dims = {subspace_dims}')
+        print(f'num_subspaces_per_dim = {num_subspaces_per_dim}')
+
+        print(f'gs_energy = {ad.gs_energy}')
+        print(f'energies min/max = {emin:+2.2E} / {emax:+2.2E}')
+
         print(f'fops = {ad.fops}')
         print(f'quantum_numbers = {ad.quantum_numbers}')
         print(f'fock_states = {ad.fock_states}')

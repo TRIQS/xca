@@ -9,7 +9,7 @@ In the bold formulation :math:`G(\tau)` is self-consistently computed using the 
 
 .. math::
 
-   (1 - G_0 \ast \Sigma \ast) G = G_0 \\
+   (1 - G_0 \ast ( \Sigma + \eta) \ast) G = G_0 \\
    
 where :math:`G_0(\tau)` is the atomic many-body propagator and :math:`\Sigma(\tau)` is the pseudo-particle self-energy truncated at a finite expansion order :math:`n` in the hybridization function :math:`\Delta(\tau)`.
 
@@ -17,7 +17,9 @@ where :math:`G_0(\tau)` is the atomic many-body propagator and :math:`\Sigma(\ta
 
    \Sigma[G] = \Sigma_1[G] + \Sigma_2[G] + \dots + \Sigma_n[G]
 
-Once convergence is reached physical response functions like the single particle Green's function :math:`g(\tau) = \langle \mathcal{T} c(\tau) c^\dagger(0) \rangle` can be evaluted by a separate diagrammatic series (similar to :math:`\Sigma`).
+Once convergence is reached physical response functions like the single particle Green's function :math:`g(\tau) = -\langle \mathcal{T} c(\tau) c^\dagger(0) \rangle` can be evaluated by a separate diagrammatic series (similar to :math:`\Sigma`).
+
+To stabilize the self consistency the pseudo particle Green's function :math:`G(\tau)` is normalized in between each new evaluaton of the self-energy :math:`\Sigma` by enforcing that :math:`\textrm{Tr}[G(\beta)] = -1` by tuning the pseudo particle chemical potential :math:`\eta` in the Dyson equation. This is essential to avoid numerical overflow.
 
 The ``triqs_xca`` solver implements the bold hybridization expansion using the Discrete Lehmann Representation (DLR) [#dlr]_ [#cppdlr]_ for compact representation of propagators in imaginary time :math:`\tau` and a separate hybridization function compression approach [#xca]_ (based on the famous AAA algorithm) to evaluate the diagram series for :math:`\Sigma` with lower computational complexity than standard quadrature integration. [#dlrhyb]_
 

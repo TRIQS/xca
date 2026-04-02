@@ -102,7 +102,7 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
     G_S = S.S.G0_iaa
     
     G_BSS = BSS.pseudo_particle_greens_function()
-    G_BSS = pseudo_particle_block_gf_to_dense(G_BSS, BSS.ad)
+    G_BSS = pseudo_particle_block_gf_to_dense(G_BSS, BSS.atom_diag)
 
     G_diff = np.max(np.abs(G_BSS.data - G_S))
     print(f'G_diff = {G_diff:2.2E}')
@@ -112,7 +112,7 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
     np.testing.assert_almost_equal(Z, 1.0)
 
     G_DYSON_BSS = BSS.solve_dyson(BSS.Sigma, BSS.eta) # Solving Dyson with zero self-energy
-    G_DYSON_BSS = pseudo_particle_block_gf_to_dense(G_DYSON_BSS, BSS.ad)
+    G_DYSON_BSS = pseudo_particle_block_gf_to_dense(G_DYSON_BSS, BSS.atom_diag)
     np.testing.assert_array_almost_equal(G_DYSON_BSS.data, G_S)
 
     results_by_order = dict()
@@ -133,7 +133,7 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
         d.Sigma_S = S.S.calc_Sigma(d.order)
         d.spgf_S = S.S.calc_spgf(d.order)
 
-        d.Sigma_BSS = pseudo_particle_block_gf_to_dense(BSS.eval_pseudo_particle_self_energy(BSS.G, d.order), BSS.ad)
+        d.Sigma_BSS = pseudo_particle_block_gf_to_dense(BSS.eval_pseudo_particle_self_energy(BSS.G, d.order), BSS.atom_diag)
         d.spgf_BSS = BSS.eval_single_particle_greens_function(BSS.G, d.order)
 
         results_by_order[order] = d
@@ -159,7 +159,7 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
             t2 = time.time()
 
             d.Sigma_BSS = BSS.eval_pseudo_particle_self_energy_topology(BSS.G, topology)
-            d.Sigma_BSS = pseudo_particle_block_gf_to_dense(d.Sigma_BSS, BSS.ad)
+            d.Sigma_BSS = pseudo_particle_block_gf_to_dense(d.Sigma_BSS, BSS.atom_diag)
 
             t3 = time.time()
 
@@ -297,7 +297,7 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
 
     if not verbose:
 
-        H_mat = hamiltonian_matrix(BSS.ad)    
+        H_mat = hamiltonian_matrix(BSS.atom_diag)    
         np.testing.assert_array_almost_equal(H_mat, S.S.H_mat)
 
         np.testing.assert_array_almost_equal(G_BSS.data, G_S)
