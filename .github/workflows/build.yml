@@ -152,7 +152,8 @@ jobs:
 
     - name: Test triqs_xca
       env:
-        OMP_NUM_THREADS: "2"
+        OMP_NUM_THREADS: "1"
+        OPENBLAS_NUM_THREADS: "1"
       run: |
         source $HOME/install/share/triqs/triqsvars.sh
         cd build
