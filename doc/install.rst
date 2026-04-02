@@ -14,11 +14,6 @@ Prerequisites
 #. The :ref:`TRIQS <triqslibs:welcome>` library, see :ref:`TRIQS installation instructions. <triqslibs:triqs_install>`   
    We are currently depending on the ``unstable`` development branch of TRIQS that has to be compiled from source. (*Note that the packaged versions of TRIQS are not supported.*)
    In the following, we assume that TRIQS is installed in the directory ``path_to_triqs``.
-   
-#. The `Adapol <https://github.com/flatironinstitute/adapol>`_ package (Adaptive Pole Fitting for Quantum Many-Body Physics) has to be installed on the ``triqs_xca`` branch. This can be achieved using a local ``pip`` install, e.g.::
-
-    $ git clone git@github.com:flatironinstitute/adapol.git --branch triqs_xca
-    $ python -m pip install -e ./adapol
 
 #. The `pyed <https://github.com/HugoStrand/pyed>`_ package (PYED: Exact diagonalization for finite quantum systems) has to be available in the python environment. This can be tested by running::
 

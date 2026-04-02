@@ -37,6 +37,45 @@ def scatter_array_over_ranks(arr):
 
 class BlockSparseSolver(object):
     
+    """ Solver class for triqs_xca using the block sparse algorithm. 
+    
+    Parameters
+    ----------
+    H_loc : triqs.operators.Operator
+        Local Hamiltonian, including both quadratic and quartic terms (:math:`H_{\\textrm{loc}} = \\sum c^\\dagger c + \\sum c^\\dagger c^\\dagger c c`).
+    beta : float
+        Inverse temperature :math:`\\beta`.
+    w_max : float
+        Imaginary time DLR discretization frequency cutoff :math:`\\omega_{\\text{max}}`.
+    eps : float
+        Imaginary time DLR accuracy tolerance :math:`\\epsilon`.
+    gf_struct : dict
+        Triqs style Green's function structure, e.g. ``[('up', 1), ('down', 1)]``, matching the operator content of ``H_loc``.
+    conserved_operators : list, optional
+        List of conserved operators (``triqs.operators.Operator`` instances). 
+        Default is ``automatic`` using the autopartition algorithm of ``triqs.atom_diag``.
+        To disable symmetries and use the dense solver (``DenseDiagramEvaluator``), pass an empty list ``[]``.
+    timer : Timer, optional
+        Timer for performance measurements. Default: ``None`` (will be setup automatically).
+    atom_diag : AtomDiag, optional
+        Triqs AtomDiag object ``triqs.atom_diag.AtomDiag``. Default: ``None``. 
+        If not provided, it will be initialized automatically using the provided local Hamiltonian and conserved operators.
+    verbose : bool/int, optional
+        Verbosity flag controlling level of printouts. Default: ``True``.
+
+    Notes
+    -----
+
+    The hybridization function is available as the ``Delta_tau`` attribute, which is a block Green's function in imaginary time. 
+    It has to be set by the user before calling ``solve()``. If not set by the user, it will be initialized to zero.
+
+    The main method of the class is ``solve()``, which runs the pseudo particle self-consistent perturbation theory until convergence.
+
+    The single particle Green's function is available as the ``G_tau`` attribute after calling ``solve()``. 
+    It is a block Green's function in imaginary time.
+
+    """
+
     def __init__(self, H_loc, beta, w_max, eps, gf_struct, conserved_operators='automatic', timer=None, atom_diag=None, verbose=True):
 
         self.H_loc = H_loc
@@ -195,7 +234,7 @@ class BlockSparseSolver(object):
 
 
     def solve(self, max_order, tol=1e-4, maxiter=10, mix=1., delta_tol=None, normalization='classic', verbose=True):
-        """ Solve the impurity problem using pseudo particle self-consistent perturbation theory (PP-SCPT).
+        """ Solve the impurity problem using pseudo particle self-consistent perturbation theory.
         
         Parameters
         ----------
@@ -216,13 +255,18 @@ class BlockSparseSolver(object):
         -------
         None
 
+        Notes
+        -----
+
         Available normalization methods:
-        - 'classic': Classical normalization
-        - 'root': Root normalization
-        - 'ode+classic': ODE with classic normalization
-        - 'ode+root': ODE with root normalization
-        - 'odeG+classic': ODE on G with classic normalization
-        - 'odeG+root': ODE on G with root normalization
+
+        * ``'classic'``: Classical normalization (Default)
+        * ``'root'``: Root normalization
+        * ``'ode+classic'``: ODE with classic normalization
+        * ``'ode+root'``: ODE with root normalization
+        * ``'odeG+classic'``: ODE on G with classic normalization
+        * ``'odeG+root'``: ODE on G with root normalization
+
         """
 
         self.normalization = normalization
@@ -351,12 +395,6 @@ class BlockSparseSolver(object):
 
 
     def partition_function_from_ppgf(self, G):
-        """ Partition function of the impurity model, computed from the pseudo particle Green's function as
-
-        ..math::
-            Z = -\\mathrm{Tr}[ G(\\tau=\\beta) ]
-        
-        """
         Z = -trace(G)
         #print(f'partition_function_from_ppgf: Z = {Z}, eps = {self.eps}')
         #assert(Z.imag < 1e-12)
@@ -365,10 +403,50 @@ class BlockSparseSolver(object):
 
 
     def partition_function(self):
-        return self.partition_function_from_ppgf(self.G)
+        """ Partition function :math:`Z` of the impurity model, computed from the pseudo particle Green's function as
+        
+        .. math::
+            Z = -\\mathrm{Tr}[ G(\\beta) ] \cdot e^{-\\beta \\eta}
+          
+        Returns
+        -------
+        float
+            Partition function :math:`Z` of the impurity model.
+        """
+        return self.partition_function_from_ppgf(self.G) * np.exp(-self.beta * self.eta)
+
+
+    def pseudo_particle_chemical_potential(self):
+        """ Pseudo particle chemical potential :math:`\\eta`.
+
+        The pseudo particle chemical potential :math:`\\eta` is a shift of the pseudo particle energies used to enforce
+        the normalization condition :math:`\\textrm{Tr}[G(\\beta)] = -1` on the pseudo particle Green's function :math:`G`.
+
+        Returns
+        -------
+        float
+            Pseudo particle chemical potential :math:`\\eta`.
+        """
+        return self.eta
 
 
     def expectation_value(self, operator):
+        """ Expectation value :math:`\\langle \\hat{O} \\rangle` of an operator :math:`\\hat{O}`, computed from the pseudo particle Green's function as
+        
+        .. math::
+            \\langle \\hat{O} \\rangle = -\\mathrm{Tr}[ \\hat{O} G(\\beta) ]
+          
+        Parameters
+        ----------
+        operator : triqs.operators.Operator
+            Operator :math:`\\hat{O}` for which the expectation value is computed. 
+            It has to be compatible with the operator content of the local Hamiltonian and the Green's function structure.
+
+        Returns
+        -------
+        float
+            Expectation value :math:`\\langle \\hat{O} \\rangle` of the operator :math:`\\hat{O}`.
+        """
         return expectation_value(operator, self.atom_diag, self.G)
     
 
