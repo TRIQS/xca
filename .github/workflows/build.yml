@@ -154,6 +154,7 @@ jobs:
       env:
         OMP_NUM_THREADS: "1"
         OPENBLAS_NUM_THREADS: "1"
+        KMP_DUPLICATE_LIB_OK: "TRUE"
       run: |
         source $HOME/install/share/triqs/triqsvars.sh
         cd build
