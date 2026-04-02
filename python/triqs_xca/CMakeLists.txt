@@ -16,7 +16,7 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} DESTINATION ${TRIQS_PYTHON_LIB_DES
 install(DIRECTORY ${adapol_SOURCE_DIR}/src/adapol DESTINATION ${TRIQS_PYTHON_LIB_DEST_ROOT} FILES_MATCHING PATTERN "*.py")
 install(DIRECTORY ${pyed_SOURCE_DIR}/pyed DESTINATION ${TRIQS_PYTHON_LIB_DEST_ROOT} FILES_MATCHING PATTERN "*.py")
 
-option(Update_Python_Bindings "Optionally update the C++ Python bindings in the source directory using clair-c2py" ON)
+option(Update_Python_Bindings "Optionally update the C++ Python bindings in the source directory using clair-c2py" OFF)
 if(Update_Python_Bindings)
   find_program(clair-c2py clair-c2py REQUIRED)
 endif()
