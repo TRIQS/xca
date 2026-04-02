@@ -128,7 +128,8 @@ jobs:
 
     - name: Build & Install TRIQS
       env:
-        TRIQS_BRANCH: ${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}
+        #TRIQS_BRANCH: ${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}
+        TRIQS_BRANCH: unstable
       run: |
         git clone https://github.com/TRIQS/triqs --branch "$TRIQS_BRANCH"
         cmake -S triqs -B triqs/build -G Ninja -DBuild_Tests=OFF -DCMAKE_INSTALL_PREFIX=$HOME/install
