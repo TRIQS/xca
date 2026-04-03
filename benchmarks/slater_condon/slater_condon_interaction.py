@@ -13,15 +13,7 @@ from triqs.operators.util.hamiltonians import h_int_kanamori
 from triqs_xca.block_sparse_solver import is_root
 
 
-def solve_slater_condon_bethe_half_filling(
-        l=2, # d-orbitals angular momentum quantum number
-        Fs=[3.0, 0.5, 0.3], # Slater-Condon interaction parameters for d-orbitals
-        beta=1.0,
-        order=1, 
-        eps=1e-3,
-        ppsc_tol=1e-2,
-        ppsc_maxiter=10,
-        ):
+def _build_slater_condon_solver(l, Fs, beta, eps):
 
     if l == 2:
         assert( len(Fs) == 3 )
@@ -31,7 +23,7 @@ def solve_slater_condon_bethe_half_filling(
     elif l == 1:
         assert( len(Fs) == 2 )
         F0, F2 = Fs
-        mu = (15 * F0 - 6/5 * F2) / 6 # For half-filling of the p-shell 
+        mu = (15 * F0 - 6/5 * F2) / 6 # For half-filling of the p-shell
         w_max = 15.0 * F0 # 6 electrons with energy scale 15 * F0
     elif l == 0:
         assert( len(Fs) == 1 )
@@ -39,9 +31,7 @@ def solve_slater_condon_bethe_half_filling(
         mu = F0 / 2. # For half-filling of the s-shell
         w_max = F0 # 2 electrons with energy scale F0
     else:
-        raise NotImplementedError('Only l=2 (d-orbitals) and l=1 (p-orbitals) are implemented for now.')
-
-    # --
+        raise NotImplementedError('Only l=0 (s-orbitals), l=1 (p-orbitals), and l=2 (d-orbitals) are implemented for now.')
 
     n_orb = 2*l + 1
     spin_names = ['up', 'do']
@@ -67,12 +57,27 @@ def solve_slater_condon_bethe_half_filling(
     from triqs_xca.block_sparse_solver import BlockSparseSolver
 
     S = BlockSparseSolver(
-        H, beta, w_max, eps, gf_struct, 
+        H, beta, w_max, eps, gf_struct,
         #conserved_operators=[N_tot],
         )
 
     S.Delta_tau['up'] << Delta_tau
     S.Delta_tau['do'] << Delta_tau
+
+    return S, N_tot
+
+
+def solve_slater_condon_bethe_half_filling(
+        l=2, # d-orbitals angular momentum quantum number
+        Fs=[3.0, 0.5, 0.3], # Slater-Condon interaction parameters for d-orbitals
+        beta=1.0,
+        order=1, 
+        eps=1e-3,
+        ppsc_tol=1e-2,
+        ppsc_maxiter=10,
+        ):
+
+    S, N_tot = _build_slater_condon_solver(l=l, Fs=Fs, beta=beta, eps=eps)
 
     S.solve(max_order=order, tol=ppsc_tol, maxiter=ppsc_maxiter)
 
@@ -88,17 +93,68 @@ def solve_slater_condon_bethe_half_filling(
 
     return S
 
+def one_se_iter_slater_condon_bethe_half_filling(
+        l=2, # d-orbitals angular momentum quantum number
+        Fs=[3.0, 0.5, 0.3], # Slater-Condon interaction parameters for d-orbitals
+        beta=1.0,
+        order=1, 
+        eps=1e-3,
+        ppsc_tol=1e-2,
+        ):
+
+    S, N_tot = _build_slater_condon_solver(l=l, Fs=Fs, beta=beta, eps=eps)
+
+    # copy over beginning of solve() method
+    S.fit_hybridization(tol=ppsc_tol)
+    S.init_diagram_evaluator()
+
+    # compute the self-energy at the given order using the non-interacting G 
+    import time
+    t_start = time.perf_counter()
+    Sigma = S.eval_pseudo_particle_self_energy_order(S.G, order)
+    t_end = time.perf_counter()
+    elapsed = t_end - t_start
+
+    if is_root():
+        filename = f'self_energy_l_{l}_order_{order}_beta_{S.beta}.h5'
+        with HDFArchive(filename, 'w') as ar:
+            ar['l'] = l
+            ar['order'] = order
+            ar['Sigma'] = Sigma
+            ar['elapsed_time'] = elapsed
+
+    return Sigma
+
 if __name__ == '__main__':
 
-    opts = dict(
-        beta=1.0,
-        eps=1e-9,
-        ppsc_tol=1e-4,
-        ppsc_maxiter=10,
-        order=1,
+    run_full_solves = False
+    run_one_se_iters = True
+
+    if run_full_solves:
+        opts = dict(
+            beta=1.0,
+            eps=1e-9,
+            ppsc_tol=1e-4,
+            ppsc_maxiter=10,
+            order=1,
         )
 
-    solve_slater_condon_bethe_half_filling(l=0, Fs=[3.0], **opts)
-    solve_slater_condon_bethe_half_filling(l=1, Fs=[3.0, 0.5], **opts)
-    solve_slater_condon_bethe_half_filling(l=2, Fs=[3.0, 0.5, 0.3], **opts)
+        solve_slater_condon_bethe_half_filling(l=0, Fs=[3.0], **opts)
+        solve_slater_condon_bethe_half_filling(l=1, Fs=[3.0, 0.5], **opts)
+        solve_slater_condon_bethe_half_filling(l=2, Fs=[3.0, 0.5, 0.3], **opts)
+
+    if run_one_se_iters:
+        orders = [1, 2] # , 3]
+
+        for order in orders:
+            opts = dict(
+                beta=1.0,
+                eps=1e-9,
+                ppsc_tol=1e-4,
+                order=order,
+            )
+
+            one_se_iter_slater_condon_bethe_half_filling(l=0, Fs=[3.0], **opts)
+            one_se_iter_slater_condon_bethe_half_filling(l=1, Fs=[3.0, 0.5], **opts)
+            one_se_iter_slater_condon_bethe_half_filling(l=2, Fs=[3.0, 0.5, 0.3], **opts)
 
