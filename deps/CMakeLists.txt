@@ -68,7 +68,7 @@ endif()
 # -- pyed --
 if(PythonSupport)
   external_dependency(pyed
-    GIT_REPO https://github.com/Wentzell/pyed
+    GIT_REPO https://github.com/HugoStrand/pyed
     GIT_TAG triqs_xca
   )
 endif()
