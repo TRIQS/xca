@@ -6,6 +6,7 @@
 
 #include <triqs_xca/dense_backbone.hpp>
 #include <triqs_xca/block_sparse_backbone.hpp>
+#include <triqs_xca/hyb.hpp>
 
 #include <triqs_xca/strong_cpl.hpp>
 
@@ -495,30 +496,15 @@ TEST(Backbone, OCA_semicircle_bath_aaa) {
   // DLR generation
   auto dlr_rf = build_dlr_rf(Lambda, eps);
   auto itops  = imtime_ops(Lambda, dlr_rf);
-  int r       = itops.rank();
 
   auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
 
   int p = 7;
   int n = 4;
-  nda::vector<dcomplex> hyb_vals(r), hyb_coeff_vals(p);
-  nda::array<dcomplex, 3> hyb(r, n, n), hyb_coeffs(p, n, n);
-  hyb_vals       = {-0.4997496184487105, -0.4867352379479528, -0.4603465101833711, -0.4239204950540695, -0.3716597467714097,
-                    -0.2884886574148449, -0.2479810727230272, -0.2065525284769785, -0.1635819676241178, -0.1326995066858671,
-                    -0.1225444804140666, -0.1282199855712255, -0.1386184647087601, -0.1720919948804938, -0.2300400167898313,
-                    -0.3000508284935615, -0.3759657450111002, -0.4545389745912252, -0.4821599768174421, -0.4997496184487105};
+  nda::vector<dcomplex> hyb_coeff_vals(p);
+  nda::array<dcomplex, 3> hyb_coeffs(p, n, n);
   hyb_coeff_vals = {0.0028042961182163, 0.088487039172428,  0.1575418229076625, 0.1953880665937937,
                     0.2145207908265103, 0.1832496441339733, 0.1580088741667851};
-  for (int t = 0; t < r; t++) {
-    hyb(t, 0, 0) = hyb_vals(t);
-    hyb(t, 1, 1) = hyb_vals(t);
-    hyb(t, 2, 2) = hyb_vals(t);
-    hyb(t, 3, 3) = hyb_vals(t);
-    hyb(t, 0, 1) = hyb_vals(t);
-    hyb(t, 1, 0) = hyb_vals(t);
-    hyb(t, 2, 3) = hyb_vals(t);
-    hyb(t, 3, 2) = hyb_vals(t);
-  }
   for (int l = 0; l < p; l++) {
     hyb_coeffs(l, 0, 0) = hyb_coeff_vals(l);
     hyb_coeffs(l, 1, 1) = hyb_coeff_vals(l);
@@ -529,13 +515,14 @@ TEST(Backbone, OCA_semicircle_bath_aaa) {
     hyb_coeffs(l, 2, 3) = hyb_coeff_vals(l);
     hyb_coeffs(l, 3, 2) = hyb_coeff_vals(l);
   }
-  auto hyb_refl = hyb;
   nda::array<dcomplex, 3> hyb_refl_coeffs(p, n, n);
   hyb_refl_coeffs = hyb_coeffs;
 
   nda::vector<double> hyb_poles(p);
   hyb_poles = {-2.537191963500981,  1.7111725610238615, -1.514666605887425, 1.04941790134832,
                -0.7410379494142222, 0.3763525311836938, -0.1312888711963961};
+  auto hyb = triqs_xca::hyb::coefs2vals(beta, Lambda, eps, hyb_coeffs, hyb_poles);
+  auto hyb_refl = hyb;
   hyb_poles = hyb_poles * beta;
 
   nda::vector<double> hyb_poles_reflect = -hyb_poles;
@@ -582,28 +569,19 @@ TEST(Backbone, spin_flip_fermion_aaa) {
   int norb = 2;
   int nn   = 2 * norb;
   int p    = 7;
-  int r    = itops.rank();
-  nda::array<dcomplex, 3> hyb(r, nn, nn), hyb_coeffs(p, nn, nn);
-  nda::vector<dcomplex> hyb00(r), hyb_coeffs00(p);
-  hyb00        = {-0.4997496184487105, -0.4867352379479528, -0.4603465101833711, -0.4239204950540695, -0.3716597467714097,
-                  -0.2884886574148449, -0.2479810727230272, -0.2065525284769785, -0.1635819676241178, -0.1326995066858671,
-                  -0.1225444804140666, -0.1282199855712255, -0.1386184647087601, -0.1720919948804938, -0.2300400167898313,
-                  -0.3000508284935615, -0.3759657450111002, -0.4545389745912252, -0.4821599768174421, -0.4997496184487105};
+  nda::array<dcomplex, 3> hyb_coeffs(p, nn, nn);
+  nda::vector<dcomplex> hyb_coeffs00(p);
   hyb_coeffs00 = {0.0028042961182163, 0.088487039172428,  0.1575418229076625, 0.1953880665937937,
                   0.2145207908265103, 0.1832496441339733, 0.1580088741667851};
-
   for (int i = 0; i < nn; i++) {
     for (int j = i; j < nn; j++) {
       if (i / 2 == j / 2) {
-        hyb(_, i, j)        = hyb00;
         hyb_coeffs(_, i, j) = hyb_coeffs00;
       } else {
-        hyb(_, i, j)        = 0.0;
         hyb_coeffs(_, i, j) = 0.0;
       }
     }
   }
-  auto hyb_refl = hyb;
   nda::array<dcomplex, 3> hyb_refl_coeffs(p, nn, nn);
   hyb_refl_coeffs = hyb_coeffs;
   nda::vector<double> hyb_poles(p);
@@ -682,28 +660,20 @@ TEST(Backbone, spin_flip_fermion_all_sym_aaa) {
   int norb = 2;
   int nn   = 2 * norb;
   int p    = 7;
-  int r    = itops.rank();
-  nda::array<dcomplex, 3> hyb(r, nn, nn), hyb_coeffs(p, nn, nn);
-  nda::vector<dcomplex> hyb00(r), hyb_coeffs00(p);
-  hyb00        = {-0.4997496184487105, -0.4867352379479528, -0.4603465101833711, -0.4239204950540695, -0.3716597467714097,
-                  -0.2884886574148449, -0.2479810727230272, -0.2065525284769785, -0.1635819676241178, -0.1326995066858671,
-                  -0.1225444804140666, -0.1282199855712255, -0.1386184647087601, -0.1720919948804938, -0.2300400167898313,
-                  -0.3000508284935615, -0.3759657450111002, -0.4545389745912252, -0.4821599768174421, -0.4997496184487105};
+  nda::array<dcomplex, 3> hyb_coeffs(p, nn, nn);
+  nda::vector<dcomplex> hyb_coeffs00(p);
   hyb_coeffs00 = {0.0028042961182163, 0.088487039172428,  0.1575418229076625, 0.1953880665937937,
                   0.2145207908265103, 0.1832496441339733, 0.1580088741667851};
 
   for (int i = 0; i < nn; i++) {
     for (int j = i; j < nn; j++) {
       if ((i == j) || (j - i) % (nn / 2) == 0) {
-        hyb(_, i, j)        = hyb00;
         hyb_coeffs(_, i, j) = hyb_coeffs00;
       } else {
-        hyb(_, i, j)        = 0.0;
         hyb_coeffs(_, i, j) = 0.0;
       }
     }
   }
-  auto hyb_refl = hyb;
   nda::array<dcomplex, 3> hyb_refl_coeffs(p, nn, nn);
   hyb_refl_coeffs = hyb_coeffs;
   nda::vector<double> hyb_poles(p);
