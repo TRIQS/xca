@@ -139,11 +139,11 @@ class BlockSparseSolver(object):
 
 
     @timer('Adapol hybridization fit')
-    def fit_hybridization(self, tol=None, use_polefitting_dlr=True, verbose=True):
+    def fit_hybridization(self, tol=None, dlr_polefitting=True, verbose=True):
 
         self.tol_adapol = 100 * self.eps if tol is None else tol
 
-        if use_polefitting_dlr:
+        if dlr_polefitting:
             #Delta_dlr = make_gf_dlr(self.Delta_tau)
             #Delta_dlr_dense = self.__from_blockgf_to_dense(Delta_dlr)
             #w_dlr = np.array([ float(x) for x in Delta_dlr.mesh ])
@@ -239,7 +239,7 @@ class BlockSparseSolver(object):
         #if is_root(): print(f'done.')
 
 
-    def solve(self, max_order, tol=1e-4, maxiter=10, mix=1., delta_tol=None, normalization='classic', verbose=True):
+    def solve(self, max_order, tol=1e-4, maxiter=10, mix=1., delta_tol=None, dlr_polefitting=True, normalization='classic', verbose=True):
         """ Solve the impurity problem using pseudo particle self-consistent perturbation theory.
         
         Parameters
@@ -281,7 +281,7 @@ class BlockSparseSolver(object):
         
         #if verbose and is_root(): print(f'delta_tol = {self.delta_tol:2.2E}')
 
-        self.fit_hybridization(tol=self.delta_tol, verbose=verbose)
+        self.fit_hybridization(tol=self.delta_tol, dlr_polefitting=dlr_polefitting, verbose=verbose)
         self.init_diagram_evaluator() # FIXME! Evaluator takes hyb poles and coeffs in constructor
 
         for iter in range(1, maxiter+1):
@@ -412,7 +412,7 @@ class BlockSparseSolver(object):
         """ Partition function :math:`Z` of the impurity model, computed from the pseudo particle Green's function as
         
         .. math::
-            Z = -\\mathrm{Tr}[ G(\\beta) ] \cdot e^{-\\beta \\eta}
+            Z = -\\mathrm{Tr}[ G(\\beta) ] \\cdot e^{-\\beta \\eta}
           
         Returns
         -------
