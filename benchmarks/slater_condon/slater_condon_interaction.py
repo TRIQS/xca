@@ -13,7 +13,8 @@ from triqs.operators.util.hamiltonians import h_int_kanamori
 from triqs_xca.block_sparse_solver import is_root
 
 
-def _build_slater_condon_solver(l, Fs, beta, eps):
+def _slater_condon_mu_wmax(l, Fs):
+    """Return half-filling chemical potential and recommended DLR cutoff."""
 
     if l == 2:
         assert( len(Fs) == 3 )
@@ -33,6 +34,14 @@ def _build_slater_condon_solver(l, Fs, beta, eps):
     else:
         raise NotImplementedError('Only l=0 (s-orbitals), l=1 (p-orbitals), and l=2 (d-orbitals) are implemented for now.')
 
+    return mu, w_max
+
+
+def _setup_slater_condon_problem(l, Fs, beta, eps):
+    """Build shared Slater-Condon inputs for both solver frontends."""
+
+    mu, w_max = _slater_condon_mu_wmax(l, Fs)
+
     n_orb = 2*l + 1
     spin_names = ['up', 'do']
     gf_struct = [ [f'{spin}', n_orb] for spin in spin_names ]
@@ -49,10 +58,15 @@ def _build_slater_condon_solver(l, Fs, beta, eps):
 
     mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=w_max, eps=eps)
     Delta_w = Gf(mesh=mesh_w, target_shape=[n_orb]*2)
-
-    #Delta_w << inverse(iOmega_n)
     Delta_w << SemiCircular(half_bandwidth=1.0)
     Delta_tau = make_gf_dlr_imtime(Delta_w)
+
+    return H, N_tot, gf_struct, Delta_tau, w_max
+
+
+def _build_slater_condon_solver(l, Fs, beta, eps):
+
+    H, N_tot, gf_struct, Delta_tau, w_max = _setup_slater_condon_problem(l, Fs, beta, eps)
 
     from triqs_xca.block_sparse_solver import BlockSparseSolver
 
@@ -65,6 +79,31 @@ def _build_slater_condon_solver(l, Fs, beta, eps):
     S.Delta_tau['do'] << Delta_tau
 
     return S, N_tot
+
+
+def _build_slater_condon_solver_dense(l, Fs, beta, eps, verbose=True):
+    """Build a Slater-Condon impurity model using TriqsSolver instead of BlockSparseSolver.
+
+    Returns
+    -------
+    S : TriqsSolver
+        Configured solver instance with Delta_tau initialized.
+    H : Operator
+        Local Hamiltonian including the half-filling chemical potential shift.
+    N_tot : Operator
+        Total particle number operator.
+    """
+
+    H, N_tot, gf_struct, Delta_tau, w_max = _setup_slater_condon_problem(l, Fs, beta, eps)
+
+    from triqs_xca.triqs_solver import TriqsSolver
+
+    S = TriqsSolver(beta=beta, gf_struct=gf_struct, eps=eps, w_max=w_max, verbose=verbose)
+    # S.set_hybridization(Delta_tau.data())
+    S.Delta_tau['up'] << Delta_tau
+    S.Delta_tau['do'] << Delta_tau
+
+    return S, H, N_tot
 
 
 def solve_slater_condon_bethe_half_filling(
@@ -94,6 +133,7 @@ def solve_slater_condon_bethe_half_filling(
     return S
 
 def one_se_iter_slater_condon_bethe_half_filling(
+        dense=False,
         l=2, # d-orbitals angular momentum quantum number
         Fs=[3.0, 0.5, 0.3], # Slater-Condon interaction parameters for d-orbitals
         beta=1.0,
@@ -102,28 +142,51 @@ def one_se_iter_slater_condon_bethe_half_filling(
         ppsc_tol=1e-2,
         ):
 
-    S, N_tot = _build_slater_condon_solver(l=l, Fs=Fs, beta=beta, eps=eps)
-
-    # copy over beginning of solve() method
-    S.fit_hybridization(tol=ppsc_tol)
-    S.init_diagram_evaluator()
-
     # compute the self-energy at the given order using the non-interacting G 
-    import time
-    t_start = time.perf_counter()
-    Sigma = S.eval_pseudo_particle_self_energy_order(S.G, order)
-    t_end = time.perf_counter()
+    if dense:
+        S, H, N_tot = _build_slater_condon_solver_dense(l=l, Fs=Fs, beta=beta, eps=eps)
+        S.order = order
+        S.h_int = H
+        S.S.set_H_loc(H)
+        S.S.G_iaa = S.S.G0_iaa.copy() # start with non-interacting G
+        S.delta_iaa = S._TriqsSolver__from_blockgf_to_array(S.Delta_tau)
+        S.S.set_hybridization(S.delta_iaa, compress=True, verbose=True)
+
+        from triqs_xca.diag import all_connected_pairings
+        from triqs_xca.solver import Sigma_calc_topology
+        import time
+
+        Sigma_dense = 0 # zeros like S.G_iaa
+        t_start = time.perf_counter()
+        for sign, topo in all_connected_pairings(order):
+            Sigma_dense += pow(-1, order) * sign * S.S.calc_Sigma_topology(topo)
+        t_end = time.perf_counter()
+    else:
+        S, N_tot = _build_slater_condon_solver(l=l, Fs=Fs, beta=beta, eps=eps)
+        # copy over beginning of solve() method
+        S.fit_hybridization(tol=ppsc_tol)
+        S.init_diagram_evaluator()
+
+        import time
+        t_start = time.perf_counter()
+        Sigma = S.eval_pseudo_particle_self_energy_order(S.G, order)
+        t_end = time.perf_counter()
+        from triqs_xca.block_sparse_solver import pseudo_particle_block_gf_to_dense
+        Sigma_dense = pseudo_particle_block_gf_to_dense(Sigma, S.ad)
+
     elapsed = t_end - t_start
 
     if is_root():
-        filename = f'self_energy_l_{l}_order_{order}_beta_{S.beta}.h5'
+        filename = f'{'dense' if dense else 'bs'}_self_energy_l_{l}_order_{order}_beta_{S.beta}.h5'
         with HDFArchive(filename, 'w') as ar:
             ar['l'] = l
             ar['order'] = order
-            ar['Sigma'] = Sigma
+            ar['Sigma_dense'] = Sigma_dense
+            if not dense:
+                ar['Sigma'] = Sigma
             ar['elapsed_time'] = elapsed
 
-    return Sigma
+    return Sigma_dense
 
 if __name__ == '__main__':
 
@@ -144,17 +207,19 @@ if __name__ == '__main__':
         solve_slater_condon_bethe_half_filling(l=2, Fs=[3.0, 0.5, 0.3], **opts)
 
     if run_one_se_iters:
-        orders = [1, 2] # , 3]
+        orders = [1, 2, 3]
 
         for order in orders:
-            opts = dict(
-                beta=1.0,
-                eps=1e-9,
-                ppsc_tol=1e-4,
-                order=order,
-            )
+            for dense in [False, True]:
+                opts = dict(
+                    dense=dense,
+                    beta=1.0,
+                    eps=1e-9,
+                    ppsc_tol=1e-4,
+                    order=order,
+                )
 
-            one_se_iter_slater_condon_bethe_half_filling(l=0, Fs=[3.0], **opts)
-            one_se_iter_slater_condon_bethe_half_filling(l=1, Fs=[3.0, 0.5], **opts)
-            one_se_iter_slater_condon_bethe_half_filling(l=2, Fs=[3.0, 0.5, 0.3], **opts)
+                one_se_iter_slater_condon_bethe_half_filling(l=0, Fs=[3.0], **opts)
+                one_se_iter_slater_condon_bethe_half_filling(l=1, Fs=[3.0, 0.5], **opts)
+                one_se_iter_slater_condon_bethe_half_filling(l=2, Fs=[3.0, 0.5, 0.3], **opts)
 
