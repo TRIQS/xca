@@ -60,7 +60,11 @@ static auto const fun_0 = c2py::dispatcher_f_kw_t{
                  "self", "G_ppsc", "topology"),
    c2py::cmethod([](triqs_xca::dense::DenseDiagramEvaluator &self, triqs_xca::dense::DenseDiagramEvaluator::gf_vt G_ppsc,
                     nda::array_const_view<int, 2> topology, int f_ix) { return self.compute_self_energy(G_ppsc, topology, f_ix); },
-                 "self", "G_ppsc", "topology", "f_ix")};
+                 "self", "G_ppsc", "topology", "f_ix"),
+   c2py::cmethod([](triqs_xca::dense::DenseDiagramEvaluator &self, triqs_xca::dense::DenseDiagramEvaluator::gf_vt G_ppsc,
+                    nda::array_const_view<int, 2> topology,
+                    nda::array_const_view<int, 1> f_ix_vec) { return self.compute_self_energy(G_ppsc, topology, f_ix_vec); },
+                 "self", "G_ppsc", "topology", "f_ix_vec")};
 
 // compute_single_ptcle_gf
 static auto const fun_1 = c2py::dispatcher_f_kw_t{
@@ -69,7 +73,11 @@ static auto const fun_1 = c2py::dispatcher_f_kw_t{
                  "self", "G_ppsc", "topology"),
    c2py::cmethod([](triqs_xca::dense::DenseDiagramEvaluator &self, triqs_xca::dense::DenseDiagramEvaluator::gf_vt G_ppsc,
                     nda::array_const_view<int, 2> topology, int f_ix) { return self.compute_single_ptcle_gf(G_ppsc, topology, f_ix); },
-                 "self", "G_ppsc", "topology", "f_ix")};
+                 "self", "G_ppsc", "topology", "f_ix"),
+   c2py::cmethod([](triqs_xca::dense::DenseDiagramEvaluator &self, triqs_xca::dense::DenseDiagramEvaluator::gf_vt G_ppsc,
+                    nda::array_const_view<int, 2> topology,
+                    nda::array_const_view<int, 1> f_ix_vec) { return self.compute_single_ptcle_gf(G_ppsc, topology, f_ix_vec); },
+                 "self", "G_ppsc", "topology", "f_ix_vec")};
 
 // get_num_self_energy_backbones
 static auto const fun_2 = c2py::dispatcher_f_kw_t{c2py::cmethod(

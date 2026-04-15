@@ -100,6 +100,7 @@ class DiagramEvaluator {
 
   triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology);           // compute self-energy for given topology
   triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, int f_ix); // compute self-energy for given topology and flat index
+  triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec); // compute self-energy for given topology and flat index vector
 
   void print_self_energy_backbone(nda::array_const_view<int, 2> topology,
                                   int f_ix); // print the backbone corresponding to a given flat index for debugging
@@ -121,6 +122,8 @@ class DiagramEvaluator {
     triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology);
   nda::array<dcomplex, 3> compute_single_ptcle_gf(
     triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, int f_ix);
+  nda::array<dcomplex, 3> compute_single_ptcle_gf(
+    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec);
 
   void print_single_ptcle_gf_backbone(nda::array_const_view<int, 2> topology,
                                       int f_ix); // print the backbone corresponding to a given flat index for debugging

@@ -93,6 +93,8 @@ namespace triqs_xca::dense {
     compute_self_energy(gf_vt G_ppsc, nda::array_const_view<int, 2> topology); // compute self-energy for given topology
     triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy(gf_vt G_ppsc, nda::array_const_view<int, 2> topology,
                                                                       int f_ix); // compute self-energy for given topology and flat index
+    triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy(gf_vt G_ppsc, nda::array_const_view<int, 2> topology,
+                                                                      nda::array_const_view<int, 1> f_ix_vec); // compute self-energy for given topology and flat index vector
     // get number of backbones for given topology
     int get_num_self_energy_backbones(nda::array_const_view<int, 2> topology);
 
@@ -107,6 +109,8 @@ namespace triqs_xca::dense {
     nda::array<dcomplex, 3> compute_single_ptcle_gf(gf_vt G_ppsc, nda::array_const_view<int, 2> topology);
     // compute single particle Green's function for given topology and flat index
     nda::array<dcomplex, 3> compute_single_ptcle_gf(gf_vt G_ppsc, nda::array_const_view<int, 2> topology, int f_ix);
+    // compute single particle Green's function for given topology and flat index vector
+    nda::array<dcomplex, 3> compute_single_ptcle_gf(gf_vt G_ppsc, nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec);
     // get number of backbones for given topology
     int get_num_single_ptcle_gf_backbones(nda::array_const_view<int, 2> topology);
 

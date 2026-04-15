@@ -501,18 +501,13 @@ class BlockSparseSolver(object):
 
 
     def __eval_pseudo_particle_self_energy_topology_loop(self, G, topology, verbose=False):
+
         order = len(topology)
-        Sigma = self.get_zero_pseudo_particle_propagator()
-
         n_max = self.d.get_num_self_energy_backbones(topology)
-        n_vec = scatter_array_over_ranks(np.arange(n_max))
+        n_vec = scatter_array_over_ranks(np.arange(n_max, dtype=np.int32))
 
-        if verbose and is_root(): from tqdm import tqdm as loop
-        else: loop = lambda x: x
-
-        for n in loop(n_vec): # FIXME! Pass vector to C++ and let it loop there, to avoid Python overhead in the loop.
-            Sigma += pow(-1, order+1) * self.d.compute_self_energy(G, topology, n) # FIXME! Sign convention.
-
+        Sigma = self.get_zero_pseudo_particle_propagator()
+        Sigma = pow(-1, order+1) * self.d.compute_self_energy(G, topology, n_vec)
         for bidx, sigma_b in Sigma:
             sigma_b.data[:] = mpi.all_reduce(sigma_b.data)
 
@@ -566,14 +561,12 @@ class BlockSparseSolver(object):
 
 
     def __eval_single_particle_greens_function_topology_loop(self, G, topology):
-        spgf = self.get_zero_single_particle_greens_function()
 
         n_max = self.d.get_num_single_ptcle_gf_backbones(topology)
-        n_vec = scatter_array_over_ranks(np.arange(n_max))
+        n_vec = scatter_array_over_ranks(np.arange(n_max, dtype=np.int32))
 
-        for n in n_vec:
-            spgf.data[:] += self.d.compute_single_ptcle_gf(G, topology, n) # FIXME! return triqs::gfs::gf
-
+        spgf = self.get_zero_single_particle_greens_function()
+        spgf.data[:] = self.d.compute_single_ptcle_gf(G, topology, n_vec)
         spgf.data[:] = mpi.all_reduce(spgf.data)
 
         return spgf

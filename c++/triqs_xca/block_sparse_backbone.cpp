@@ -358,6 +358,36 @@ triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_ene
 }
 
 triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_energy(
+  triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, 
+  nda::array_const_view<int, 1> f_ix_vec) 
+  {
+  BlockDiagOpFun Gt(G_ppsc);
+
+  // Allocate Sigma and set to zero
+  Sigma = Gt;
+  Sigma *= 0;
+
+  Backbone backbone(topology, n);
+
+  for( auto f_ix : f_ix_vec ) {
+    eval_self_energy(Gt, backbone, f_ix);
+  }
+
+  // This converts a BlockDiagOpFun to a triqs::gfs::block_gf (move into BlockDiagOpFun?)
+  auto sig = Sigma;
+  std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> sig_blocks(sig.get_num_block_cols());
+  for (int i = 0; i < sig.get_num_block_cols(); ++i) {
+    if (sig.get_zero_block_index(i) == -1) {
+      sig_blocks[i] = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, 0 * Gt.get_block(i)); // zero block
+    } else {
+      sig_blocks[i] = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, sig.get_block(i));
+    }
+  }
+  reset();
+  return {sig_blocks};  
+} 
+
+triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_energy(
   BlockDiagOpFun &Gt, nda::array_const_view<int, 2> topology, int f_ix) 
   {
   // Allocate Sigma and set to zero
@@ -723,6 +753,20 @@ nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(
   auto mu_ops  = setup_mu_ops_for_single_ptcle_gf();
   auto kap_ops = setup_kap_ops_for_single_ptcle_gf();
   return eval_correlator(Gt, backbone, mu_ops, kap_ops, f_ix);
+}
+
+nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(
+  triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec) 
+  {
+  BlockDiagOpFun Gt(G_ppsc);
+  CorrelatorBackbone backbone(topology, n);
+  auto mu_ops  = setup_mu_ops_for_single_ptcle_gf();
+  auto kap_ops = setup_kap_ops_for_single_ptcle_gf();
+  nda::array<dcomplex, 3> correlator = nda::zeros<dcomplex>(r, mu_ops.size(), kap_ops.size());
+  for( auto f_ix : f_ix_vec ) {
+    correlator += eval_correlator(Gt, backbone, mu_ops, kap_ops, f_ix);
+  }
+  return correlator;
 }
 
 void DiagramEvaluator::print_single_ptcle_gf_backbone(nda::array_const_view<int, 2> topology, int f_ix) {
