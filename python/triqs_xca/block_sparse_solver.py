@@ -151,12 +151,18 @@ class BlockSparseSolver(object):
             #pole_weights, poles, fit_error = polefitting_dlr(
             #    Delta_dlr_dense.data, w_dlr, self.beta, eps=self.tol_adapol, statistics="Fermion", verbose=True)
 
-            from adapol.fit_utils_dlr import polefitting_dlr_triqs
-            Delta_tau_dense = self.__from_blockgf_to_dense(self.Delta_tau)
-            pole_weights, poles, fit_error = polefitting_dlr_triqs(
-                Delta_tau_dense, eps=self.tol_adapol, statistics="Fermion", verbose=verbose > 1)
+            if False:
+                from adapol.fit_utils_dlr import polefitting_dlr_triqs
+                Delta_tau_dense = self.__from_blockgf_to_dense(self.Delta_tau)
+                pole_weights, poles, fit_error = polefitting_dlr_triqs(
+                    Delta_tau_dense, eps=self.tol_adapol, statistics="Fermion", verbose=verbose > 1)
 
-            pole_weights *= -1. # FIXME! Why is this necessary? Is there a sign convention issue in polefitting_dlr?
+                pole_weights *= -1. # FIXME! Why is this necessary? Is there a sign convention issue in polefitting_dlr?
+            else:
+                from adapol.aaa_bra_triqs import TriqsDLRCompression
+                Delta_tau_dense = self.__from_blockgf_to_dense(self.Delta_tau)
+                tdc = TriqsDLRCompression(Delta_tau_dense, tol=self.tol_adapol)
+                poles, pole_weights, fit_error = tdc.poles, tdc.residues, tdc.error
 
         else:
             Delta_iw = make_gf_dlr_imfreq(self.Delta_tau)
