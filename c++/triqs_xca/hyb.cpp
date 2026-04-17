@@ -20,33 +20,47 @@ namespace triqs_xca::hyb {
        values(coefs2vals(tau_mesh.beta(), tau_mesh.dlr_it(), hyb_coeffs, hyb_poles)),
        values_reflect(refl_sign
                       * tau_mesh.dlr_it().reflect(values)) // Follow sign convention of block_sparse_backbone for reflected hybridization function.
-  {};
+  {
+    auto dlr_it = tau_mesh.dlr_it().get_itnodes();
+    int r       = tau_mesh.dlr_it().rank();
+    int p       = static_cast<int>(poles.size());
+    k_it_p      = nda::array<double, 2>(r, p);
+    k_it_m      = nda::array<double, 2>(r, p);
+    k_0_p       = nda::vector<double>(p);
+    k_0_m       = nda::vector<double>(p);
+    for (int i = 0; i < poles.size(); i++) {
+      for (int t = 0; t < tau_mesh.dlr_it().rank(); t++) {
+        k_it_p(t, i) = cppdlr::k_it(dlr_it(t), poles(i));
+        k_it_m(t, i) = cppdlr::k_it(dlr_it(t), -poles(i));
+      }
+      k_0_p(i) = cppdlr::k_it(0, poles(i));
+      k_0_m(i) = cppdlr::k_it(0, -poles(i));
+    }
+  };
 
   void Hybridization::multiply_kernel_on_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, int v_ix, int l_ix, double sign) {
     // Multiply the kernel associated with vertex v_ix and pole index l_ix into T_buf
 
-    int r       = tau_mesh.dlr_it().rank();
-    int Ksign   = backbone.get_vertex_Ksign(v_ix);
-    auto dlr_it = tau_mesh.dlr_it().get_itnodes();
+    int r     = tau_mesh.dlr_it().rank();
+    int Ksign = backbone.get_vertex_Ksign(v_ix);
 
     if (Ksign != 0) {
-      double pole = sign * poles(l_ix);
-      for (int t = 0; t < r; t++) T_buf(t, _, _) *= cppdlr::k_it(dlr_it(t), Ksign * pole);
+      auto k_it = (sign * Ksign > 0) ? k_it_p(_, l_ix) : k_it_m(_, l_ix);
+      for (int t = 0; t < r; t++) T_buf(t, _, _) *= k_it(t);
     }
   }
 
   void Hybridization::multiply_kernels_on_edge(nda::array_view<dcomplex, 3> Gt, Backbone &backbone, int e_ix) {
     // Multiply the kernels associated with edge e_ix into T_buf
 
-    int m       = backbone.m;
-    int r       = tau_mesh.dlr_it().rank();
-    auto dlr_it = tau_mesh.dlr_it().get_itnodes();
+    int m = backbone.m;
+    int r = tau_mesh.dlr_it().rank();
 
     for (int x = 0; x < m - 1; x++) {
       int Ksign = backbone.get_edge(e_ix, x);
       if (Ksign != 0) {
-        double pole = poles(backbone.get_pole_ind(x));
-        for (int t = 0; t < r; t++) Gt(t, _, _) *= cppdlr::k_it(dlr_it(t), Ksign * pole);
+        auto k_it = (Ksign > 0) ? k_it_p(_, backbone.get_pole_ind(x)) : k_it_m(_, backbone.get_pole_ind(x));
+        for (int t = 0; t < r; t++) Gt(t, _, _) *= k_it(t);
       }
     }
   }
@@ -60,9 +74,9 @@ namespace triqs_xca::hyb {
     for (int m_ix = 0; m_ix < m - 1; m_ix++) {     // loop over hybridization indices
       int exp = backbone.get_prefactor_Kexp(m_ix); // exponent on K for this hybridization index
       if (exp != 0) {
-        int Ksign   = backbone.get_prefactor_Ksign(m_ix); // sign on K for this hybridization index
-        double pole = poles(backbone.get_pole_ind(m_ix)); // DLR frequency for this value of this hybridization index
-        prefactor *= std::pow(cppdlr::k_it(0, Ksign * pole), -exp);
+        int Ksign = backbone.get_prefactor_Ksign(m_ix); // sign on K for this hybridization index
+        auto k_0 = (Ksign > 0) ? k_0_p(backbone.get_pole_ind(m_ix)) : k_0_m(backbone.get_pole_ind(m_ix));
+        prefactor *= std::pow(k_0, -exp);
       }
     }
 
@@ -88,16 +102,6 @@ namespace triqs_xca::hyb {
     nda::array<dcomplex, 3> vals(r, n1, n2);
     reshape(vals, r, n1 * n2) = matmul(kmat, cf_r);
     return vals;
-  }
-
-  nda::array<dcomplex, 3> reflect(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> coefs,
-                                  nda::vector_const_view<double> poles) {
-    auto vals   = coefs2vals(beta, Lambda, eps, coefs, poles);
-    auto dlr_rf = cppdlr::build_dlr_rf(Lambda, eps);
-    auto itops  = cppdlr::imtime_ops(Lambda, dlr_rf);
-    auto refl   = itops.reflect(vals);
-    // TODO
-    return coefs; // placeholder
   }
 
 } // namespace triqs_xca::hyb

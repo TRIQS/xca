@@ -21,6 +21,11 @@ namespace triqs_xca::hyb {
     nda::array<dcomplex, 3> values;         // hybridization function at imaginary time nodes
     nda::array<dcomplex, 3> values_reflect; // hybridization function at imaginary time nodes (reversed)
 
+    nda::array<double, 2> k_it_p; // fermionic kernel evaluated at imaginary time nodes and poles
+    nda::array<double, 2> k_it_m; // fermionic kernel evaluated at imaginary time nodes and (-1 * poles)
+    nda::vector<double> k_0_p; // fermionic kernel evaluated at tau = 0 and poles
+    nda::vector<double> k_0_m; // fermionic kernel evaluated at tau = 0 and (-1 * poles)
+
     /**
      * @brief Constructor for DenseFSet
      * @param[in] tau_mesh TRIQS imaginary time DLR mesh
@@ -54,15 +59,4 @@ namespace triqs_xca::hyb {
  */
   nda::array<dcomplex, 3> coefs2vals(double beta, const cppdlr::imtime_ops &itops, nda::array_const_view<dcomplex, 3> coefs,
                                      nda::vector_const_view<double> poles);
-
-  /**
- * @brief Get hybridization coefficients of reflection
- * @param[in] beta inverse temperature
- * @param[in] Lambda DLR cutoff parameter
- * @param[in] eps DLR epsilon parameter
- * @param[in] coefs DLR values at imaginary time nodes
- * @param[in] poles DLR imaginary time nodes
- */
-  nda::array<dcomplex, 3> reflect(double beta, double Lambda, double eps, nda::array_const_view<dcomplex, 3> coefs,
-                                  nda::vector_const_view<double> poles);
 } // namespace triqs_xca::hyb
