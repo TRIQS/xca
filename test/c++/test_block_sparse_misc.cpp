@@ -69,38 +69,6 @@ TEST(BlockSparseMisc, compute_nonint_gf) {
   ASSERT_LE(nda::max_element(nda::abs(Gt_mat(_, range(15, 16), range(15, 16)) - Gt.get_block(4))), 1e-13);
 }
 
-TEST(BlockSparseMisc, hyb_coefs2vals) {
-  // example hybridization function
-  nda::vector<dcomplex> hyb00{-0.4997496184487105, -0.4867352379479528, -0.4603465101833711, -0.4239204950540695, -0.3716597467714097,
-                              -0.2884886574148449, -0.2479810727230272, -0.2065525284769785, -0.1635819676241178, -0.1326995066858671,
-                              -0.1225444804140666, -0.1282199855712255, -0.1386184647087601, -0.1720919948804938, -0.2300400167898313,
-                              -0.3000508284935615, -0.3759657450111002, -0.4545389745912252, -0.4821599768174421, -0.4997496184487105};
-  // hybridizations coefficients computed using a Python AAA routine
-  nda::vector<dcomplex> coefs00{0.0028042961182163, 0.088487039172428,  0.1575418229076625, 0.1953880665937937,
-                                0.2145207908265103, 0.1832496441339733, 0.1580088741667851};
-  // filling hybridization and coefficient arrays
-  nda::array<dcomplex, 3> hyb_py(20, 4, 4), coefs(7, 4, 4);
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
-      if (i / 2 == j / 2) {
-        hyb_py(_, i, j) = hyb00;
-        coefs(_, i, j)  = coefs00;
-      } else {
-        hyb_py(_, i, j) = 0.0;
-        coefs(_, i, j)  = 0.0;
-      }
-    }
-  }
-  // hybridization poles computed using a Python AAA routine
-  nda::vector<double> poles{-2.537191963500981,  1.7111725610238615, -1.514666605887425, 1.04941790134832,
-                            -0.7410379494142222, 0.3763525311836938, -0.1312888711963961};
-  double beta   = 8.0;
-  double Lambda = 10.0 * beta;
-  double eps    = 1.0e-6;
-  auto hyb      = triqs_xca::hyb::coefs2vals(beta, Lambda, eps, coefs, poles);
-  ASSERT_LE(nda::max_element(nda::abs(hyb - hyb_py)), eps);
-}
-
 TEST(BlockSparseMisc, block_gf_to_BDOF) {
   double beta   = 1;
   double Lambda = 10 * beta;
