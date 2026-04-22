@@ -123,7 +123,7 @@ class BlockSparseSolver(object):
 
         self.timer.start('Dyson')
         self.timer.start('Setup')
-        self.G0 = atomic_pseudo_particle_greens_function(self.atom_diag, self.beta, self.mesh_tau)
+        self.G0, self.eta0 = atomic_pseudo_particle_greens_function(self.atom_diag, self.beta, self.mesh_tau)
         self.G = self.G0.copy()
         self.Sigma = self.get_zero_pseudo_particle_propagator()
 
@@ -161,14 +161,31 @@ class BlockSparseSolver(object):
             else:
                 from adapol.aaa_bra_triqs import TriqsDLRCompression
                 Delta_tau_dense = self.__from_blockgf_to_dense(self.Delta_tau)
-                tdc = TriqsDLRCompression(Delta_tau_dense, tol=self.tol_adapol)
-                poles, pole_weights, fit_error = tdc.poles, tdc.residues, tdc.error
+                try:
+                    tdc = TriqsDLRCompression(Delta_tau_dense, tol=self.tol_adapol, verbose=verbose and is_root())
+                    poles, pole_weights, fit_error = tdc.poles, tdc.residues, tdc.error
+                except ValueError as e:
+                    if is_root():
+                        print(f'Adapol: WARNING! TriqsDLRCompression failed with error: {e}. Using direct DLR coefficients instead.')
+                    Delta_dlr_dense = make_gf_dlr(Delta_tau_dense)
+                    poles = np.array([ float(x) for x in Delta_dlr_dense.mesh ]) / self.beta
+                    pole_weights = Delta_dlr_dense.data.copy()
+                    fit_error = Delta_dlr_dense.mesh.eps
 
         else:
-            Delta_iw = make_gf_dlr_imfreq(self.Delta_tau)
-            Delta_iw_dense = self.__from_blockgf_to_dense(Delta_iw)
-            _, fit_error, poles, pole_weights = anacont_triqs(Delta_iw_dense, tol=self.tol_adapol, debug=True)
-            #_, fit_error, poles_ref, pole_weights_ref = anacont_triqs(Delta_iw_dense, tol=self.tol_adapol, debug=True)
+
+            if False:
+                Delta_iw = make_gf_dlr_imfreq(self.Delta_tau)
+                Delta_iw_dense = self.__from_blockgf_to_dense(Delta_iw)
+                _, fit_error, poles, pole_weights = anacont_triqs(Delta_iw_dense, tol=self.tol_adapol, debug=True)
+                #_, fit_error, poles_ref, pole_weights_ref = anacont_triqs(Delta_iw_dense, tol=self.tol_adapol, debug=True)
+            else:
+                Delta_tau_dense = self.__from_blockgf_to_dense(self.Delta_tau)
+                Delta_dlr_dense = make_gf_dlr(Delta_tau_dense)
+                poles = np.array([ float(x) for x in Delta_dlr_dense.mesh ]) / self.beta
+                pole_weights = Delta_dlr_dense.data.copy()
+                fit_error = Delta_dlr_dense.mesh.eps
+
 
         #print(f'poles     = {poles}')
         #print(f'poles_ref = {poles_ref}')
@@ -289,6 +306,8 @@ class BlockSparseSolver(object):
             #if is_root(): print(f'Sigma max_order = {self.max_order}')
             self.Sigma = self.eval_pseudo_particle_self_energy(self.G, self.max_order, verbose=verbose > 1)
 
+            print(f'Hermiticity error of Sigma = {self.herm_err(self.Sigma):2.2E}') # DEBUG!
+
             self.timer.start('Dyson')
 
             if normalization == 'classic':
@@ -324,6 +343,7 @@ class BlockSparseSolver(object):
                 raise NotImplementedError(f'Normalization method {normalization} not implemented.')
 
             Z = self.partition_function_from_ppgf(G_new)
+
             self.timer.stop()
 
             self.diff_G = max_abs_diff_BlockGf(G_new, self.G)
@@ -456,6 +476,40 @@ class BlockSparseSolver(object):
         return expectation_value(operator, self.atom_diag, self.G)
     
 
+    def many_body_density_matrix(self, G):
+        """ Get the block sparse many body density matrix :math:`\\rho` from the pseudo particle Green's function :math:`G`.
+        
+        Returns
+        -------
+        
+        rho : list of tuples(str, np.ndarray)
+            List of tuples ``(bidx, rho_b)``, where ``bidx`` is the block index 
+            and ``rho_b`` is the many body density matrix for block ``bidx``
+        """
+        rho = []
+        for bidx, g_b in G:
+            g_b_dlr = make_gf_dlr(g_b)
+            rho_b = -g_b_dlr(g_b.mesh.beta)
+            rho.append((bidx, rho_b))
+        return rho
+    
+
+    def herm_err(self, G):
+        """ Compute maximum hermiticity error of a block Green's function :math:`G` """
+        err = 0.
+        for bidx, g_b in G:
+            err_b = np.max(np.abs(g_b.data - np.conj(g_b.data.transpose(0,2,1))))
+            err = max(err, err_b)
+        return err
+
+
+    def make_hermitian(self, G):
+        """ Enforce hermiticity of a block Green's function :math:`G` by symmetrizing it with its conjugate transpose. """
+        for bidx, g_b in G:
+            g_b.data[:] = 0.5 * (g_b.data + g_b.data.transpose(0,2,1).conjugate())
+        return G
+
+
     @timer('Solve')
     def solve_dyson(self, Sigma, eta):
 
@@ -467,6 +521,11 @@ class BlockSparseSolver(object):
             #if is_root(): print(f'solve_dyson: block {bidx}, sigma_b.data.shape = {sigma_b.data.shape}')
             #self.timer.start(f'Dyson block {bidx}')
             G[bidx].data[:] = dyson.solve(sigma_b.data, eta)
+
+            # The Dyson solver does not enforce hermiticity of the solution, which can lead to numerical issues in the self-consistent iteration.
+            # Enforce hermiticity explicitly here, which is important for convergence of the self-consistent iteration.
+            G[bidx].data[:] = 0.5*(G[bidx].data + G[bidx].data.conjugate().transpose(0,2,1))
+
             #self.timer.stop()
 
         return G
@@ -1153,7 +1212,7 @@ def atomic_pseudo_particle_greens_function(ad, beta, mesh_tau):
         
     G_tau = BlockGf(block_list=G_tau_blocks)
 
-    return G_tau
+    return G_tau, eta0
 
 
 def print_atom_diag_info(ad, verbose=False):
