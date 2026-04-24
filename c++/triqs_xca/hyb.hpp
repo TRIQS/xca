@@ -21,10 +21,11 @@ namespace triqs_xca::hyb {
     nda::array<dcomplex, 3> values;         // hybridization function at imaginary time nodes
     nda::array<dcomplex, 3> values_reflect; // hybridization function at imaginary time nodes (reversed)
 
-    nda::array<double, 2> k_it_p; // fermionic kernel evaluated at imaginary time nodes and poles
-    nda::array<double, 2> k_it_m; // fermionic kernel evaluated at imaginary time nodes and (-1 * poles)
-    nda::vector<double> k_0_p; // fermionic kernel evaluated at tau = 0 and poles
+    nda::vector<double> k_0_p; // fermionic kernel evaluated at tau = 0 and (+1 * poles)
     nda::vector<double> k_0_m; // fermionic kernel evaluated at tau = 0 and (-1 * poles)
+
+    nda::array<double, 2> k_it_p; // fermionic kernel evaluated at imaginary time nodes and (+1 * poles)
+    nda::array<double, 2> k_it_m; // fermionic kernel evaluated at imaginary time nodes and (-1 * poles)
 
     /**
      * @brief Constructor for DenseFSet

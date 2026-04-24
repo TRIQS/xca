@@ -18,28 +18,34 @@ namespace triqs_xca::hyb {
        poles(hyb_poles * tau_mesh.beta()),
        coeffs(hyb_coeffs),
        values(coefs2vals(tau_mesh.beta(), tau_mesh.dlr_it(), hyb_coeffs, hyb_poles)),
-       values_reflect(refl_sign
-                      * tau_mesh.dlr_it().reflect(values)) // Follow sign convention of block_sparse_backbone for reflected hybridization function.
+       // Follow sign convention of block_sparse_backbone for reflected hybridization function.
+       values_reflect(refl_sign * tau_mesh.dlr_it().reflect(values)),
+       k_0_p(poles.size()),
+       k_0_m(poles.size()),
+       k_it_p(tau_mesh.dlr_it().rank(), poles.size()),
+       k_it_m(tau_mesh.dlr_it().rank(), poles.size())
   {
+
+    // Precompute kernels at tau=0 and at imaginary time nodes for both +poles and -poles,
+    // since these are needed frequently in the diagram evaluation.
+
     auto dlr_it = tau_mesh.dlr_it().get_itnodes();
-    int r       = tau_mesh.dlr_it().rank();
-    int p       = static_cast<int>(poles.size());
-    k_it_p      = nda::array<double, 2>(r, p);
-    k_it_m      = nda::array<double, 2>(r, p);
-    k_0_p       = nda::vector<double>(p);
-    k_0_m       = nda::vector<double>(p);
-    for (int i = 0; i < poles.size(); i++) {
-      for (int t = 0; t < tau_mesh.dlr_it().rank(); t++) {
-        k_it_p(t, i) = cppdlr::k_it(dlr_it(t), poles(i));
-        k_it_m(t, i) = cppdlr::k_it(dlr_it(t), -poles(i));
+
+    for (size_t p = 0; p < poles.size(); ++p) {
+
+      k_0_p(p) = cppdlr::k_it(0, +poles(p));
+      k_0_m(p) = cppdlr::k_it(0, -poles(p));
+
+      for (int t = 0; t < tau_mesh.dlr_it().rank(); ++t) {
+        k_it_p(t, p) = cppdlr::k_it(dlr_it(t), +poles(p));
+        k_it_m(t, p) = cppdlr::k_it(dlr_it(t), -poles(p));
       }
-      k_0_p(i) = cppdlr::k_it(0, poles(i));
-      k_0_m(i) = cppdlr::k_it(0, -poles(i));
     }
   };
 
   void Hybridization::multiply_kernel_on_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, int v_ix, int l_ix, double sign) {
     // Multiply the kernel associated with vertex v_ix and pole index l_ix into T_buf
+    // sign is expected to be +1 or -1 (used only to select +/- pole cache).
 
     int r     = tau_mesh.dlr_it().rank();
     int Ksign = backbone.get_vertex_Ksign(v_ix);
@@ -59,7 +65,8 @@ namespace triqs_xca::hyb {
     for (int x = 0; x < m - 1; x++) {
       int Ksign = backbone.get_edge(e_ix, x);
       if (Ksign != 0) {
-        auto k_it = (Ksign > 0) ? k_it_p(_, backbone.get_pole_ind(x)) : k_it_m(_, backbone.get_pole_ind(x));
+        int l = backbone.get_pole_ind(x);
+        auto k_it = (Ksign > 0) ? k_it_p(_, l) : k_it_m(_, l);
         for (int t = 0; t < r; t++) Gt(t, _, _) *= k_it(t);
       }
     }
@@ -75,7 +82,8 @@ namespace triqs_xca::hyb {
       int exp = backbone.get_prefactor_Kexp(m_ix); // exponent on K for this hybridization index
       if (exp != 0) {
         int Ksign = backbone.get_prefactor_Ksign(m_ix); // sign on K for this hybridization index
-        auto k_0 = (Ksign > 0) ? k_0_p(backbone.get_pole_ind(m_ix)) : k_0_m(backbone.get_pole_ind(m_ix));
+        int l = backbone.get_pole_ind(m_ix);
+        auto k_0 = (Ksign > 0) ? k_0_p(l) : k_0_m(l);
         prefactor *= std::pow(k_0, -exp);
       }
     }
