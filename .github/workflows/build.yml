@@ -127,15 +127,6 @@ jobs:
         git clone https://github.com/HugoStrand/pyed $HOME/pyed
         echo "PYTHONPATH=$HOME/pyed:$PYTHONPATH" >> $GITHUB_ENV
 
-    - name: Build & Install TRIQS
-      env:
-        #TRIQS_BRANCH: ${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}
-        TRIQS_BRANCH: unstable
-      run: |
-        git clone https://github.com/TRIQS/triqs --branch "$TRIQS_BRANCH"
-        cmake -S triqs -B triqs/build -G Ninja -DBuild_Tests=OFF -DCMAKE_INSTALL_PREFIX=$HOME/install
-        cmake --build triqs/build --target install --verbose
-
     - name: Build & Install clair
       env:
         CXX: ${{ matrix.clang_cxx }}
@@ -144,6 +135,15 @@ jobs:
         git clone https://github.com/flatironinstitute/clair --branch unstable
         cmake -S clair -B clair/build -G Ninja -DBuild_Tests=OFF -DCMAKE_INSTALL_PREFIX=$HOME/install
         cmake --build clair/build --target install --verbose
+
+    - name: Build & Install TRIQS
+      env:
+        #TRIQS_BRANCH: ${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}
+        TRIQS_BRANCH: unstable
+      run: |
+        git clone https://github.com/TRIQS/triqs --branch "$TRIQS_BRANCH"
+        cmake -S triqs -B triqs/build -G Ninja -DBuild_Tests=OFF -DCMAKE_INSTALL_PREFIX=$HOME/install
+        cmake --build triqs/build --target install --verbose
 
     - name: Build triqs_xca
       run: |
