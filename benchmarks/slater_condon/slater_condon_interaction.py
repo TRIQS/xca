@@ -9,8 +9,11 @@ from triqs.operators.util.hamiltonians import h_int_slater
 from triqs.operators.util.U_matrix import U_matrix_kanamori
 from triqs.operators.util.hamiltonians import h_int_kanamori
 
+from triqs.gf import Gf
 
 from triqs_xca.block_sparse_solver import is_root
+
+from adapol.fit_utils_dlr import polefitting_dlr_triqs
 
 
 def _slater_condon_mu_wmax(l, Fs):
@@ -62,6 +65,36 @@ def _setup_slater_condon_problem(l, Fs, beta, eps):
     Delta_tau = make_gf_dlr_imtime(Delta_w)
 
     return H, N_tot, gf_struct, Delta_tau, w_max
+
+
+def _from_blockgf_to_dense(G):
+    """Convert a BlockGf to a dense Gf.
+    
+    Parameters
+    ----------
+    G : BlockGf
+        Block Green's function to be converted.
+        
+    Returns
+    -------
+    G_dense : Gf
+        Dense Green's function with shape [sum(block_sizes), sum(block_sizes)].
+    """
+    for b, g in G:
+        assert( len(g.target_shape) == 2)
+        assert( g.target_shape[0] == g.target_shape[1] )
+
+    norb = sum([ g.target_shape[0] for b, g in G ])
+    
+    G_dense = Gf(mesh=G.mesh, target_shape=[norb]*2)
+    
+    sidx = 0
+    for b, g in G:
+        size = g.target_shape[0]
+        G_dense.data[:, sidx:sidx+size, sidx:sidx+size] = g.data
+        sidx += size
+
+    return G_dense
 
 
 def _build_slater_condon_solver(l, Fs, beta, eps):
@@ -142,15 +175,30 @@ def one_se_iter_slater_condon_bethe_half_filling(
         ppsc_tol=1e-2,
         ):
 
-    # compute the self-energy at the given order using the non-interacting G 
+    # build solver first to get S and Delta_tau
     if dense:
         S, H, N_tot = _build_slater_condon_solver_dense(l=l, Fs=Fs, beta=beta, eps=eps)
+    else:
+        S, N_tot = _build_slater_condon_solver(l=l, Fs=Fs, beta=beta, eps=eps)
+
+    # compute hybridization poles and weights using adapol
+    # use same poles and weights for dense and block-sparse solvers
+    # copied over from block_sparse_solver.py fit_hybridization() method
+    tol_adapol = ppsc_tol
+    Delta_tau_dense = _from_blockgf_to_dense(S.Delta_tau)
+    weights, poles, _ = polefitting_dlr_triqs(Delta_tau_dense, eps=tol_adapol, statistics="Fermion", verbose=True)
+    weights = -1 * weights
+    
+    # compute the self-energy at the given order using the non-interacting G 
+    if dense:
         S.order = order
         S.h_int = H
         S.S.set_H_loc(H)
         S.S.G_iaa = S.S.G0_iaa.copy() # start with non-interacting G
-        S.delta_iaa = S._TriqsSolver__from_blockgf_to_array(S.Delta_tau)
-        S.S.set_hybridization(S.delta_iaa, compress=True, verbose=True)
+        # S.delta_iaa = S._TriqsSolver__from_blockgf_to_array(S.Delta_tau)
+        # S.S.set_hybridization(S.delta_iaa, compress=True, verbose=True)
+        S.S.fd.copy_aaa_result(poles, weights)
+        S.S.fd.hyb_decomposition(poledlrflag=False, eps=0.0)
 
         from triqs_xca.diag import all_connected_pairings
         from triqs_xca.solver import Sigma_calc_topology
@@ -162,17 +210,16 @@ def one_se_iter_slater_condon_bethe_half_filling(
             Sigma_dense += pow(-1, order) * sign * S.S.calc_Sigma_topology(topo)
         t_end = time.perf_counter()
     else:
-        S, N_tot = _build_slater_condon_solver(l=l, Fs=Fs, beta=beta, eps=eps)
-        # copy over beginning of solve() method
-        S.fit_hybridization(tol=ppsc_tol)
+        # S.fit_hybridization(tol=ppsc_tol)
+        S.set_hybridization_poles_and_coefficients(poles, weights)
         S.init_diagram_evaluator()
 
         import time
         t_start = time.perf_counter()
-        Sigma = S.eval_pseudo_particle_self_energy_order(S.G, order)
+        Sigma = S._BlockSparseSolver__eval_pseudo_particle_self_energy_order(S.G, order)
         t_end = time.perf_counter()
         from triqs_xca.block_sparse_solver import pseudo_particle_block_gf_to_dense
-        Sigma_dense = pseudo_particle_block_gf_to_dense(Sigma, S.ad)
+        Sigma_dense = pseudo_particle_block_gf_to_dense(Sigma, S.atom_diag)
 
     elapsed = t_end - t_start
 
