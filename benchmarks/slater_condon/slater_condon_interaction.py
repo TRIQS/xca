@@ -15,6 +15,10 @@ from triqs_xca.block_sparse_solver import is_root
 
 from adapol.fit_utils_dlr import polefitting_dlr_triqs
 
+from mpi4py import MPI
+
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
 
 def _slater_condon_mu_wmax(l, Fs):
     """Return half-filling chemical potential and recommended DLR cutoff."""
@@ -202,22 +206,24 @@ def one_se_iter_slater_condon_bethe_half_filling(
 
         from triqs_xca.diag import all_connected_pairings
         from triqs_xca.solver import Sigma_calc_topology
-        import time
 
         Sigma_dense = 0 # zeros like S.G_iaa
-        t_start = time.perf_counter()
+        comm.Barrier()
+        t_start = MPI.Wtime()
         for sign, topo in all_connected_pairings(order):
             Sigma_dense += pow(-1, order) * sign * S.S.calc_Sigma_topology(topo)
-        t_end = time.perf_counter()
+        comm.Barrier()
+        t_end = MPI.Wtime()
     else:
         # S.fit_hybridization(tol=ppsc_tol)
         S.set_hybridization_poles_and_coefficients(poles, weights)
         S.init_diagram_evaluator()
 
-        import time
-        t_start = time.perf_counter()
+        comm.Barrier()
+        t_start = MPI.Wtime()
         Sigma = S._BlockSparseSolver__eval_pseudo_particle_self_energy_order(S.G, order)
-        t_end = time.perf_counter()
+        comm.Barrier()
+        t_end = MPI.Wtime()
         from triqs_xca.block_sparse_solver import pseudo_particle_block_gf_to_dense
         Sigma_dense = pseudo_particle_block_gf_to_dense(Sigma, S.atom_diag)
 
@@ -268,5 +274,5 @@ if __name__ == '__main__':
 
                 one_se_iter_slater_condon_bethe_half_filling(l=0, Fs=[3.0], **opts)
                 one_se_iter_slater_condon_bethe_half_filling(l=1, Fs=[3.0, 0.5], **opts)
-                one_se_iter_slater_condon_bethe_half_filling(l=2, Fs=[3.0, 0.5, 0.3], **opts)
+                # one_se_iter_slater_condon_bethe_half_filling(l=2, Fs=[3.0, 0.5, 0.3], **opts)
 
