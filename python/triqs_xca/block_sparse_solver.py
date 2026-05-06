@@ -1,3 +1,4 @@
+import copy
 import numpy as np
 
 from collections import defaultdict
@@ -76,8 +77,11 @@ class BlockSparseSolver(object):
 
     """
 
-    def __init__(self, H_loc, beta, w_max, eps, gf_struct, conserved_operators='automatic', timer=None, atom_diag=None, verbose=True):
+    def __init__(self, H_loc, beta, w_max, eps, gf_struct, 
+                 conserved_operators='automatic', dlr_symmetrize=False,
+                 timer=None, atom_diag=None, verbose=True):
 
+        self.dlr_symmetrize = dlr_symmetrize
         self.H_loc = H_loc
         self.gf_struct = gf_struct
         self.beta = beta
@@ -101,7 +105,7 @@ class BlockSparseSolver(object):
         
         self.eta = 0. # Pseudo particle chemical potential (shift of the pseudo particle energies).
 
-        self.mesh_tau = MeshDLRImTime(beta=self.beta, statistic='Fermion', w_max=self.w_max, eps=self.eps)
+        self.mesh_tau = MeshDLRImTime(beta=self.beta, statistic='Fermion', w_max=self.w_max, eps=self.eps, symmetrize=self.dlr_symmetrize)
 
         self.Delta_tau = BlockGf(mesh=self.mesh_tau, gf_struct=self.gf_struct, name='Delta_tau')
 
@@ -130,7 +134,11 @@ class BlockSparseSolver(object):
         # FIXME! Get ito from mesh_tau
         from .pycppdlr import build_dlr_rf
         from .pycppdlr import ImTimeOps
-        ito = ImTimeOps(w_max * beta, build_dlr_rf(w_max * beta, eps)) 
+        ito = ImTimeOps(w_max * beta, build_dlr_rf(w_max * beta, eps, self.dlr_symmetrize), symmetrize=self.dlr_symmetrize)
+
+        # Compare DLR meshes
+        #np.testing.assert_array_almost_equal(np.array([ float(t) for t in self.mesh_tau]), ito.get_itnodes() * beta)
+        np.testing.assert_array_almost_equal(self.mesh_tau.dlr_freq, ito.get_rfnodes())
 
         self.dysons = [DysonItPPSC(self.beta, ito, G0_block.data) for _, G0_block in self.G0]
     
@@ -306,8 +314,6 @@ class BlockSparseSolver(object):
             #if is_root(): print(f'Sigma max_order = {self.max_order}')
             self.Sigma = self.eval_pseudo_particle_self_energy(self.G, self.max_order, verbose=verbose > 1)
 
-            print(f'Hermiticity error of Sigma = {self.herm_err(self.Sigma):2.2E}') # DEBUG!
-
             self.timer.start('Dyson')
 
             if normalization == 'classic':
@@ -350,11 +356,11 @@ class BlockSparseSolver(object):
 
             if verbose and is_root(): print(f'iter = {iter}, diff_G = {self.diff_G:2.2E}, Z-1 = {Z-1:+2.2E}, eta = {self.eta:2.2E}')
 
-            self.G = mix * G_new + (1 - mix) * self.G
-
             if self.diff_G < tol:
                 if verbose and is_root(): print(f'Converged after {iter} iterations with diff_G = {self.diff_G:2.2E} < tol = {tol:2.2E}')
                 break
+
+            self.G = mix * G_new + (1 - mix) * self.G
 
         G_tau = self.eval_single_particle_greens_function(self.G, max_order=self.max_order)
         self.G_tau = self.__from_dense_to_blockgf(G_tau, self.gf_struct)
@@ -1076,6 +1082,15 @@ class BlockSparseSolver(object):
         keys = set(d.keys()).intersection(self.__skip_keys())
         for key in keys: del d[key]
         return d
+
+
+    def __copy__(self):
+        return self.__factory_from_dict__(self.__class__.__name__, self.__reduce_to_dict__())
+
+    
+    def __deepcopy__(self, memo):
+        d = copy.deepcopy(self.__reduce_to_dict__())
+        return self.__factory_from_dict__(self.__class__.__name__, d)
 
 
     @classmethod

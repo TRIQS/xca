@@ -19,6 +19,7 @@ set(all_tests
   triqs_solver
   one_spinful_fermion
   analytic_diagrams
+  block_sparse_copy
   block_sparse_api
   block_sparse_api_one_fermion
   block_sparse_api_two_fermions
