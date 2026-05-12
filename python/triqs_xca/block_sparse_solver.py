@@ -8,9 +8,6 @@ import triqs.utility.mpi as mpi
 from triqs.gf import Gf, MeshDLRImTime, BlockGf, make_gf_dlr, make_gf_dlr_imfreq
 from triqs.atom_diag import AtomDiag, AtomDiagReal, AtomDiagComplex
 
-from adapol.anacont import anacont_triqs
-from adapol.fit_utils_dlr import polefitting_dlr
-
 from .diag import all_connected_pairings
 
 from .dlr_dyson_ppsc import DysonItPPSC
@@ -151,55 +148,26 @@ class BlockSparseSolver(object):
 
         self.tol_adapol = 100 * self.eps if tol is None else tol
 
+        Delta_tau_dense = self.__from_blockgf_to_dense(self.Delta_tau)
+
         if dlr_polefitting:
-            #Delta_dlr = make_gf_dlr(self.Delta_tau)
-            #Delta_dlr_dense = self.__from_blockgf_to_dense(Delta_dlr)
-            #w_dlr = np.array([ float(x) for x in Delta_dlr.mesh ])
-            
-            #pole_weights, poles, fit_error = polefitting_dlr(
-            #    Delta_dlr_dense.data, w_dlr, self.beta, eps=self.tol_adapol, statistics="Fermion", verbose=True)
 
-            if False:
-                from adapol.fit_utils_dlr import polefitting_dlr_triqs
-                Delta_tau_dense = self.__from_blockgf_to_dense(self.Delta_tau)
-                pole_weights, poles, fit_error = polefitting_dlr_triqs(
-                    Delta_tau_dense, eps=self.tol_adapol, statistics="Fermion", verbose=verbose > 1)
+            from adapol.triqs_xca import TriqsDLRCompression
+        
+            try:
+                tdc = TriqsDLRCompression(Delta_tau_dense, tol=self.tol_adapol, verbose=verbose and is_root())
+                poles, pole_weights, fit_error = tdc.poles, tdc.residues, tdc.error
+            except ValueError as e:
+                fit_error = None
+                if is_root():
+                    print(f'Adapol: WARNING! TriqsDLRCompression failed with error: {e}. Using direct DLR coefficients instead.')
 
-                pole_weights *= -1. # FIXME! Why is this necessary? Is there a sign convention issue in polefitting_dlr?
-            else:
-                from adapol.aaa_bra_triqs import TriqsDLRCompression
-                Delta_tau_dense = self.__from_blockgf_to_dense(self.Delta_tau)
-                try:
-                    tdc = TriqsDLRCompression(Delta_tau_dense, tol=self.tol_adapol, verbose=verbose and is_root())
-                    poles, pole_weights, fit_error = tdc.poles, tdc.residues, tdc.error
-                except ValueError as e:
-                    if is_root():
-                        print(f'Adapol: WARNING! TriqsDLRCompression failed with error: {e}. Using direct DLR coefficients instead.')
-                    Delta_dlr_dense = make_gf_dlr(Delta_tau_dense)
-                    poles = np.array([ float(x) for x in Delta_dlr_dense.mesh ]) / self.beta
-                    pole_weights = Delta_dlr_dense.data.copy()
-                    fit_error = Delta_dlr_dense.mesh.eps
+        if not dlr_polefitting or fit_error is None:
 
-        else:
-
-            if False:
-                Delta_iw = make_gf_dlr_imfreq(self.Delta_tau)
-                Delta_iw_dense = self.__from_blockgf_to_dense(Delta_iw)
-                _, fit_error, poles, pole_weights = anacont_triqs(Delta_iw_dense, tol=self.tol_adapol, debug=True)
-                #_, fit_error, poles_ref, pole_weights_ref = anacont_triqs(Delta_iw_dense, tol=self.tol_adapol, debug=True)
-            else:
-                Delta_tau_dense = self.__from_blockgf_to_dense(self.Delta_tau)
-                Delta_dlr_dense = make_gf_dlr(Delta_tau_dense)
-                poles = np.array([ float(x) for x in Delta_dlr_dense.mesh ]) / self.beta
-                pole_weights = Delta_dlr_dense.data.copy()
-                fit_error = Delta_dlr_dense.mesh.eps
-
-
-        #print(f'poles     = {poles}')
-        #print(f'poles_ref = {poles_ref}')
-        #print(f'pole_weights     =\n{pole_weights}')
-        #print(f'pole_weights_ref =\n{pole_weights_ref}')
-        #print(f'tol = {tol}, self.tol_adapol = {self.tol_adapol:2.2E}, fit_error = {fit_error:2.2E}')
+            Delta_dlr_dense = make_gf_dlr(Delta_tau_dense)
+            poles = np.array([ float(x) for x in Delta_dlr_dense.mesh ]) / self.beta
+            pole_weights = Delta_dlr_dense.data.copy()
+            fit_error = Delta_dlr_dense.mesh.eps
 
         if verbose and is_root():
             if fit_error >= self.tol_adapol:

@@ -28,7 +28,7 @@ from mpi4py import MPI as mpi
 
 from pyed.TriqsExactDiagonalization import TriqsExactDiagonalization
 
-from adapol.fit_utils_xca import polefitting
+from .adapol_depr.fit_utils_xca import polefitting
 
 from .pycppdlr import build_dlr_rf
 from .pycppdlr import ImTimeOps
