@@ -20,7 +20,7 @@ def test_block_sparse_self_cons(verbose=False):
     maxiter = 100
     dmft_maxiter = 100
     dmft_tol = 1e-6
-    delta_tol = 1e-8
+    hyb_tol = 1e-8
 
     gf_struct = [['0', 1]]
 
@@ -81,7 +81,7 @@ def test_block_sparse_self_cons(verbose=False):
 
         BSS.solve(
             max_order=order, tol=ppsc_tol, 
-            delta_tol=delta_tol,
+            hyb_tol=hyb_tol,
             maxiter=maxiter)
 
         g_BSS = BSS.G_tau

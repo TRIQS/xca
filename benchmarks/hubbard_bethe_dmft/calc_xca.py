@@ -20,9 +20,9 @@ def solve_one_spinful_fermion_block_sparse_solver(
         dmft_maxiter=20, dmft_tol=1e-5, 
         ppsc_maxiter=20, ppsc_tol=1e-8,
         S_old=None, delta_mix=1.0, ppsc_mix=1.0,
-        dlr_polefitting=True, delta_tol=1e-8, dlr_symmetrize=False,
+        hyb_tol=1e-8, dlr_symmetrize=False,
         ):
-
+    
     spin_names = ['up', 'do']
     gf_struct = [(s, 1) for s in spin_names]
 
@@ -54,8 +54,8 @@ def solve_one_spinful_fermion_block_sparse_solver(
 
     for iter in range(1, dmft_maxiter+1):
 
-        S.solve(max_order=order, tol=ppsc_tol, delta_tol=delta_tol,
-                maxiter=ppsc_maxiter, mix=ppsc_mix, dlr_polefitting=dlr_polefitting, 
+        S.solve(max_order=order, tol=ppsc_tol, hyb_tol=hyb_tol,
+                maxiter=ppsc_maxiter, mix=ppsc_mix,
                 verbose=True, normalization='classic')
 
         S.n_up_exp = S.expectation_value(n('up', 0)).real
@@ -93,7 +93,7 @@ class ListDummy():
 
 def calc_linear_sweep_both_ways(Us, beta=100.0, order=1):
 
-    orders_Us = [(1, Us), (1, Us[::-1])]
+    orders_Us = [(order, Us), (order, Us[::-1])]
 
     S = None
     Sss = []
@@ -105,7 +105,7 @@ def calc_linear_sweep_both_ways(Us, beta=100.0, order=1):
                 U=U, beta=beta, order=order, S_old=S, 
                 eps=1e-10, w_max=6.0,
                 dmft_maxiter=40, dmft_tol=1e-5, ppsc_maxiter=20, ppsc_tol=1e-8,
-                delta_mix=1.0, ppsc_mix=1.0, dlr_polefitting=False)
+                delta_mix=1.0, ppsc_mix=1.0)
 
             Ss.append(S)
 
@@ -120,6 +120,7 @@ def calc_linear_sweep_both_ways(Us, beta=100.0, order=1):
 
     if mpi.is_master_node():
         filename = f'data_hubbard_bethe_dmft_order{order}_beta{beta}_Umin{Us.min()}_Umax{Us.max()}.h5'
+        print(f'-> Storing: {filename}')
         with HDFArchive(filename, 'w') as A:
             A['Sss'] = Sss
 
@@ -129,10 +130,10 @@ if __name__ == '__main__':
     # -- 1st order transition already at order 1.
 
     # beta = 50
-    #calc_linear_sweep_both_ways(Us=np.linspace(3.4, 3.6, num=20), beta=50.0, order=1)
+    calc_linear_sweep_both_ways(Us=np.linspace(3.4, 3.6, num=20), beta=50.0, order=1)
 
     # beta = 100
-    calc_linear_sweep_both_ways(Us=np.linspace(3.4, 3.8, num=20), beta=100.0, order=1)
+    #calc_linear_sweep_both_ways(Us=np.linspace(3.4, 3.8, num=20), beta=100.0, order=1)
 
     # beta = 200
     #calc_linear_sweep_both_ways(Us=np.linspace(3.4, 3.8, num=20), beta=200.0, order=1)

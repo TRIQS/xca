@@ -144,13 +144,13 @@ class BlockSparseSolver(object):
 
 
     @timer('Adapol hybridization fit')
-    def fit_hybridization(self, tol=None, dlr_polefitting=True, verbose=True):
+    def fit_hybridization(self, tol=None, compression=True, verbose=True):
 
         self.tol_adapol = 100 * self.eps if tol is None else tol
 
         Delta_tau_dense = self.__from_blockgf_to_dense(self.Delta_tau)
 
-        if dlr_polefitting:
+        if compression:
 
             from adapol.triqs_xca import TriqsDLRCompression
         
@@ -162,7 +162,7 @@ class BlockSparseSolver(object):
                 if is_root():
                     print(f'Adapol: WARNING! TriqsDLRCompression failed with error: {e}. Using direct DLR coefficients instead.')
 
-        if not dlr_polefitting or fit_error is None:
+        if not compression or fit_error is None:
 
             Delta_dlr_dense = make_gf_dlr(Delta_tau_dense)
             poles = np.array([ float(x) for x in Delta_dlr_dense.mesh ]) / self.beta
@@ -232,7 +232,7 @@ class BlockSparseSolver(object):
         #if is_root(): print(f'done.')
 
 
-    def solve(self, max_order, tol=1e-4, maxiter=10, mix=1., delta_tol=None, dlr_polefitting=True, normalization='classic', verbose=True):
+    def solve(self, max_order, tol=1e-4, maxiter=10, mix=1., hyb_tol=None, hyb_comp=True, normalization='classic', verbose=True):
         """ Solve the impurity problem using pseudo particle self-consistent perturbation theory.
         
         Parameters
@@ -245,8 +245,11 @@ class BlockSparseSolver(object):
             Maximum number of iterations.
         mix : float, optional
             Mixing parameter for the self-consistent iteration.
-        delta_tol : float, optional
-            Tolerance for the hybridization function fitting.
+        hyb_tol : float, optional
+            Tolerance for the hybridization function compression. Defaults to 0.1 * tol if not provided.
+        hyb_comp : bool, optional
+            Whether to compress the hybridization function. Default: True.
+            When set to False, the hybridization function is represented using the full DLR basis.
         normalization : str, optional
             Normalization method for the pseudo particle Green's function. Default: 'classic'.
 
@@ -270,11 +273,13 @@ class BlockSparseSolver(object):
 
         self.normalization = normalization
         self.max_order = max_order
-        self.delta_tol = delta_tol if delta_tol is not None else 0.1 * tol
-        
-        #if verbose and is_root(): print(f'delta_tol = {self.delta_tol:2.2E}')
+        self.hyb_tol = hyb_tol if hyb_tol is not None else 0.1 * tol
 
-        self.fit_hybridization(tol=self.delta_tol, dlr_polefitting=dlr_polefitting, verbose=verbose)
+        self.hyb_comp = hyb_comp if max_order > 1 else False # Skip hybridization compression for max_order = 1 (NCA) since the pole representation is not used.
+        
+        #if verbose and is_root(): print(f'hyb_tol = {self.hyb_tol:2.2E}')
+
+        self.fit_hybridization(tol=self.hyb_tol, compression=self.hyb_comp, verbose=verbose)
         self.init_diagram_evaluator() # FIXME! Evaluator takes hyb poles and coeffs in constructor
 
         for iter in range(1, maxiter+1):
