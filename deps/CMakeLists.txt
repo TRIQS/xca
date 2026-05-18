@@ -61,7 +61,7 @@ endif()
 if(PythonSupport)
   external_dependency(adapol
     GIT_REPO https://github.com/flatironinstitute/adapol
-    GIT_TAG triqs_xca
+    GIT_TAG dev_hs
   )
 endif()
 
