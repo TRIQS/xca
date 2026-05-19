@@ -18,7 +18,7 @@ The TRIQS arbitrary Crossing Approximation (**XCA**) impurity solver ``triqs_xca
 
 This implementation is leveraging the sum-of-exponentials (SOE) trick to achieve parametrically better computational complexity compared to direct integration and uses the Discrete Lehmann Representation (DLR) for representing response functions.
 
-Learn how to use triqs_xca in the :ref:`documentation`.
+Learn how to use ``triqs_xca`` in the :ref:`documentation`.
 
 
 Citation

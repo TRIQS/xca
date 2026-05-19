@@ -51,8 +51,8 @@ class BlockSparseSolver(object):
         Triqs style Green's function structure, e.g. ``[('up', 1), ('down', 1)]``, matching the operator content of ``H_loc``.
     conserved_operators : list, optional
         List of conserved operators (``triqs.operators.Operator`` instances). 
-        Default is ``automatic`` using the autopartition algorithm of ``triqs.atom_diag``.
-        To disable symmetries and use the dense solver (``DenseDiagramEvaluator``), pass an empty list ``[]``.
+        Default is ``'automatic'`` using the autopartition algorithm of ``triqs.atom_diag``.
+        To disable symmetries and use the dense diagram evaluator (``DenseDiagramEvaluator``), pass an empty list ``[]``.
     timer : Timer, optional
         Timer for performance measurements. Default: ``None`` (will be setup automatically).
     atom_diag : AtomDiag, optional
@@ -162,6 +162,12 @@ class BlockSparseSolver(object):
                 if is_root():
                     print(f'Adapol: WARNING! TriqsDLRCompression failed with error: {e}. Using direct DLR coefficients instead.')
 
+            if verbose and is_root():
+                if fit_error >= self.tol_adapol:
+                    print(f'Adapol: WARNING! Fit error = {fit_error:2.2E} >= tol_adapol = {self.tol_adapol:2.2E}, N_poles = {len(poles)}')
+                else:
+                    print(f'Adapol: Fit error = {fit_error:2.2E} < tol_adapol = {self.tol_adapol:2.2E}, N_poles = {len(poles)}')
+
         if not compression or fit_error is None:
 
             Delta_dlr_dense = make_gf_dlr(Delta_tau_dense)
@@ -169,11 +175,8 @@ class BlockSparseSolver(object):
             pole_weights = Delta_dlr_dense.data.copy()
             fit_error = Delta_dlr_dense.mesh.eps
 
-        if verbose and is_root():
-            if fit_error >= self.tol_adapol:
-                print(f'Adapol: WARNING! Fit error = {fit_error:2.2E} >= tol_adapol = {self.tol_adapol:2.2E}, N_poles = {len(poles)}')
-            else:
-                print(f'Adapol: Fit error = {fit_error:2.2E} < tol_adapol = {self.tol_adapol:2.2E}, N_poles = {len(poles)}')
+            if verbose and is_root():
+                print(f'Hybridization: using DLR expansion with N_poles = {len(poles)}')
 
         self.set_hybridization_poles_and_coefficients(poles, pole_weights)
 
@@ -246,12 +249,12 @@ class BlockSparseSolver(object):
         mix : float, optional
             Mixing parameter for the self-consistent iteration.
         hyb_tol : float, optional
-            Tolerance for the hybridization function compression. Defaults to 0.1 * tol if not provided.
+            Tolerance for the hybridization function compression. Defaults to ``0.1 * tol`` if not provided.
         hyb_comp : bool, optional
-            Whether to compress the hybridization function. Default: True.
-            When set to False, the hybridization function is represented using the full DLR basis.
+            Whether to compress the hybridization function. Default: ``True``.
+            When set to ``False``, the hybridization function is represented using the full DLR basis.
         normalization : str, optional
-            Normalization method for the pseudo particle Green's function. Default: 'classic'.
+            Normalization method for the pseudo particle Green's function. Default: ``'classic'``.
 
         Returns
         -------
