@@ -144,18 +144,18 @@ class BlockSparseSolver(object):
 
 
     @timer('Adapol hybridization fit')
-    def fit_hybridization(self, tol=None, compression=True, verbose=True):
-
-        self.tol_adapol = 100 * self.eps if tol is None else tol
+    def fit_hybridization(self, tol=None, compression=False, verbose=True):
 
         Delta_tau_dense = self.__from_blockgf_to_dense(self.Delta_tau)
 
         if compression:
 
+            assert( tol is not None and tol > 0 ), 'Error: tol must be provided and positive when compression is enabled.'
+
             from adapol.triqs_xca import TriqsDLRCompression
         
             try:
-                tdc = TriqsDLRCompression(Delta_tau_dense, tol=self.tol_adapol, verbose=verbose and is_root())
+                tdc = TriqsDLRCompression(Delta_tau_dense, tol=tol, verbose=verbose and is_root())
                 poles, pole_weights, fit_error = tdc.poles, tdc.residues, tdc.error
             except ValueError as e:
                 fit_error = None
@@ -163,10 +163,10 @@ class BlockSparseSolver(object):
                     print(f'Adapol: WARNING! TriqsDLRCompression failed with error: {e}. Using direct DLR coefficients instead.')
 
             if verbose and is_root():
-                if fit_error >= self.tol_adapol:
-                    print(f'Adapol: WARNING! Fit error = {fit_error:2.2E} >= tol_adapol = {self.tol_adapol:2.2E}, N_poles = {len(poles)}')
+                if fit_error >= tol:
+                    print(f'Adapol: WARNING! Fit error = {fit_error:2.2E} >= tol = {tol:2.2E}, N_poles = {len(poles)}')
                 else:
-                    print(f'Adapol: Fit error = {fit_error:2.2E} < tol_adapol = {self.tol_adapol:2.2E}, N_poles = {len(poles)}')
+                    print(f'Adapol: Fit error = {fit_error:2.2E} < tol = {tol:2.2E}, N_poles = {len(poles)}')
 
         if not compression or fit_error is None:
 
@@ -180,6 +180,8 @@ class BlockSparseSolver(object):
 
         self.set_hybridization_poles_and_coefficients(poles, pole_weights)
 
+        self.hyb.tol = tol
+        self.hyb.compression = compression
         self.hyb.fit_error = fit_error
 
 
