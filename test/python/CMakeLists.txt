@@ -28,6 +28,7 @@ set(all_tests
   block_sparse_normalization
   bug_bs_one_fermion
   volterra_integral
+  one_time_correlator
   )
 
 foreach(test ${all_tests})

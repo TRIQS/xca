@@ -20,7 +20,7 @@ namespace triqs_xca::atom_diag {
         // Transform to Fock basis
         auto U1                              = ad.get_unitary_matrix(s1);
         auto U2                              = ad.get_unitary_matrix(s2);
-        nda::matrix<dcomplex> block_mat_fock = U2 * block_mat * nda::transpose(U1);
+        nda::matrix<dcomplex> block_mat_fock = U2 * block_mat * nda::conj(nda::transpose(U1));
 
         // Get Fock states
         auto f1 = ad.get_fock_states(s1);

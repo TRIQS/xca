@@ -336,4 +336,54 @@ namespace triqs_xca::dense {
     return correlator;
   }
   
+  template<bool isComplex>
+  nda::array<dcomplex, 3> DenseDiagramEvaluator::compute_one_time_correlator(gf_vt G_ppsc, 
+      std::vector<triqs::operators::many_body_operator_real> const & ops_tau, 
+      std::vector<triqs::operators::many_body_operator_real> const & ops_0, 
+      triqs::atom_diag::atom_diag<isComplex> const &ad,
+      nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec){
+
+    CorrelatorBackbone backbone(topology, n);
+
+    // Check Hilbert space dimension.
+    assert( N == ad.get_full_hilbert_space_dim() );
+    assert( ad.n_subspaces() == 1 );
+
+    auto U = ad.get_unitary_matrix(0);
+
+    nda::array<dcomplex, 3> mu_ops = nda::zeros<dcomplex>(ops_tau.size(), N, N);
+    nda::array<dcomplex, 3> kap_ops = nda::zeros<dcomplex>(ops_0.size(), N, N);
+
+    for (auto [i, op] : itertools::enumerate(ops_tau)) {
+      mu_ops(i, _, _) = U * ad.get_op_mat(op).block_mat[0] * nda::conj(nda::transpose(U));
+    }
+
+    for (auto [i, op] : itertools::enumerate(ops_0)) {
+      kap_ops(i, _, _) = U * ad.get_op_mat(op).block_mat[0] * nda::conj(nda::transpose(U));
+    }
+
+    nda::array<dcomplex, 3> correlator = nda::zeros<dcomplex>(r, mu_ops.extent(0), kap_ops.extent(0));
+
+    for (auto f_ix : f_ix_vec) {
+      correlator += eval_correlator(G_ppsc[0].data(), backbone, mu_ops, kap_ops, f_ix);
+    }
+
+    return correlator;
+  }
+
+  template
+  nda::array<dcomplex, 3> DenseDiagramEvaluator::compute_one_time_correlator(gf_vt G_ppsc, 
+      std::vector<triqs::operators::many_body_operator_real> const & ops_tau, 
+      std::vector<triqs::operators::many_body_operator_real> const & ops_0, 
+      triqs::atom_diag::atom_diag<false> const &ad,
+      nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec);
+
+
+  template
+  nda::array<dcomplex, 3> DenseDiagramEvaluator::compute_one_time_correlator(gf_vt G_ppsc, 
+      std::vector<triqs::operators::many_body_operator_real> const & ops_tau, 
+      std::vector<triqs::operators::many_body_operator_real> const & ops_0, 
+      triqs::atom_diag::atom_diag<true> const &ad,
+      nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec);
+    
 } // namespace triqs_xca::dense

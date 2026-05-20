@@ -723,7 +723,8 @@ namespace triqs_xca::block_sparse {
       assert( op_blocks.connection[bidx] == bidx );
       if( op_blocks.block_mat[bidx].shape(0) == 0 ) continue; // skip empty blocks
       auto g_dlr = make_gf_dlr(G_ppsc[bidx]);
-      sum += -trace(matmul(op_blocks.block_mat[bidx], g_dlr(beta)));
+      // BUG! Need to transform block_mat from atomic eigenbasis to occupation number basis
+      sum += -trace(matmul(op_blocks.block_mat[bidx], g_dlr(beta))); // FIXME!
     }
 
   return sum;

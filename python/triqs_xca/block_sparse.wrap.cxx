@@ -71,8 +71,27 @@ ad : {par_6}
                                                  nda::borrowed<nda::mem::AddressSpace::Host>>>()},
     {},
     {c2py::python_typename<const triqs::atom_diag::atom_diag<1> &>(), c2py::python_typename<const triqs::atom_diag::atom_diag<0> &>()}});
-// compute_self_energy
+// compute_one_time_correlator
 static auto const _c2py_fun_0 = c2py::dispatcher_f_kw_t{
+   c2py::cmethod(
+      [](_c2py_cls_0 &self, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc,
+         const std::vector<triqs::operators::many_body_operator_real> &ops_tau, const std::vector<triqs::operators::many_body_operator_real> &ops_0,
+         const triqs::atom_diag::atom_diag<1> &ad,
+         nda::basic_array_view<const int, 2, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> topology,
+         nda::basic_array_view<const int, 1, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> f_ix_vec)
+         -> decltype(auto) { return self.template compute_one_time_correlator<true>(G_ppsc, ops_tau, ops_0, ad, topology, f_ix_vec); },
+      "self", "G_ppsc", "ops_tau", "ops_0", "ad", "topology", "f_ix_vec"),
+   c2py::cmethod(
+      [](_c2py_cls_0 &self, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc,
+         const std::vector<triqs::operators::many_body_operator_real> &ops_tau, const std::vector<triqs::operators::many_body_operator_real> &ops_0,
+         const triqs::atom_diag::atom_diag<0> &ad,
+         nda::basic_array_view<const int, 2, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> topology,
+         nda::basic_array_view<const int, 1, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> f_ix_vec)
+         -> decltype(auto) { return self.template compute_one_time_correlator<false>(G_ppsc, ops_tau, ops_0, ad, topology, f_ix_vec); },
+      "self", "G_ppsc", "ops_tau", "ops_0", "ad", "topology", "f_ix_vec")};
+
+// compute_self_energy
+static auto const _c2py_fun_1 = c2py::dispatcher_f_kw_t{
    c2py::cmethod(
       [](_c2py_cls_0 &self, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc,
          nda::basic_array_view<const int, 2, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> topology)
@@ -91,7 +110,7 @@ static auto const _c2py_fun_0 = c2py::dispatcher_f_kw_t{
       "self", "G_ppsc", "topology", "f_ix_vec")};
 
 // compute_single_ptcle_gf
-static auto const _c2py_fun_1 = c2py::dispatcher_f_kw_t{
+static auto const _c2py_fun_2 = c2py::dispatcher_f_kw_t{
    c2py::cmethod(
       [](_c2py_cls_0 &self, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc,
          nda::basic_array_view<const int, 2, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> topology)
@@ -110,35 +129,35 @@ static auto const _c2py_fun_1 = c2py::dispatcher_f_kw_t{
       "self", "G_ppsc", "topology", "f_ix_vec")};
 
 // get_num_self_energy_backbones
-static auto const _c2py_fun_2 = c2py::dispatcher_f_kw_t{c2py::cmethod(
+static auto const _c2py_fun_3 = c2py::dispatcher_f_kw_t{c2py::cmethod(
    [](_c2py_cls_0 &self,
       nda::basic_array_view<const int, 2, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> topology)
       -> decltype(auto) { return self.get_num_self_energy_backbones(topology); },
    "self", "topology")};
 
 // get_num_single_ptcle_gf_backbones
-static auto const _c2py_fun_3 = c2py::dispatcher_f_kw_t{c2py::cmethod(
+static auto const _c2py_fun_4 = c2py::dispatcher_f_kw_t{c2py::cmethod(
    [](_c2py_cls_0 &self,
       nda::basic_array_view<const int, 2, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> topology)
       -> decltype(auto) { return self.get_num_single_ptcle_gf_backbones(topology); },
    "self", "topology")};
 
 // print_self_energy_backbone
-static auto const _c2py_fun_4 = c2py::dispatcher_f_kw_t{c2py::cmethod(
+static auto const _c2py_fun_5 = c2py::dispatcher_f_kw_t{c2py::cmethod(
    [](_c2py_cls_0 &self,
       nda::basic_array_view<const int, 2, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> topology,
       int f_ix) -> decltype(auto) { return self.print_self_energy_backbone(topology, f_ix); },
    "self", "topology", "f_ix")};
 
 // print_single_ptcle_gf_backbone
-static auto const _c2py_fun_5 = c2py::dispatcher_f_kw_t{c2py::cmethod(
+static auto const _c2py_fun_6 = c2py::dispatcher_f_kw_t{c2py::cmethod(
    [](_c2py_cls_0 &self,
       nda::basic_array_view<const int, 2, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> topology,
       int f_ix) -> decltype(auto) { return self.print_single_ptcle_gf_backbone(topology, f_ix); },
    "self", "topology", "f_ix")};
 
 // reset
-static auto const _c2py_fun_6 = c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_0 &self) -> decltype(auto) { return self.reset(); }, "self")};
+static auto const _c2py_fun_7 = c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_0 &self) -> decltype(auto) { return self.reset(); }, "self")};
 
 static const auto _c2py_doc_0 = _c2py_fun_0.doc(R"DOC()DOC");
 static const auto _c2py_doc_1 = _c2py_fun_1.doc(R"DOC()DOC");
@@ -147,17 +166,19 @@ static const auto _c2py_doc_3 = _c2py_fun_3.doc(R"DOC()DOC");
 static const auto _c2py_doc_4 = _c2py_fun_4.doc(R"DOC()DOC");
 static const auto _c2py_doc_5 = _c2py_fun_5.doc(R"DOC()DOC");
 static const auto _c2py_doc_6 = _c2py_fun_6.doc(R"DOC()DOC");
+static const auto _c2py_doc_7 = _c2py_fun_7.doc(R"DOC()DOC");
 
 // ----- Method table ----
 template <>
 PyMethodDef c2py::tp_methods<_c2py_cls_0>[] = {
-   {"compute_self_energy", (PyCFunction)c2py::pyfkw<_c2py_fun_0>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_0.c_str()},
-   {"compute_single_ptcle_gf", (PyCFunction)c2py::pyfkw<_c2py_fun_1>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_1.c_str()},
-   {"get_num_self_energy_backbones", (PyCFunction)c2py::pyfkw<_c2py_fun_2>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_2.c_str()},
-   {"get_num_single_ptcle_gf_backbones", (PyCFunction)c2py::pyfkw<_c2py_fun_3>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_3.c_str()},
-   {"print_self_energy_backbone", (PyCFunction)c2py::pyfkw<_c2py_fun_4>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_4.c_str()},
-   {"print_single_ptcle_gf_backbone", (PyCFunction)c2py::pyfkw<_c2py_fun_5>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_5.c_str()},
-   {"reset", (PyCFunction)c2py::pyfkw<_c2py_fun_6>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_6.c_str()},
+   {"compute_one_time_correlator", (PyCFunction)c2py::pyfkw<_c2py_fun_0>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_0.c_str()},
+   {"compute_self_energy", (PyCFunction)c2py::pyfkw<_c2py_fun_1>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_1.c_str()},
+   {"compute_single_ptcle_gf", (PyCFunction)c2py::pyfkw<_c2py_fun_2>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_2.c_str()},
+   {"get_num_self_energy_backbones", (PyCFunction)c2py::pyfkw<_c2py_fun_3>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_3.c_str()},
+   {"get_num_single_ptcle_gf_backbones", (PyCFunction)c2py::pyfkw<_c2py_fun_4>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_4.c_str()},
+   {"print_self_energy_backbone", (PyCFunction)c2py::pyfkw<_c2py_fun_5>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_5.c_str()},
+   {"print_single_ptcle_gf_backbone", (PyCFunction)c2py::pyfkw<_c2py_fun_6>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_6.c_str()},
+   {"reset", (PyCFunction)c2py::pyfkw<_c2py_fun_7>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_7.c_str()},
    {nullptr, nullptr, 0, nullptr} // Sentinel
 };
 
@@ -198,22 +219,22 @@ data structures required for computation.)DOC"
 // ==================== module functions ====================
 
 // convolve_ppsc
-static auto const _c2py_fun_7 = c2py::dispatcher_f_kw_t{
+static auto const _c2py_fun_8 = c2py::dispatcher_f_kw_t{
    c2py::cfun([](triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G1,
                  triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G2) { return triqs_xca::block_sparse::convolve_ppsc(G1, G2); },
               "G1", "G2")};
 
 // expectation_value
-static auto const _c2py_fun_8 = c2py::dispatcher_f_kw_t{
+static auto const _c2py_fun_9 = c2py::dispatcher_f_kw_t{
    c2py::cfun([](const triqs::operators::many_body_operator_real &op, const triqs::atom_diag::atom_diag<0> &ad,
                  triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc) { return triqs_xca::block_sparse::expectation_value(op, ad, G_ppsc); },
               "op", "ad", "G_ppsc")};
 
 // trace
-static auto const _c2py_fun_9 =
+static auto const _c2py_fun_10 =
    c2py::dispatcher_f_kw_t{c2py::cfun([](triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G) { return triqs_xca::block_sparse::trace(G); }, "G")};
 
-static const auto _c2py_doc_7 = _c2py_fun_7.doc(R"DOC(
+static const auto _c2py_doc_8  = _c2py_fun_8.doc(R"DOC(
 Compute the Volterra "convolution" of two pseudo-particle Green's functions
 
 Parameters
@@ -228,10 +249,10 @@ Returns
 {ret_0}
    Convolution (G1 * G2)()
 )DOC",
-                                                {{c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()},
-                                                 {c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()}},
-                                                {c2py::python_typename<triqs::gfs::block_gf<triqs::mesh::dlr_imtime>>()});
-static const auto _c2py_doc_8 = _c2py_fun_8.doc(R"DOC(
+                                                 {{c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()},
+                                                  {c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()}},
+                                                 {c2py::python_typename<triqs::gfs::block_gf<triqs::mesh::dlr_imtime>>()});
+static const auto _c2py_doc_9  = _c2py_fun_9.doc(R"DOC(
 Compute the expectation value of the 2nd quantized operator op, <O> = -Tr[O G()]
 using the AtomDiag instance ad to generate a block representation
 and tracing with the many-body density matrix of the pseudo particle Green's function G_ppsc
@@ -250,11 +271,11 @@ Returns
 {ret_0}
    Expectation value -Tr[G() O]
 )DOC",
-                                                {{c2py::python_typename<const triqs::operators::many_body_operator_real &>()},
-                                                 {c2py::python_typename<const triqs::atom_diag::atom_diag<0> &>()},
-                                                 {c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()}},
-                                                {c2py::python_typename<nda::dcomplex>()});
-static const auto _c2py_doc_9 = _c2py_fun_9.doc(R"DOC(
+                                                 {{c2py::python_typename<const triqs::operators::many_body_operator_real &>()},
+                                                  {c2py::python_typename<const triqs::atom_diag::atom_diag<0> &>()},
+                                                  {c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()}},
+                                                 {c2py::python_typename<nda::dcomplex>()});
+static const auto _c2py_doc_10 = _c2py_fun_10.doc(R"DOC(
 Take the trace of a pseudo-particle Green's function
 
 Parameters
@@ -262,13 +283,13 @@ Parameters
 G : {par_0}
    Pseudo-particle Green's function
 )DOC",
-                                                {{c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()}});
+                                                  {{c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()}});
 //--------------------- module function table  -----------------------------
 
 static PyMethodDef module_methods[] = {
-   {"convolve_ppsc", (PyCFunction)c2py::pyfkw<_c2py_fun_7>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_7.c_str()},
-   {"expectation_value", (PyCFunction)c2py::pyfkw<_c2py_fun_8>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_8.c_str()},
-   {"trace", (PyCFunction)c2py::pyfkw<_c2py_fun_9>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_9.c_str()},
+   {"convolve_ppsc", (PyCFunction)c2py::pyfkw<_c2py_fun_8>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_8.c_str()},
+   {"expectation_value", (PyCFunction)c2py::pyfkw<_c2py_fun_9>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_9.c_str()},
+   {"trace", (PyCFunction)c2py::pyfkw<_c2py_fun_10>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_10.c_str()},
    {nullptr, nullptr, 0, nullptr} // Sentinel
 };
 

@@ -108,6 +108,14 @@ namespace triqs_xca::dense {
     // get number of backbones for given topology
     int get_num_single_ptcle_gf_backbones(nda::array_const_view<int, 2> topology);
 
+    // compute one time correlator for given operators
+    template<bool isComplex>
+    nda::array<dcomplex, 3> compute_one_time_correlator(gf_vt G_ppsc, 
+      std::vector<triqs::operators::many_body_operator_real> const &ops_tau, 
+      std::vector<triqs::operators::many_body_operator_real> const &ops_0, 
+      triqs::atom_diag::atom_diag<isComplex> const &ad,
+      nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec);
+
     /**
        * @brief Constructor for DenseDiagramEvaluator
        * 

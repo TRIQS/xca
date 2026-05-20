@@ -122,6 +122,15 @@ class DiagramEvaluator {
   void print_single_ptcle_gf_backbone(nda::array_const_view<int, 2> topology,
                                       int f_ix); // print the backbone corresponding to a given flat index for debugging
  
+  // compute one time correlator for given operators
+  template<bool isComplex>
+  nda::array<dcomplex, 3> compute_one_time_correlator(
+    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, 
+    std::vector<triqs::operators::many_body_operator_real> const &ops_tau, 
+    std::vector<triqs::operators::many_body_operator_real> const &ops_0, 
+    triqs::atom_diag::atom_diag<isComplex> const &ad,
+    nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec);
+
   /**
    * @brief Constructor for DiagramEvaluator
    * @param[in] beta inverse temperature

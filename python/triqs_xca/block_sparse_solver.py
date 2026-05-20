@@ -695,6 +695,49 @@ class BlockSparseSolver(object):
         return spgf
 
 
+    @timer('One-time correlator')
+    def eval_one_time_correlator(self, G, max_order, ops_tau, ops_0):
+        """ Evaluate a one time correlator of the form
+
+        .. math::
+            C(\\tau) = \\langle T_\\tau O(\\tau) O(0) \\rangle
+        
+        where :math:`O(\\tau)` and :math:`O(0)` are operators in imaginary time, 
+        and :math:`T_\\tau` is the imaginary time ordering operator. 
+        
+        The operators are specified by the lists of fundamental operators 
+        ``ops_tau`` and ``ops_0``, which contain the operators at imaginary time 
+        :math:`\\tau` and :math:`0`, respectively.
+        """
+        corr = Gf(mesh=self.mesh_tau, target_shape=[len(ops_tau), len(ops_0)])
+        corr.data[:] = 0.
+
+        for order in range(1, max_order+1):
+            with self.timer(f'Order {order}'):
+                self.__inplace_eval_one_time_correlator_order(corr, G, order, ops_tau, ops_0)
+
+        return corr
+
+
+    def __inplace_eval_one_time_correlator_order(self, corr, G, order, ops_tau, ops_0):
+
+        for sign, topology in all_connected_pairings(order):
+            topology = np.array(topology, dtype=np.int32)
+            prefactor = pow(-1, order) * sign
+            self.__inplace_eval_one_time_correlator_topology_loop(
+                corr, G, topology, ops_tau, ops_0, prefactor)
+    
+
+    def __inplace_eval_one_time_correlator_topology_loop(self, corr, G, topology, ops_tau, ops_0, prefactor):
+
+        n_max = self.d.get_num_single_ptcle_gf_backbones(topology)
+        n_vec = scatter_array_over_ranks(np.arange(n_max, dtype=np.int32))
+
+        corr_arr = prefactor * self.d.compute_one_time_correlator(
+            G, ops_tau, ops_0, self.atom_diag, topology, n_vec)
+        corr.data[:] += mpi.all_reduce(corr_arr)
+
+
     def Z_alpha(self, alpha, eta):
         r""" Partition function with Sigma scaled by alpha 
         Solving
