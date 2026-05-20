@@ -29,6 +29,7 @@ set(all_tests
   bug_bs_one_fermion
   volterra_integral
   one_time_correlator
+  expectation_value
   )
 
 foreach(test ${all_tests})

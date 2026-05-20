@@ -226,15 +226,20 @@ static auto const _c2py_fun_8 = c2py::dispatcher_f_kw_t{
 
 // expectation_value
 static auto const _c2py_fun_9 = c2py::dispatcher_f_kw_t{
-   c2py::cfun([](const triqs::operators::many_body_operator_real &op, const triqs::atom_diag::atom_diag<0> &ad,
-                 triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc) { return triqs_xca::block_sparse::expectation_value(op, ad, G_ppsc); },
-              "op", "ad", "G_ppsc")};
+   c2py::cfun(
+      [](const triqs::operators::many_body_operator_real &op, const triqs::atom_diag::atom_diag<0> &ad,
+         triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc) { return triqs_xca::block_sparse::expectation_value<false>(op, ad, G_ppsc); },
+      "op", "ad", "G_ppsc"),
+   c2py::cfun(
+      [](const triqs::operators::many_body_operator_real &op, const triqs::atom_diag::atom_diag<1> &ad,
+         triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc) { return triqs_xca::block_sparse::expectation_value<true>(op, ad, G_ppsc); },
+      "op", "ad", "G_ppsc")};
 
 // trace
 static auto const _c2py_fun_10 =
    c2py::dispatcher_f_kw_t{c2py::cfun([](triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G) { return triqs_xca::block_sparse::trace(G); }, "G")};
 
-static const auto _c2py_doc_8  = _c2py_fun_8.doc(R"DOC(
+static const auto _c2py_doc_8 = _c2py_fun_8.doc(R"DOC(
 Compute the Volterra "convolution" of two pseudo-particle Green's functions
 
 Parameters
@@ -249,10 +254,11 @@ Returns
 {ret_0}
    Convolution (G1 * G2)()
 )DOC",
-                                                 {{c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()},
-                                                  {c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()}},
-                                                 {c2py::python_typename<triqs::gfs::block_gf<triqs::mesh::dlr_imtime>>()});
-static const auto _c2py_doc_9  = _c2py_fun_9.doc(R"DOC(
+                                                {{c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()},
+                                                 {c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()}},
+                                                {c2py::python_typename<triqs::gfs::block_gf<triqs::mesh::dlr_imtime>>()});
+static const auto _c2py_doc_9 = _c2py_fun_9.doc(
+   R"DOC(
 Compute the expectation value of the 2nd quantized operator op, <O> = -Tr[O G()]
 using the AtomDiag instance ad to generate a block representation
 and tracing with the many-body density matrix of the pseudo particle Green's function G_ppsc
@@ -271,10 +277,10 @@ Returns
 {ret_0}
    Expectation value -Tr[G() O]
 )DOC",
-                                                 {{c2py::python_typename<const triqs::operators::many_body_operator_real &>()},
-                                                  {c2py::python_typename<const triqs::atom_diag::atom_diag<0> &>()},
-                                                  {c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()}},
-                                                 {c2py::python_typename<nda::dcomplex>()});
+   {{c2py::python_typename<const triqs::operators::many_body_operator_real &>()},
+    {c2py::python_typename<const triqs::atom_diag::atom_diag<0> &>(), c2py::python_typename<const triqs::atom_diag::atom_diag<1> &>()},
+    {c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()}},
+   {c2py::python_typename<nda::dcomplex>()});
 static const auto _c2py_doc_10 = _c2py_fun_10.doc(R"DOC(
 Take the trace of a pseudo-particle Green's function
 

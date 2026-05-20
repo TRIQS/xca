@@ -30,4 +30,16 @@ nda::array<dcomplex, 3> triqs_xca::block_sparse::DiagramEvaluator::compute_one_t
     triqs::atom_diag::atom_diag<false> const &, nda::array_const_view<int, 2>,
     nda::array_const_view<int, 1>);
 
+extern template
+dcomplex triqs_xca::block_sparse::expectation_value<false>(
+  triqs::operators::many_body_operator_real const &op, 
+  triqs::atom_diag::atom_diag<false> const &ad, 
+  triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc);
+
+extern template
+dcomplex triqs_xca::block_sparse::expectation_value<true>(
+  triqs::operators::many_body_operator_real const &op, 
+  triqs::atom_diag::atom_diag<true> const &ad, 
+  triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc);
+
 #include "block_sparse.wrap.cxx"

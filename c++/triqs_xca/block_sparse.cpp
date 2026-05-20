@@ -709,9 +709,10 @@ namespace triqs_xca::block_sparse {
     return {gf_vec};
   }
 
+  template<bool isComplex>
   dcomplex expectation_value(
     triqs::operators::many_body_operator_real const &op, 
-    triqs::atom_diag::atom_diag<false> const &ad, 
+    triqs::atom_diag::atom_diag<isComplex> const &ad, 
     triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc) {
 
     auto op_blocks = ad.get_op_mat(op);
@@ -723,12 +724,25 @@ namespace triqs_xca::block_sparse {
       assert( op_blocks.connection[bidx] == bidx );
       if( op_blocks.block_mat[bidx].shape(0) == 0 ) continue; // skip empty blocks
       auto g_dlr = make_gf_dlr(G_ppsc[bidx]);
-      // BUG! Need to transform block_mat from atomic eigenbasis to occupation number basis
-      sum += -trace(matmul(op_blocks.block_mat[bidx], g_dlr(beta))); // FIXME!
+      auto U = ad.get_unitary_matrix(bidx);      
+      auto op_mat_transf = U * op_blocks.block_mat[bidx] * nda::conj(nda::transpose(U));
+      sum += -trace(matmul(op_mat_transf, g_dlr(beta)));
     }
 
   return sum;
   }
+ 
+  template
+  dcomplex expectation_value(
+    triqs::operators::many_body_operator_real const &op, 
+    triqs::atom_diag::atom_diag<false> const &ad, 
+    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc);
+
+  template
+  dcomplex expectation_value(
+    triqs::operators::many_body_operator_real const &op, 
+    triqs::atom_diag::atom_diag<true> const &ad, 
+    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc);
 
   triqs::gfs::block_gf<triqs::mesh::dlr_imtime> convolve_ppsc(
     triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G1, 
