@@ -237,7 +237,7 @@ class BlockSparseSolver(object):
         #if is_root(): print(f'done.')
 
 
-    def solve(self, max_order, tol=1e-4, maxiter=10, mix=1., hyb_tol=None, hyb_comp=True, normalization='classic', verbose=True):
+    def solve(self, max_order, tol=1e-4, maxiter=10, mix=1., hyb_tol=None, hyb_comp=True, normalization='classic', spgf_max_order=None, verbose=True):
         """ Solve the impurity problem using pseudo particle self-consistent perturbation theory.
         
         Parameters
@@ -255,6 +255,8 @@ class BlockSparseSolver(object):
         hyb_comp : bool, optional
             Whether to compress the hybridization function. Default: ``True``.
             When set to ``False``, the hybridization function is represented using the full DLR basis.
+        spgf_max_order : int, optional
+            Maximum order for the single particle Green's function evaluation. If not provided, it defaults to ``max_order``.
         normalization : str, optional
             Normalization method for the pseudo particle Green's function. Default: ``'classic'``.
 
@@ -278,6 +280,8 @@ class BlockSparseSolver(object):
 
         self.normalization = normalization
         self.max_order = max_order
+        self.spgf_max_order = spgf_max_order if spgf_max_order is not None else max_order
+
         self.hyb_tol = hyb_tol if hyb_tol is not None else 0.1 * tol
 
         self.hyb_comp = hyb_comp if max_order > 1 else False # Skip hybridization compression for max_order = 1 (NCA) since the pole representation is not used.
@@ -340,7 +344,7 @@ class BlockSparseSolver(object):
 
             self.G = mix * G_new + (1 - mix) * self.G
 
-        G_tau = self.eval_single_particle_greens_function(self.G, max_order=self.max_order)
+        G_tau = self.eval_single_particle_greens_function(self.G, max_order=self.spgf_max_order)
         self.G_tau = self.__from_dense_to_blockgf(G_tau, self.gf_struct)
 
         self.n_ppsc_iter = iter
@@ -348,6 +352,76 @@ class BlockSparseSolver(object):
         if verbose and is_root():
             print(); self.timer.write()
 
+
+    def solve_bare(self, max_order, hyb_tol=None, hyb_comp=True, use_dyson=False, spgf_max_order=None, verbose=True):
+        """ Solve the impurity problem using the bare pseudo particle self-consistent perturbation theory, 
+        i.e. with the pseudo particle self-energy evaluated using the atomic pseudo particle Green's function.
+         
+        .. math::
+            \\Sigma = \\Sigma[G_0]
+
+        The pseudo-particle Green's function :math:`G` is then obtained by
+
+        .. math::
+            G = G_0 + G_0 \\ast \\Sigma \\ast G_0
+
+        or when ``use_dyson=True`` by solving the Dyson equation
+
+        .. math::
+            (1 - G_0 \\ast \\Sigma \\ast \\, ) G = G_0 
+             
+        This is useful for benchmarking and testing purposes.
+        
+        Parameters
+        ----------
+        max_order : int
+            Maximum order of the perturbation theory.
+        hyb_tol : float, optional
+            Tolerance for the hybridization function compression. Defaults to ``10 * self.eps`` if not provided.
+        hyb_comp : bool, optional
+            Whether to compress the hybridization function. Default: ``True``.
+            When set to ``False``, the hybridization function is represented using the full DLR basis.
+        use_dyson : bool, optional
+            Whether to solve the Dyson equation to obtain the pseudo particle Green's function. Default: ``False``.
+        spgf_max_order : int, optional
+            Maximum order for the single particle Green's function evaluation. If not provided, it defaults to ``max_order``.
+        verbose : bool, optional
+            Verbosity flag controlling level of printouts. Default: ``True``.
+        """
+
+        self.max_order = max_order
+        self.spgf_max_order = spgf_max_order if spgf_max_order is not None else max_order
+
+        self.hyb_tol = hyb_tol if hyb_tol is not None else 10 * self.eps
+        self.hyb_comp = hyb_comp if max_order > 1 else False # Skip hybridization compression for max_order = 1 (NCA) since the pole representation is not used.
+        
+        self.fit_hybridization(tol=self.hyb_tol, compression=self.hyb_comp, verbose=verbose)
+        self.init_diagram_evaluator() # FIXME! Evaluator takes hyb poles and coeffs in constructor
+
+        self.Sigma = self.eval_pseudo_particle_self_energy(self.G0, self.max_order, verbose=verbose > 1)
+
+        if use_dyson:   
+            self.timer.start('Dyson')
+            G = self.solve_dyson(self.Sigma, self.eta)
+        else:
+            self.timer.start('G = G0 + G0 Sigma G0')
+            G = self.G0 + conv(self.G0, conv(self.Sigma, self.G0)) # Add self.eta here? (eta * G0 * G0)
+
+        G = self.normalize_pseudo_particle_gf(G)
+        Z = self.partition_function_from_ppgf(G)
+
+        self.timer.stop()
+
+        if verbose and is_root(): print(f'Bare: Z-1 = {Z-1:+2.2E}, eta = {self.eta:2.2E}')
+
+        self.G = G
+
+        G_tau = self.eval_single_particle_greens_function(self.G, max_order=self.spgf_max_order)
+        self.G_tau = self.__from_dense_to_blockgf(G_tau, self.gf_struct)
+
+        if verbose and is_root():
+            print(); self.timer.write()
+        
 
     def normalize_pseudo_particle_gf(self, G):
         """ Normalize the pseudo particle Green's function by updating the pseudo particle chemical potential eta, such that the partition function Z is equal to 1. """
