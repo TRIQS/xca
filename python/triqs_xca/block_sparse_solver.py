@@ -8,7 +8,7 @@ import triqs.utility.mpi as mpi
 from triqs.gf import Gf, MeshDLRImTime, BlockGf, make_gf_dlr, make_gf_dlr_imfreq
 from triqs.atom_diag import AtomDiag, AtomDiagReal, AtomDiagComplex
 
-from .diag import all_connected_pairings
+from .diag import all_pairings, all_connected_pairings
 
 from .dlr_dyson_ppsc import DysonItPPSC
 
@@ -152,7 +152,7 @@ class BlockSparseSolver(object):
 
             assert( tol is not None and tol > 0 ), 'Error: tol must be provided and positive when compression is enabled.'
 
-            from adapol.triqs_xca import TriqsDLRCompression
+            from adapol.triqs import TriqsDLRCompression
         
             try:
                 tdc = TriqsDLRCompression(Delta_tau_dense, tol=tol, verbose=verbose and is_root())
@@ -291,6 +291,7 @@ class BlockSparseSolver(object):
         self.fit_hybridization(tol=self.hyb_tol, compression=self.hyb_comp, verbose=verbose)
         self.init_diagram_evaluator() # FIXME! Evaluator takes hyb poles and coeffs in constructor
 
+        iter = 0
         for iter in range(1, maxiter+1):
 
             #if is_root(): print(f'Sigma max_order = {self.max_order}')
@@ -594,22 +595,24 @@ class BlockSparseSolver(object):
 
 
     @timer('Sigma')
-    def eval_pseudo_particle_self_energy(self, G, max_order, verbose=False):
+    def eval_pseudo_particle_self_energy(self, G, max_order, connected=True, verbose=False):
 
         self.Sigma = self.get_zero_pseudo_particle_propagator()
 
         for order in range(1, max_order+1):
             with self.timer(f'Order {order}'):
-                self.Sigma += self.__eval_pseudo_particle_self_energy_order(G, order, verbose=verbose)
+                self.Sigma += self.__eval_pseudo_particle_self_energy_order(G, order, connected, verbose=verbose)
 
         return self.Sigma
 
 
-    def __eval_pseudo_particle_self_energy_order(self, G, order, verbose=False):
+    def __eval_pseudo_particle_self_energy_order(self, G, order, connected, verbose=False):
 
         Sigma = self.get_zero_pseudo_particle_propagator()
         
-        for sign, topology in all_connected_pairings(order):
+        pairings = all_connected_pairings if connected else all_pairings
+
+        for sign, topology in pairings(order):
             if verbose and is_root(): print(f'SIGMA: O{order} topo {topology} sign {sign:+d}')
             topology = np.array(topology, dtype=np.int32)
             Sigma +=  pow(-1, order) * sign * \
