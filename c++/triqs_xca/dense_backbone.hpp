@@ -140,6 +140,23 @@ namespace triqs_xca::dense {
     DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs, triqs::mesh::dlr_imtime tau_mesh,
                           triqs::atom_diag::atom_diag<isComplex> const &ad);
 
+    /**
+       * @brief Constructor for DiagramEvaluator
+       * @param[in] hyb_poles hybridization poles
+       * @param[in] hyb_coeffs hybridization function coefficients (at poles)
+       * @param[in] tau_mesh TRIQS imagnary time DLR mesh
+       * @param[in] ad TRIQS atom_diag object with Hamiltonian and field operators
+       * @param[in] dynint_ops vector of many_body_operator_real objects representing the dynamic interactions
+       * @param[in] dynint_coeffs array of coefficients for the dynamic interactions (also using hyb_poles)
+       */
+    template<bool isComplex>
+    DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs, 
+                          triqs::mesh::dlr_imtime tau_mesh,
+                          triqs::atom_diag::atom_diag<isComplex> const &ad,
+                          std::vector<triqs::operators::many_body_operator_real> const &dynint_ops,
+                          nda::array_const_view<dcomplex, 3> dynint_coeffs
+                          );                          
+
     virtual ~DenseDiagramEvaluator() = default;
   };
 
