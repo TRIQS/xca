@@ -158,7 +158,7 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
 
             t2 = time.time()
 
-            d.Sigma_BSS = BSS.eval_pseudo_particle_self_energy_topology(BSS.G, topology)
+            d.Sigma_BSS = (-1)**(order + 1) * BSS.eval_pseudo_particle_self_energy_topology(BSS.G, topology)
             d.Sigma_BSS = pseudo_particle_block_gf_to_dense(d.Sigma_BSS, BSS.atom_diag)
 
             t3 = time.time()
