@@ -86,6 +86,7 @@ class BlockSparseSolver(object):
         self.eps = eps
         self.conserved_operators = conserved_operators
         self.verbose = verbose
+        self.has_dynamic_interactions = False        
 
         self.fundamental_operators = fundamental_operators_from_gf_struct(gf_struct)
         self.use_dense_solver = (self.conserved_operators == []) # Without symmetries, use the dense solver
@@ -227,12 +228,23 @@ class BlockSparseSolver(object):
             #print(f'hyb.coefficients =\n{self.hyb.coefficients}')
 
 
+    def set_dynamic_interactions(self, dynint_ops, dynint_coeffs):
+        self.has_dynamic_interactions = True
+        self.dynint_ops = dynint_ops
+        self.dynint_coeffs = dynint_coeffs
+
+
     @timer('DiagramEvaluator Init')
     def init_diagram_evaluator(self):
         #if is_root(): print(f'Initializing diagram evaluator with use_dense_solver = {self.use_dense_solver}')
         if self.use_dense_solver:
-            self.d = DenseDiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.atom_diag)
+            if self.has_dynamic_interactions:
+                self.d = DenseDiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.atom_diag, self.dynint_ops, self.dynint_coeffs)
+            else:
+                self.d = DenseDiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.atom_diag)
         else:
+            if self.has_dynamic_interactions:
+                raise NotImplementedError('Dynamic interactions are not yet implemented for the block sparse solver (DiagramEvaluator).')
             self.d = DiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.atom_diag)
         #if is_root(): print(f'done.')
 
@@ -399,7 +411,7 @@ class BlockSparseSolver(object):
         self.fit_hybridization(tol=self.hyb_tol, compression=self.hyb_comp, verbose=verbose)
         self.init_diagram_evaluator() # FIXME! Evaluator takes hyb poles and coeffs in constructor
 
-        self.Sigma = self.eval_pseudo_particle_self_energy(self.G0, self.max_order, verbose=verbose > 1)
+        self.Sigma = self.eval_pseudo_particle_self_energy(self.G0, self.max_order, connected=False, verbose=verbose > 1)
 
         if use_dyson:   
             self.timer.start('Dyson')
@@ -692,7 +704,13 @@ class BlockSparseSolver(object):
         n_vec = scatter_array_over_ranks(np.arange(n_max, dtype=np.int32))
 
         spgf = self.get_zero_single_particle_greens_function()
-        spgf.data[:] = self.d.compute_single_ptcle_gf(G, topology, n_vec)
+        if self.has_dynamic_interactions:
+            n_orb = spgf.target_shape[0]
+            # FIXME! With the dense solver we compute all operator combinations not only single particle ones
+            # fix this by adjusting the dense spgf calculator
+            spgf.data[:] = self.d.compute_single_ptcle_gf(G, topology, n_vec)[:, :n_orb, :n_orb]  
+        else:
+            spgf.data[:] = self.d.compute_single_ptcle_gf(G, topology, n_vec)
         spgf.data[:] = mpi.all_reduce(spgf.data)
 
         return spgf
