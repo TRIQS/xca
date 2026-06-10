@@ -15,6 +15,10 @@ namespace triqs_xca::dynint {
     using triqs_xca::dense::DenseFSet;
     using triqs_xca::atom_diag::triqs_atom_diag_t;
 
+    nda::array<dcomplex, 3> get_extended_coefficients(
+        nda::array_const_view<dcomplex, 3> hyb_coeffs, 
+        nda::array_const_view<dcomplex, 3> dynint_coeffs);
+    
     DenseFSet get_operators_and_interactions_dense(
         const triqs_atom_diag_t<true> &ad, 
         nda::array_const_view<dcomplex, 3> hyb_coeffs, 

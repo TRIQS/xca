@@ -4,6 +4,7 @@
 #include <cppdlr/dlr_kernels.hpp>
 
 #include "triqs_xca/hyb.hpp"
+#include "triqs_xca/dynint.hpp"
 #include "triqs_xca/dense_backbone.hpp"
 
 namespace triqs_xca::dense {
@@ -55,6 +56,18 @@ namespace triqs_xca::dense {
        Tkaps(nda::zeros<dcomplex>(n, r, N, N)), // Largest memory footprint, speeding up multiply_left_vertex_and_right_zero_vertex
        Tmu(nda::zeros<dcomplex>(r, N, N)) {}
 
+  template DenseDiagramEvaluator::DenseDiagramEvaluator(
+    nda::vector_const_view<double> hyb_poles,
+    nda::array_const_view<dcomplex, 3> hyb_coeffs,
+    triqs::mesh::dlr_imtime tau_mesh,
+    triqs::atom_diag::atom_diag<true> const &ad);
+
+  template DenseDiagramEvaluator::DenseDiagramEvaluator(
+    nda::vector_const_view<double> hyb_poles,
+    nda::array_const_view<dcomplex, 3> hyb_coeffs,
+    triqs::mesh::dlr_imtime tau_mesh,
+    triqs::atom_diag::atom_diag<false> const &ad);
+
   template<bool isComplex>
   DenseDiagramEvaluator::DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
                                                triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<isComplex> const &ad, 
@@ -64,10 +77,10 @@ namespace triqs_xca::dense {
        beta(tau_mesh.beta()),
        itops(tau_mesh.dlr_it()),
        dlr_it(itops.get_itnodes()),
-       hyb(tau_mesh, hyb_poles, hyb_coeffs, -1.0),
-       Fset(get_operators_and_interactions_dense(ad, hyb_coeffs, dynint_coeffs, dynint_ops)),
+       hyb(tau_mesh, hyb_poles, dynint::get_extended_coefficients(hyb_coeffs, dynint_coeffs), -1.0),
+       Fset(dynint::get_operators_and_interactions_dense(ad, hyb_coeffs, dynint_coeffs, dynint_ops)),
        r(itops.rank()),
-       n(ad.get_fops().size()), // number of fermion flavours (spin-orbitals)
+       n(ad.get_fops().size() + dynint_ops.size()), // number of fermion flavours (spin-orbitals)
        N(ad.get_full_hilbert_space_dim()),
        // allocate arrays
        Sigma(nda::zeros<dcomplex>(r, N, N)),
@@ -81,13 +94,17 @@ namespace triqs_xca::dense {
     nda::vector_const_view<double> hyb_poles,
     nda::array_const_view<dcomplex, 3> hyb_coeffs,
     triqs::mesh::dlr_imtime tau_mesh,
-    triqs::atom_diag::atom_diag<true> const &ad);
+    triqs::atom_diag::atom_diag<true> const &ad,
+    std::vector<triqs::operators::many_body_operator_real> const &dynint_ops,
+    nda::array_const_view<dcomplex, 3> dynint_coeffs);
 
   template DenseDiagramEvaluator::DenseDiagramEvaluator(
     nda::vector_const_view<double> hyb_poles,
     nda::array_const_view<dcomplex, 3> hyb_coeffs,
     triqs::mesh::dlr_imtime tau_mesh,
-    triqs::atom_diag::atom_diag<false> const &ad);
+    triqs::atom_diag::atom_diag<false> const &ad,
+    std::vector<triqs::operators::many_body_operator_real> const &dynint_ops,
+    nda::array_const_view<dcomplex, 3> dynint_coeffs);
 
   void DenseDiagramEvaluator::reset() {
     T     = 0;
