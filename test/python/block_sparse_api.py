@@ -157,7 +157,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
             t2 = time.time()
 
             d.Sigma_BSS = pseudo_particle_block_gf_to_dense(
-                BSS.eval_pseudo_particle_self_energy_topology(BSS.G, topology), BSS.atom_diag)
+                (-1)**(order + 1) * BSS.eval_pseudo_particle_self_energy_topology(BSS.G, topology), BSS.atom_diag)
 
             t3 = time.time()
 

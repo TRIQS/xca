@@ -627,7 +627,7 @@ class BlockSparseSolver(object):
         for sign, topology in pairings(order):
             if verbose and is_root(): print(f'SIGMA: O{order} topo {topology} sign {sign:+d}')
             topology = np.array(topology, dtype=np.int32)
-            Sigma +=  pow(-1, order) * sign * \
+            Sigma +=  -sign * \
                 self.__eval_pseudo_particle_self_energy_topology_loop(G, topology, verbose=verbose) # FIXME! Signs
             
         return Sigma
@@ -635,7 +635,7 @@ class BlockSparseSolver(object):
     
     def eval_pseudo_particle_self_energy_topology(self, G, topology):
         order = len(topology)
-        return pow(-1, order+1) * self.d.compute_self_energy(G, topology) # FIXME! Sign convention.
+        return self.d.compute_self_energy(G, topology) # FIXME! Sign convention.
 
 
     def __eval_pseudo_particle_self_energy_topology_loop(self, G, topology, verbose=False):
@@ -645,7 +645,7 @@ class BlockSparseSolver(object):
         n_vec = scatter_array_over_ranks(np.arange(n_max, dtype=np.int32))
 
         Sigma = self.get_zero_pseudo_particle_propagator()
-        Sigma = pow(-1, order+1) * self.d.compute_self_energy(G, topology, n_vec)
+        Sigma = self.d.compute_self_energy(G, topology, n_vec)
         for bidx, sigma_b in Sigma:
             sigma_b.data[:] = mpi.all_reduce(sigma_b.data)
 
