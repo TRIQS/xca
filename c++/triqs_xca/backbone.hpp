@@ -60,6 +60,17 @@ class BackboneVertex {
  * DiagramEvaluator class.
  */
 class Backbone {
+
+  public:
+  int m;              // order
+  int n;              // number of orbital indices
+  int n_hyb;          // number of hybridization operators
+  int n_int;          // number of interaction operators
+  int fb_ix_max;      // maximum value of fb_ix, i.e., 2^m - 1
+  int o_ix_max;       // maximum value of o_ix, i.e., n^(m-1) - 1
+  int prefactor_sign; // +1 or -1, depending on the sign of the prefactor
+  std::vector<BackboneVertex> vertices;
+
   private:
   nda::vector<int> prefactor_Ksigns; // for each of m-1 pole indices (l, l`, ...), the sign on K_l^?(0)
   nda::vector<int> prefactor_Kexps;  // for each of m-1 pole_indices, the exponent on K_l(0)^?
@@ -113,15 +124,6 @@ class Backbone {
                  nda::vector_const_view<double> hyb_poles); // set directions, pole indices, and orbital indices from a single integer index.
   // In terms of fb_ix, p_ix, and o_ix, f_ix = o_ix + n^(m-1) * p_ix + (n * r)^(m-1) * fb_ix, where r is the number of hybridization indices.
   void reset_all_inds();
-
-  int m;              // order
-  int n;              // number of orbital indices
-  int n_hyb;          // number of hybridization operators
-  int n_int;          // number of interaction operators
-  int fb_ix_max;      // maximum value of fb_ix, i.e., 2^m - 1
-  int o_ix_max;       // maximum value of o_ix, i.e., n^(m-1) - 1
-  int prefactor_sign; // +1 or -1, depending on the sign of the prefactor
-  std::vector<BackboneVertex> vertices;
 
   int get_prefactor_Ksign(int i);
   int get_prefactor_Kexp(int i);
