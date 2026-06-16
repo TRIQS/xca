@@ -16,6 +16,7 @@ set(all_tests
   h5_io
   h5_io_bs
   dense
+  dynint
   triqs_solver
   one_spinful_fermion
   analytic_diagrams

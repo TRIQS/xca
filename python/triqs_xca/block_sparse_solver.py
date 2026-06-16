@@ -627,6 +627,10 @@ class BlockSparseSolver(object):
         for sign, topology in pairings(order):
             if verbose and is_root(): print(f'SIGMA: O{order} topo {topology} sign {sign:+d}')
             topology = np.array(topology, dtype=np.int32)
+
+            # BOSONIC DEBUG TEST! (Breaks all fermionic calcs) FIXME!
+            #Sigma += - \
+            
             Sigma +=  -sign * \
                 self.__eval_pseudo_particle_self_energy_topology_loop(G, topology, verbose=verbose) # FIXME! Signs
             
