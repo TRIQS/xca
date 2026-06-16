@@ -41,6 +41,8 @@ namespace triqs_xca::dense {
 
     int r; // DLR rank
     int n; // number of orbitals
+    int n_hyb; // number of hybridization operators
+    int n_int; // number of interaction operators
     int N; // number of many body states
 
     nda::array<dcomplex, 3> Sigma; // array for storing self-energy contribution (final result)

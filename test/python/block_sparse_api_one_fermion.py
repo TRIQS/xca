@@ -231,6 +231,10 @@ def test_oca_diagram_cf_block_sparse_and_dense(
             d.Sigma_BSS = BSS.eval_pseudo_particle_self_energy_topology(BSS.G, topology)
             d.Sigma_BSS = pseudo_particle_block_gf_to_dense(d.Sigma_BSS, BSS.atom_diag)
 
+            # Correct for dense solver, computing the sign internally
+            # Remove when BlockSparseDiagramEvaluator does the same thing.
+            if conserved_operators == []: d.Sigma_BSS *= sign
+
             t3 = time.time()
 
             print(f'    Sigma time ZH ({t2 - t1} s) BS ({t3 - t2} s)')

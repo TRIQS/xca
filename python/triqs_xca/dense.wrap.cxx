@@ -192,6 +192,8 @@ constexpr auto _c2py_doc_member_9  = R"DOC()DOC";
 constexpr auto _c2py_doc_member_10 = R"DOC()DOC";
 constexpr auto _c2py_doc_member_11 = R"DOC()DOC";
 constexpr auto _c2py_doc_member_12 = R"DOC()DOC";
+constexpr auto _c2py_doc_member_13 = R"DOC()DOC";
+constexpr auto _c2py_doc_member_14 = R"DOC()DOC";
 
 // ----- Member and property table ----
 
@@ -203,13 +205,15 @@ constinit PyGetSetDef c2py::tp_getset<_c2py_cls_0>[] = {
    c2py::getsetdef_from_member<&_c2py_cls_0::dlr_it, _c2py_cls_0>("dlr_it", _c2py_doc_member_3),
    c2py::getsetdef_from_member<&_c2py_cls_0::r, _c2py_cls_0>("r", _c2py_doc_member_4),
    c2py::getsetdef_from_member<&_c2py_cls_0::n, _c2py_cls_0>("n", _c2py_doc_member_5),
-   c2py::getsetdef_from_member<&_c2py_cls_0::N, _c2py_cls_0>("N", _c2py_doc_member_6),
-   c2py::getsetdef_from_member<&_c2py_cls_0::Sigma, _c2py_cls_0>("Sigma", _c2py_doc_member_7),
-   c2py::getsetdef_from_member<&_c2py_cls_0::T, _c2py_cls_0>("T", _c2py_doc_member_8),
-   c2py::getsetdef_from_member<&_c2py_cls_0::U, _c2py_cls_0>("U", _c2py_doc_member_9),
-   c2py::getsetdef_from_member<&_c2py_cls_0::GKt, _c2py_cls_0>("GKt", _c2py_doc_member_10),
-   c2py::getsetdef_from_member<&_c2py_cls_0::Tkaps, _c2py_cls_0>("Tkaps", _c2py_doc_member_11),
-   c2py::getsetdef_from_member<&_c2py_cls_0::Tmu, _c2py_cls_0>("Tmu", _c2py_doc_member_12),
+   c2py::getsetdef_from_member<&_c2py_cls_0::n_hyb, _c2py_cls_0>("n_hyb", _c2py_doc_member_6),
+   c2py::getsetdef_from_member<&_c2py_cls_0::n_int, _c2py_cls_0>("n_int", _c2py_doc_member_7),
+   c2py::getsetdef_from_member<&_c2py_cls_0::N, _c2py_cls_0>("N", _c2py_doc_member_8),
+   c2py::getsetdef_from_member<&_c2py_cls_0::Sigma, _c2py_cls_0>("Sigma", _c2py_doc_member_9),
+   c2py::getsetdef_from_member<&_c2py_cls_0::T, _c2py_cls_0>("T", _c2py_doc_member_10),
+   c2py::getsetdef_from_member<&_c2py_cls_0::U, _c2py_cls_0>("U", _c2py_doc_member_11),
+   c2py::getsetdef_from_member<&_c2py_cls_0::GKt, _c2py_cls_0>("GKt", _c2py_doc_member_12),
+   c2py::getsetdef_from_member<&_c2py_cls_0::Tkaps, _c2py_cls_0>("Tkaps", _c2py_doc_member_13),
+   c2py::getsetdef_from_member<&_c2py_cls_0::Tmu, _c2py_cls_0>("Tmu", _c2py_doc_member_14),
 
    {nullptr, nullptr, nullptr, nullptr, nullptr}};
 

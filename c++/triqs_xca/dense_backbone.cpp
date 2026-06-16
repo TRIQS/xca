@@ -26,6 +26,8 @@ namespace triqs_xca::dense {
        Fset(Fset),
        r(itops.rank()),
        n(hyb_coeffs.extent(1)),
+       n_hyb(n),
+       n_int(0), // No dynamic interactions in this constructor
        //n(Fset.Fs.extent(0)),
        N(Fset.Fs.extent(1)),
        // allocate arrays
@@ -47,6 +49,8 @@ namespace triqs_xca::dense {
        Fset(get_operators_dense(ad, hyb_coeffs)),
        r(itops.rank()),
        n(ad.get_fops().size()), // number of fermion flavours (spin-orbitals)
+       n_hyb(n),
+       n_int(0), // No dynamic interactions in this constructor
        N(ad.get_full_hilbert_space_dim()),
        // allocate arrays
        Sigma(nda::zeros<dcomplex>(r, N, N)),
@@ -81,6 +85,8 @@ namespace triqs_xca::dense {
        Fset(dynint::get_operators_and_interactions_dense(ad, hyb_coeffs, dynint_coeffs, dynint_ops)),
        r(itops.rank()),
        n(ad.get_fops().size() + dynint_ops.size()), // number of fermion flavours (spin-orbitals)
+       n_hyb(ad.get_fops().size()),
+       n_int(dynint_ops.size()), // Number of dynamic interactions
        N(ad.get_full_hilbert_space_dim()),
        // allocate arrays
        Sigma(nda::zeros<dcomplex>(r, N, N)),
@@ -116,7 +122,7 @@ namespace triqs_xca::dense {
   }
 
   triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DenseDiagramEvaluator::compute_self_energy(gf_vt G_ppsc, nda::array_const_view<int, 2> topology) {
-    Backbone backbone(topology, n);
+    Backbone backbone(topology, n, n_int);
     eval_self_energy(G_ppsc[0].data(), backbone);
     auto sigma_gf = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, this->Sigma);
     reset();
@@ -125,7 +131,7 @@ namespace triqs_xca::dense {
 
   triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DenseDiagramEvaluator::compute_self_energy(gf_vt G_ppsc, nda::array_const_view<int, 2> topology,
                                                                                            int f_ix) {
-    Backbone backbone(topology, n);
+    Backbone backbone(topology, n, n_int);
     eval_self_energy_fixed_indices(G_ppsc[0].data(), backbone, f_ix); // evaluate the diagram with these directions, poles, and orbital indices
     auto sigma_gf = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, this->Sigma);
     reset();
@@ -134,7 +140,7 @@ namespace triqs_xca::dense {
 
   triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DenseDiagramEvaluator::compute_self_energy(gf_vt G_ppsc, nda::array_const_view<int, 2> topology,
                                                                                            nda::array_const_view<int, 1> f_ix_vec) {
-    Backbone backbone(topology, n);
+    Backbone backbone(topology, n, n_int);
     for (int f_ix : f_ix_vec)
       eval_self_energy_fixed_indices(G_ppsc[0].data(), backbone, f_ix); // evaluate the diagram with these directions, poles, and orbital indices
     auto sigma_gf = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, this->Sigma);
@@ -182,7 +188,20 @@ namespace triqs_xca::dense {
       Tmu = 0;
       for (int kap = 0; kap < n; kap++) {
         nda::array_const_view<dcomplex, 1> hyb_t = hyb_too(_, mu, kap);
-        for (int t = 0; t < r; t++) Tmu(t, _, _) += hyb_t(t) * Tkaps(kap, t, _, _);
+
+        // set the orbital indices of the vertex connected to zero
+        // and compute the fermionic permutation parity of the resulting 
+        // diagram.
+  
+        backbone.set_orb_inds_of_0_and_vct0(kap, mu);
+        int fermionic_parity = backbone.get_parity();
+        //std::cout << "DenseDiagramEvaluator::multiply_left_vertex_and_right_zero_vertex: mu = " << mu << ", kap = " << kap << ", fermionic_parity = " << fermionic_parity << "\n";
+
+        for (int t = 0; t < r; t++) Tmu(t, _, _) += fermionic_parity * hyb_t(t) * Tkaps(kap, t, _, _);
+
+        // DEBUG! Ignoring fermionic sign for now (to check against python sign calc.)
+        //for (int t = 0; t < r; t++) Tmu(t, _, _) += hyb_t(t) * Tkaps(kap, t, _, _); 
+
       }
       nda::array_const_view<dcomplex, 2> F_mu = Fset.get_operator(backbone, vct0, mu);
       for (int t = 0; t < r; t++) T_buf(t, _, _) += matmul(F_mu, Tmu(t, _, _));
@@ -190,7 +209,7 @@ namespace triqs_xca::dense {
   }
 
   int DenseDiagramEvaluator::get_num_self_energy_backbones(nda::array_const_view<int, 2> topology) {
-    Backbone backbone(topology, n);
+    Backbone backbone(topology, n, n_int);
     return get_num_self_energy_backbones(backbone);
   }
 
