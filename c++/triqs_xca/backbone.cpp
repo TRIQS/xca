@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "triqs_xca/backbone.hpp"
 #include "triqs_xca/topology.hpp"
 
@@ -18,31 +20,54 @@ void BackboneVertex::set_Ksign(int i) { Ksign = i; }
 void BackboneVertex::set_orb(int i) { orb = i; }
 
 Backbone::Backbone(nda::array<int, 2> topology, int n, int n_int)
-   : topology(topology),
-     f_ix(0),
+   : 
      m(topology.extent(0)),
      n(n),
      n_hyb(n - n_int), // number of hybridization operators is total number of operators minus number of interaction operators
      n_int(n_int),
      fb_ix_max(static_cast<int>(pow(2, m))),
      o_ix_max(static_cast<int>(pow(n, m - 1))),
-     prefactor_sign(1) {
+     prefactor_sign(1),
+     vertices(std::vector<BackboneVertex>(2 * m)),
+     prefactor_Ksigns(nda::vector<int>(m - 1, 0)),
+     prefactor_Kexps(nda::vector<int>(m - 1, 0)),
+     edges(nda::zeros<int>(2 * m - 1, m - 1)),
+     topology(topology),
+     fb(nda::vector<int>(m, 0)),
+     f_ix(0) {
+  
+  for (int i = 0; i < m-1; i++) {
+    if (topology(i+1, 0) <= topology(i, 0)) { 
+      throw std::invalid_argument("first pair indices must be in increasing order"); 
+    }
+  }
 
-  prefactor_Ksigns = nda::vector<int>(m - 1, 0);
-  prefactor_Kexps  = nda::vector<int>(m - 1, 0);
-  vertices         = std::vector<BackboneVertex>(2 * m);
-  edges            = nda::zeros<int>(2 * m - 1, m - 1);
-  fb               = nda::vector<int>(m, 0);
+  for (int i = 0; i < m; i++) {
+    if (topology(i, 0) >= topology(i, 1)) { 
+      throw std::invalid_argument("first row of topology must contain smaller-numbered vertices"); 
+    }
+  }
+
+  if (topology(0, 0) != 0) throw std::invalid_argument("topology(0,0) must be 0");
+
+  // Test that sorts all indices and compares to range(0, 2*m) 
+  // to check that all vertices are present and there are no duplicates.
+  std::vector<int> vertices_sorted(2 * m);
+  for (int i = 0; i < m; i++) {
+    vertices_sorted[2 * i] = topology(i, 0);
+    vertices_sorted[2 * i + 1] = topology(i, 1);  
+  }
+  std::ranges::sort(vertices_sorted);
+  for (int i = 0; i < 2 * m; i++) {
+    if (vertices_sorted[i] != i) { throw std::invalid_argument("topology must contain each vertex index from 0 to 2m-1 exactly once"); }
+  }
+
 }
 
 void Backbone::set_directions(nda::vector_const_view<int> fb_vec) {
 
   this->fb = fb_vec;
   if (m != fb_vec.size()) { throw std::invalid_argument("topology and fb must have same # of vertices"); }
-  for (int i = 0; i < m; i++) {
-    if (topology(i, 0) >= topology(i, 1)) { throw std::invalid_argument("first row of topology must contain smaller-numbered vertices"); }
-  }
-  if (topology(0, 0) != 0) throw std::invalid_argument("topology(0,0) must be 0");
 
   // set operator flags for each vertex, depending on fb
   vertices[0].set_bar(false);              // operator on vertex 0 has no bar
