@@ -20,6 +20,24 @@ triqs_xca::dense::DenseDiagramEvaluator::DenseDiagramEvaluator(
     nda::vector_const_view<double>, nda::array_const_view<dcomplex, 3>,
     triqs::mesh::dlr_imtime, triqs::atom_diag::atom_diag<false> const &);
 
+// -- Dynamic interaction constructor
+
+extern template
+triqs_xca::dense::DenseDiagramEvaluator::DenseDiagramEvaluator(
+    nda::vector_const_view<double>, nda::array_const_view<dcomplex, 3>,
+    triqs::mesh::dlr_imtime, triqs::atom_diag::atom_diag<true> const &,
+    std::vector<triqs::operators::many_body_operator_real> const &,
+    nda::array_const_view<dcomplex, 3>);
+
+extern template
+triqs_xca::dense::DenseDiagramEvaluator::DenseDiagramEvaluator(
+    nda::vector_const_view<double>, nda::array_const_view<dcomplex, 3>,
+    triqs::mesh::dlr_imtime, triqs::atom_diag::atom_diag<false> const &,
+    std::vector<triqs::operators::many_body_operator_real> const &,
+    nda::array_const_view<dcomplex, 3>);
+
+// -- Correlator evaluator
+
 extern template
 nda::array<dcomplex, 3> triqs_xca::dense::DenseDiagramEvaluator::compute_one_time_correlator<true>(
     gf_vt, std::vector<triqs::operators::many_body_operator_real> const &,
