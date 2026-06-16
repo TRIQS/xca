@@ -50,7 +50,7 @@ TEST(DenseBackbone, OCA) {
 
   // evaluate OCA self-energy contribution
   D.eval_self_energy(Gt_dense, B);
-  auto OCA_result = D.Sigma;
+  auto OCA_result = nda::make_regular(-D.Sigma); // Cancel topology sign, accounted for in dense diag eval.
 
   // compare against manually-computed OCA result
   auto OCA_dense_result = OCA_dense(Deltat, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
@@ -196,7 +196,7 @@ TEST(DenseBackbone, OCA_semicircle_bath_aaa) {
   auto Fset                   = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs);
   auto D                      = DenseDiagramEvaluator(beta, eps, itops, hyb_poles, hyb_coeffs, Fset);
   D.eval_self_energy(Gt_dense, B); // evaluate OCA diagram
-  auto OCA_result = D.Sigma;       // get the result from the DiagramEvaluator
+  auto OCA_result = nda::make_regular(-D.Sigma);       // get the result from the DiagramEvaluator
 
   // compare with the dense result
   ASSERT_LE(nda::max_element(nda::abs(OCA_result - OCA_dense_result)), 2 * eps);

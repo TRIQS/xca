@@ -628,10 +628,14 @@ class BlockSparseSolver(object):
             if verbose and is_root(): print(f'SIGMA: O{order} topo {topology} sign {sign:+d}')
             topology = np.array(topology, dtype=np.int32)
 
-            # BOSONIC DEBUG TEST! (Breaks all fermionic calcs) FIXME!
-            #Sigma += - \
-            
-            Sigma +=  -sign * \
+            # Disable sign for the dense solver
+            # since it is computed internally by the diagram evaluator
+            # in the step applying the vertex connected to zero
+            # using the backbone parity calculation.
+            # TODO: Propagate this behaviour to the BlockSparseDiagramEvaluator
+            if self.use_dense_solver: sign = +1
+
+            Sigma += -sign * \
                 self.__eval_pseudo_particle_self_energy_topology_loop(G, topology, verbose=verbose) # FIXME! Signs
             
         return Sigma

@@ -306,7 +306,7 @@ TEST(Backbone, OCA_BDOF_construct) {
   auto B = Backbone(topology, n);
   D2.eval_self_energy(Gt_dense, B);
   end                   = std::chrono::high_resolution_clock::now();
-  auto OCA_dense_result = D2.Sigma;
+  auto OCA_dense_result = nda::make_regular(-D2.Sigma); // Cancel topology sign, accounted for in dense diag eval.
   elapsed               = end - start;
 
   // use block-sparse solver but with trivial sparsity
@@ -408,7 +408,7 @@ TEST(Backbone, spin_flip_fermion) {
   D2.eval_self_energy(Gt_dense, B);
   end               = std::chrono::high_resolution_clock::now();
   duration          = end - start;
-  auto result_dense = D2.Sigma;
+  auto result_dense = nda::make_regular(-D2.Sigma); // Cancel topology sign, accounted for in dense diag eval.
 
   for (int i = 0; i < Gt_block_sizes.size(); i++) {
     auto result_dense_block = get_tensor_in_atom_diag_subspace(result_dense, i, ad);
@@ -479,7 +479,7 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
   D2.eval_self_energy(Gt_dense, B);
   end               = std::chrono::high_resolution_clock::now();
   duration          = end - start;
-  auto result_dense = D2.Sigma;
+  auto result_dense = nda::make_regular(-D2.Sigma); // Cancel topology sign, accounted for in dense diag eval.
 
   for (int i = 0; i < Gt_block_sizes.size(); i++) {
     auto result_dense_block = get_tensor_in_atom_diag_subspace(result_dense, i, ad);
@@ -640,7 +640,7 @@ TEST(Backbone, spin_flip_fermion_aaa) {
   D2.eval_self_energy(Gt_dense, B);
   end               = std::chrono::high_resolution_clock::now();
   duration          = end - start;
-  auto result_dense = D2.Sigma;
+  auto result_dense = nda::make_regular(-D2.Sigma); // Cancel topology sign, accounted for in dense diag eval.
 
   for (int i = 0; i < Gt_block_sizes.size(); i++) {
     auto result_dense_block = get_tensor_in_atom_diag_subspace(result_dense, i, ad);
@@ -728,7 +728,7 @@ TEST(Backbone, spin_flip_fermion_all_sym_aaa) {
   D2.eval_self_energy(Gt_dense, B);
   end               = std::chrono::high_resolution_clock::now();
   duration          = end - start;
-  auto result_dense = D2.Sigma;
+  auto result_dense = nda::make_regular(-D2.Sigma); // Cancel topology sign, accounted for in dense diag eval.
 
   for (int i = 0; i < Gt_block_sizes.size(); i++) {
     auto result_dense_block = get_tensor_in_atom_diag_subspace(result_dense, i, ad);

@@ -100,6 +100,14 @@ class Backbone {
   void set_orb_inds(nda::vector_const_view<int> orb_inds_vec);
   void set_orb_inds(int o_ix); // set orbital indices from a single integer index in [[0, n^(m-1)-1]]
   void reset_orb_inds();
+
+  // set the orbital indices of vertex 0 and the vertex connected to it, which are not included in orb_inds
+  void set_orb_inds_of_0_and_vct0(int orb_ind_0, int orb_ind_vct0);
+
+  // get the fermionic permutation parity of the diagram represented by this backbone, 
+  // based on the topology and orbital indices
+  int get_parity(); 
+
   virtual void
   set_flat_index(int flat_ix,
                  nda::vector_const_view<double> hyb_poles); // set directions, pole indices, and orbital indices from a single integer index.
@@ -108,6 +116,8 @@ class Backbone {
 
   int m;              // order
   int n;              // number of orbital indices
+  int n_hyb;          // number of hybridization operators
+  int n_int;          // number of interaction operators
   int fb_ix_max;      // maximum value of fb_ix, i.e., 2^m - 1
   int o_ix_max;       // maximum value of o_ix, i.e., n^(m-1) - 1
   int prefactor_sign; // +1 or -1, depending on the sign of the prefactor
@@ -135,8 +145,9 @@ class Backbone {
    * 
    * @param[in] topology list of vertices connected by a hybridization line
    * @param[in] n number of orbital indices
+   * @param[in] n_int number of interaction operators (default 0, since not all backbones have dynamic interactions)
    */
-  Backbone(nda::array<int, 2> topology, int n);
+  Backbone(nda::array<int, 2> topology, int n, int n_int = 0);
 
   virtual ~Backbone() = default; // virtual destructor for proper cleanup
 };

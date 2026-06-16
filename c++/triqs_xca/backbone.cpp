@@ -1,4 +1,5 @@
 #include "triqs_xca/backbone.hpp"
+#include "triqs_xca/topology.hpp"
 
 namespace triqs_xca::backbone {
 
@@ -16,11 +17,13 @@ void BackboneVertex::set_hyb_ind(int i) { hyb_ind = i; }
 void BackboneVertex::set_Ksign(int i) { Ksign = i; }
 void BackboneVertex::set_orb(int i) { orb = i; }
 
-Backbone::Backbone(nda::array<int, 2> topology, int n)
+Backbone::Backbone(nda::array<int, 2> topology, int n, int n_int)
    : topology(topology),
      f_ix(0),
      m(topology.extent(0)),
      n(n),
+     n_hyb(n - n_int), // number of hybridization operators is total number of operators minus number of interaction operators
+     n_int(n_int),
      fb_ix_max(static_cast<int>(pow(2, m))),
      o_ix_max(static_cast<int>(pow(n, m - 1))),
      prefactor_sign(1) {
@@ -187,6 +190,44 @@ void Backbone::set_orb_inds(int o_ix) {
 
 void Backbone::reset_orb_inds() {
   for (int i = 0; i < 2 * m; i++) vertices[i].set_orb(0);
+}
+
+void Backbone::set_orb_inds_of_0_and_vct0(int orb_ind_0, int orb_ind_vct0) {
+  // set the orbital indices of vertex 0 and the vertex connected to it, which are not included in orb_inds
+  vertices[0].set_orb(orb_ind_0);
+  vertices[topology(0, 1)].set_orb(orb_ind_vct0);
+}
+
+int Backbone::get_parity() {
+  // get the fermionic permutation parity of the diagram represented by this backbone, 
+  // based on the topology and orbital indices
+  assert( vertices[0].get_orb() >= 0 ); // make sure orbital index of vertex 0 is set
+  assert( vertices[topology(0, 1)].get_orb() >= 0 ); // make sure orbital index of vertex connected to 0 is set
+
+  // loop over orbital indices and check which ones are fermionic by checking i < n_hyb
+  // put the result in a boolean vector of size m, where true means the line is fermionic
+  nda::vector<bool> is_fermionic(2 * m);
+  //nda::vector<int> orb_idxs(2 * m);
+
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < 2; j++) {
+      int vertex_idx = topology(i, j);
+      int orb_ind = vertices[vertex_idx].get_orb();
+      // orb_idxs(2 * j + i) = orb_ind; // for debugging
+      is_fermionic[vertex_idx] = orb_ind < n_hyb; // if orbital index is less than n_hyb, it's a fermionic line
+    }
+  }
+  auto fermionic_topology = topology::fermionic_topology(topology, is_fermionic);
+  int fermionic_parity = topology::topology_parity(fermionic_topology);
+
+  /*
+  std::cout << "Backbone::get_parity: topology = \n" << topology << "\n";
+  std::cout << "Backbone::get_parity: orb_idx = " << orb_idxs << "\n";
+  std::cout << "Backbone::get_parity: is_fermionic = " << is_fermionic << "\n";
+  std::cout << "Backbone::get_parity: fermionic_topology = \n" << fermionic_topology << "\n";
+  std::cout << "Backbone::get_parity: fermionic_parity = " << fermionic_parity << "\n";
+  */
+  return fermionic_parity;
 }
 
 void Backbone::set_flat_index(int flat_ix, nda::vector_const_view<double> hyb_poles) {
