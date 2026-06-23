@@ -96,10 +96,10 @@ namespace triqs_xca::dense {
 
     // evaluate the mu, kap entries of a correlator for a diagram of a given order and topology in dense storage
     C2PY_IGNORE nda::array<dcomplex, 3> eval_correlator(nda::array_const_view<dcomplex, 3> Gt, CorrelatorBackbone &backbone,
-                                                        nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops);
+                                                        nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops, bool is_fermionic = true);
     // evaluate a correlator diagram with fixed orbital indices, poles, and line directions in dense storage, including prefactor
     C2PY_IGNORE nda::array<dcomplex, 3> eval_correlator(nda::array_const_view<dcomplex, 3> Gt, CorrelatorBackbone &backbone,
-                                                        nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops, int f_ix);
+                                                        nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops, int f_ix, bool is_fermionic = true);
 
     // compute single particle Green's function for given topology
     nda::array<dcomplex, 3> compute_single_ptcle_gf(gf_vt G_ppsc, nda::array_const_view<int, 2> topology);

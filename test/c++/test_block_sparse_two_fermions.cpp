@@ -194,6 +194,8 @@ TEST(two_fermions, one_hyb_pole) {
   auto mu_ops  = Fset.Fs;
   auto kap_ops = Fset.F_dags;
   CorrelatorBackbone B(topology, norb);
-  auto spgf_dense = D_dense.eval_correlator(G_ppsc_dense, B, mu_ops, kap_ops);
+  // Add extra sign since toplogy factor computed internally in DenseDiagramEvaluator, 
+  // but not in BlockSparseDiagramEvaluator. Remove when BlockSparseDiagramEvaluator does the same thing.
+  auto spgf_dense = -D_dense.eval_correlator(G_ppsc_dense, B, mu_ops, kap_ops);
   ASSERT_LE(nda::max_element(nda::abs(spgf - spgf_dense)), 1.0e-15);
 }
