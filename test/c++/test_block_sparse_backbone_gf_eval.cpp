@@ -74,7 +74,7 @@ TEST(Backbone, one_fermion_three_orders_const_hyb) {
   double halfbeta4             = halfbetasq * halfbetasq;
   for (int i = 0; i < r; ++i) {
     double t              = rel2abs(dlr_it(i)); // t = tau / beta
-    third_order_gf_ana(i) = halfbeta4 * (1.0 - t) * (1.0 - t) * t * t / 2.0;
+    third_order_gf_ana(i) = -halfbeta4 * (1.0 - t) * (1.0 - t) * t * t / 2.0;
   }
   ASSERT_LE(nda::max_element(nda::abs(third_order_gf(_, 0, 0) - third_order_gf_ana)), eps);
 }
@@ -124,7 +124,7 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
   double om                    = hyb_poles(0);
   for (int i = 0; i < r; ++i) {
     double t              = rel2abs(dlr_it(i)); // t = tau / beta
-    third_order_gf_ana(i) = (t + (exp(-om * t) - 1.0) / om) * (t - beta + (exp(om * (beta - t)) - 1.0) / om)
+    third_order_gf_ana(i) = -(t + (exp(-om * t) - 1.0) / om) * (t - beta + (exp(om * (beta - t)) - 1.0) / om)
        / (2 * om * om * (1 + exp(-beta * om)) * (exp(beta * om) + 1));
   }
 
@@ -236,9 +236,7 @@ TEST(BSGFBackbone, OCA_BDOF_construct) {
   auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
   auto Fset                               = DenseFSet(Fs_dense, F_dags_dense, itops.vals2coefs(Deltat));
   auto C                                  = DenseDiagramEvaluator(beta, eps, itops, dlr_rf, itops.vals2coefs(Deltat), Fset);
-  // Add extra sign since toplogy factor computed internally in DenseDiagramEvaluator, 
-  // but not in BlockSparseDiagramEvaluator. Remove when BlockSparseDiagramEvaluator does the same thing.
-  auto OCA_result_gf_dense                = -C.eval_correlator(Gt_dense, B, Fs_dense, F_dags_dense);
+  auto OCA_result_gf_dense                = C.eval_correlator(Gt_dense, B, Fs_dense, F_dags_dense);
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_result_gf - OCA_result_gf_dense)), 1.0e-15);
 }
@@ -327,9 +325,7 @@ TEST(Backbone, spin_flip_fermion) {
   auto Gt_dense            = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
   auto Fset                = get_operators_dense(ad, hyb_coeffs);
   auto C                   = DenseDiagramEvaluator(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
-  // Add extra sign since toplogy factor computed internally in DenseDiagramEvaluator, 
-  // but not in BlockSparseDiagramEvaluator. Remove when BlockSparseDiagramEvaluator does the same thing.
-  auto OCA_result_gf_dense = -C.eval_correlator(Gt_dense, B, Fset.Fs, Fset.F_dags);
+  auto OCA_result_gf_dense = C.eval_correlator(Gt_dense, B, Fset.Fs, Fset.F_dags);
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_result_gf - OCA_result_gf_dense)), 1.0e-15);
 }
@@ -429,9 +425,7 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
   auto Gt_dense            = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
   auto Fset                = get_operators_dense(ad, hyb_coeffs);
   auto C                   = DenseDiagramEvaluator(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
-  // Add extra sign since toplogy factor computed internally in DenseDiagramEvaluator, 
-  // but not in BlockSparseDiagramEvaluator. Remove when BlockSparseDiagramEvaluator does the same thing.
-  auto OCA_result_gf_dense = -C.eval_correlator(Gt_dense, B, Fset.Fs, Fset.F_dags);
+  auto OCA_result_gf_dense = C.eval_correlator(Gt_dense, B, Fset.Fs, Fset.F_dags);
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_result_gf - OCA_result_gf_dense)), 1.0e-15);
 }
@@ -482,7 +476,7 @@ TEST(Backbone, OCA_semicircle_bath_aaa) {
   Delta_F_reflect.update_inplace(Delta_decomp_reflect, dlr_it, F_dags_dense, Fs_dense);
   nda::array<int, 2> D2                 = {{0, 2}, {1, 3}}; // topology for OCA diagram evaluator
   auto start                            = std::chrono::high_resolution_clock::now();
-  auto OCA_gf_old                       = G_Diagram_calc_sum_all(Delta_F, Delta_F_reflect, D2, Gt_dense, itops, beta, Fs_dense, F_dags_dense);
+  auto OCA_gf_old                       = -G_Diagram_calc_sum_all(Delta_F, Delta_F_reflect, D2, Gt_dense, itops, beta, Fs_dense, F_dags_dense);
   auto end                              = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = end - start;
   std::cout << "Old dense OCA correlator evaluation took " << elapsed.count() << " seconds\n";

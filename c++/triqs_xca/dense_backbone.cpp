@@ -190,18 +190,12 @@ namespace triqs_xca::dense {
         nda::array_const_view<dcomplex, 1> hyb_t = hyb_too(_, mu, kap);
 
         // set the orbital indices of the vertex connected to zero
-        // and compute the fermionic permutation parity of the resulting 
-        // diagram.
+        // and compute the fermionic permutation parity of the resulting diagram.
   
         backbone.set_orb_inds_of_0_and_vct0(kap, mu);
         int fermionic_parity = backbone.get_parity();
-        //std::cout << "DenseDiagramEvaluator::multiply_left_vertex_and_right_zero_vertex: mu = " << mu << ", kap = " << kap << ", fermionic_parity = " << fermionic_parity << "\n";
 
         for (int t = 0; t < r; t++) Tmu(t, _, _) += fermionic_parity * hyb_t(t) * Tkaps(kap, t, _, _);
-
-        // DEBUG! Ignoring fermionic sign for now (to check against python sign calc.)
-        //for (int t = 0; t < r; t++) Tmu(t, _, _) += hyb_t(t) * Tkaps(kap, t, _, _); 
-
       }
       nda::array_const_view<dcomplex, 2> F_mu = Fset.get_operator(backbone, vct0, mu);
       for (int t = 0; t < r; t++) T_buf(t, _, _) += matmul(F_mu, Tmu(t, _, _));
@@ -329,20 +323,19 @@ namespace triqs_xca::dense {
 
     for (int mu = 0; mu < mu_ops.extent(0); ++mu) {
       for (int t = 0; t < r; ++t) Tmuop(t, _, _) = matmul(U(t, _, _), matmul(mu_ops(mu, _, _), T(t, _, _)));
-
       for (int kap = 0; kap < kap_ops.extent(0); ++kap) {
-
-        // use special orbital index values to indicate whether the vertex connected to zero 
-        // is fermionic or bosonic, since this affects the fermionic parity calculation. 
-        // -2 for fermionic, -3 for bosonic
-
-        int orb_idx_flag = is_fermionic ? -2 : -3;
-        backbone.set_orb_inds_of_0_and_vct0(orb_idx_flag, orb_idx_flag);
-        int fermionic_sign = backbone.get_parity();
-
-        for (int t = 0; t < r; ++t) correlator(t, mu, kap) += fermionic_sign * trace(matmul(Tmuop(t, _, _), kap_ops(kap, _, _)));
+        for (int t = 0; t < r; ++t) correlator(t, mu, kap) += trace(matmul(Tmuop(t, _, _), kap_ops(kap, _, _)));
       }
     }
+
+    // use special orbital index values to indicate whether the vertex connected to zero
+    // is fermionic or bosonic, since this affects the fermionic parity calculation.
+    // -2 for fermionic, -3 for bosonic
+
+    int orb_idx_flag = is_fermionic ? -2 : -3;
+    backbone.set_orb_inds_of_0_and_vct0(orb_idx_flag, orb_idx_flag);
+    int fermionic_sign = backbone.get_parity();
+    correlator *= fermionic_sign;
 
     backbone.reset_all_inds(); // reset directions, pole indices, and orbital indices for the next iteration
 

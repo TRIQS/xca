@@ -74,7 +74,7 @@ TEST(two_fermions, const_hyb_se) {
   auto oca_se_ana              = nda::zeros<double>(r);
   for (int i = 0; i < r; ++i) {
     double t      = rel2abs(dlr_it(i)); // t = tau / beta
-    oca_se_ana(i) = -0.25 * exp(-t * ln4) * t * t * beta * beta;
+    oca_se_ana(i) = 0.25 * exp(-t * ln4) * t * t * beta * beta;
   }
   for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) { ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data()(_, 0, 0) - oca_se_ana)), eps); }
 
@@ -84,7 +84,7 @@ TEST(two_fermions, const_hyb_se) {
   auto third_order_se_ana      = nda::zeros<double>(r);
   for (int i = 0; i < r; ++i) {
     double t              = rel2abs(dlr_it(i)); // t = tau / beta
-    third_order_se_ana(i) = 1.0 / 96 * exp(-t * ln4) * pow(t, 4) * pow(beta, 4);
+    third_order_se_ana(i) = -1.0 / 96 * exp(-t * ln4) * pow(t, 4) * pow(beta, 4);
   }
   // third_order_se has three blocks: 1x1, 2x2, and 1x1. Check that all diagonal entries equal the analytical expression
   for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) {
@@ -137,7 +137,7 @@ TEST(two_fermions, const_hyb_spgf) {
   auto oca_spgf_ana            = nda::zeros<double>(r);
   for (int i = 0; i < r; ++i) {
     double t        = rel2abs(dlr_it(i)); // t = tau / beta
-    oca_spgf_ana(i) = 0.25 * (beta * beta * t - beta * beta * t * t);
+    oca_spgf_ana(i) = -0.25 * (beta * beta * t - beta * beta * t * t);
   }
   ASSERT_LE(nda::max_element(nda::abs(oca_spgf(_, 0, 0) - oca_spgf_ana)), eps);
   ASSERT_LE(nda::max_element(nda::abs(oca_spgf(_, 1, 1) - oca_spgf_ana)), eps);
@@ -150,7 +150,7 @@ TEST(two_fermions, const_hyb_spgf) {
   beta4                        = beta4 * beta4;
   for (int i = 0; i < r; ++i) {
     double t                = rel2abs(dlr_it(i)); // t = tau / beta
-    third_order_spgf_ana(i) = 0.5 * beta4 * t * t * (-t + 0.5 * (1 + t * t));
+    third_order_spgf_ana(i) = -0.5 * beta4 * t * t * (-t + 0.5 * (1 + t * t));
   }
   third_order_spgf_ana = third_order_spgf_ana / 16.0;
   ASSERT_LE(nda::max_element(nda::abs(third_order_spgf(_, 0, 0) - 2 * third_order_spgf_ana)), eps);
@@ -194,8 +194,6 @@ TEST(two_fermions, one_hyb_pole) {
   auto mu_ops  = Fset.Fs;
   auto kap_ops = Fset.F_dags;
   CorrelatorBackbone B(topology, norb);
-  // Add extra sign since toplogy factor computed internally in DenseDiagramEvaluator, 
-  // but not in BlockSparseDiagramEvaluator. Remove when BlockSparseDiagramEvaluator does the same thing.
-  auto spgf_dense = -D_dense.eval_correlator(G_ppsc_dense, B, mu_ops, kap_ops);
+  auto spgf_dense = D_dense.eval_correlator(G_ppsc_dense, B, mu_ops, kap_ops);
   ASSERT_LE(nda::max_element(nda::abs(spgf - spgf_dense)), 1.0e-15);
 }

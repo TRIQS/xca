@@ -193,7 +193,7 @@ TEST(Backbone, one_fermion_three_orders_const_hyb) {
     bt4                   = beta * t;
     bt4                   = bt4 * bt4;
     bt4                   = bt4 * bt4;
-    third_order_se_ana(i) = bt4 * exp(-t * std::numbers::ln2) / 192.0;
+    third_order_se_ana(i) = -bt4 * exp(-t * std::numbers::ln2) / 192.0;
   }
   ASSERT_LE(nda::max_element(nda::abs(third_order_se[0].data()(_, 0, 0) - third_order_se_ana)), eps);
 }
@@ -262,7 +262,7 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
     tom                      = t * om;
     third_order_se_ana(i, 0) = (tom * tom * exp(tom) - 4 * tom * exp(tom) - 2 * tom + 6 * exp(tom) - 6) * exp(beta * om);
     third_order_se_ana(i, 1) += (tom * tom + 4 * tom + 2 * (tom - 3) * exp(tom) + 6) * exp(om * (2 * beta - t));
-    third_order_se_ana(i, _) *= exp(-t * std::numbers::ln2) / denom;
+    third_order_se_ana(i, _) *= -exp(-t * std::numbers::ln2) / denom;
   }
   ASSERT_LE(nda::max_element(nda::abs(third_order_se_ana(_, 0) - third_order_se[0].data()(_, 0, 0))), eps);
   ASSERT_LE(nda::max_element(nda::abs(third_order_se_ana(_, 1) - third_order_se[1].data()(_, 0, 0))), eps);
@@ -306,7 +306,7 @@ TEST(Backbone, OCA_BDOF_construct) {
   auto B = Backbone(topology, n);
   D2.eval_self_energy(Gt_dense, B);
   end                   = std::chrono::high_resolution_clock::now();
-  auto OCA_dense_result = nda::make_regular(-D2.Sigma); // Cancel topology sign, accounted for in dense diag eval.
+  auto OCA_dense_result = D2.Sigma;
   elapsed               = end - start;
 
   // use block-sparse solver but with trivial sparsity
@@ -408,7 +408,7 @@ TEST(Backbone, spin_flip_fermion) {
   D2.eval_self_energy(Gt_dense, B);
   end               = std::chrono::high_resolution_clock::now();
   duration          = end - start;
-  auto result_dense = nda::make_regular(-D2.Sigma); // Cancel topology sign, accounted for in dense diag eval.
+  auto result_dense = D2.Sigma;
 
   for (int i = 0; i < Gt_block_sizes.size(); i++) {
     auto result_dense_block = get_tensor_in_atom_diag_subspace(result_dense, i, ad);
@@ -479,7 +479,7 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
   D2.eval_self_energy(Gt_dense, B);
   end               = std::chrono::high_resolution_clock::now();
   duration          = end - start;
-  auto result_dense = nda::make_regular(-D2.Sigma); // Cancel topology sign, accounted for in dense diag eval.
+  auto result_dense = D2.Sigma;
 
   for (int i = 0; i < Gt_block_sizes.size(); i++) {
     auto result_dense_block = get_tensor_in_atom_diag_subspace(result_dense, i, ad);
@@ -540,7 +540,7 @@ TEST(Backbone, OCA_semicircle_bath_aaa) {
   auto OCA_forward  = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
   fb(1)             = 1;
   auto OCA_backward = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D2, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
-  auto OCA_old      = nda::make_regular(-OCA_forward - OCA_backward);
+  auto OCA_old      = nda::make_regular(OCA_forward + OCA_backward);
 
   // generic diagram evaluator
   nda::array<int, 2> topology   = {{0, 2}, {1, 3}};
@@ -640,7 +640,7 @@ TEST(Backbone, spin_flip_fermion_aaa) {
   D2.eval_self_energy(Gt_dense, B);
   end               = std::chrono::high_resolution_clock::now();
   duration          = end - start;
-  auto result_dense = nda::make_regular(-D2.Sigma); // Cancel topology sign, accounted for in dense diag eval.
+  auto result_dense = D2.Sigma;
 
   for (int i = 0; i < Gt_block_sizes.size(); i++) {
     auto result_dense_block = get_tensor_in_atom_diag_subspace(result_dense, i, ad);
@@ -728,7 +728,7 @@ TEST(Backbone, spin_flip_fermion_all_sym_aaa) {
   D2.eval_self_energy(Gt_dense, B);
   end               = std::chrono::high_resolution_clock::now();
   duration          = end - start;
-  auto result_dense = nda::make_regular(-D2.Sigma); // Cancel topology sign, accounted for in dense diag eval.
+  auto result_dense = D2.Sigma;
 
   for (int i = 0; i < Gt_block_sizes.size(); i++) {
     auto result_dense_block = get_tensor_in_atom_diag_subspace(result_dense, i, ad);

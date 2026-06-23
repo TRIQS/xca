@@ -160,10 +160,7 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
 
             d.Sigma_BSS = (-1)**(order + 1) * BSS.eval_pseudo_particle_self_energy_topology(BSS.G, topology)
             d.Sigma_BSS = pseudo_particle_block_gf_to_dense(d.Sigma_BSS, BSS.atom_diag)
-
-            # Correct for dense solver, computing the sign internally
-            # Remove when BlockSparseDiagramEvaluator does the same thing.
-            if conserved_operators == []: d.Sigma_BSS *= sign
+            d.Sigma_BSS *= sign # Compensate for internal sign calc in new solver
 
             t3 = time.time()
 
@@ -176,11 +173,8 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
             d.spgf_S = S.S.calc_spgf_toplogy(topology)
             t2 = time.time()
             d.spgf_BSS = BSS.eval_single_particle_greens_function_topology(BSS.G, topology) 
+            d.spgf_BSS *= sign # Compensate for internal sign calc in new solver
             t3 = time.time()
-
-            # Correct for dense solver, computing the sign internally
-            # Remove when BlockSparseDiagramEvaluator does the same thing.
-            if conserved_operators == []: d.spgf_BSS *= sign
 
             print(f'    spgf time ZH ({t2 - t1} s) BS ({t3 - t2} s)')
             

@@ -103,10 +103,10 @@ class DiagramEvaluator {
   int get_num_single_ptcle_gf_backbones(nda::array_const_view<int, 2> topology); // get number of backbones for given topology
 
   C2PY_IGNORE nda::array<dcomplex, 3> eval_correlator(
-    BlockDiagOpFun &Gt, CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops);
+    BlockDiagOpFun &Gt, CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops, bool is_fermionic = true);
 
   C2PY_IGNORE nda::array<dcomplex, 3> eval_correlator(
-    BlockDiagOpFun &Gt, CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops, int f_ix);
+    BlockDiagOpFun &Gt, CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops, int f_ix, bool is_fermionic = true);
 
   // compute single particle Green's function for given topology (and flat index)
   C2PY_IGNORE nda::array<dcomplex, 3> compute_single_ptcle_gf(BlockDiagOpFun &Gt, nda::array_const_view<int, 2> topology);

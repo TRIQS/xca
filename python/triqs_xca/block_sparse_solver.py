@@ -627,23 +627,14 @@ class BlockSparseSolver(object):
         for sign, topology in pairings(order):
             if verbose and is_root(): print(f'SIGMA: O{order} topo {topology} sign {sign:+d}')
             topology = np.array(topology, dtype=np.int32)
-
-            # Disable sign for the dense solver
-            # since it is computed internally by the diagram evaluator
-            # in the step applying the vertex connected to zero
-            # using the backbone parity calculation.
-            # TODO: Propagate this behaviour to the BlockSparseDiagramEvaluator
-            if self.use_dense_solver: sign = +1
-
-            Sigma += -sign * \
-                self.__eval_pseudo_particle_self_energy_topology_loop(G, topology, verbose=verbose) # FIXME! Signs
+            Sigma -= self.__eval_pseudo_particle_self_energy_topology_loop(G, topology, verbose=verbose)
             
         return Sigma
     
     
     def eval_pseudo_particle_self_energy_topology(self, G, topology):
         order = len(topology)
-        return self.d.compute_self_energy(G, topology) # FIXME! Sign convention.
+        return self.d.compute_self_energy(G, topology)
 
 
     def __eval_pseudo_particle_self_energy_topology_loop(self, G, topology, verbose=False):
@@ -691,15 +682,7 @@ class BlockSparseSolver(object):
 
         for sign, topology in all_connected_pairings(order):
             topology = np.array(topology, dtype=np.int32)
-
-            # Disable sign for the dense solver
-            # since it is computed internally by the diagram evaluator
-            # in the step applying the vertex connected to zero
-            # using the backbone parity calculation.
-            # TODO: Propagate this behaviour to the BlockSparseDiagramEvaluator
-            if self.use_dense_solver: sign = +1
-
-            spgf += pow(-1, order) * sign * \
+            spgf += pow(-1, order) * \
                 self.__eval_single_particle_greens_function_topology_loop(G, topology)
 
         return spgf
@@ -758,18 +741,9 @@ class BlockSparseSolver(object):
 
     def __inplace_eval_one_time_correlator_order(self, corr, G, order, ops_tau, ops_0):
 
+        prefactor = pow(-1, order)
         for sign, topology in all_connected_pairings(order):
             topology = np.array(topology, dtype=np.int32)
-
-            # Disable sign for the dense solver
-            # since it is computed internally by the diagram evaluator
-            # in the step applying the vertex connected to zero
-            # using the backbone parity calculation.
-            # TODO: Propagate this behaviour to the BlockSparseDiagramEvaluator
-            if self.use_dense_solver: sign = +1
-
-            prefactor = pow(-1, order) * sign
-
             self.__inplace_eval_one_time_correlator_topology_loop(
                 corr, G, topology, ops_tau, ops_0, prefactor)
     

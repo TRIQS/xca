@@ -176,7 +176,14 @@ void DiagramEvaluator::multiply_left_vertex_and_right_zero_vertex(nda::array_vie
       nda::array_const_view<dcomplex, 1> hyb_oo = is_forward ? 
         hyb.values(_, Fq.sym_set_to_orb(p_mu, mu), Fq.sym_set_to_orb(p_kap, kap)) :
         hyb.values_reflect(_, Fq.sym_set_to_orb(p_mu, mu), Fq.sym_set_to_orb(p_kap, kap));
-      for (int t = 0; t < r; t++) Tmu_v(t, _, _) += hyb_sign * hyb_oo(t) * Tkaps_v(kap, t, _, _);
+
+      // set the orbital indices of the vertex connected to zero
+      // and compute the fermionic permutation parity of the resulting diagram.
+
+      backbone.set_orb_inds_of_0_and_vct0(Fq.sym_set_to_orb(p_kap, kap), Fq.sym_set_to_orb(p_mu, mu));
+      int fermionic_parity = backbone.get_parity();
+
+      for (int t = 0; t < r; t++) Tmu_v(t, _, _) += fermionic_parity * hyb_sign * hyb_oo(t) * Tkaps_v(kap, t, _, _);
     }
     // Apply F_mu operator from the left at vertex connected to tau = 0
     auto F_mu = F_selector(!is_forward, b_ix_mu, p_mu, mu);
@@ -467,19 +474,21 @@ void DiagramEvaluator::integrate_right_edge(nda::array_view<dcomplex, 3> U_buf, 
   U_e = itops.convolve(beta, itops.vals2coefs(U_e), itops.vals2coefs(GKt_ep), cppdlr::TIME_ORDERED);
 }
 
-nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(BlockDiagOpFun &Gt, CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops) {
+nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(BlockDiagOpFun &Gt, CorrelatorBackbone &backbone,
+    std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops, bool is_fermionic) {
+
   int m        = backbone.m;
   int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb.poles.size(), m - 1));
 
   nda::array<dcomplex, 3> correlator(r, mu_ops.size(), kap_ops.size()), Tmuop(r, Nmax, Nmax);
   correlator = 0;
 
-  for (int f_ix = 0; f_ix < f_ix_max; ++f_ix) { correlator += eval_correlator(Gt, backbone, mu_ops, kap_ops, f_ix); }
+  for (int f_ix = 0; f_ix < f_ix_max; ++f_ix) { correlator += eval_correlator(Gt, backbone, mu_ops, kap_ops, f_ix, is_fermionic); }
   return correlator;
 }
 
 nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(BlockDiagOpFun &Gt, CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops,
-                                                          int f_ix) {
+                                                          int f_ix, bool is_fermionic) {
   int m = backbone.m;
   int vct0 = backbone.get_topology(0, 1);
 
@@ -650,6 +659,15 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(BlockDiagOpFun &Gt, Co
     }
   }
   
+  // use special orbital index values to indicate whether the vertex connected to zero
+  // is fermionic or bosonic, since this affects the fermionic parity calculation.
+  // -2 for fermionic, -3 for bosonic
+
+  int orb_idx_flag = is_fermionic ? -2 : -3;
+  backbone.set_orb_inds_of_0_and_vct0(orb_idx_flag, orb_idx_flag);
+  int fermionic_sign = backbone.get_parity();
+  correlator *= fermionic_sign;
+
   backbone.reset_all_inds(); // reset directions, pole indices, and orbital indices for the next iteration
 
   return correlator;
@@ -818,6 +836,23 @@ nda::array<dcomplex, 3> DiagramEvaluator::compute_one_time_correlator(
     triqs::atom_diag::atom_diag<isComplex> const &ad,
     nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec){
 
+  nda::array<bool, 2> is_fermionic_ops(ops_tau.size(), ops_0.size());
+
+  for (auto [i, op_tau] : itertools::enumerate(ops_tau)) {
+    for (auto [j, op_0] : itertools::enumerate(ops_0)) {
+      // test bosonic property: [A, B] = 0
+      is_fermionic_ops(i, j) = !(op_tau * op_0 - op_0 * op_tau).is_zero();
+    }
+  }
+
+  // Test that all operators have the same statistics
+  for ( auto el : is_fermionic_ops ) {
+    if (el != is_fermionic_ops(0, 0))
+      throw std::runtime_error("compute_one_time_correlator: All operators must have the same statistics (either all fermionic or all bosonic).");
+  }
+
+  bool is_fermionic = is_fermionic_ops(0, 0); // Pass on statistics to diagram evaluator
+
   BlockDiagOpFun Gt(G_ppsc);
   CorrelatorBackbone backbone(topology, n);
 
@@ -827,7 +862,7 @@ nda::array<dcomplex, 3> DiagramEvaluator::compute_one_time_correlator(
   nda::array<dcomplex, 3> correlator = nda::zeros<dcomplex>(r, mu_ops.size(), kap_ops.size());
 
   for (auto f_ix : f_ix_vec) {
-    correlator += eval_correlator(Gt, backbone, mu_ops, kap_ops, f_ix);
+    correlator += eval_correlator(Gt, backbone, mu_ops, kap_ops, f_ix, is_fermionic);
   }
 
   return correlator;
