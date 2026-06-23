@@ -157,7 +157,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
             t2 = time.time()
 
             d.Sigma_BSS = pseudo_particle_block_gf_to_dense(
-                (-1)**(order + 1) * BSS.eval_pseudo_particle_self_energy_topology(BSS.G, topology), BSS.atom_diag)
+                (-1)**(order + 1) * sign * BSS.eval_pseudo_particle_self_energy_topology(BSS.G, topology), BSS.atom_diag)
 
             t3 = time.time()
 
@@ -169,7 +169,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(beta=2.0, verbose=False):
             t1 = time.time()
             d.spgf_S = S.S.calc_spgf_toplogy(topology)
             t2 = time.time()
-            d.spgf_BSS = BSS.eval_single_particle_greens_function_topology(BSS.G, topology)
+            d.spgf_BSS = sign * BSS.eval_single_particle_greens_function_topology(BSS.G, topology)
             t3 = time.time()
 
             print(f'    spgf time ZH ({t2 - t1} s) BS ({t3 - t2} s)')

@@ -104,5 +104,5 @@ if __name__ == "__main__":
     m_dlr = MeshDLRImTime(beta=2.3, statistic='Fermion', eps=1e-12, w_max=8.0)
 
     #plot_comparison(m_dlr, analytic_two_level_solution, xca_two_level_solution_dense, max_order=3)
-    test_convergence_rate(m_dlr, analytic_solution, xca_two_level_solution_dense, label='two_level', max_order=3, do_test=True)
-    #test_convergence_rate(m_dlr, analytic_solution, xca_two_level_solution_block_sparse, label='two_level', max_order=3, do_test=True)
+    #test_convergence_rate(m_dlr, analytic_solution, xca_two_level_solution_dense, label='two_level', max_order=3, do_test=True)
+    test_convergence_rate(m_dlr, analytic_solution, xca_two_level_solution_block_sparse, label='two_level', max_order=4, do_test=True)
