@@ -36,7 +36,7 @@ def pyed_dimer_solution(mesh_tau, t=-1.0, e0=0.1):
     return d
 
 
-def xca_dimer_solution(mesh_tau, t=-1.0, e0 = 0.1, sigma_order=1, spgf_order=None, verbose=False):
+def xca_dimer_solution(mesh_tau, t=-1.0, e0 = 0.1, sigma_order=1, spgf_order=None, verbose=False, conserved_operators=[]):
 
     if spgf_order is None: spgf_order = sigma_order
 
@@ -47,7 +47,7 @@ def xca_dimer_solution(mesh_tau, t=-1.0, e0 = 0.1, sigma_order=1, spgf_order=Non
     S = BlockSparseSolver(
         H_loc=e0 * n('0', 0), gf_struct=[['0', 1]],
         beta=m.beta, w_max=m.w_max, eps=m.eps,
-        conserved_operators=[])
+        conserved_operators=conserved_operators)
 
     S.Delta_tau['0'].data[:] = -0.5 * t**2
 
@@ -66,9 +66,18 @@ def xca_dimer_solution(mesh_tau, t=-1.0, e0 = 0.1, sigma_order=1, spgf_order=Non
     return d
 
 
+def xca_dimer_solution_dense(mesh_tau, t=-1.0, e0=0.1, sigma_order=1, spgf_order=None, verbose=False):
+    return xca_dimer_solution(mesh_tau, t=t, e0=e0, sigma_order=sigma_order, spgf_order=spgf_order, verbose=verbose, conserved_operators=[])
+
+
+def xca_dimer_solution_block_sparse(mesh_tau, t=-1.0, e0=0.1, sigma_order=1, spgf_order=None, verbose=False):
+    return xca_dimer_solution(mesh_tau, t=t, e0=e0, sigma_order=sigma_order, spgf_order=spgf_order, verbose=verbose, conserved_operators='automatic')
+
+
 if __name__ == "__main__":
 
     m_dlr = MeshDLRImTime(beta=2.3, statistic='Fermion', eps=1e-12, w_max=4.0)
 
-    #plot_comparison(m_dlr, pyed_dimer_solution, xca_dimer_solution, max_order=4)
-    test_convergence_rate(m_dlr, pyed_dimer_solution, xca_dimer_solution, label='dimer', max_order=4)
+    #plot_comparison(m_dlr, pyed_dimer_solution, xca_dimer_solution_dense, max_order=5)
+    test_convergence_rate(m_dlr, pyed_dimer_solution, xca_dimer_solution_dense, label='dimer', max_order=5)
+    #test_convergence_rate(m_dlr, pyed_dimer_solution, xca_dimer_solution_block_sparse, label='dimer', max_order=5)    

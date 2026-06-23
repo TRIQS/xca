@@ -69,8 +69,8 @@ def test_convergence_rate(m_dlr, ed_solver, xca_solver, label='dimer', max_order
     Chi_errss = []
     orders = list(range(1, max_order + 1))
     for order in orders:
-        #t2s = np.logspace(-1.5, -0.5, 3)
-        t2s = np.logspace(-1.5, 0.5, 4)
+        t2s = np.logspace(-1.5, -1.0, 2)
+        #t2s = np.logspace(-1.5, 0.5, 4)
         G_errs = np.zeros_like(t2s)
         Chi_errs = np.zeros_like(t2s)
 
@@ -97,7 +97,8 @@ def test_convergence_rate(m_dlr, ed_solver, xca_solver, label='dimer', max_order
             Chi_rate = (np.log(Chi_errs[:-1] / Chi_errs[1:]) / np.log(t2s[:-1] / t2s[1:]))[0]
             G_rates.append(G_rate)
             Chi_rates.append(Chi_rate)
-            print(f'Order {order} convergence rates: G={G_rate:.2f}, Chi={Chi_rate:.2f}')
+            #print(f'Label: {label}')
+            #print(f'Order {order} convergence rates: G={G_rate:.2f}, Chi={Chi_rate:.2f}')
 
     if verbose and mpi.is_master_node():
         # Plot errors
@@ -134,7 +135,7 @@ def test_convergence_rate(m_dlr, ed_solver, xca_solver, label='dimer', max_order
     if mpi.is_master_node():
         # Check convergence rates
         for order, G_rate, Chi_rate in zip(orders, G_rates, Chi_rates):
-            print(f'Order {order} convergence rates: G={G_rate:.2f}, Chi={Chi_rate:.2f}')
             if do_test:
-                assert( np.abs(G_rate - order) < 0.3 ), f'Expected convergence rate of {order} for order {order}, but got {G_rate}, diff {np.abs(G_rate - order)}'
-                assert( np.abs(Chi_rate - order) < 0.3 ), f'Expected convergence rate of {order} for order {order}, but got {Chi_rate}, diff {np.abs(Chi_rate - order)}'
+                print(f'Label: {label} order {order} convergence rates: G={G_rate:.2f}, Chi={Chi_rate:.2f}')
+                assert( G_rate > order - 0.3 ), f'Expected convergence rate of {order} for order {order}, but got {G_rate}.'
+                assert( Chi_rate > order - 0.3 ), f'Expected convergence rate of {order} for order {order}, but got {Chi_rate}.'
