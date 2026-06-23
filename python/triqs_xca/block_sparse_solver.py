@@ -691,6 +691,14 @@ class BlockSparseSolver(object):
 
         for sign, topology in all_connected_pairings(order):
             topology = np.array(topology, dtype=np.int32)
+
+            # Disable sign for the dense solver
+            # since it is computed internally by the diagram evaluator
+            # in the step applying the vertex connected to zero
+            # using the backbone parity calculation.
+            # TODO: Propagate this behaviour to the BlockSparseDiagramEvaluator
+            if self.use_dense_solver: sign = +1
+
             spgf += pow(-1, order) * sign * \
                 self.__eval_single_particle_greens_function_topology_loop(G, topology)
 
@@ -752,7 +760,16 @@ class BlockSparseSolver(object):
 
         for sign, topology in all_connected_pairings(order):
             topology = np.array(topology, dtype=np.int32)
+
+            # Disable sign for the dense solver
+            # since it is computed internally by the diagram evaluator
+            # in the step applying the vertex connected to zero
+            # using the backbone parity calculation.
+            # TODO: Propagate this behaviour to the BlockSparseDiagramEvaluator
+            if self.use_dense_solver: sign = +1
+
             prefactor = pow(-1, order) * sign
+
             self.__inplace_eval_one_time_correlator_topology_loop(
                 corr, G, topology, ops_tau, ops_0, prefactor)
     

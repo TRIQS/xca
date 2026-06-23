@@ -236,7 +236,9 @@ TEST(BSGFBackbone, OCA_BDOF_construct) {
   auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
   auto Fset                               = DenseFSet(Fs_dense, F_dags_dense, itops.vals2coefs(Deltat));
   auto C                                  = DenseDiagramEvaluator(beta, eps, itops, dlr_rf, itops.vals2coefs(Deltat), Fset);
-  auto OCA_result_gf_dense                = C.eval_correlator(Gt_dense, B, Fs_dense, F_dags_dense);
+  // Add extra sign since toplogy factor computed internally in DenseDiagramEvaluator, 
+  // but not in BlockSparseDiagramEvaluator. Remove when BlockSparseDiagramEvaluator does the same thing.
+  auto OCA_result_gf_dense                = -C.eval_correlator(Gt_dense, B, Fs_dense, F_dags_dense);
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_result_gf - OCA_result_gf_dense)), 1.0e-15);
 }
@@ -325,7 +327,9 @@ TEST(Backbone, spin_flip_fermion) {
   auto Gt_dense            = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
   auto Fset                = get_operators_dense(ad, hyb_coeffs);
   auto C                   = DenseDiagramEvaluator(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
-  auto OCA_result_gf_dense = C.eval_correlator(Gt_dense, B, Fset.Fs, Fset.F_dags);
+  // Add extra sign since toplogy factor computed internally in DenseDiagramEvaluator, 
+  // but not in BlockSparseDiagramEvaluator. Remove when BlockSparseDiagramEvaluator does the same thing.
+  auto OCA_result_gf_dense = -C.eval_correlator(Gt_dense, B, Fset.Fs, Fset.F_dags);
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_result_gf - OCA_result_gf_dense)), 1.0e-15);
 }
@@ -425,7 +429,9 @@ TEST(Backbone, spin_flip_fermion_sym_sets) {
   auto Gt_dense            = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
   auto Fset                = get_operators_dense(ad, hyb_coeffs);
   auto C                   = DenseDiagramEvaluator(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
-  auto OCA_result_gf_dense = C.eval_correlator(Gt_dense, B, Fset.Fs, Fset.F_dags);
+  // Add extra sign since toplogy factor computed internally in DenseDiagramEvaluator, 
+  // but not in BlockSparseDiagramEvaluator. Remove when BlockSparseDiagramEvaluator does the same thing.
+  auto OCA_result_gf_dense = -C.eval_correlator(Gt_dense, B, Fset.Fs, Fset.F_dags);
 
   ASSERT_LE(nda::max_element(nda::abs(OCA_result_gf - OCA_result_gf_dense)), 1.0e-15);
 }

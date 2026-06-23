@@ -252,6 +252,10 @@ def test_oca_diagram_cf_block_sparse_and_dense(
             d.spgf_BSS = BSS.eval_single_particle_greens_function_topology(BSS.G, topology)
             t3 = time.time()
 
+            # Correct for dense solver, computing the sign internally
+            # Remove when BlockSparseDiagramEvaluator does the same thing.
+            if conserved_operators == []: d.spgf_BSS *= sign
+
             print(f'    spgf time ZH ({t2 - t1} s) BS ({t3 - t2} s)')
             
             #spgf_BSS_loop = BSS.single_particle_greens_function_topology_loop(topology)

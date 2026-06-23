@@ -278,7 +278,7 @@ namespace triqs_xca::dense {
   }
 
   nda::array<dcomplex, 3> DenseDiagramEvaluator::eval_correlator(nda::array_const_view<dcomplex, 3> Gt, CorrelatorBackbone &backbone,
-                                                                 nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops) {
+                                                                 nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops, bool is_fermionic) {
     int m        = backbone.m;
     int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb.poles.size(), m - 1));
 
@@ -286,14 +286,14 @@ namespace triqs_xca::dense {
 
     // loop over all flat indices
     for (int f_ix = 0; f_ix < f_ix_max; ++f_ix) {
-      correlator += eval_correlator(Gt, backbone, mu_ops, kap_ops, f_ix); // evaluate the diagram with these directions, poles, and orbital indices
+      correlator += eval_correlator(Gt, backbone, mu_ops, kap_ops, f_ix, is_fermionic); // evaluate the diagram with these directions, poles, and orbital indices
     }
 
     return correlator;
   }
 
   nda::array<dcomplex, 3> DenseDiagramEvaluator::eval_correlator(nda::array_const_view<dcomplex, 3> Gt, CorrelatorBackbone &backbone,
-                                                                 nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops, int f_ix) {
+                                                                 nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops, int f_ix, bool is_fermionic) {
 
     int m = backbone.m;
 
@@ -331,7 +331,16 @@ namespace triqs_xca::dense {
       for (int t = 0; t < r; ++t) Tmuop(t, _, _) = matmul(U(t, _, _), matmul(mu_ops(mu, _, _), T(t, _, _)));
 
       for (int kap = 0; kap < kap_ops.extent(0); ++kap) {
-        for (int t = 0; t < r; ++t) correlator(t, mu, kap) += trace(matmul(Tmuop(t, _, _), kap_ops(kap, _, _)));
+
+        // use special orbital index values to indicate whether the vertex connected to zero 
+        // is fermionic or bosonic, since this affects the fermionic parity calculation. 
+        // -2 for fermionic, -3 for bosonic
+
+        int orb_idx_flag = is_fermionic ? -2 : -3;
+        backbone.set_orb_inds_of_0_and_vct0(orb_idx_flag, orb_idx_flag);
+        int fermionic_sign = backbone.get_parity();
+
+        for (int t = 0; t < r; ++t) correlator(t, mu, kap) += fermionic_sign * trace(matmul(Tmuop(t, _, _), kap_ops(kap, _, _)));
       }
     }
 
@@ -422,8 +431,37 @@ namespace triqs_xca::dense {
 
     nda::array<dcomplex, 3> correlator = nda::zeros<dcomplex>(r, mu_ops.extent(0), kap_ops.extent(0));
 
+    // Figure out whether ops_tau and ops_0 are fermionic or bosonic.
+    // Require that all operators have the same statistics
+
+    nda::array<bool, 2> is_fermionic_ops(ops_tau.size(), ops_0.size());
+
+    for (auto [i, op_tau] : itertools::enumerate(ops_tau)) {
+      for (auto [j, op_0] : itertools::enumerate(ops_0)) {
+
+        // test bosonic property: [A, B] = 0 
+        is_fermionic_ops(i, j) = !(op_tau * op_0 - op_0 * op_tau).is_zero(); 
+
+        /*
+        std::cout << "i, j = " << i << ", " << j 
+          << ", op_tau = " << op_tau << ", op_0 = " << op_0
+          << ", is_fermionic_ops(i, j) = " << is_fermionic_ops(i, j) << "\n";
+        */
+      }
+    }
+
+    // Test that all operators have the same statistics
+
+    for ( auto el : is_fermionic_ops ) {
+      if (el != is_fermionic_ops(0, 0)) {
+        throw std::runtime_error("compute_one_time_correlator: All operators must have the same statistics (either all fermionic or all bosonic).");
+      }
+    }
+
+    bool is_fermionic = is_fermionic_ops(0, 0); // Pass on statistics to diagram evaluator
+
     for (auto f_ix : f_ix_vec) {
-      correlator += eval_correlator(G_ppsc[0].data(), backbone, mu_ops, kap_ops, f_ix);
+      correlator += eval_correlator(G_ppsc[0].data(), backbone, mu_ops, kap_ops, f_ix, is_fermionic);
     }
 
     return correlator;

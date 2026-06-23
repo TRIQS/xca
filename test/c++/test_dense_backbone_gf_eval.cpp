@@ -86,7 +86,9 @@ TEST(DenseGFBackbone, OCA) {
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = CorrelatorBackbone(topology, n);
   auto C                      = DenseDiagramEvaluator(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
-  auto gf                     = C.eval_correlator(Gt_dense, B, Fs_dense, F_dags_dense);
+  // Add extra sign since toplogy factor computed internally in DenseDiagramEvaluator, 
+  // but not in BlockSparseDiagramEvaluator. Remove when BlockSparseDiagramEvaluator does the same thing.
+  auto gf                     = -C.eval_correlator(Gt_dense, B, Fs_dense, F_dags_dense);
 
   // compare against manually-computed OCA result
   auto OCA_gf_dense_result = OCA_gf_dense(hyb_coeffs, hyb_refl_coeffs, dlr_rf, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
@@ -152,7 +154,9 @@ TEST(DenseBackbone, OCA_semicircle_bath_aaa) {
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto B                      = CorrelatorBackbone(topology, n);
   auto C                      = DenseDiagramEvaluator(beta, eps, itops, hyb_poles, hyb_coeffs, Fset);
-  auto gf                     = C.eval_correlator(Gt_dense, B, Fs_dense, F_dags_dense);
+  // Add extra sign since toplogy factor computed internally in DenseDiagramEvaluator, 
+  // but not in BlockSparseDiagramEvaluator. Remove when BlockSparseDiagramEvaluator does the same thing.
+  auto gf                     = -C.eval_correlator(Gt_dense, B, Fs_dense, F_dags_dense);
 
   // compare against manually-computed OCA result
   auto OCA_dense_gf_result = OCA_gf_dense(hyb_coeffs, hyb_refl_coeffs, hyb_poles, itops, beta, Gt_dense, Fs_dense, F_dags_dense);

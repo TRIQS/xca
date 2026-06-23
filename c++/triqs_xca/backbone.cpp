@@ -5,6 +5,8 @@
 
 namespace triqs_xca::backbone {
 
+using nda::range;
+
 BackboneVertex::BackboneVertex() : bar(false), dag(false), hyb_ind(0), Ksign(0), orb(0) { ; }
 
 bool BackboneVertex::has_bar() { return bar; }
@@ -224,34 +226,33 @@ void Backbone::set_orb_inds_of_0_and_vct0(int orb_ind_0, int orb_ind_vct0) {
 }
 
 int Backbone::get_parity() {
+
   // get the fermionic permutation parity of the diagram represented by this backbone, 
   // based on the topology and orbital indices
-  assert( vertices[0].get_orb() >= 0 ); // make sure orbital index of vertex 0 is set
-  assert( vertices[topology(0, 1)].get_orb() >= 0 ); // make sure orbital index of vertex connected to 0 is set
+  
+  assert( vertices[0].get_orb() != -1 ); // make sure orbital index of vertex 0 is set
+  assert( vertices[topology(0, 1)].get_orb() != -1 ); // make sure orbital index of vertex connected to 0 is set
 
   // loop over orbital indices and check which ones are fermionic by checking i < n_hyb
   // put the result in a boolean vector of size m, where true means the line is fermionic
   nda::vector<bool> is_fermionic(2 * m);
-  //nda::vector<int> orb_idxs(2 * m);
 
-  for (int i = 0; i < m; i++) {
-    for (int j = 0; j < 2; j++) {
-      int vertex_idx = topology(i, j);
-      int orb_ind = vertices[vertex_idx].get_orb();
-      // orb_idxs(2 * j + i) = orb_ind; // for debugging
-      is_fermionic[vertex_idx] = orb_ind < n_hyb; // if orbital index is less than n_hyb, it's a fermionic line
+  for ( auto vertex_idx : range(0, 2 * m) ) {
+    int orb_ind = vertices[vertex_idx].get_orb();
+
+    if( orb_ind >= 0 ) {
+      is_fermionic[vertex_idx] = orb_ind < n_hyb; // fermionic vertex when orbital index is less than n_hyb
+    } else if ( orb_ind == -2 ) {
+      is_fermionic[vertex_idx] = true; // if orbital index is -2, it's a fermionic vertex
+    } else if ( orb_ind == -3 ) {
+      is_fermionic[vertex_idx] = false; // if orbital index is -3, it's a bosonic vertex
+    } else {
+      throw std::invalid_argument("Orbital index of vertex " + std::to_string(vertex_idx) + " is not set");
     }
   }
   auto fermionic_topology = topology::fermionic_topology(topology, is_fermionic);
   int fermionic_parity = topology::topology_parity(fermionic_topology);
 
-  /*
-  std::cout << "Backbone::get_parity: topology = \n" << topology << "\n";
-  std::cout << "Backbone::get_parity: orb_idx = " << orb_idxs << "\n";
-  std::cout << "Backbone::get_parity: is_fermionic = " << is_fermionic << "\n";
-  std::cout << "Backbone::get_parity: fermionic_topology = \n" << fermionic_topology << "\n";
-  std::cout << "Backbone::get_parity: fermionic_parity = " << fermionic_parity << "\n";
-  */
   return fermionic_parity;
 }
 
