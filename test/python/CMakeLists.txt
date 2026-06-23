@@ -1,3 +1,5 @@
+add_subdirectory(exp_order_conv)
+
 # Copy h5 files to binary dir
 file(GLOB_RECURSE all_h5_ref_files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.ref.h5)
 foreach(file ${all_h5_ref_files})
@@ -32,15 +34,16 @@ set(all_tests
   volterra_integral
   one_time_correlator
   expectation_value
+  exp_order_conv/n_level_non_int_discrete_bath
   )
 
 foreach(test ${all_tests})
   get_filename_component(test_name ${test} NAME_WE)
   get_filename_component(test_dir ${test} DIRECTORY)
-  add_test(NAME Py_${test_name} COMMAND ${TRIQS_PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${test_dir}/${test_name}.py WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${test_dir})
-  set_property(TEST Py_${test_name} APPEND PROPERTY ENVIRONMENT_MODIFICATION
+  add_test(NAME Py_${test} COMMAND ${TRIQS_PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${test_dir}/${test_name}.py WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${test_dir})
+  set_property(TEST Py_${test} APPEND PROPERTY ENVIRONMENT_MODIFICATION
     "PYTHONPATH=path_list_prepend:${pyed_SOURCE_DIR}"
     "PYTHONPATH=path_list_prepend:${adapol_SOURCE_DIR}/src"
     "PYTHONPATH=path_list_prepend:${PROJECT_BINARY_DIR}/python")
-  set_property(TEST Py_${test_name} APPEND PROPERTY ENVIRONMENT ${SANITIZER_RT_PRELOAD})
+  set_property(TEST Py_${test} APPEND PROPERTY ENVIRONMENT ${SANITIZER_RT_PRELOAD})
 endforeach()
