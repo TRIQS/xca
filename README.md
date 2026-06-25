@@ -7,7 +7,7 @@ added regularly. Until a stable release is announced, use at your own risk!
 
 ### Documentation
 
-For documentation and installation instructions see [triqs.github.io/xca/0.1.x](https://triqs.github.io/xca/0.1.x).
+For documentation and installation instructions see [triqs.github.io/xca/unstable](https://triqs.github.io/xca/unstable).
 
 ### References and citation
 
