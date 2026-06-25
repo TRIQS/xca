@@ -67,13 +67,12 @@ html_theme = 'sphinx_rtd_theme'
 # this loads the custom css file to change the page width
 html_style = 'css/custom.css'
 
-html_favicon = '@CMAKE_CURRENT_SOURCE_DIR@/_static/triqs_logo/triqs_favicon.ico'
-#html_logo = '@CMAKE_CURRENT_SOURCE_DIR@/logos/logo.png'
+html_favicon = '@CMAKE_CURRENT_SOURCE_DIR@/_static/xca_logo/triqs-xca-favicon.ico'
+html_logo = '@CMAKE_CURRENT_SOURCE_DIR@/_static/xca_logo/triqs-xca-logo-white.svg'
 
 # options for the the rtd theme
 html_theme_options = {
-    'logo_only': False,
-    'display_version': True,
+    'logo_only': True,
     'prev_next_buttons_location': 'bottom',
     'style_external_links': False,
     'vcs_pageview_mode': '',

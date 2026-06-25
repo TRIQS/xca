@@ -1,0 +1,31 @@
+{%- extends "!layout.html" %}
+
+{# Re-add the version label just under the logo in the sidebar header.
+   sphinx_rtd_theme >= 3 dropped the static version display (it now only
+   appears as a flyout on Read the Docs), so we restore it the same way the
+   TRIQS docs do, see github.com/TRIQS/triqs : doc/_templates/layout.html.
+   This overrides the theme's "sidebartitle" block; everything below mirrors
+   the upstream block apart from the version <div>. #}
+{% block sidebartitle %}
+
+{%- set _logo_url = logo_url|default(pathto('_static/' + (logo or ""), 1)) %}
+{%- set _root_doc = root_doc|default(master_doc) %}
+<a href="{{ pathto(_root_doc) }}">
+  {%- if logo or logo_url %}
+  <img src="{{ _logo_url }}" class="logo" alt="{{ _('Logo') }}"/>
+  {%- endif %}
+</a>
+
+{%- set nav_version = version %}
+{%- if READTHEDOCS and current_version %}
+  {%- set nav_version = current_version %}
+{%- endif %}
+{%- if nav_version %}
+<div class="version">
+  {{ nav_version }}
+</div>
+{%- endif %}
+
+{% include "searchbox.html" %}
+
+{% endblock %}
