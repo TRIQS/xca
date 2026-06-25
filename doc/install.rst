@@ -16,10 +16,6 @@ Prerequisites
 
    In the following, we assume that TRIQS is installed in the directory ``path_to_triqs``.
 
-#. The `cvxpy <https://www.cvxpy.org/>`_ Python package is required at runtime (it is a dependency of the adapol library which is built automatically)::
-
-    $ pip install cvxpy
-
 Installation steps
 ------------------
 
