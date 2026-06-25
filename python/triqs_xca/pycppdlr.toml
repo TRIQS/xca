@@ -17,7 +17,7 @@ namespaces = ""
 #    if reject_names and reject_names matches Qname : skip X
 #    else keep X.
 #
-match_names = "ImTimeOps|cppdlr::(build_dlr_rf|statistic_t)"
+match_names = "ImTimeOps|cppdlr::build_dlr_rf"
 reject_names = ""
 
 # Only keep elements declared in files matching the pattern
