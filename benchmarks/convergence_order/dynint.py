@@ -14,6 +14,79 @@ from pyed.SparseExactDiagonalization import SparseExactDiagonalization
 from pyed.SparseMatrixFockStates import SparseMatrixFermiBoseCreationOperators
 
 
+def get_serge_florens_analytic_spgf(mesh_f_tau, U_w, verbose=False):
+
+    """
+    Analytic single particle Green's function for retarded interacting AIM
+
+    pp. 156 
+    Coherence et localisation dans les systemes d'electrons fortement correles 
+    PhD thesis by Serge Florens (2003)
+
+    """
+
+    U_w_mat = U_w
+    U_w = Gf(mesh=U_w_mat.mesh, target_shape=[])
+    U_w.data[:] = U_w_mat.data[:, 0, 0].copy()
+
+    from triqs.gfs import MatsubaraFreq
+
+    beta = U_w.mesh.beta
+    U_dlr = make_gf_dlr(U_w)
+    U_0 = U_dlr(MatsubaraFreq(0, beta, 'Boson')) # zeroth Matsubara frequency component of the retarded interaction
+
+    F_w = U_w.copy()
+    for iwn in U_w.mesh:
+        F_w[iwn] = (U_w[iwn] - U_0) / complex(iwn)**2 if iwn.index != 0 else 0.0
+
+    F_tau = make_gf_dlr_imtime(F_w)
+
+    F_dlr = make_gf_dlr(F_tau)
+    F_tau -= F_dlr(0.) # subtract the tau = 0^+ value of F(\tau)
+    F_dlr = make_gf_dlr(F_tau)
+
+    beta = mesh_f_tau.beta
+
+    G_tau = Gf(mesh=mesh_f_tau, target_shape=[1, 1])
+    for tau in mesh_f_tau:
+        G_tau[tau] = -0.5 * np.exp(F_dlr(tau)) * (np.exp(-U_0/2 * tau) + np.exp(-U_0/2 * (beta - tau))) / \
+            (1 + np.exp(-beta * U_0/2)) 
+
+    if verbose:
+        from triqs.plot.mpl_interface import oplot, plt
+
+        plt.figure(figsize=(6, 8))
+        subp = [3, 2, 1]
+
+        plt.subplot(*subp); subp[-1] += 1
+        oplot(U_w)
+        plt.plot(0, U_0.real, 'ro', label='Re[U_0]')
+        plt.plot(0, U_0.imag, 'bs', label='Im[U_0]')
+
+        #plt.plot(iwn.imag, U_w_ref.real, 'r+', label='Re[U_w]')
+        #plt.plot(iwn.imag, U_w_ref.imag, 'b+', label='Im[U_w]')
+
+        #plt.plot(iwn.imag, U_w_ref2.real, 'r.', label='Re[U_w]')
+        #plt.plot(iwn.imag, U_w_ref2.imag, 'b.', label='Im[U_w]')
+
+        plt.subplot(*subp); subp[-1] += 1
+        oplot(make_gf_dlr_imtime(U_w), label='U_tau')
+
+        plt.subplot(*subp); subp[-1] += 1
+        oplot(F_w)
+
+        plt.subplot(*subp); subp[-1] += 1
+        oplot(F_tau, label='F_tau')
+
+        plt.subplot(*subp); subp[-1] += 1
+        oplot(G_tau, label='G_tau')
+
+        plt.tight_layout()
+        plt.show(); exit()
+
+    return G_tau
+
+
 def get_dimer_ed_ref(eps0, eps1, V, g, omega0, mesh_f_tau, mesh_b_tau, Nb_max=10):
 
     ops = SparseMatrixFermiBoseCreationOperators(Nf=2, Nb=1, Nb_max=Nb_max)
@@ -130,6 +203,10 @@ def test_dynint_retarded_dimer():
     g = 0.1
     omega0 = 1.
 
+    #eps0 = 0.0
+    #g = 1.0
+    #omega0 = 1.
+
     #eps0, eps1, V, g, omega0 = -0.1, +0.1, 0., 0.1, 1. # Debug V = 0.0
     #eps0, eps1, V, g, omega0 = -0.1, +0.1, 0., 0., 1. # Debug g = 0.0, V = 0.0
     #eps0, eps1, V, g, omega0 = -0.1, +0.1, 0.25, 0., 1. # DEBUG g = 0.0
@@ -223,6 +300,8 @@ def test_dynint_retarded_dimer():
     g_tau_ed_0, chi_tau_ed_0 = get_ed_ref(eps0 - mu, 0.0, omega0, f_mesh, b_mesh, Nb_max=10)
     g_tau_ed, chi_tau_ed = get_ed_ref(eps0 - mu, g, omega0, f_mesh, b_mesh, Nb_max=10)
 
+    g_tau_anal = get_serge_florens_analytic_spgf(f_mesh, D0_iw)
+
     from triqs.plot.mpl_interface import oplot, plt
 
     plt.figure(figsize=(6, 8))
@@ -258,6 +337,7 @@ def test_dynint_retarded_dimer():
 
     plt.subplot(*subp); subp[-1] += 1
     oplot(make_gf_imtime(S.G_tau['0'][0, 0], n_tau=100).real, '-', label='g_tau_xca')
+    oplot(make_gf_imtime(g_tau_anal, n_tau=100).real, '-.', label='g_tau_anal')
     oplot(make_gf_imtime(g_tau_ref, n_tau=100).real, '-.', label='g_tau_xca_ref')
     oplot(make_gf_imtime(g_tau_ed, n_tau=100).real, '--', label='g_tau_ed')
     oplot(make_gf_imtime(g_tau_ed_0, n_tau=100).real, ':', label='g_tau_ed_0')
@@ -445,7 +525,7 @@ def analyze_signs(connected=False):
 if __name__ == '__main__':
 
     #test_dynint_hubbard_atom()
-    #test_dynint_retarded_dimer()
+    test_dynint_retarded_dimer()
     #test_dynint_one_fermion_1st_order(verbose=True)
-    test_convergence_rate(verbose=True)
+    #test_convergence_rate(verbose=True)
     #analyze_signs()
