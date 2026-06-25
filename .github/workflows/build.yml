@@ -92,11 +92,6 @@ jobs:
         python3-scipy
         python3-ipython
 
-    - name: Install ubuntu cvxpy dependency using pip
-      if: ${{ contains(matrix.os, 'ubuntu') }}
-      run: |
-        pip install cvxpy
-
     - name: Set up virtualenv
       run: |
         mkdir -p $HOME/.venv
@@ -110,7 +105,7 @@ jobs:
       run: |
         brew update
         brew install ccache gcc llvm libomp boost fftw hdf5 open-mpi openblas
-        pip install mako numpy scipy mpi4py cvxpy
+        pip install mako numpy scipy mpi4py
         pip install -r requirements.txt
         echo "PATH=$(brew --prefix llvm)/bin:$(brew --prefix gcc)/bin:$PATH" >> $GITHUB_ENV
         echo "PYTHONPATH=$(brew --prefix llvm)/lib/python3.13/site-packages" >> $GITHUB_ENV
