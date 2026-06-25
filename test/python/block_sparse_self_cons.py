@@ -1,6 +1,6 @@
 import numpy as np
 
-from triqs.gf import inverse, iOmega_n, MeshDLRImFreq, Gf, make_gf_dlr_imtime
+from triqs.gfs import inverse, iOmega_n, MeshDLRImFreq, Gf, make_gf_dlr_imtime
 
 from triqs_xca.triqs_solver import TriqsSolver
 from triqs_xca.block_sparse_solver import BlockSparseSolver
@@ -78,7 +78,7 @@ def test_block_sparse_self_cons(verbose=False):
 
     if verbose:
         from triqs.plot.mpl_interface import oplot, plt, oplotr, oploti
-        from triqs.gf import make_gf_imtime
+        from triqs.gfs import make_gf_imtime
 
         G_BSS_tau = make_gf_imtime(G_BSS, n_tau=400)
         Sigma_BSS_tau = make_gf_imtime(Sigma_BSS, n_tau=400)

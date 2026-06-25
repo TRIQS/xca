@@ -4,7 +4,7 @@ import numpy as np
 
 from itertools import product
 
-from triqs.gf import Gf, MeshDLRImFreq, make_gf_dlr_imtime
+from triqs.gfs import Gf, MeshDLRImFreq, make_gf_dlr_imtime
 from triqs.operators.util.hamiltonians import h_int_kanamori, make_operator_real
 
 from triqs_xca.triqs_solver import TriqsSolver

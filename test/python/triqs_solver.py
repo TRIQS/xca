@@ -25,7 +25,7 @@
 import numpy as np
 
 import triqs.utility.mpi as mpi
-from triqs.gf import make_gf_dlr_imtime, make_gf_dlr_imfreq, inverse, iOmega_n
+from triqs.gfs import make_gf_dlr_imtime, make_gf_dlr_imfreq, inverse, iOmega_n
 from triqs.operators import c, c_dag
 
 from triqs_xca.solver import Solver

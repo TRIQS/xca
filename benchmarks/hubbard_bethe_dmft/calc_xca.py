@@ -11,7 +11,7 @@ import triqs.utility.mpi as mpi
 
 from h5 import HDFArchive
 
-from triqs.gf import make_gf_dlr_imtime, make_gf_dlr_imfreq, make_gf_dlr, SemiCircular, Gf
+from triqs.gfs import make_gf_dlr_imtime, make_gf_dlr_imfreq, make_gf_dlr, SemiCircular, Gf
 
 
 def solve_one_spinful_fermion_block_sparse_solver(

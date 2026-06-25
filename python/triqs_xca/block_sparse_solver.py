@@ -5,7 +5,7 @@ from collections import defaultdict
 
 import triqs.utility.mpi as mpi
 
-from triqs.gf import Gf, MeshDLRImTime, BlockGf, make_gf_dlr, make_gf_dlr_imfreq
+from triqs.gfs import Gf, MeshDLRImTime, BlockGf, make_gf_dlr, make_gf_dlr_imfreq
 from triqs.atom_diag import AtomDiag, AtomDiagReal, AtomDiagComplex
 
 from .diag import all_pairings, all_connected_pairings

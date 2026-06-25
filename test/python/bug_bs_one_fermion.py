@@ -22,7 +22,7 @@ eps = 1e-12
 lamb = 20.0 * beta
 w_max = lamb / beta
 
-from triqs.gf import Gf, MeshDLRImTime, BlockGf
+from triqs.gfs import Gf, MeshDLRImTime, BlockGf
 
 mesh_tau = MeshDLRImTime(beta=beta, statistic='Fermion', w_max=w_max, eps=eps)
 

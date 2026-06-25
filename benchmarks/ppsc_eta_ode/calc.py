@@ -1,6 +1,6 @@
 import numpy as np
 
-from triqs.gf import inverse, iOmega_n, make_gf_dlr_imtime, make_gf_dlr_imfreq
+from triqs.gfs import inverse, iOmega_n, make_gf_dlr_imtime, make_gf_dlr_imfreq
 
 from triqs_xca.triqs_solver import TriqsSolver
 from triqs_xca.block_sparse_solver import BlockSparseSolver

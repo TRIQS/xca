@@ -23,8 +23,8 @@ import numpy as np
 
 from itertools import product
 
-from triqs.gf import make_gf_dlr_imtime, make_gf_dlr
-from triqs.gf import Gf, MeshDLRImTime, MeshDLRImFreq, iOmega_n, inverse
+from triqs.gfs import make_gf_dlr_imtime, make_gf_dlr
+from triqs.gfs import Gf, MeshDLRImTime, MeshDLRImFreq, iOmega_n, inverse
 from triqs.operators.util.hamiltonians import h_int_kanamori, make_operator_real
 
 from triqs_xca.triqs_solver import TriqsSolver

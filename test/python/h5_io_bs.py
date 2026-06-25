@@ -22,7 +22,7 @@
 from triqs_xca.block_sparse_solver import BlockSparseSolver
 
 from triqs.operators import n
-from triqs.gf import inverse, iOmega_n, make_gf_dlr_imfreq, make_gf_dlr_imtime
+from triqs.gfs import inverse, iOmega_n, make_gf_dlr_imfreq, make_gf_dlr_imtime
 
 from h5 import HDFArchive
 

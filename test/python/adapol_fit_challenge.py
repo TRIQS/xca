@@ -9,7 +9,7 @@ def from_blockgf_to_dense(G):
 
     norb = sum([ g.target_shape[0] for b, g in G ])
     
-    from triqs.gf import Gf
+    from triqs.gfs import Gf
     G_dense = Gf(mesh=G.mesh, target_shape=[norb]*2)
     
     sidx = 0
@@ -42,7 +42,7 @@ def adapol_fit_test(do_xca_calc=True):
         from triqs.operators import n
         H = -mu * n('0', 0)
         
-        from triqs.gf import inverse, iOmega_n, MeshDLRImFreq, Gf, make_gf_dlr_imtime, make_gf_dlr
+        from triqs.gfs import inverse, iOmega_n, MeshDLRImFreq, Gf, make_gf_dlr_imtime, make_gf_dlr
 
         mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=w_max, eps=eps)
         Delta_w = Gf(mesh=mesh_w, target_shape=[1, 1])

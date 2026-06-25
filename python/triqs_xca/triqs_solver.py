@@ -24,7 +24,7 @@ import numpy as np
 
 
 import triqs.utility.mpi as mpi
-from triqs.gf import MeshDLR, MeshDLRImTime, BlockGf
+from triqs.gfs import MeshDLR, MeshDLRImTime, BlockGf
 from triqs.operators import c, Operator
 
 

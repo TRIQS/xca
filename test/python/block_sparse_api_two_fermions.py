@@ -2,7 +2,7 @@ import numpy as np
 
 from itertools import product
 
-from triqs.gf import Gf, MeshDLRImTime, inverse, iOmega_n
+from triqs.gfs import Gf, MeshDLRImTime, inverse, iOmega_n
 from triqs.operators.util.hamiltonians import h_int_kanamori, make_operator_real
 
 from triqs_xca.triqs_solver import TriqsSolver
@@ -61,7 +61,7 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
     
     # -- Hybridization function and adapol fit
 
-    from triqs.gf import MeshDLRImFreq
+    from triqs.gfs import MeshDLRImFreq
 
     mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=w_max, eps=eps, symmetrize=False)
     Delta_w = Gf(mesh=mesh_w, target_shape=[2]*2)
@@ -69,7 +69,7 @@ def test_diagrams_cf_block_sparse_and_dense(e1=-1.5, beta=2.0, conserved_operato
 
     Delta_w << inverse(iOmega_n - e1)
 
-    from triqs.gf import make_gf_dlr_imtime, make_gf_dlr
+    from triqs.gfs import make_gf_dlr_imtime, make_gf_dlr
 
     Delta_tau = make_gf_dlr_imtime(Delta_w)
     Delta_dlr = make_gf_dlr(Delta_w)

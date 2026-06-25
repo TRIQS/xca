@@ -2,7 +2,7 @@
 import copy
 
 from triqs.operators import n
-from triqs.gf import make_gf_dlr_imfreq, make_gf_dlr_imtime, inverse, iOmega_n
+from triqs.gfs import make_gf_dlr_imfreq, make_gf_dlr_imtime, inverse, iOmega_n
 
 from triqs_xca.block_sparse_solver import BlockSparseSolver
 

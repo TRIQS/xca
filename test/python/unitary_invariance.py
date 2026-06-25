@@ -35,7 +35,7 @@ import itertools
 import numpy as np
 
 import triqs.utility.mpi as mpi
-from triqs.gf import Gf, MeshImTime
+from triqs.gfs import Gf, MeshImTime
 from triqs.operators import c, c_dag
 
 from pyed.OperatorUtils import operator_single_particle_transform

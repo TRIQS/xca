@@ -54,8 +54,8 @@ def solve_slater_condon_bethe_half_filling(
     N_tot = sum( n(spin, oidx) for spin in spin_names for oidx in range(n_orb) )
     H += - mu * N_tot
 
-    from triqs.gf import SemiCircular
-    from triqs.gf import MeshDLRImFreq, Gf, make_gf_dlr_imtime, iOmega_n, inverse
+    from triqs.gfs import SemiCircular
+    from triqs.gfs import MeshDLRImFreq, Gf, make_gf_dlr_imtime, iOmega_n, inverse
 
     mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=w_max, eps=eps)
     Delta_w = Gf(mesh=mesh_w, target_shape=[n_orb]*2)

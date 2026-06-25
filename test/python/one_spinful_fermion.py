@@ -36,7 +36,7 @@ from h5 import HDFArchive
 from triqs.operators import c, c_dag, n
 from triqs.operators.util import N_op
 
-from triqs.gf import make_gf_dlr_imtime, make_gf_dlr_imfreq, SemiCircular, inverse, iOmega_n
+from triqs.gfs import make_gf_dlr_imtime, make_gf_dlr_imfreq, SemiCircular, inverse, iOmega_n
 
 from triqs_xca.triqs_solver import TriqsSolver
 
@@ -108,7 +108,7 @@ def solve_one_spinful_fermion(
 
     S.g_iaa_nca = S.S.calc_spgf(max_order=1)
             
-    from triqs.gf import make_gf_imtime
+    from triqs.gfs import make_gf_imtime
     S.G_tau_fine = make_gf_imtime(S.G_tau, n_tau=801)
     S.Delta_tau_fine = make_gf_imtime(S.Delta_tau, n_tau=801)
 
