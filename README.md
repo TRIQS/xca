@@ -7,7 +7,7 @@ added regularly. Until a stable release is announced, use at your own risk!
 
 ### Documentation
 
-For documentation and installation instructions see [triqs.github.io/xca/block_sparse](https://triqs.github.io/xca/block_sparse).
+For documentation and installation instructions see [triqs.github.io/xca/0.1.x](https://triqs.github.io/xca/0.1.x).
 
 ### References and citation
 
