@@ -157,9 +157,18 @@ def all_gf_pairings(order):
     return diags
 
 
+def all_connected_gf_rainbow_pairings(order):
+    """ Generate all connected rainbow pairings for the single particle Green's function at a given order.
+    Where a raindbow is nested over the vertex connected to the zero vertex. """
+    n = order
+    diag = [ (0, n) ] + [(i, 2*n - i) for i in range(1, n)] # rainbow over the vertex conected to zero.
+    parity = (-1)**(n-1) # parity of the rainbow pairing
+    return [(parity, diag)]
+
+
 if __name__ == '__main__':
 
-    exit()
+    #exit()
     
     #for order in [1]:
     for order in [1, 2, 3, 4]:
@@ -169,7 +178,12 @@ if __name__ == '__main__':
         for par, pair in all_connected_pairings(order):
             print(f'{par:+d}, {pair}')
 
-    #exit()
+        print('-'*72)
+        print('--> Rainbow pairings')
+        for par, pair in all_connected_gf_rainbow_pairings(order):
+            print(f'{par:+d}, {pair}')
+        
+    exit()
                     
     import matplotlib.pyplot as plt
     from matplotlib.patches import Arc
@@ -226,7 +240,7 @@ if __name__ == '__main__':
         ax.set_ylim([-0.5*(1+len(ks)), (n+1)//2 - 0.25])
 
 
-    if False:
+    if True:
         order = 3
         nks = { 1:1, 2:2, 3:7, 4:42 }
 
@@ -254,7 +268,7 @@ if __name__ == '__main__':
         plt.show()
         exit()
 
-    if True:
+    if False:
         order = 3
         
         nks = { 1:1, 2:2, 3:7, 4:42 }
