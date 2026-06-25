@@ -11,7 +11,7 @@ The TRIQS arbitrary Crossing Approximation (XCA) impurity solver
       .. image:: _static/logo_github.png
          :width: 75%
          :align: center
-         :target: https://github.com/triqs/xca/tree/0.1.x
+         :target: https://github.com/triqs/xca/tree/unstable
 
 
 The TRIQS arbitrary Crossing Approximation (**XCA**) impurity solver ``triqs_xca`` can solve generic multiband Anderson impurity problems approximately by perturbative expansion in the coupling to the environment (a.k.a. the hybridization function :math:`\Delta(\tau)`).
