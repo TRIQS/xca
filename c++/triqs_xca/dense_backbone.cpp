@@ -17,7 +17,7 @@ namespace triqs_xca::dense {
 
   DenseDiagramEvaluator::DenseDiagramEvaluator(double beta, double eps, imtime_ops &itops, nda::vector_const_view<double> hyb_poles,
                                                nda::array_const_view<dcomplex, 3> hyb_coeffs, DenseFSet &Fset)
-     : tau_mesh(triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, itops.lambda() / beta, eps)),
+     : tau_mesh(triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, itops.lambda() / beta, eps, false)),
        beta(beta),
        itops(itops),
        dlr_it(itops.get_itnodes()),

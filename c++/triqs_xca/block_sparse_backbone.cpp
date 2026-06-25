@@ -23,7 +23,7 @@ DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps,
                                    nda::array_const_view<dcomplex, 3> hyb_coeffs,
                                    BlockOpSymQuartet &Fq)
    : 
-     tau_mesh(triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda / beta, eps)),
+     tau_mesh(triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda / beta, eps, false)),
      itops(tau_mesh.dlr_it()),
      dlr_it(itops.get_itnodes()),
      Fq(Fq),

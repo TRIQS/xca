@@ -693,7 +693,7 @@ namespace triqs_xca::block_sparse {
     auto itops  = cppdlr::imtime_ops(Lambda, dlr_rf);
 
     // triqs gf mesh
-    auto t_mesh = triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda, eps);
+    auto t_mesh = triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda, eps, false);
     // create vector of gf
     std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> gf_vec(BDOF.get_num_block_cols());
 

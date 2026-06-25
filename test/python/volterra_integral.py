@@ -12,7 +12,7 @@ from triqs.gf import make_gf_imtime
 def test_const_GG_volterra_integral_DLR(
         beta=1.0, eps=1e-12, w_max=1., verbose=False):
 
-    m = MeshDLRImTime(beta=beta, statistic='Fermion', w_max=w_max, eps=eps)
+    m = MeshDLRImTime(beta=beta, statistic='Fermion', w_max=w_max, eps=eps, symmetrize=False)
     tau = np.array([ float(t) for t in m ])
     #print(m)
 

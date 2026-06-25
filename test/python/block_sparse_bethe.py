@@ -30,7 +30,7 @@ def test_block_sparse_self_cons(verbose=False):
     
     H = -mu * N_op
 
-    mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=w_max, eps=eps)
+    mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=w_max, eps=eps, symmetrize=False)
     Delta_w = Gf(mesh=mesh_w, target_shape=[1, 1])
 
     Delta_w << 0.5 * inverse(iOmega_n - e1)

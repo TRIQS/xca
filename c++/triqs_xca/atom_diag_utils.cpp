@@ -337,7 +337,7 @@ namespace triqs_xca::atom_diag {
 
     // Create vector of gf<dlr_imtime>
     std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> gf_blocks(H_block_inds.size());
-    triqs::mesh::dlr_imtime tau_mesh(beta, triqs::mesh::Fermion, Lambda / beta, eps);
+    triqs::mesh::dlr_imtime tau_mesh(beta, triqs::mesh::Fermion, Lambda / beta, eps, false);
     for (int i = 0; i < H_block_inds.size(); ++i) { gf_blocks[i] = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, ap_blocks[i]); }
     return {gf_blocks};
   }

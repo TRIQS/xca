@@ -139,7 +139,7 @@ def test_oca_diagram_cf_block_sparse_and_dense(
     
     print(f'conserved_operators = {conserved_operators}')    
     
-    mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=w_max, eps=eps)
+    mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=w_max, eps=eps, symmetrize=False)
     Delta_w = Gf(mesh=mesh_w, target_shape=[1]*2)
 
     Delta_w << inverse(iOmega_n - e1)

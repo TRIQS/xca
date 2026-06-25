@@ -67,8 +67,8 @@ class TriqsSolver:
         self.eps = eps
         self.w_max = w_max
         
-        self.dmesh = MeshDLR(beta=beta, statistic='Fermion', eps=eps, w_max=w_max)        
-        self.tmesh = MeshDLRImTime(beta=beta, statistic='Fermion', eps=eps, w_max=w_max)        
+        self.dmesh = MeshDLR(beta=beta, statistic='Fermion', eps=eps, w_max=w_max, symmetrize=False)
+        self.tmesh = MeshDLRImTime(beta=beta, statistic='Fermion', eps=eps, w_max=w_max, symmetrize=False)
 
         self.Delta_tau = BlockGf(mesh=self.tmesh, gf_struct=self.gf_struct)
         

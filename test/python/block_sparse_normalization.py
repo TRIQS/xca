@@ -69,7 +69,7 @@ def solve_slater_condon_bethe_half_filling(
     from triqs.gf import SemiCircular
     from triqs.gf import MeshDLRImFreq, Gf, make_gf_dlr_imtime, iOmega_n, inverse
 
-    mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=w_max, eps=eps)
+    mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=w_max, eps=eps, symmetrize=False)
     Delta_w = Gf(mesh=mesh_w, target_shape=[n_orb]*2)
 
     Delta_w << inverse(iOmega_n)
