@@ -63,7 +63,7 @@ def test_dynint_one_fermion(
     S.Delta_tau['0'].data[:] = 0.
 
     f_mesh = S.mesh_tau
-    b_mesh = MeshDLRImTime(beta=f_mesh.beta, statistic='Boson', eps=f_mesh.eps, w_max=f_mesh.w_max)
+    b_mesh = MeshDLRImTime(beta=f_mesh.beta, statistic='Boson', eps=f_mesh.eps, w_max=f_mesh.w_max, symmetrize=False)
 
     D0_tau = Gf(mesh=b_mesh, target_shape=[1, 1])
     D0_iw = make_gf_dlr_imfreq(D0_tau)
