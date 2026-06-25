@@ -23,6 +23,8 @@
 
 // https://en.wikipedia.org/wiki/Exponentiation_by_squaring
 
+namespace triqs_xca::utils {
+
 static constexpr inline int64_t pown(int64_t x, unsigned p) {
   int64_t result = 1;
   while (p) {
@@ -32,3 +34,5 @@ static constexpr inline int64_t pown(int64_t x, unsigned p) {
   }
   return result;
 }
+
+} // namespace triqs_xca::utils

@@ -180,8 +180,8 @@ nda::array<dcomplex, 3> G_Diagram_calc_sum_all(hyb_F &hyb_F_self, hyb_F &hyb_F_r
   int P                     = hyb_F_self.P; //number of poles
   int n                     = F.shape(0);   //impurity size
   auto Diagram              = nda::array<dcomplex, 3>::zeros({r, n, n});
-  auto total_num_fb_diagram = pown(2, m - 1); // total number of forward and backward choices
-  auto num_diagram_per_fb   = pown(P, m - 1); //number of diagrams per fb
+  auto total_num_fb_diagram = triqs_xca::utils::pown(2, m - 1); // total number of forward and backward choices
+  auto num_diagram_per_fb   = triqs_xca::utils::pown(P, m - 1); //number of diagrams per fb
   auto total_num_diagram    = num_diagram_per_fb * total_num_fb_diagram;
 
   std::cout << "total_num_diagram = " << num_diagram_per_fb * total_num_fb_diagram << "\n";
@@ -314,7 +314,7 @@ nda::array<dcomplex, 3> G_Diagram_calc(hyb_F &hyb_F_self, hyb_F &hyb_F_reflect, 
 
   //iteration over the terms of 2, · · · , m-th hybridization. Note that 1-st hybridization is not decomposed.
 
-  auto total_num_diagram = pown(P, m - 1);
+  auto total_num_diagram = triqs_xca::utils::pown(P, m - 1);
   // #pragma omp parallel
   {
     // #pragma omp for
@@ -511,7 +511,7 @@ nda::array<dcomplex, 3> Sigma_Diagram_calc(hyb_F &hyb_F_self, hyb_F &hyb_F_refle
   }
 
   //iteration over the terms of 2, · · · , m-th hybridization. Note that 1-st hybridization is not decomposed.
-  int64_t total_num_diagram = pown(P, m - 1); //number of total diagrams
+  int64_t total_num_diagram = triqs_xca::utils::pown(P, m - 1); //number of total diagrams
 
   std::cout << "total_num_diagram = " << total_num_diagram << "\n";
   triqs::utility::timer timer_run;
@@ -545,9 +545,9 @@ nda::array<dcomplex, 3> Sigma_Diagram_calc_sum_all(hyb_F &hyb_F_self, hyb_F &hyb
 
   auto Diagram = nda::array<dcomplex, 3>::zeros({r, N, N});
 
-  auto total_num_fb_diagram = pown(2, m - 1); // total number of forward and backward choices
+  auto total_num_fb_diagram = triqs_xca::utils::pown(2, m - 1); // total number of forward and backward choices
 
-  auto num_diagram_per_fb = pown(P, m - 1); //number of diagrams per fb
+  auto num_diagram_per_fb = triqs_xca::utils::pown(P, m - 1); //number of diagrams per fb
   auto total_num_diagram  = num_diagram_per_fb * total_num_fb_diagram;
   std::cout << "total_num_diagram = " << num_diagram_per_fb * total_num_fb_diagram << "\n";
   triqs::utility::timer timer_run;
