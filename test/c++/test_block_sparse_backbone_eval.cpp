@@ -405,7 +405,7 @@ TEST(Backbone, one_fermion_three_orders_hyb_two_pole) {
   // argument (only hyb_coeffs/hyb_poles do, which are overwritten below with the two-pole values
   // already defined for the block-sparse path), so it is reused here instead of hand-building the
   // dense H/F/F_dag setup a second time.
-  auto dense_model = one_fermion_model_dense_helper(beta, Lambda, eps, 0.0, false);
+  auto dense_model = one_fermion_model_dense_helper(beta, Lambda, eps, 0.0);
   auto Gt_dense    = dense_model.G_ppsc_dense[0].data();
   auto &Fs_dense   = dense_model.Fset_dense.Fs;
   // itops-based overload: the beta/Lambda/eps convenience overload hardcodes a symmetrized grid internally
