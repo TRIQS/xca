@@ -134,6 +134,19 @@ nda::array<dcomplex, 3> OCA_dense(nda::array_const_view<dcomplex, 3> hyb, nda::a
 nda::array<dcomplex, 3> OCA_tpz(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta, nda::array_const_view<dcomplex, 3> Gt,
                                 nda::array_const_view<dcomplex, 3> Fs, int n_quad);
 
+/**
+ * @brief Evaluate the third-order self-energy diagram for topology {{0,3},{1,4},{2,5}} directly using trapezoidal quadrature
+ * @param[in] hyb hybridization function at imaginary time nodes
+ * @param[in] itops cppdlr imaginary time object
+ * @param[in] beta inverse temperature
+ * @param[in] Gt Greens function
+ * @param[in] Fs F operator
+ * @param[in] n_quad number of quadrature nodes
+ * @return third-order (topology {{0,3},{1,4},{2,5}}) term of self-energy
+ */
+nda::array<dcomplex, 3> third_order_tpz(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta,
+                                        nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Fs, int n_quad);
+
 nda::array<dcomplex, 3> third_order_dense_partial(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta,
                                                   nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Fs,
                                                   nda::array_const_view<dcomplex, 3> F_dags);

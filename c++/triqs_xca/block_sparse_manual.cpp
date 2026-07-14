@@ -1022,6 +1022,110 @@ nda::array<dcomplex, 3> OCA_tpz(nda::array_const_view<dcomplex, 3> hyb, imtime_o
   return Sigma_eq;
 }
 
+nda::array<dcomplex, 3> third_order_tpz(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta, nda::array_const_view<dcomplex, 3> Gt,
+                                        nda::array_const_view<dcomplex, 3> Fs, int n_quad) {
+  // Third-order self-energy diagram for topology {{0,3},{1,4},{2,5}} (the fully-crossing topology),
+  // evaluated by direct trapezoidal quadrature. Generalizes OCA_tpz's pattern from 2 hybridization
+  // lines / 2 internal vertex times (4 vertices) to 3 lines / 4 internal vertex times (6 vertices):
+  // vertex 0 is fixed at tau=0, vertex 5 is the external self-energy time, and vertices 1-4 are
+  // integrated over 0 <= j1 <= j2 <= j3 <= j4 <= i. Line 0 connects vertices 0 and 3, line 1 connects
+  // vertices 1 and 4, line 2 connects vertices 2 and 5.
+  int N = Gt.extent(1);
+
+  auto hyb_coeffs      = itops.vals2coefs(hyb); // hybridization DLR coeffs
+  auto hyb_refl        = nda::make_regular(-itops.reflect(hyb));
+  auto hyb_refl_coeffs = itops.vals2coefs(hyb_refl);
+
+  // get F^dagger operators
+  int num_Fs = Fs.extent(0);
+  nda::array<dcomplex, 3> F_dags(num_Fs, N, N);
+  for (int i = 0; i < num_Fs; ++i) { F_dags(i, _, _) = nda::transpose(nda::conj(Fs(i, _, _))); }
+
+  // get equispaced grid and evaluate functions on grid
+  auto it_eq = cppdlr::eqptsrel(n_quad + 1);
+  nda::array<dcomplex, 3> hyb_eq(n_quad + 1, num_Fs, num_Fs);
+  nda::array<dcomplex, 3> hyb_refl_eq(n_quad + 1, num_Fs, num_Fs);
+  auto Gt_coeffs = itops.vals2coefs(Gt);
+  nda::array<dcomplex, 3> Gt_eq(n_quad + 1, N, N);
+  for (int i = 0; i < n_quad + 1; i++) {
+    hyb_eq(i, _, _)      = itops.coefs2eval(hyb_coeffs, it_eq(i));
+    hyb_refl_eq(i, _, _) = itops.coefs2eval(hyb_refl_coeffs, it_eq(i));
+    hyb_refl_eq(i, _, _) = nda::transpose(hyb_refl_eq(i, _, _));
+    Gt_eq(i, _, _)       = itops.coefs2eval(Gt_coeffs, it_eq(i));
+  }
+  nda::array<dcomplex, 3> Sigma_eq(n_quad + 1, N, N);
+
+  double dt = beta / n_quad;
+
+  for (int d0 = 0; d0 <= 1; d0++) {
+    for (int d1 = 0; d1 <= 1; d1++) {
+      for (int d2 = 0; d2 <= 1; d2++) {
+        // fb = 1 for forward line, else = 0
+        // d0 is the direction of the line touching vertex 0 (connects vertices 0 and 3)
+        // d1, d2 are the directions of the lines connecting vertices (1,4) and (2,5)
+        auto const &F0list = (d0 == 1) ? Fs(_, _, _) : F_dags(_, _, _);
+        auto const &F1list = (d1 == 1) ? Fs(_, _, _) : F_dags(_, _, _);
+        auto const &F2list = (d2 == 1) ? Fs(_, _, _) : F_dags(_, _, _);
+        auto const &F3list = (d0 == 1) ? F_dags(_, _, _) : Fs(_, _, _);
+        auto const &F4list = (d1 == 1) ? F_dags(_, _, _) : Fs(_, _, _);
+        auto const &F5list = (d2 == 1) ? F_dags(_, _, _) : Fs(_, _, _);
+
+        auto const &hyb0 = (d0 == 1) ? hyb_eq(_, _, _) : hyb_refl_eq(_, _, _); // line 0-3
+        auto const &hyb1 = (d1 == 1) ? hyb_eq(_, _, _) : hyb_refl_eq(_, _, _); // line 1-4
+        auto const &hyb2 = (d2 == 1) ? hyb_eq(_, _, _) : hyb_refl_eq(_, _, _); // line 2-5
+
+        int sfM = ((d0 + d1 + d2) % 2 == 0) ? -1 : 1; // sign
+
+        for (int o0 = 0; o0 < num_Fs; o0++) {
+          for (int o1 = 0; o1 < num_Fs; o1++) {
+            for (int o2 = 0; o2 < num_Fs; o2++) {
+              for (int o3 = 0; o3 < num_Fs; o3++) {
+                for (int o4 = 0; o4 < num_Fs; o4++) {
+                  for (int o5 = 0; o5 < num_Fs; o5++) {
+                    for (int i = 1; i <= n_quad; i++) {
+                      for (int j4 = 1; j4 <= i; j4++) {
+                        double w4 = (j4 == i) ? 0.5 : 1.0;
+                        for (int j3 = 0; j3 <= j4; j3++) {
+                          double w3 = w4 * ((j3 == 0 || j3 == j4) ? 0.5 : 1.0);
+                          for (int j2 = 0; j2 <= j3; j2++) {
+                            double w2 = w3 * ((j2 == 0 || j2 == j3) ? 0.5 : 1.0);
+                            for (int j1 = 0; j1 <= j2; j1++) {
+                              double w = w2 * ((j1 == 0 || j1 == j2) ? 0.5 : 1.0);
+
+                              auto chain = matmul(
+                                 F5list(o5, _, _),
+                                 matmul(Gt_eq(i - j4, _, _),
+                                        matmul(F4list(o4, _, _),
+                                               matmul(Gt_eq(j4 - j3, _, _),
+                                                      matmul(F3list(o3, _, _),
+                                                             matmul(Gt_eq(j3 - j2, _, _),
+                                                                    matmul(F2list(o2, _, _),
+                                                                           matmul(Gt_eq(j2 - j1, _, _),
+                                                                                  matmul(F1list(o1, _, _),
+                                                                                         matmul(Gt_eq(j1, _, _), F0list(o0, _, _)))))))))));
+
+                              Sigma_eq(i, _, _) += sfM * w * hyb0(j3, o3, o0) * hyb1(j4 - j1, o1, o4) * hyb2(i - j2, o2, o5) * chain;
+                            } // sum over j1
+                          } // sum over j2
+                        } // sum over j3
+                      } // sum over j4
+                    } // sum over i
+                  } // sum over o5
+                } // sum over o4
+              } // sum over o3
+            } // sum over o2
+          } // sum over o1
+        } // sum over o0
+
+      } // sum over d2
+    } // sum over d1
+  } // sum over d0
+
+  Sigma_eq = dt * dt * dt * dt * Sigma_eq;
+
+  return Sigma_eq;
+}
+
 nda::array<dcomplex, 3> third_order_dense_partial(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta,
                                                   nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Fs,
                                                   nda::array_const_view<dcomplex, 3> F_dags) {

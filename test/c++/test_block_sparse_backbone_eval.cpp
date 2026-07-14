@@ -6,6 +6,7 @@
 
 #include <triqs_xca/dense_backbone.hpp>
 #include <triqs_xca/block_sparse_backbone.hpp>
+#include <triqs_xca/block_sparse_manual.hpp>
 #include <triqs_xca/hyb.hpp>
 
 #include <triqs_xca/strong_cpl.hpp>
@@ -27,6 +28,9 @@ using triqs_xca::dense::DenseFSet;
 using triqs_xca::block_sparse::BlockOpSymSet;
 
 using triqs_xca::block_sparse::DiagramEvaluator;
+
+using triqs_xca::block_sparse::eval_eq;
+using triqs_xca::block_sparse::third_order_tpz;
 
 using triqs_xca::atom_diag::ad_to_atom_prop;
 using triqs_xca::atom_diag::get_full_h_atomic;
@@ -220,8 +224,8 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
   auto &ad               = one_fermion_model.ad;
   auto &G0_ppsc          = one_fermion_model.G_ppsc;
   auto &G0_bdof          = one_fermion_model.G_bdof;
-  auto dlr_it = itops.get_itnodes();
-  auto G0_ana = nda::zeros<double>(r);
+  auto dlr_it            = itops.get_itnodes();
+  auto G0_ana            = nda::zeros<double>(r);
   for (int i = 0; i < r; ++i) {
     double t  = rel2abs(dlr_it(i));
     G0_ana(i) = -exp(-t * std::numbers::ln2);
@@ -267,6 +271,154 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
   }
   ASSERT_LE(nda::max_element(nda::abs(third_order_se_ana(_, 0) - third_order_se[0].data()(_, 0, 0))), eps);
   ASSERT_LE(nda::max_element(nda::abs(third_order_se_ana(_, 1) - third_order_se[1].data()(_, 0, 0))), eps);
+}
+
+/**
+ * @brief Test computation of several diagrams for a spinless fermion with a hybridization formed from two poles
+ *
+ * @details This tests the evaluation of the first-, second-, and third-order self-energy diagrams for a
+ * two-pole hybridization Delta(tau) = K(tau, omega_1) + 2*K(tau, omega_2), analogous to
+ * one_fermion_two_poles_analytical_solutions.ipynb. `one_fermion_model_helper` only supports a single
+ * pole, so the two-pole model is built manually here, mirroring its internals (trivial atomic
+ * Hamiltonian H = 0, one orbital). omega_1 = 0.6 and omega_2 = -0.9 were chosen to avoid the resonance
+ * poles (omega_1 = omega_2, omega_1 = 2*omega_2, omega_2 = 2*omega_1) found while deriving the
+ * third-order closed form in that notebook.
+ *
+ * The third-order closed form is a sum over 2^3 = 8 pole-index combinations and is too large to
+ * transcribe here as a single formula evaluated at every DLR node (unlike the one-pole case above), so
+ * instead the DLR-interpolated result (via `itops.coefs2eval`) is spot-checked at a handful of tau
+ * values against reference numbers computed from that closed form and independently cross-validated
+ * against brute-force nested quadrature of the undecomposed diagram integral in the notebook.
+ */
+TEST(Backbone, one_fermion_three_orders_hyb_two_pole) {
+  double beta   = 1.0;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-10;
+
+  // Generate DLR imaginary-time object (unsymmetrized, as in the one-pole test above)
+  auto dlr_rf = build_dlr_rf(Lambda, eps);
+  auto itops  = imtime_ops(Lambda, dlr_rf);
+  int r       = itops.rank();
+
+  // Two-pole hybridization: weight 1 at omega_1 = 0.6, weight 2 at omega_2 = -0.9
+  int p    = 2;
+  int norb = 1;
+  nda::array<dcomplex, 3> hyb_coeffs(p, norb, norb);
+  hyb_coeffs(0, 0, 0) = 1.0;
+  hyb_coeffs(1, 0, 0) = 2.0;
+  nda::vector<double> hyb_poles(p);
+  hyb_poles(0) = 0.6;
+  hyb_poles(1) = -0.9;
+
+  // Trivial atomic Hamiltonian H = 0, one orbital -- same as one_fermion_model_helper
+  using triqs::operators::many_body_operator_complex;
+  using triqs::operators::n;
+  many_body_operator_complex H;
+  double mu = 0.0;
+  many_body_operator_complex N;
+  N = n("0", 0);
+  H = -mu * N;
+
+  triqs::atom_diag::fundamental_operator_set fop_set;
+  fop_set.insert("0", 0);
+  auto ad = triqs::atom_diag::atom_diag<true>(H, fop_set);
+
+  auto G0_ppsc = triqs_xca::atom_diag::ad_to_atom_prop(ad, beta, Lambda, eps);
+  auto G0_bdof = BlockDiagOpFun(G0_ppsc);
+
+  // Check that G0_ppsc is correct by comparing to analytical expression (same as the other two tests --
+  // independent of the hybridization since H = 0 in all three)
+  auto dlr_it = itops.get_itnodes();
+  auto G0_ana = nda::zeros<double>(r);
+  for (int i = 0; i < r; ++i) {
+    double t  = rel2abs(dlr_it(i));
+    G0_ana(i) = -exp(-t * std::numbers::ln2);
+  }
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) { ASSERT_LE(nda::max_element(nda::abs(G0_bdof.get_block(b)(_, 0, 0) - G0_ana)), eps); }
+
+  // ----- NCA test -----
+  // First order is linear in Delta, so the analytic reference is just the coefficient-weighted sum of
+  // the single-pole NCA formula over the two poles.
+  nda::array<int, 2> topology1 = {{0, 1}};
+  DiagramEvaluator D(hyb_poles, hyb_coeffs, G0_ppsc[0].mesh(), ad);
+  auto nca_se = D.compute_self_energy(G0_ppsc, topology1);
+
+  auto nca_se_ana = nda::zeros<double>(r, 2);
+  double t        = 0;
+  double om1      = hyb_poles(0);
+  double om2      = hyb_poles(1);
+  double c1       = hyb_coeffs(0, 0, 0).real();
+  double c2       = hyb_coeffs(1, 0, 0).real();
+  for (int i = 0; i < r; ++i) {
+    t                = rel2abs(dlr_it(i)); // t = tau / beta
+    nca_se_ana(i, 0) = c1 * exp(-t * std::numbers::ln2) * exp(t * om1) / (exp(beta * om1) + 1)
+       + c2 * exp(-t * std::numbers::ln2) * exp(t * om2) / (exp(beta * om2) + 1);
+    nca_se_ana(i, 1) = c1 * exp(-t * std::numbers::ln2) * exp(-t * om1) / (exp(-beta * om1) + 1)
+       + c2 * exp(-t * std::numbers::ln2) * exp(-t * om2) / (exp(-beta * om2) + 1);
+  }
+  ASSERT_LE(nda::max_element(nda::abs(nca_se[0].data()(_, 0, 0) - nca_se_ana(_, 0))), eps);
+  ASSERT_LE(nda::max_element(nda::abs(nca_se[1].data()(_, 0, 0) - nca_se_ana(_, 1))), eps);
+
+  // ----- OCA test -----
+  // Still identically zero: the combinatorial argument (creation/annihilation operators must alternate
+  // for a single fermion level) doesn't depend on how many poles Delta has.
+  nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
+  auto oca_se                  = D.compute_self_energy(G0_ppsc, topology2);
+  ASSERT_LE(nda::max_element(nda::abs(oca_se[0].data()(_, 0, 0))), eps);
+  ASSERT_LE(nda::max_element(nda::abs(oca_se[1].data()(_, 0, 0))), eps);
+
+  // ----- third-order test -----
+  nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
+  auto third_order_se          = D.compute_self_energy(G0_ppsc, topology3);
+
+  auto se00_coeffs = itops.vals2coefs(third_order_se[0].data()(_, 0, 0));
+  auto se11_coeffs = itops.vals2coefs(third_order_se[1].data()(_, 0, 0));
+
+  // Reference values for Sigma_00(tau), Sigma_11(tau) at beta=1, omega_1=0.6, omega_2=-0.9, computed from
+  // the closed form in one_fermion_two_poles_analytical_solutions.ipynb and cross-validated there against
+  // independent brute-force nested quadrature of the undecomposed diagram integral.
+  std::vector<double> tau_pts  = {0.1, 0.3, 0.5, 0.7, 0.9};
+  std::vector<double> se00_ref = {0.000014094454748, 0.000890679147681, 0.005485107140040, 0.017223807607182, 0.039435093044707};
+  std::vector<double> se11_ref = {0.000010136868438, 0.000699571262738, 0.004714452501594, 0.016214271857205, 0.040647750033025};
+
+  for (size_t k = 0; k < tau_pts.size(); ++k) {
+    dcomplex se00_val = itops.coefs2eval(se00_coeffs, tau_pts[k]);
+    dcomplex se11_val = itops.coefs2eval(se11_coeffs, tau_pts[k]);
+    ASSERT_LE(std::abs(se00_val - se00_ref[k]), eps);
+    ASSERT_LE(std::abs(se11_val - se11_ref[k]), eps);
+  }
+
+  // ----- trapezoidal cross-check -----
+  // Independent, in-repo verification of third_order_se, computed by direct trapezoidal quadrature
+  // (third_order_tpz, c++/triqs_xca/block_sparse_manual.hpp) of the same topology {{0,3},{1,4},{2,5}},
+  // rather than by relying solely on the untracked notebook referenced above.
+  //
+  // Unlike eps above, this tolerance is not limited by DLR conditioning (third_order_se is already
+  // accurate to ~1e-10 here). It is limited by third_order_tpz's own error, which does NOT shrink
+  // monotonically with n_quad: the routine sums ~n_quad^4 terms of alternating sign across 8
+  // hybridization-line-direction combinations that mostly cancel to a much smaller residual, so
+  // floating-point round-off accumulated over more terms can outweigh the shrinking trapezoidal
+  // discretization error (measured diff at n_quad=40 was larger than at n_quad=20). n_quad=20 was
+  // the better empirical choice here for that reason.
+  //
+  // one_fermion_model_dense_helper's Gt_dense/Fs_dense output does not depend on its hyb_pole
+  // argument (only hyb_coeffs/hyb_poles do, which are overwritten below with the two-pole values
+  // already defined for the block-sparse path), so it is reused here instead of hand-building the
+  // dense H/F/F_dag setup a second time.
+  auto dense_model = one_fermion_model_dense_helper(beta, Lambda, eps, 0.0, false);
+  auto Gt_dense    = dense_model.G_ppsc_dense[0].data();
+  auto &Fs_dense   = dense_model.Fset_dense.Fs;
+  // itops-based overload: the beta/Lambda/eps convenience overload hardcodes a symmetrized grid internally
+  auto hyb_dense = triqs_xca::hyb::coefs2vals(beta, itops, hyb_coeffs, hyb_poles);
+
+  int n_quad              = 20;
+  auto third_order_se_tpz = third_order_tpz(hyb_dense, itops, beta, Gt_dense, Fs_dense, n_quad);
+  auto third_order_se0_eq = eval_eq(itops, third_order_se[0].data(), n_quad);
+  auto third_order_se1_eq = eval_eq(itops, third_order_se[1].data(), n_quad);
+
+  double tpz_tol = 2.0e-3; // ~2x the empirically observed n_quad=20 error (~9.2e-4)
+  ASSERT_LE(nda::max_element(nda::abs(third_order_se0_eq(_, 0, 0) - third_order_se_tpz(_, 0, 0))), tpz_tol);
+  ASSERT_LE(nda::max_element(nda::abs(third_order_se1_eq(_, 0, 0) - third_order_se_tpz(_, 1, 1))), tpz_tol);
 }
 
 TEST(Backbone, OCA_BDOF_construct) {
