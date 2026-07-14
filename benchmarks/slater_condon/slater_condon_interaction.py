@@ -10,6 +10,7 @@ from triqs.operators.util.U_matrix import U_matrix_kanamori
 from triqs.operators.util.hamiltonians import h_int_kanamori
 
 from triqs.gf import Gf
+from triqs.operators import n
 
 from triqs_xca.block_sparse_solver import is_root
 
@@ -20,6 +21,14 @@ from time import perf_counter
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
+
+def _N_tot_operator(l):
+    """Total particle number operator for the (l-shell, spin up/down) orbital content."""
+
+    n_orb = 2*l + 1
+    spin_names = ['up', 'do']
+    return sum(n(spin, oidx) for spin in spin_names for oidx in range(n_orb))
+
 
 def _slater_condon_mu_wmax(l, Fs):
     """Return half-filling chemical potential and recommended DLR cutoff."""
@@ -214,8 +223,8 @@ def one_se_iter_slater_condon_bethe_half_filling(
     Delta_tau_dense = _from_blockgf_to_dense(S.Delta_tau)
     weights, poles, _ = polefitting_dlr_triqs(Delta_tau_dense, eps=tol_adapol, statistics="Fermion", verbose=True)
     weights = -1 * weights
-    print(f'Weights = {weights}')
-    print(f'Poles = {poles}')
+    # print(f'Weights = {weights}')
+    # print(f'Poles = {poles}')
     section_times['hybridization_fit'] = perf_counter() - t_section
     
     # compute the self-energy at the given order using the non-interacting G 
@@ -351,7 +360,8 @@ if __name__ == '__main__':
 
     run_full_solves = False
     run_one_se_no_sym_iters = False
-    run_one_spgf_no_sym_iters = True
+    run_one_se_all_sym_iters = True
+    run_one_spgf_no_sym_iters = False
 
     if run_full_solves:
         opts = dict(
@@ -382,6 +392,23 @@ if __name__ == '__main__':
                 one_se_iter_slater_condon_bethe_half_filling(conserved_operators=[], l=0, Fs=[3.0], **opts)
                 one_se_iter_slater_condon_bethe_half_filling(conserved_operators=[], l=1, Fs=[3.0, 0.5], **opts)
                 # one_se_iter_slater_condon_bethe_half_filling(conserved_operators=[], l=2, Fs=[3.0, 0.5, 0.3], **opts)
+    
+    if run_one_se_all_sym_iters:
+        orders = [1, 2, 3]
+
+        for order in orders:
+            for dense in [False, True]:
+                opts = dict(
+                    dense=dense,
+                    beta=1.0,
+                    eps=1e-9,
+                    ppsc_tol=1e-4,
+                    order=order,
+                )
+
+                one_se_iter_slater_condon_bethe_half_filling(conserved_operators=[_N_tot_operator(0)], l=0, Fs=[3.0], **opts)
+                one_se_iter_slater_condon_bethe_half_filling(conserved_operators=[_N_tot_operator(1)], l=1, Fs=[3.0, 0.5], **opts)
+                # one_se_iter_slater_condon_bethe_half_filling(conserved_operators='automatic', l=2, Fs=[3.0, 0.5, 0.3], **opts)
 
     if run_one_spgf_no_sym_iters:
         orders = [2] # [1, 2, 3]
