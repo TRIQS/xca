@@ -73,7 +73,7 @@ def _setup_slater_condon_problem(l, Fs, beta, eps):
     from triqs.gfs import SemiCircular
     from triqs.gfs import MeshDLRImFreq, Gf, make_gf_dlr_imtime, iOmega_n, inverse
 
-    mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=w_max, eps=eps)
+    mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=w_max, eps=eps, symmetrize=False)
     Delta_w = Gf(mesh=mesh_w, target_shape=[n_orb]*2)
     Delta_w << SemiCircular(half_bandwidth=1.0)
     Delta_tau = make_gf_dlr_imtime(Delta_w)
@@ -256,7 +256,7 @@ def one_se_iter_slater_condon_bethe_half_filling(
         # comm.Barrier()
         t_start = MPI.Wtime()
         t_section = perf_counter()
-        Sigma = S._BlockSparseSolver__eval_pseudo_particle_self_energy_order(S.G, order)
+        Sigma = S._BlockSparseSolver__eval_pseudo_particle_self_energy_order(S.G, order, connected=True)
         section_times['block_sparse_eval'] = perf_counter() - t_section
         # comm.Barrier()
         t_end = MPI.Wtime()
