@@ -277,18 +277,7 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
  * @brief Test computation of several diagrams for a spinless fermion with a hybridization formed from two poles
  *
  * @details This tests the evaluation of the first-, second-, and third-order self-energy diagrams for a
- * two-pole hybridization Delta(tau) = K(tau, omega_1) + 2*K(tau, omega_2), analogous to
- * one_fermion_two_poles_analytical_solutions.ipynb. `one_fermion_model_helper` only supports a single
- * pole, so the two-pole model is built manually here, mirroring its internals (trivial atomic
- * Hamiltonian H = 0, one orbital). omega_1 = 0.6 and omega_2 = -0.9 were chosen to avoid the resonance
- * poles (omega_1 = omega_2, omega_1 = 2*omega_2, omega_2 = 2*omega_1) found while deriving the
- * third-order closed form in that notebook.
- *
- * The third-order closed form is a sum over 2^3 = 8 pole-index combinations and is too large to
- * transcribe here as a single formula evaluated at every DLR node (unlike the one-pole case above), so
- * instead the DLR-interpolated result (via `itops.coefs2eval`) is spot-checked at a handful of tau
- * values against reference numbers computed from that closed form and independently cross-validated
- * against brute-force nested quadrature of the undecomposed diagram integral in the notebook.
+ * two-pole hybridization Delta(tau) = K(tau, omega_1) + 2*K(tau, omega_2).
  */
 TEST(Backbone, one_fermion_three_orders_hyb_two_pole) {
   double beta   = 1.0;
@@ -390,21 +379,8 @@ TEST(Backbone, one_fermion_three_orders_hyb_two_pole) {
 
   // ----- trapezoidal cross-check -----
   // Independent, in-repo verification of third_order_se, computed by direct trapezoidal quadrature
-  // (third_order_tpz, c++/triqs_xca/block_sparse_manual.hpp) of the same topology {{0,3},{1,4},{2,5}},
-  // rather than by relying solely on the untracked notebook referenced above.
+  // (third_order_tpz, c++/triqs_xca/block_sparse_manual.hpp) of the same topology {{0,3},{1,4},{2,5}}.
   //
-  // Unlike eps above, this tolerance is not limited by DLR conditioning (third_order_se is already
-  // accurate to ~1e-10 here). It is limited by third_order_tpz's own error, which does NOT shrink
-  // monotonically with n_quad: the routine sums ~n_quad^4 terms of alternating sign across 8
-  // hybridization-line-direction combinations that mostly cancel to a much smaller residual, so
-  // floating-point round-off accumulated over more terms can outweigh the shrinking trapezoidal
-  // discretization error (measured diff at n_quad=40 was larger than at n_quad=20). n_quad=20 was
-  // the better empirical choice here for that reason.
-  //
-  // one_fermion_model_dense_helper's Gt_dense/Fs_dense output does not depend on its hyb_pole
-  // argument (only hyb_coeffs/hyb_poles do, which are overwritten below with the two-pole values
-  // already defined for the block-sparse path), so it is reused here instead of hand-building the
-  // dense H/F/F_dag setup a second time.
   auto dense_model = one_fermion_model_dense_helper(beta, Lambda, eps, 0.0);
   auto Gt_dense    = dense_model.G_ppsc_dense[0].data();
   auto &Fs_dense   = dense_model.Fset_dense.Fs;

@@ -157,7 +157,120 @@ TEST(two_fermions, const_hyb_spgf) {
   ASSERT_LE(nda::max_element(nda::abs(third_order_spgf(_, 1, 1) - 2 * third_order_spgf_ana)), eps);
 }
 
-TEST(two_fermions, one_hyb_pole) {
+/**
+ * @brief Test evaluation of the self-energy for a two-fermion system with a hybridization formed from a single pole
+ *
+ * @details This tests the evaluation of the first-, second-, and third-order self-energy diagrams,
+ * in analogy with Backbone.one_fermion_three_orders_hyb_one_pole. As in the const_hyb tests above,
+ * U = mu = 0 so that the pseudo-particle propagator is G(tau) = -4^{-tau/beta} I_4, but the
+ * hybridization is Delta(tau) = K(tau, omega) I_2 with the helper's default pole omega = -1.5.
+ * The analytic references are derived in examples/two_fermion_analytical_solutions.ipynb: the
+ * self-energy is diagonal, with equal entries within each occupation sector N = 0, 1, 2, so each
+ * block of the computed result is compared against the closed form for its sector (blocks are
+ * matched to sectors by the particle number of their Fock states rather than by block order).
+ */
+TEST(two_fermions, one_hyb_pole_se) {
+  double beta   = 2.0;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-12;
+  auto dlr_rf   = build_dlr_rf(Lambda, eps);
+  auto itops    = imtime_ops(Lambda, dlr_rf);
+  int r         = itops.rank();
+
+  auto two_fermion_model = two_fermion_model_helper(beta, Lambda, eps, 0.0, 0.0);
+  auto &hyb_coeffs       = two_fermion_model.hyb_coeffs;
+  auto &hyb_poles        = two_fermion_model.hyb_poles;
+  auto &ad               = two_fermion_model.ad;
+  auto &G_ppsc           = two_fermion_model.G_ppsc;
+  auto &G_bdof           = two_fermion_model.G_bdof;
+  double om              = hyb_poles(0);
+
+  // Check that G_ppsc is correct by comparing to analytical expression
+  auto dlr_it = itops.get_itnodes();
+  auto G0_ana = nda::zeros<double>(r);
+  double ln4  = std::numbers::ln2 * 2;
+  for (int i = 0; i < r; ++i) {
+    double t  = rel2abs(dlr_it(i));
+    G0_ana(i) = -exp(-t * ln4);
+  }
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) { ASSERT_LE(nda::max_element(nda::abs(G_bdof.get_block(b)(_, 0, 0) - G0_ana)), eps); }
+
+  // Occupation sector N of each block, used to index the analytic references below
+  auto block_N = nda::zeros<int>(ad.n_subspaces());
+  for (int b = 0; b < ad.n_subspaces(); ++b) { block_N(b) = __builtin_popcountl(ad.get_fock_states(b)[0]); }
+
+  // Set up diagram evaluator for self-energy evaluation
+  DiagramEvaluator D(hyb_poles, hyb_coeffs, G_ppsc[0].mesh(), ad);
+
+  // ----- NCA test -----
+  nda::array<int, 2> topology1 = {{0, 1}};
+  auto nca_se                  = D.compute_self_energy(G_ppsc, topology1);
+  auto nca_se_ana              = nda::zeros<double>(r, 3); // columns are occupation sectors N = 0, 1, 2
+  for (int i = 0; i < r; ++i) {
+    double t         = rel2abs(dlr_it(i)); // t = tau / beta
+    double tau       = beta * t;
+    double g4        = exp(-t * ln4);
+    nca_se_ana(i, 0) = 2 * g4 * exp(om * tau) / (exp(beta * om) + 1);
+    nca_se_ana(i, 2) = 2 * g4 * exp(-om * tau) / (exp(-beta * om) + 1);
+    nca_se_ana(i, 1) = 0.5 * (nca_se_ana(i, 0) + nca_se_ana(i, 2));
+  }
+  for (int b = 0; b < ad.n_subspaces(); ++b) {
+    for (int d = 0; d < nca_se[b].data().extent(1); ++d) {
+      ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data()(_, d, d) - nca_se_ana(_, block_N(b)))), eps);
+      for (int d2 = 0; d2 < nca_se[b].data().extent(2); ++d2) {
+        if (d2 != d) { ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data()(_, d, d2))), eps); }
+      }
+    }
+  }
+
+  // ----- OCA test -----
+  nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
+  auto oca_se                  = D.compute_self_energy(G_ppsc, topology2);
+  auto oca_se_ana              = nda::zeros<double>(r, 3);
+  double denom2                = om * om * (exp(beta * om) + 1) * (exp(beta * om) + 1);
+  for (int i = 0; i < r; ++i) {
+    double t         = rel2abs(dlr_it(i)); // t = tau / beta
+    double tau       = beta * t;
+    double tom       = om * tau;
+    double g4        = exp(-t * ln4);
+    oca_se_ana(i, 0) = -2 * g4 * (exp(tom) - tom - 1) * exp(tom) / denom2;
+    oca_se_ana(i, 1) = -g4 * (exp(tom) - 1) * (exp(tom) - 1) * exp(om * (beta - tau)) / denom2;
+    oca_se_ana(i, 2) = -2 * g4 * (tom * exp(tom) - exp(tom) + 1) * exp(2 * om * (beta - tau)) / denom2;
+  }
+  for (int b = 0; b < ad.n_subspaces(); ++b) {
+    for (int d = 0; d < oca_se[b].data().extent(1); ++d) {
+      ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data()(_, d, d) - oca_se_ana(_, block_N(b)))), eps);
+      for (int d2 = 0; d2 < oca_se[b].data().extent(2); ++d2) {
+        if (d2 != d) { ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data()(_, d, d2))), eps); }
+      }
+    }
+  }
+
+  // ----- third-order test -----
+  nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
+  auto third_order_se          = D.compute_self_energy(G_ppsc, topology3);
+  auto third_order_se_ana      = nda::zeros<double>(r, 3);
+  double denom3                = om * om * om * om * (exp(beta * om) + 1) * (exp(beta * om) + 1) * (exp(beta * om) + 1);
+  for (int i = 0; i < r; ++i) {
+    double t                 = rel2abs(dlr_it(i)); // t = tau / beta
+    double tau               = beta * t;
+    double tom               = om * tau;
+    double g4                = exp(-t * ln4);
+    third_order_se_ana(i, 0) = g4 * (tom * tom * exp(tom) - 4 * tom * exp(tom) - 2 * tom + 6 * exp(tom) - 6) * exp(beta * om) / denom3;
+    third_order_se_ana(i, 2) = g4 * (tom * tom + 4 * tom + 2 * (tom - 3) * exp(tom) + 6) * exp(om * (2 * beta - tau)) / denom3;
+    third_order_se_ana(i, 1) = 0.5 * (third_order_se_ana(i, 0) + third_order_se_ana(i, 2));
+  }
+  for (int b = 0; b < ad.n_subspaces(); ++b) {
+    for (int d = 0; d < third_order_se[b].data().extent(1); ++d) {
+      ASSERT_LE(nda::max_element(nda::abs(third_order_se[b].data()(_, d, d) - third_order_se_ana(_, block_N(b)))), eps);
+      for (int d2 = 0; d2 < third_order_se[b].data().extent(2); ++d2) {
+        if (d2 != d) { ASSERT_LE(nda::max_element(nda::abs(third_order_se[b].data()(_, d, d2))), eps); }
+      }
+    }
+  }
+}
+
+TEST(two_fermions, one_hyb_pole_spgf) {
   double beta   = 2.0;
   double Lambda = 20.0 * beta;
   double eps    = 1.0e-12;
