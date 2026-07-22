@@ -180,12 +180,27 @@ TEST(Backbone, one_fermion_three_orders_const_hyb) {
   // Compare computed and expected NCA
   ASSERT_LE(nda::max_element(nda::abs(nca_se[0].data()(_, 0, 0) - nca_se_ana)), eps);
   ASSERT_LE(nda::max_element(nda::abs(nca_se[1].data()(_, 0, 0) - nca_se_ana)), eps);
+  // Compare with manual NCA evaluator
+  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
+  auto nca_se_manual        = NCA_bs(D.hyb.values, D.hyb.values_reflect, G0_bdof, Fq);
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    // NCA_bs and DiagramEvaluator::compute_self_energy use opposite overall sign conventions for the
+    // self-energy (cf. the "-Sigma_Diagram_calc" negation in test_block_sparse_NCA_manual.cpp), hence "+".
+    ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_manual.get_block(b))), eps);
+  }
 
   // ----- OCA test -----
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
   auto oca_se                  = D.compute_self_energy(G0_ppsc, topology2);
   // OCA contribution should be identically zero
   for (int i = 0; i < 2; ++i) { ASSERT_LE(nda::max_element(nda::abs(oca_se[i].data()(_, 0, 0))), eps); }
+  // Compare with manual OCA evaluator
+  auto oca_se_manual = OCA_bs(D.hyb.values, D.hyb.poles, itops, beta, G0_bdof, Fq);
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    // Unlike NCA (odd order), OCA (even order) does not need the sign flip; the (-1) per hybridization
+    // line in NCA_bs/OCA_bs cancels against the extra line at second order.
+    ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_manual.get_block(b))), eps);
+  }
 
   // ----- third-order test -----
   nda::array<int, 2> topology = {{0, 3}, {1, 4}, {2, 5}};
@@ -249,12 +264,27 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
   }
   ASSERT_LE(nda::max_element(nda::abs(nca_se[0].data()(_, 0, 0) - nca_se_ana(_, 0))), eps);
   ASSERT_LE(nda::max_element(nda::abs(nca_se[1].data()(_, 0, 0) - nca_se_ana(_, 1))), eps);
+  // compare with manual NCA evaluator
+  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
+  auto nca_se_manual        = NCA_bs(D.hyb.values, D.hyb.values_reflect, G0_bdof, Fq);
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    // NCA_bs and DiagramEvaluator::compute_self_energy use opposite overall sign conventions for the
+    // self-energy (cf. the "-Sigma_Diagram_calc" negation in test_block_sparse_NCA_manual.cpp), hence "+".
+    ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_manual.get_block(b))), eps);
+  }
 
   // OCA
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
   auto oca_se                  = D.compute_self_energy(G0_ppsc, topology2);
   ASSERT_LE(nda::max_element(nda::abs(oca_se[0].data()(_, 0, 0))), eps);
   ASSERT_LE(nda::max_element(nda::abs(oca_se[1].data()(_, 0, 0))), eps);
+  // compare with manual OCA evaluator
+  auto oca_se_manual = OCA_bs(D.hyb.values, D.hyb.poles, itops, beta, G0_bdof, Fq);
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    // Unlike NCA (odd order), OCA (even order) does not need the sign flip; the (-1) per hybridization
+    // line in NCA_bs/OCA_bs cancels against the extra line at second order.
+    ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_manual.get_block(b))), eps);
+  }
 
   // third order
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
@@ -348,6 +378,14 @@ TEST(Backbone, one_fermion_three_orders_hyb_two_pole) {
   }
   ASSERT_LE(nda::max_element(nda::abs(nca_se[0].data()(_, 0, 0) - nca_se_ana(_, 0))), eps);
   ASSERT_LE(nda::max_element(nda::abs(nca_se[1].data()(_, 0, 0) - nca_se_ana(_, 1))), eps);
+  // compare with manual NCA evaluator
+  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
+  auto nca_se_manual        = NCA_bs(D.hyb.values, D.hyb.values_reflect, G0_bdof, Fq);
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    // NCA_bs and DiagramEvaluator::compute_self_energy use opposite overall sign conventions for the
+    // self-energy (cf. the "-Sigma_Diagram_calc" negation in test_block_sparse_NCA_manual.cpp), hence "+".
+    ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_manual.get_block(b))), eps);
+  }
 
   // ----- OCA test -----
   // Still identically zero: the combinatorial argument (creation/annihilation operators must alternate
@@ -356,6 +394,13 @@ TEST(Backbone, one_fermion_three_orders_hyb_two_pole) {
   auto oca_se                  = D.compute_self_energy(G0_ppsc, topology2);
   ASSERT_LE(nda::max_element(nda::abs(oca_se[0].data()(_, 0, 0))), eps);
   ASSERT_LE(nda::max_element(nda::abs(oca_se[1].data()(_, 0, 0))), eps);
+  // compare with manual OCA evaluator
+  auto oca_se_manual = OCA_bs(D.hyb.values, D.hyb.poles, itops, beta, G0_bdof, Fq);
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    // Unlike NCA (odd order), OCA (even order) does not need the sign flip; the (-1) per hybridization
+    // line in NCA_bs/OCA_bs cancels against the extra line at second order.
+    ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_manual.get_block(b))), eps);
+  }
 
   // ----- third-order test -----
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
