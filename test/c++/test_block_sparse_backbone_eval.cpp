@@ -201,6 +201,7 @@ TEST(Backbone, one_fermion_three_orders_const_hyb) {
     third_order_se_ana(i) = -bt4 * exp(-t * std::numbers::ln2) / 192.0;
   }
   ASSERT_LE(nda::max_element(nda::abs(third_order_se[0].data()(_, 0, 0) - third_order_se_ana)), eps);
+  ASSERT_LE(nda::max_element(nda::abs(third_order_se[1].data()(_, 0, 0) - third_order_se_ana)), eps);
 }
 
 /**
