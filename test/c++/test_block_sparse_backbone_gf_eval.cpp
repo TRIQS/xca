@@ -5,6 +5,7 @@
 
 #include <triqs_xca/dense_backbone.hpp>
 #include <triqs_xca/block_sparse_backbone.hpp>
+#include <triqs_xca/block_sparse_manual_gf.hpp>
 #include <triqs_xca/hyb.hpp>
 
 #include <triqs_xca/strong_cpl.hpp>
@@ -46,6 +47,7 @@ TEST(Backbone, one_fermion_three_orders_const_hyb) {
   auto &hyb_poles        = one_fermion_model.hyb_poles;
   auto &ad               = one_fermion_model.ad;
   auto &G0_ppsc          = one_fermion_model.G_ppsc;
+  auto &G0_bdof          = one_fermion_model.G_bdof;
   auto dlr_it            = itops.get_itnodes();
 
   // Set up diagram evaluator for single-particle Green's function evalution
@@ -58,12 +60,24 @@ TEST(Backbone, one_fermion_three_orders_const_hyb) {
   nca_gf_ana                   = nca_gf_ana / 2;
   // Compare computed and expected NCA
   ASSERT_LE(nda::max_element(nda::abs(nca_gf(_, 0, 0) - nca_gf_ana)), eps);
+  // compare to manual block-sparse NCA Green's function evaluator
+  std::vector<nda::array<dcomplex, 3>> G0_refl_blocks;
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) { G0_refl_blocks.push_back(nda::make_regular(itops.reflect(G0_bdof.get_block(b)))); }
+  nda::vector<int> G0_zero_block_indices(G0_bdof.get_num_block_cols());
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) { G0_zero_block_indices(b) = G0_bdof.get_zero_block_index(b); }
+  BlockDiagOpFun G0_bdof_refl(G0_refl_blocks, G0_zero_block_indices);
+  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
+  auto nca_gf_manual        = NCA_gf_bs(G0_bdof, G0_bdof_refl, Fq);
+  ASSERT_LE(nda::max_element(nda::abs(nca_gf - nca_gf_manual)), eps);
 
   // ----- OCA test -----
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
   auto oca_gf                  = D.compute_single_ptcle_gf(G0_ppsc, topology2);
   // OCA contribution should be identically zero
   ASSERT_LE(nda::max_element(nda::abs(oca_gf)), eps);
+  // compare to manual block-sparse OCA Green's function evaluator
+  auto oca_gf_manual = OCA_gf_bs(D.hyb.poles, itops, beta, G0_bdof, Fq);
+  ASSERT_LE(nda::max_element(nda::abs(oca_gf - oca_gf_manual)), eps);
 
   // ----- third-order test -----
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
@@ -98,6 +112,7 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
   auto &hyb_poles        = one_fermion_model.hyb_poles;
   auto &ad               = one_fermion_model.ad;
   auto &G0_ppsc          = one_fermion_model.G_ppsc;
+  auto &G0_bdof          = one_fermion_model.G_bdof;
   auto dlr_it            = itops.get_itnodes();
 
   // Set up diagram evaluator for single-particle Green's function evalution
@@ -110,12 +125,24 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
   nca_gf_ana                   = nca_gf_ana / 2;
   // Compare computed and expected NCA
   ASSERT_LE(nda::max_element(nda::abs(nca_gf(_, 0, 0) - nca_gf_ana)), eps);
+  // compare to manual block-sparse NCA Green's function evaluator
+  std::vector<nda::array<dcomplex, 3>> G0_refl_blocks;
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) { G0_refl_blocks.push_back(nda::make_regular(itops.reflect(G0_bdof.get_block(b)))); }
+  nda::vector<int> G0_zero_block_indices(G0_bdof.get_num_block_cols());
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) { G0_zero_block_indices(b) = G0_bdof.get_zero_block_index(b); }
+  BlockDiagOpFun G0_bdof_refl(G0_refl_blocks, G0_zero_block_indices);
+  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
+  auto nca_gf_manual        = NCA_gf_bs(G0_bdof, G0_bdof_refl, Fq);
+  ASSERT_LE(nda::max_element(nda::abs(nca_gf - nca_gf_manual)), eps);
 
   // ----- OCA test -----
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
   auto oca_gf                  = D.compute_single_ptcle_gf(G0_ppsc, topology2);
   // OCA contribution should be identically zero
   ASSERT_LE(nda::max_element(nda::abs(oca_gf)), eps);
+  // compare to manual block-sparse OCA Green's function evaluator
+  auto oca_gf_manual = OCA_gf_bs(D.hyb.poles, itops, beta, G0_bdof, Fq);
+  ASSERT_LE(nda::max_element(nda::abs(oca_gf - oca_gf_manual)), eps);
 
   // ----- third-order test -----
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
@@ -172,6 +199,7 @@ TEST(Backbone, one_fermion_three_orders_hyb_two_poles) {
   auto ad = triqs::atom_diag::atom_diag<true>(H, fop_set);
 
   auto G0_ppsc = triqs_xca::atom_diag::ad_to_atom_prop(ad, beta, Lambda, eps);
+  BlockDiagOpFun G0_bdof(G0_ppsc);
 
   // Set up diagram evaluator for single-particle Green's function evaluation
   DiagramEvaluator D(hyb_poles, hyb_coeffs, G0_ppsc[0].mesh(), ad);
@@ -184,6 +212,15 @@ TEST(Backbone, one_fermion_three_orders_hyb_two_poles) {
   auto nca_gf_ana              = nda::ones<dcomplex>(r);
   nca_gf_ana                   = nca_gf_ana / 2;
   ASSERT_LE(nda::max_element(nda::abs(nca_gf(_, 0, 0) - nca_gf_ana)), eps);
+  // compare to manual block-sparse NCA Green's function evaluator
+  std::vector<nda::array<dcomplex, 3>> G0_refl_blocks;
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) { G0_refl_blocks.push_back(nda::make_regular(itops.reflect(G0_bdof.get_block(b)))); }
+  nda::vector<int> G0_zero_block_indices(G0_bdof.get_num_block_cols());
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) { G0_zero_block_indices(b) = G0_bdof.get_zero_block_index(b); }
+  BlockDiagOpFun G0_bdof_refl(G0_refl_blocks, G0_zero_block_indices);
+  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
+  auto nca_gf_manual        = NCA_gf_bs(G0_bdof, G0_bdof_refl, Fq);
+  ASSERT_LE(nda::max_element(nda::abs(nca_gf - nca_gf_manual)), eps);
 
   // ----- OCA test -----
   // Still identically zero: the combinatorial argument (creation/annihilation operators must alternate
@@ -191,6 +228,9 @@ TEST(Backbone, one_fermion_three_orders_hyb_two_poles) {
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
   auto oca_gf                  = D.compute_single_ptcle_gf(G0_ppsc, topology2);
   ASSERT_LE(nda::max_element(nda::abs(oca_gf)), eps);
+  // compare to manual block-sparse OCA Green's function evaluator
+  auto oca_gf_manual = OCA_gf_bs(D.hyb.poles, itops, beta, G0_bdof, Fq);
+  ASSERT_LE(nda::max_element(nda::abs(oca_gf - oca_gf_manual)), eps);
 
   // ----- third-order test -----
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};

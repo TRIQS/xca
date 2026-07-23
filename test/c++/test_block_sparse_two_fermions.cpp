@@ -157,9 +157,7 @@ TEST(two_fermions, const_hyb_spgf) {
   BlockDiagOpFun G_bdof_refl(G_refl_blocks, G_zero_block_indices);
   auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
   auto nca_gf_manual        = NCA_gf_bs(G_bdof, G_bdof_refl, Fq);
-  // Unlike OCA_gf_bs, NCA_gf_bs sums only a single forward/backward term (no internal fb=0,1 loop), while
-  // compute_single_ptcle_gf sums both equal contributions, hence the factor of 2.
-  ASSERT_LE(nda::max_element(nda::abs(nca_spgf - 2 * nca_gf_manual)), eps);
+  ASSERT_LE(nda::max_element(nda::abs(nca_spgf - nca_gf_manual)), eps);
 
   // ----- OCA test -----
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
@@ -364,9 +362,7 @@ TEST(two_fermions, one_hyb_pole_spgf) {
   BlockDiagOpFun G_bdof_refl(G_refl_blocks, G_zero_block_indices);
   auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
   auto nca_gf_manual        = NCA_gf_bs(G_bdof, G_bdof_refl, Fq);
-  // Unlike OCA_gf_bs, NCA_gf_bs sums only a single forward/backward term (no internal fb=0,1 loop), while
-  // compute_single_ptcle_gf sums both equal contributions, hence the factor of 2.
-  ASSERT_LE(nda::max_element(nda::abs(nca_spgf - 2 * nca_gf_manual)), eps);
+  ASSERT_LE(nda::max_element(nda::abs(nca_spgf - nca_gf_manual)), eps);
 
   // ----- OCA test -----
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};

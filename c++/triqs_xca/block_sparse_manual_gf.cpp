@@ -32,6 +32,7 @@ nda::array<dcomplex, 3> NCA_gf_bs(const BlockDiagOpFun &Gt, const BlockDiagOpFun
   std::size_t r = Gt.get_num_time_nodes();
   long n        = Fq.sym_set_labels.size();
   nda::array<dcomplex, 3> gf(r, n, n); // initialize Green's function
+  gf = 0;
   nda::vector<int> ind_path(2), block_dims(3);
 
   long q = nda::max_element(Fq.sym_set_labels) + 1;
@@ -64,7 +65,7 @@ nda::array<dcomplex, 3> NCA_gf_bs(const BlockDiagOpFun &Gt, const BlockDiagOpFun
               long lam_orb = Fq.sym_set_to_orb(p_lam, lam);
               long kap_orb = Fq.sym_set_to_orb(p_kap, kap);
               for (int t = 0; t < r; t++) {
-                gf(t, lam_orb, kap_orb) =
+                gf(t, lam_orb, kap_orb) +=
                    nda::trace(matmul(Gt_refl.get_block(ind_path(1))(t, _, _),
                                      matmul(Fq.Fs[p_lam].get_block(ind_path(0))(lam, _, _),
                                             matmul(Gt.get_block(ind_path(0))(t, _, _), Fq.F_dags[p_kap].get_block(b)(kap, _, _)))));
