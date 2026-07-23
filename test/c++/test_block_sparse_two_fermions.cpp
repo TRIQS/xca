@@ -318,12 +318,21 @@ TEST(two_fermions, one_hyb_pole_se) {
   }
 }
 
+/**
+ * @brief Test evaluation of the single-particle Green's function for a two-fermion system with a
+ * hybridization formed from a single pole
+ *
+ * @details This tests the evaluation of the first-, second-, and third-order single-particle Green's
+ * function diagrams. As in Backbone.one_hyb_pole_se, U = mu = 0 so that the pseudo-particle propagator
+ * is G(tau) = -4^{-tau/beta} I_4, and the hybridization is Delta(tau) = K(tau, omega) I_2 with the
+ * helper's default pole omega = -1.5.
+ */
 TEST(two_fermions, one_hyb_pole_spgf) {
   double beta   = 2.0;
   double Lambda = 20.0 * beta;
   double eps    = 1.0e-12;
 
-  auto two_fermion_model = two_fermion_model_helper(beta, Lambda, eps);
+  auto two_fermion_model = two_fermion_model_helper(beta, Lambda, eps, 0.0, 0.0);
   auto &hyb_coeffs       = two_fermion_model.hyb_coeffs;
   auto &hyb_poles        = two_fermion_model.hyb_poles;
   auto &ad               = two_fermion_model.ad;
@@ -331,40 +340,70 @@ TEST(two_fermions, one_hyb_pole_spgf) {
 
   int norb = 2;
 
-  // compute single-particle Green's function for the two-fermion system with one hybridization pole
-  DiagramEvaluator D(hyb_poles, hyb_coeffs, G_ppsc[0].mesh(), ad);
-  nda::array<int, 2> topology = {{0, 2}, {1, 3}};
-  auto spgf                   = D.compute_single_ptcle_gf(G_ppsc, topology);
-
-  // compare to call to dense code
-  auto hyb    = triqs_xca::hyb::coefs2vals(beta, Lambda, eps, hyb_coeffs, hyb_poles);
   auto dlr_rf = build_dlr_rf(Lambda, eps);
   auto itops  = imtime_ops(Lambda, dlr_rf);
 
-  // ----- OCA_gf_bs cross-check -----
-  // Independent, in-repo verification of spgf (an OCA-order single-particle Green's function, topology
-  // {{0,2},{1,3}}) using the manual block-sparse OCA Green's-function solver (OCA_gf_bs,
-  // c++/triqs_xca/block_sparse_manual_gf.hpp).
+  // compute single-particle Green's function for the two-fermion system with one hybridization pole
+  DiagramEvaluator D(hyb_poles, hyb_coeffs, G_ppsc[0].mesh(), ad);
+
+  // ----- NCA test -----
+  // First order has no hybridization line at all, so the reference is the same hybridization-independent
+  // constant 1/2 seen in the const-hybridization test above.
+  nda::array<int, 2> topology1 = {{0, 1}};
+  auto nca_spgf                = D.compute_single_ptcle_gf(G_ppsc, topology1);
+  auto nca_spgf_ana            = nda::zeros<double>(itops.rank(), 2, 2);
+  nca_spgf_ana(_, 0, 0)        = 0.5;
+  nca_spgf_ana(_, 1, 1)        = 0.5;
+  ASSERT_LE(nda::max_element(nda::abs(nca_spgf - nca_spgf_ana)), eps);
+  // compare to manual block-sparse NCA Green's function evaluator
   BlockDiagOpFun G_bdof(G_ppsc);
+  std::vector<nda::array<dcomplex, 3>> G_refl_blocks;
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) { G_refl_blocks.push_back(nda::make_regular(itops.reflect(G_bdof.get_block(b)))); }
+  nda::vector<int> G_zero_block_indices(G_bdof.get_num_block_cols());
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) { G_zero_block_indices(b) = G_bdof.get_zero_block_index(b); }
+  BlockDiagOpFun G_bdof_refl(G_refl_blocks, G_zero_block_indices);
   auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
-  auto oca_gf_manual        = OCA_gf_bs(D.hyb.poles, itops, beta, G_bdof, Fq);
+  auto nca_gf_manual        = NCA_gf_bs(G_bdof, G_bdof_refl, Fq);
+  // Unlike OCA_gf_bs, NCA_gf_bs sums only a single forward/backward term (no internal fb=0,1 loop), while
+  // compute_single_ptcle_gf sums both equal contributions, hence the factor of 2.
+  ASSERT_LE(nda::max_element(nda::abs(nca_spgf - 2 * nca_gf_manual)), eps);
+
+  // ----- OCA test -----
+  nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
+  auto spgf                    = D.compute_single_ptcle_gf(G_ppsc, topology2);
+  // compare to reference values computed from the closed form derived in examples/two_fermion_analytical_solutions.ipynb
+  auto hyb                        = triqs_xca::hyb::coefs2vals(beta, Lambda, eps, hyb_coeffs, hyb_poles);
+  auto oca_spgf_coeffs            = itops.vals2coefs(spgf(_, 0, 0));
+  std::vector<double> oca_tau_pts = {0.1, 0.3, 0.5, 0.7, 0.9};
+  std::vector<double> oca_gf_ref  = {0.051177221707610, 0.110236319147384, 0.127756436679493, 0.110236319147384, 0.051177221707610};
+  for (size_t k = 0; k < oca_tau_pts.size(); ++k) {
+    dcomplex oca_val_up   = itops.coefs2eval(oca_spgf_coeffs, oca_tau_pts[k]);
+    dcomplex oca_val_down = itops.coefs2eval(itops.vals2coefs(spgf(_, 1, 1)), oca_tau_pts[k]);
+    ASSERT_LE(std::abs(oca_val_up - oca_gf_ref[k]), eps);
+    ASSERT_LE(std::abs(oca_val_down - oca_gf_ref[k]), eps);
+  }
+  ASSERT_LE(nda::max_element(nda::abs(spgf(_, 0, 1))), eps);
+  ASSERT_LE(nda::max_element(nda::abs(spgf(_, 1, 0))), eps);
+  // compare to manual block-sparse OCA Green's function evaluator
+  auto oca_gf_manual = OCA_gf_bs(D.hyb.poles, itops, beta, G_bdof, Fq);
   ASSERT_LE(nda::max_element(nda::abs(spgf - oca_gf_manual)), eps);
 
-  auto hyb_refl     = itops.reflect(hyb);
-  auto G_ppsc_dense = nda::zeros<dcomplex>(itops.rank(), ad.get_full_hilbert_space_dim(), ad.get_full_hilbert_space_dim());
-  int s0            = 0;
-  int s1            = 0;
-  for (int s = 0; s < ad.n_subspaces(); ++s) {
-    s1 += ad.get_fock_states(s).size();
-    G_ppsc_dense(_, range(s0, s1), range(s0, s1)) = G_ppsc[s].data();
-    s0                                            = s1;
+  // ----- third-order test -----
+  nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
+  auto third_order_spgf        = D.compute_single_ptcle_gf(G_ppsc, topology3);
+  auto third_order_spgf_coeffs = itops.vals2coefs(third_order_spgf(_, 0, 0));
+
+  // Reference values for g_{up,up}(tau) at beta=2, omega=-1.5, computed from the closed form derived
+  // in examples/two_fermion_analytical_solutions.ipynb
+  std::vector<double> tau_pts = {0.1, 0.3, 0.5, 0.7, 0.9};
+  std::vector<double> gf_ref  = {0.000393140721520, 0.003052337792819, 0.006393977070682, 0.006929916603937, 0.002036125469681};
+
+  for (size_t k = 0; k < tau_pts.size(); ++k) {
+    dcomplex gf_val_up   = itops.coefs2eval(third_order_spgf_coeffs, tau_pts[k]);
+    dcomplex gf_val_down = itops.coefs2eval(itops.vals2coefs(third_order_spgf(_, 1, 1)), tau_pts[k]);
+    ASSERT_LE(std::abs(gf_val_up - gf_ref[k]), eps);
+    ASSERT_LE(std::abs(gf_val_down - gf_ref[k]), eps);
   }
-  auto Fset = get_operators_dense(ad, hyb_coeffs);
-  hyb_poles = nda::make_regular(beta * hyb_poles);
-  DenseDiagramEvaluator D_dense(beta, eps, itops, hyb_poles, hyb_coeffs, Fset);
-  auto mu_ops  = Fset.Fs;
-  auto kap_ops = Fset.F_dags;
-  CorrelatorBackbone B(topology, norb);
-  auto spgf_dense = D_dense.eval_correlator(G_ppsc_dense, B, mu_ops, kap_ops);
-  ASSERT_LE(nda::max_element(nda::abs(spgf - spgf_dense)), 1.0e-15);
+  ASSERT_LE(nda::max_element(nda::abs(third_order_spgf(_, 0, 1))), eps);
+  ASSERT_LE(nda::max_element(nda::abs(third_order_spgf(_, 1, 0))), eps);
 }
