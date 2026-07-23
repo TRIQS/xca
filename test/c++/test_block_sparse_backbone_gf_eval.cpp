@@ -119,9 +119,9 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
 
   // ----- third-order test -----
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
-  auto third_order_gf     = D.compute_single_ptcle_gf(G0_ppsc, topology3);
-  auto third_order_gf_ana = nda::zeros<double>(r);
-  double om               = hyb_poles(0);
+  auto third_order_gf          = D.compute_single_ptcle_gf(G0_ppsc, topology3);
+  auto third_order_gf_ana      = nda::zeros<double>(r);
+  double om                    = hyb_poles(0);
   for (int i = 0; i < r; ++i) {
     double t              = rel2abs(dlr_it(i)); // t = tau / beta
     third_order_gf_ana(i) = -(t + (exp(-om * t) - 1.0) / om) * (t - beta + (exp(om * (beta - t)) - 1.0) / om)
