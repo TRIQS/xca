@@ -131,6 +131,84 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
   ASSERT_LE(nda::max_element(nda::abs(third_order_gf(_, 0, 0) - third_order_gf_ana)), eps);
 }
 
+/**
+ * @brief Test computation of several diagrams for a spinless fermion with a hybridization formed from two poles
+ *
+ * @details This tests the evaluation of the first-, second-, and third-order single-particle Green's function
+ * diagrams for a two-pole hybridization Delta(tau) = K(tau, omega_1) + 2*K(tau, omega_2), mirroring the
+ * two-pole self-energy test `Backbone.one_fermion_three_orders_hyb_two_pole` in test_block_sparse_backbone_eval.cpp.
+ */
+TEST(Backbone, one_fermion_three_orders_hyb_two_poles) {
+  double beta   = 1.0;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-10;
+
+  // Generate DLR imaginary-time object (unsymmetrized, as in the one-pole test above)
+  auto dlr_rf = build_dlr_rf(Lambda, eps);
+  auto itops  = imtime_ops(Lambda, dlr_rf);
+  int r       = itops.rank();
+
+  // Two-pole hybridization: weight 1 at omega_1 = 0.6, weight 2 at omega_2 = -0.9
+  int p    = 2;
+  int norb = 1;
+  nda::array<dcomplex, 3> hyb_coeffs(p, norb, norb);
+  hyb_coeffs(0, 0, 0) = 1.0;
+  hyb_coeffs(1, 0, 0) = 2.0;
+  nda::vector<double> hyb_poles(p);
+  hyb_poles(0) = 0.6;
+  hyb_poles(1) = -0.9;
+
+  // Trivial atomic Hamiltonian H = 0, one orbital -- same as one_fermion_model_helper
+  using triqs::operators::many_body_operator_complex;
+  using triqs::operators::n;
+  many_body_operator_complex H;
+  double mu = 0.0;
+  many_body_operator_complex N;
+  N = n("0", 0);
+  H = -mu * N;
+
+  triqs::atom_diag::fundamental_operator_set fop_set;
+  fop_set.insert("0", 0);
+  auto ad = triqs::atom_diag::atom_diag<true>(H, fop_set);
+
+  auto G0_ppsc = triqs_xca::atom_diag::ad_to_atom_prop(ad, beta, Lambda, eps);
+
+  // Set up diagram evaluator for single-particle Green's function evaluation
+  DiagramEvaluator D(hyb_poles, hyb_coeffs, G0_ppsc[0].mesh(), ad);
+
+  // ----- NCA test -----
+  // NCA is independent of the hybridization (no Delta lines at this order), so the reference is the same
+  // constant 1/2 seen in the const-hybridization and one-pole tests above.
+  nda::array<int, 2> topology1 = {{0, 1}};
+  auto nca_gf                  = D.compute_single_ptcle_gf(G0_ppsc, topology1);
+  auto nca_gf_ana              = nda::ones<dcomplex>(r);
+  nca_gf_ana                   = nca_gf_ana / 2;
+  ASSERT_LE(nda::max_element(nda::abs(nca_gf(_, 0, 0) - nca_gf_ana)), eps);
+
+  // ----- OCA test -----
+  // Still identically zero: the combinatorial argument (creation/annihilation operators must alternate
+  // for a single fermion level) doesn't depend on how many poles Delta has.
+  nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
+  auto oca_gf                  = D.compute_single_ptcle_gf(G0_ppsc, topology2);
+  ASSERT_LE(nda::max_element(nda::abs(oca_gf)), eps);
+
+  // ----- third-order test -----
+  nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
+  auto third_order_gf          = D.compute_single_ptcle_gf(G0_ppsc, topology3);
+  auto third_order_gf_coeffs   = itops.vals2coefs(third_order_gf(_, 0, 0));
+
+  // Reference values for g_3(tau) at beta=1, omega_1=0.6, omega_2=-0.9, computed from the closed form
+  // in one_fermion_two_poles_analytical_solutions.ipynb and cross-validated there against independent
+  // brute-force nested quadrature of the undecomposed diagram integral.
+  std::vector<double> tau_pts = {0.1, 0.3, 0.5, 0.7, 0.9};
+  std::vector<double> gf_ref  = {0.001818250732044, 0.010263216835087, 0.015229427191986, 0.011360586534472, 0.002226904649606};
+
+  for (size_t k = 0; k < tau_pts.size(); ++k) {
+    dcomplex gf_val = itops.coefs2eval(third_order_gf_coeffs, tau_pts[k]);
+    ASSERT_LE(std::abs(gf_val - gf_ref[k]), eps);
+  }
+}
+
 TEST(BSGFBackbone, NCA) {
   int n         = 4;
   double beta   = 2.0;
