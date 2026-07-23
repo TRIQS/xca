@@ -24,10 +24,16 @@ using cppdlr::imtime_ops;
 using triqs_xca::dense::DenseDiagramEvaluator;
 
 using triqs_xca::block_sparse::DiagramEvaluator;
+using triqs_xca::block_sparse::NCA_dense;
+using triqs_xca::block_sparse::NCA_gf_dense;
+using triqs_xca::block_sparse::OCA_dense;
+using triqs_xca::block_sparse::OCA_gf_dense;
 
 using triqs_xca::atom_diag::ad_to_atom_prop;
+using triqs_xca::atom_diag::get_full_h_atomic;
 using triqs_xca::atom_diag::get_operators;
 using triqs_xca::atom_diag::get_operators_dense;
+using triqs_xca::atom_diag::get_tensor_in_atom_diag_subspace;
 
 /**
  * @brief Test evaluation of the self-energy for a two-fermion system with a constant hybridization function
@@ -78,6 +84,16 @@ TEST(two_fermions, const_hyb_se) {
     // self-energy (cf. the "-Sigma_Diagram_calc" negation in test_block_sparse_NCA_manual.cpp), hence "+".
     ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_manual.get_block(b))), eps);
   }
+  // compare to manual dense NCA
+  auto dlr_it_abs               = cppdlr::rel2abs(dlr_it);
+  auto H_dense                  = get_full_h_atomic(ad);
+  auto Gt_dense                 = Hmat_to_Gtmat(H_dense, beta, dlr_it_abs);
+  auto [Fs_dense, F_dags_dense] = get_operators_dense(ad);
+  auto nca_se_dense             = NCA_dense(D.hyb.values, D.hyb.values_reflect, Gt_dense, Fs_dense, F_dags_dense);
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) {
+    auto nca_se_dense_block = get_tensor_in_atom_diag_subspace(nca_se_dense, b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_dense_block)), eps);
+  }
 
   // ----- OCA test -----
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
@@ -94,6 +110,13 @@ TEST(two_fermions, const_hyb_se) {
     // Unlike NCA (odd order), OCA (even order) does not need the sign flip; the (-1) per hybridization
     // line in NCA_bs/OCA_bs cancels against the extra line at second order.
     ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_manual.get_block(b))), eps);
+  }
+  // compare to manual dense OCA
+  auto oca_se_dense =
+     OCA_dense(D.hyb.values, D.hyb.coeffs, D.hyb.values_reflect, D.hyb.coeffs, D.hyb.poles, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) {
+    auto oca_se_dense_block = get_tensor_in_atom_diag_subspace(oca_se_dense, b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_dense_block)), eps);
   }
 
   // ----- third-order test -----
@@ -158,6 +181,14 @@ TEST(two_fermions, const_hyb_spgf) {
   auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
   auto nca_gf_manual        = NCA_gf_bs(G_bdof, G_bdof_refl, Fq);
   ASSERT_LE(nda::max_element(nda::abs(nca_spgf - nca_gf_manual)), eps);
+  // compare to manual dense NCA Green's function evaluator
+  auto dlr_it_abs               = cppdlr::rel2abs(dlr_it);
+  auto H_dense                  = get_full_h_atomic(ad);
+  auto Gt_dense                 = Hmat_to_Gtmat(H_dense, beta, dlr_it_abs);
+  auto Gt_dense_refl            = itops.reflect(Gt_dense);
+  auto [Fs_dense, F_dags_dense] = get_operators_dense(ad);
+  auto nca_gf_dense             = NCA_gf_dense(Gt_dense, Gt_dense_refl, Fs_dense, F_dags_dense);
+  ASSERT_LE(nda::max_element(nda::abs(nca_spgf - nca_gf_dense)), eps);
 
   // ----- OCA test -----
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
@@ -172,6 +203,9 @@ TEST(two_fermions, const_hyb_spgf) {
   // compare to manual block-sparse OCA Green's function evaluator
   auto oca_gf_manual = OCA_gf_bs(D.hyb.poles, itops, beta, G_bdof, Fq);
   ASSERT_LE(nda::max_element(nda::abs(oca_spgf - oca_gf_manual)), eps);
+  // compare to manual dense OCA Green's function evaluator
+  auto oca_gf_dense = OCA_gf_dense(D.hyb.coeffs, D.hyb.coeffs, D.hyb.poles, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
+  ASSERT_LE(nda::max_element(nda::abs(oca_spgf - oca_gf_dense)), eps);
 
   // ----- third-order test -----
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
@@ -261,6 +295,16 @@ TEST(two_fermions, one_hyb_pole_se) {
     // self-energy (cf. the "-Sigma_Diagram_calc" negation in test_block_sparse_NCA_manual.cpp), hence "+".
     ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_manual.get_block(b))), eps);
   }
+  // compare to manual dense NCA
+  auto dlr_it_abs               = cppdlr::rel2abs(dlr_it);
+  auto H_dense                  = get_full_h_atomic(ad);
+  auto Gt_dense                 = Hmat_to_Gtmat(H_dense, beta, dlr_it_abs);
+  auto [Fs_dense, F_dags_dense] = get_operators_dense(ad);
+  auto nca_se_dense             = NCA_dense(D.hyb.values, D.hyb.values_reflect, Gt_dense, Fs_dense, F_dags_dense);
+  for (int b = 0; b < ad.n_subspaces(); ++b) {
+    auto nca_se_dense_block = get_tensor_in_atom_diag_subspace(nca_se_dense, b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_dense_block)), eps);
+  }
 
   // ----- OCA test -----
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
@@ -290,6 +334,13 @@ TEST(two_fermions, one_hyb_pole_se) {
     // Unlike NCA (odd order), OCA (even order) does not need the sign flip; the (-1) per hybridization
     // line in NCA_bs/OCA_bs cancels against the extra line at second order.
     ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_manual.get_block(b))), eps);
+  }
+  // compare to manual dense OCA
+  auto oca_se_dense =
+     OCA_dense(D.hyb.values, D.hyb.coeffs, D.hyb.values_reflect, D.hyb.coeffs, D.hyb.poles, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
+  for (int b = 0; b < ad.n_subspaces(); ++b) {
+    auto oca_se_dense_block = get_tensor_in_atom_diag_subspace(oca_se_dense, b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_dense_block)), eps);
   }
 
   // ----- third-order test -----
@@ -363,6 +414,14 @@ TEST(two_fermions, one_hyb_pole_spgf) {
   auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
   auto nca_gf_manual        = NCA_gf_bs(G_bdof, G_bdof_refl, Fq);
   ASSERT_LE(nda::max_element(nda::abs(nca_spgf - nca_gf_manual)), eps);
+  // compare to manual dense NCA Green's function evaluator
+  auto dlr_it_abs               = cppdlr::rel2abs(itops.get_itnodes());
+  auto H_dense                  = get_full_h_atomic(ad);
+  auto Gt_dense                 = Hmat_to_Gtmat(H_dense, beta, dlr_it_abs);
+  auto Gt_dense_refl            = itops.reflect(Gt_dense);
+  auto [Fs_dense, F_dags_dense] = get_operators_dense(ad);
+  auto nca_gf_dense             = NCA_gf_dense(Gt_dense, Gt_dense_refl, Fs_dense, F_dags_dense);
+  ASSERT_LE(nda::max_element(nda::abs(nca_spgf - nca_gf_dense)), eps);
 
   // ----- OCA test -----
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
@@ -383,6 +442,9 @@ TEST(two_fermions, one_hyb_pole_spgf) {
   // compare to manual block-sparse OCA Green's function evaluator
   auto oca_gf_manual = OCA_gf_bs(D.hyb.poles, itops, beta, G_bdof, Fq);
   ASSERT_LE(nda::max_element(nda::abs(spgf - oca_gf_manual)), eps);
+  // compare to manual dense OCA Green's function evaluator
+  auto oca_gf_dense = OCA_gf_dense(D.hyb.coeffs, D.hyb.coeffs, D.hyb.poles, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
+  ASSERT_LE(nda::max_element(nda::abs(spgf - oca_gf_dense)), eps);
 
   // ----- third-order test -----
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};

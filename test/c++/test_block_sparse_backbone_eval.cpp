@@ -28,6 +28,8 @@ using triqs_xca::dense::DenseFSet;
 using triqs_xca::block_sparse::BlockOpSymSet;
 
 using triqs_xca::block_sparse::DiagramEvaluator;
+using triqs_xca::block_sparse::NCA_dense;
+using triqs_xca::block_sparse::OCA_dense;
 
 using triqs_xca::block_sparse::eval_eq;
 using triqs_xca::block_sparse::third_order_tpz;
@@ -188,6 +190,16 @@ TEST(Backbone, one_fermion_three_orders_const_hyb) {
     // self-energy (cf. the "-Sigma_Diagram_calc" negation in test_block_sparse_NCA_manual.cpp), hence "+".
     ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_manual.get_block(b))), eps);
   }
+  // Compare with manual dense NCA evaluator
+  auto dlr_it_abs               = cppdlr::rel2abs(dlr_it);
+  auto H_dense                  = get_full_h_atomic(ad);
+  auto Gt_dense                 = Hmat_to_Gtmat(H_dense, beta, dlr_it_abs);
+  auto [Fs_dense, F_dags_dense] = get_operators_dense(ad);
+  auto nca_se_dense             = NCA_dense(D.hyb.values, D.hyb.values_reflect, Gt_dense, Fs_dense, F_dags_dense);
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    auto nca_se_dense_block = get_tensor_in_atom_diag_subspace(nca_se_dense, b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_dense_block)), eps);
+  }
 
   // ----- OCA test -----
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
@@ -200,6 +212,13 @@ TEST(Backbone, one_fermion_three_orders_const_hyb) {
     // Unlike NCA (odd order), OCA (even order) does not need the sign flip; the (-1) per hybridization
     // line in NCA_bs/OCA_bs cancels against the extra line at second order.
     ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_manual.get_block(b))), eps);
+  }
+  // Compare with manual dense OCA evaluator
+  auto oca_se_dense =
+     OCA_dense(D.hyb.values, D.hyb.coeffs, D.hyb.values_reflect, D.hyb.coeffs, D.hyb.poles, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    auto oca_se_dense_block = get_tensor_in_atom_diag_subspace(oca_se_dense, b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_dense_block)), eps);
   }
 
   // ----- third-order test -----
@@ -272,6 +291,16 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
     // self-energy (cf. the "-Sigma_Diagram_calc" negation in test_block_sparse_NCA_manual.cpp), hence "+".
     ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_manual.get_block(b))), eps);
   }
+  // compare with manual dense NCA evaluator
+  auto dlr_it_abs                 = cppdlr::rel2abs(dlr_it);
+  auto H0_dense                   = get_full_h_atomic(ad);
+  auto Gt0_dense                  = Hmat_to_Gtmat(H0_dense, beta, dlr_it_abs);
+  auto [Fs0_dense, F0_dags_dense] = get_operators_dense(ad);
+  auto nca_se_dense               = NCA_dense(D.hyb.values, D.hyb.values_reflect, Gt0_dense, Fs0_dense, F0_dags_dense);
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    auto nca_se_dense_block = get_tensor_in_atom_diag_subspace(nca_se_dense, b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_dense_block)), eps);
+  }
 
   // OCA
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
@@ -284,6 +313,13 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
     // Unlike NCA (odd order), OCA (even order) does not need the sign flip; the (-1) per hybridization
     // line in NCA_bs/OCA_bs cancels against the extra line at second order.
     ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_manual.get_block(b))), eps);
+  }
+  // compare with manual dense OCA evaluator
+  auto oca_se_dense =
+     OCA_dense(D.hyb.values, D.hyb.coeffs, D.hyb.values_reflect, D.hyb.coeffs, D.hyb.poles, itops, beta, Gt0_dense, Fs0_dense, F0_dags_dense);
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    auto oca_se_dense_block = get_tensor_in_atom_diag_subspace(oca_se_dense, b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_dense_block)), eps);
   }
 
   // third order
@@ -386,6 +422,16 @@ TEST(Backbone, one_fermion_three_orders_hyb_two_pole) {
     // self-energy (cf. the "-Sigma_Diagram_calc" negation in test_block_sparse_NCA_manual.cpp), hence "+".
     ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_manual.get_block(b))), eps);
   }
+  // compare with manual dense NCA evaluator
+  auto dlr_it_abs                 = cppdlr::rel2abs(dlr_it);
+  auto H0_dense                   = get_full_h_atomic(ad);
+  auto Gt0_dense                  = Hmat_to_Gtmat(H0_dense, beta, dlr_it_abs);
+  auto [Fs0_dense, F0_dags_dense] = get_operators_dense(ad);
+  auto nca_se_dense               = NCA_dense(D.hyb.values, D.hyb.values_reflect, Gt0_dense, Fs0_dense, F0_dags_dense);
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    auto nca_se_dense_block = get_tensor_in_atom_diag_subspace(nca_se_dense, b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_dense_block)), eps);
+  }
 
   // ----- OCA test -----
   // Still identically zero: the combinatorial argument (creation/annihilation operators must alternate
@@ -400,6 +446,13 @@ TEST(Backbone, one_fermion_three_orders_hyb_two_pole) {
     // Unlike NCA (odd order), OCA (even order) does not need the sign flip; the (-1) per hybridization
     // line in NCA_bs/OCA_bs cancels against the extra line at second order.
     ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_manual.get_block(b))), eps);
+  }
+  // compare with manual dense OCA evaluator
+  auto oca_se_dense =
+     OCA_dense(D.hyb.values, D.hyb.coeffs, D.hyb.values_reflect, D.hyb.coeffs, D.hyb.poles, itops, beta, Gt0_dense, Fs0_dense, F0_dags_dense);
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    auto oca_se_dense_block = get_tensor_in_atom_diag_subspace(oca_se_dense, b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_dense_block)), eps);
   }
 
   // ----- third-order test -----

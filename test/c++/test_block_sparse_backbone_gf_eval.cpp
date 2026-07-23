@@ -21,6 +21,8 @@ using triqs_xca::dense::DenseFSet;
 
 using triqs_xca::block_sparse::BlockOp;
 using triqs_xca::block_sparse::DiagramEvaluator;
+using triqs_xca::block_sparse::NCA_gf_dense;
+using triqs_xca::block_sparse::OCA_gf_dense;
 
 using triqs_xca::atom_diag::ad_to_atom_prop;
 using triqs_xca::atom_diag::get_full_h_atomic;
@@ -69,6 +71,14 @@ TEST(Backbone, one_fermion_three_orders_const_hyb) {
   auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
   auto nca_gf_manual        = NCA_gf_bs(G0_bdof, G0_bdof_refl, Fq);
   ASSERT_LE(nda::max_element(nda::abs(nca_gf - nca_gf_manual)), eps);
+  // compare to manual dense NCA Green's function evaluator
+  auto dlr_it_abs               = cppdlr::rel2abs(dlr_it);
+  auto H0_dense                 = get_full_h_atomic(ad);
+  auto Gt0_dense                = Hmat_to_Gtmat(H0_dense, beta, dlr_it_abs);
+  auto Gt0_dense_refl           = itops.reflect(Gt0_dense);
+  auto [Fs_dense, F_dags_dense] = get_operators_dense(ad);
+  auto nca_gf_dense             = NCA_gf_dense(Gt0_dense, Gt0_dense_refl, Fs_dense, F_dags_dense);
+  ASSERT_LE(nda::max_element(nda::abs(nca_gf - nca_gf_dense)), eps);
 
   // ----- OCA test -----
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
@@ -78,6 +88,9 @@ TEST(Backbone, one_fermion_three_orders_const_hyb) {
   // compare to manual block-sparse OCA Green's function evaluator
   auto oca_gf_manual = OCA_gf_bs(D.hyb.poles, itops, beta, G0_bdof, Fq);
   ASSERT_LE(nda::max_element(nda::abs(oca_gf - oca_gf_manual)), eps);
+  // compare to manual dense OCA Green's function evaluator
+  auto oca_gf_dense = OCA_gf_dense(D.hyb.coeffs, D.hyb.coeffs, D.hyb.poles, itops, beta, Gt0_dense, Fs_dense, F_dags_dense);
+  ASSERT_LE(nda::max_element(nda::abs(oca_gf - oca_gf_dense)), eps);
 
   // ----- third-order test -----
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
@@ -134,6 +147,14 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
   auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
   auto nca_gf_manual        = NCA_gf_bs(G0_bdof, G0_bdof_refl, Fq);
   ASSERT_LE(nda::max_element(nda::abs(nca_gf - nca_gf_manual)), eps);
+  // compare to manual dense NCA Green's function evaluator
+  auto dlr_it_abs               = cppdlr::rel2abs(dlr_it);
+  auto H0_dense                 = get_full_h_atomic(ad);
+  auto Gt0_dense                = Hmat_to_Gtmat(H0_dense, beta, dlr_it_abs);
+  auto Gt0_dense_refl           = itops.reflect(Gt0_dense);
+  auto [Fs_dense, F_dags_dense] = get_operators_dense(ad);
+  auto nca_gf_dense             = NCA_gf_dense(Gt0_dense, Gt0_dense_refl, Fs_dense, F_dags_dense);
+  ASSERT_LE(nda::max_element(nda::abs(nca_gf - nca_gf_dense)), eps);
 
   // ----- OCA test -----
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
@@ -143,6 +164,9 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
   // compare to manual block-sparse OCA Green's function evaluator
   auto oca_gf_manual = OCA_gf_bs(D.hyb.poles, itops, beta, G0_bdof, Fq);
   ASSERT_LE(nda::max_element(nda::abs(oca_gf - oca_gf_manual)), eps);
+  // compare to manual dense OCA Green's function evaluator
+  auto oca_gf_dense = OCA_gf_dense(D.hyb.coeffs, D.hyb.coeffs, D.hyb.poles, itops, beta, Gt0_dense, Fs_dense, F_dags_dense);
+  ASSERT_LE(nda::max_element(nda::abs(oca_gf - oca_gf_dense)), eps);
 
   // ----- third-order test -----
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
@@ -221,6 +245,14 @@ TEST(Backbone, one_fermion_three_orders_hyb_two_poles) {
   auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
   auto nca_gf_manual        = NCA_gf_bs(G0_bdof, G0_bdof_refl, Fq);
   ASSERT_LE(nda::max_element(nda::abs(nca_gf - nca_gf_manual)), eps);
+  // compare to manual dense NCA Green's function evaluator
+  auto dlr_it_abs               = cppdlr::rel2abs(itops.get_itnodes());
+  auto H0_dense                 = get_full_h_atomic(ad);
+  auto Gt0_dense                = Hmat_to_Gtmat(H0_dense, beta, dlr_it_abs);
+  auto Gt0_dense_refl           = itops.reflect(Gt0_dense);
+  auto [Fs_dense, F_dags_dense] = get_operators_dense(ad);
+  auto nca_gf_dense             = NCA_gf_dense(Gt0_dense, Gt0_dense_refl, Fs_dense, F_dags_dense);
+  ASSERT_LE(nda::max_element(nda::abs(nca_gf - nca_gf_dense)), eps);
 
   // ----- OCA test -----
   // Still identically zero: the combinatorial argument (creation/annihilation operators must alternate
@@ -231,6 +263,9 @@ TEST(Backbone, one_fermion_three_orders_hyb_two_poles) {
   // compare to manual block-sparse OCA Green's function evaluator
   auto oca_gf_manual = OCA_gf_bs(D.hyb.poles, itops, beta, G0_bdof, Fq);
   ASSERT_LE(nda::max_element(nda::abs(oca_gf - oca_gf_manual)), eps);
+  // compare to manual dense OCA Green's function evaluator
+  auto oca_gf_dense = OCA_gf_dense(D.hyb.coeffs, D.hyb.coeffs, D.hyb.poles, itops, beta, Gt0_dense, Fs_dense, F_dags_dense);
+  ASSERT_LE(nda::max_element(nda::abs(oca_gf - oca_gf_dense)), eps);
 
   // ----- third-order test -----
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
