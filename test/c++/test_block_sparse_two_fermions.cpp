@@ -148,6 +148,18 @@ TEST(two_fermions, const_hyb_spgf) {
   nca_spgf_ana(_, 0, 0)        = 0.5;
   nca_spgf_ana(_, 1, 1)        = 0.5;
   ASSERT_LE(nda::max_element(nda::abs(nca_spgf - nca_spgf_ana)), eps);
+  // compare to manual block-sparse NCA Green's function evaluator
+  BlockDiagOpFun G_bdof(G_ppsc);
+  std::vector<nda::array<dcomplex, 3>> G_refl_blocks;
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) { G_refl_blocks.push_back(nda::make_regular(itops.reflect(G_bdof.get_block(b)))); }
+  nda::vector<int> G_zero_block_indices(G_bdof.get_num_block_cols());
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) { G_zero_block_indices(b) = G_bdof.get_zero_block_index(b); }
+  BlockDiagOpFun G_bdof_refl(G_refl_blocks, G_zero_block_indices);
+  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
+  auto nca_gf_manual        = NCA_gf_bs(G_bdof, G_bdof_refl, Fq);
+  // Unlike OCA_gf_bs, NCA_gf_bs sums only a single forward/backward term (no internal fb=0,1 loop), while
+  // compute_single_ptcle_gf sums both equal contributions, hence the factor of 2.
+  ASSERT_LE(nda::max_element(nda::abs(nca_spgf - 2 * nca_gf_manual)), eps);
 
   // ----- OCA test -----
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
@@ -159,6 +171,9 @@ TEST(two_fermions, const_hyb_spgf) {
   }
   ASSERT_LE(nda::max_element(nda::abs(oca_spgf(_, 0, 0) - oca_spgf_ana)), eps);
   ASSERT_LE(nda::max_element(nda::abs(oca_spgf(_, 1, 1) - oca_spgf_ana)), eps);
+  // compare to manual block-sparse OCA Green's function evaluator
+  auto oca_gf_manual = OCA_gf_bs(D.hyb.poles, itops, beta, G_bdof, Fq);
+  ASSERT_LE(nda::max_element(nda::abs(oca_spgf - oca_gf_manual)), eps);
 
   // ----- third-order test -----
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
@@ -322,9 +337,19 @@ TEST(two_fermions, one_hyb_pole_spgf) {
   auto spgf                   = D.compute_single_ptcle_gf(G_ppsc, topology);
 
   // compare to call to dense code
-  auto hyb          = triqs_xca::hyb::coefs2vals(beta, Lambda, eps, hyb_coeffs, hyb_poles);
-  auto dlr_rf       = build_dlr_rf(Lambda, eps);
-  auto itops        = imtime_ops(Lambda, dlr_rf);
+  auto hyb    = triqs_xca::hyb::coefs2vals(beta, Lambda, eps, hyb_coeffs, hyb_poles);
+  auto dlr_rf = build_dlr_rf(Lambda, eps);
+  auto itops  = imtime_ops(Lambda, dlr_rf);
+
+  // ----- OCA_gf_bs cross-check -----
+  // Independent, in-repo verification of spgf (an OCA-order single-particle Green's function, topology
+  // {{0,2},{1,3}}) using the manual block-sparse OCA Green's-function solver (OCA_gf_bs,
+  // c++/triqs_xca/block_sparse_manual_gf.hpp).
+  BlockDiagOpFun G_bdof(G_ppsc);
+  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
+  auto oca_gf_manual        = OCA_gf_bs(D.hyb.poles, itops, beta, G_bdof, Fq);
+  ASSERT_LE(nda::max_element(nda::abs(spgf - oca_gf_manual)), eps);
+
   auto hyb_refl     = itops.reflect(hyb);
   auto G_ppsc_dense = nda::zeros<dcomplex>(itops.rank(), ad.get_full_hilbert_space_dim(), ad.get_full_hilbert_space_dim());
   int s0            = 0;
