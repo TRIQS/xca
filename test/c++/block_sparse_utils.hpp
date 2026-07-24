@@ -1,5 +1,8 @@
 #pragma once
 
+#include <algorithm>
+
+#include <nda/algorithms.hpp>
 #include <triqs_xca/atom_diag_utils.hpp>
 #include <triqs_xca/block_sparse.hpp>
 
@@ -110,3 +113,24 @@ std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>, nda::array<dcomplex
  */
 std::tuple<BlockDiagOpFun, BlockOpSymQuartet, nda::vector<int>> two_band_helper(double beta, double Lambda, double eps,
                                                                                 nda::array_const_view<dcomplex, 3> hyb_coeffs);
+
+/**
+ * @brief Largest absolute value taken by any off-diagonal entry of a (time, n, n) tensor
+ *
+ * @details Used by the analytic self-energy / single-particle Green's function tests to check that the
+ * matrix structure really is diagonal, and not just diagonal in the entries that are compared against
+ * closed forms. Returns 0 for a 1x1 matrix, which has no off-diagonal entries -- call sites that rely on
+ * this being a non-vacuous check should assert the matrix dimension separately.
+ *
+ * @param[in] A Tensor whose second and third indices are the matrix indices
+ * @return max_{i != j} max_t |A(t, i, j)|, or 0 if A has no off-diagonal entries
+ */
+inline double max_offdiag(nda::array_const_view<dcomplex, 3> A) {
+  double max_abs = 0.0;
+  for (int i = 0; i < A.extent(1); ++i) {
+    for (int j = 0; j < A.extent(2); ++j) {
+      if (i != j) { max_abs = std::max(max_abs, nda::max_element(nda::abs(A(nda::range::all, i, j)))); }
+    }
+  }
+  return max_abs;
+}

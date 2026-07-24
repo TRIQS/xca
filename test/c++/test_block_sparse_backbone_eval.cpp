@@ -200,6 +200,7 @@ TEST(Backbone, one_fermion_three_orders_const_hyb) {
     auto nca_se_dense_block = get_tensor_in_atom_diag_subspace(nca_se_dense, b, ad);
     ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_dense_block)), eps);
   }
+  ASSERT_LE(max_offdiag(nca_se_dense), eps);
 
   // ----- OCA test -----
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
@@ -220,6 +221,7 @@ TEST(Backbone, one_fermion_three_orders_const_hyb) {
     auto oca_se_dense_block = get_tensor_in_atom_diag_subspace(oca_se_dense, b, ad);
     ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_dense_block)), eps);
   }
+  ASSERT_LE(max_offdiag(oca_se_dense), eps);
 
   // ----- third-order test -----
   nda::array<int, 2> topology = {{0, 3}, {1, 4}, {2, 5}};
@@ -301,6 +303,7 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
     auto nca_se_dense_block = get_tensor_in_atom_diag_subspace(nca_se_dense, b, ad);
     ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_dense_block)), eps);
   }
+  ASSERT_LE(max_offdiag(nca_se_dense), eps);
 
   // OCA
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
@@ -321,6 +324,7 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
     auto oca_se_dense_block = get_tensor_in_atom_diag_subspace(oca_se_dense, b, ad);
     ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_dense_block)), eps);
   }
+  ASSERT_LE(max_offdiag(oca_se_dense), eps);
 
   // third order
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
@@ -432,6 +436,7 @@ TEST(Backbone, one_fermion_three_orders_hyb_two_pole) {
     auto nca_se_dense_block = get_tensor_in_atom_diag_subspace(nca_se_dense, b, ad);
     ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_dense_block)), eps);
   }
+  ASSERT_LE(max_offdiag(nca_se_dense), eps);
 
   // ----- OCA test -----
   // Still identically zero: the combinatorial argument (creation/annihilation operators must alternate
@@ -454,6 +459,7 @@ TEST(Backbone, one_fermion_three_orders_hyb_two_pole) {
     auto oca_se_dense_block = get_tensor_in_atom_diag_subspace(oca_se_dense, b, ad);
     ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_dense_block)), eps);
   }
+  ASSERT_LE(max_offdiag(oca_se_dense), eps);
 
   // ----- third-order test -----
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
@@ -494,6 +500,7 @@ TEST(Backbone, one_fermion_three_orders_hyb_two_pole) {
   double tpz_tol = 2.0e-3; // ~2x the empirically observed n_quad=20 error (~9.2e-4)
   ASSERT_LE(nda::max_element(nda::abs(third_order_se0_eq(_, 0, 0) - third_order_se_tpz(_, 0, 0))), tpz_tol);
   ASSERT_LE(nda::max_element(nda::abs(third_order_se1_eq(_, 0, 0) - third_order_se_tpz(_, 1, 1))), tpz_tol);
+  ASSERT_LE(max_offdiag(third_order_se_tpz), tpz_tol);
 }
 
 TEST(Backbone, OCA_BDOF_construct) {

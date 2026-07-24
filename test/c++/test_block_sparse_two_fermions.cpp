@@ -75,7 +75,15 @@ TEST(two_fermions, const_hyb_se) {
   auto nca_se                  = D.compute_self_energy(G_ppsc, topology1);
   auto nca_se_ana              = nda::zeros<double>(r);
   nca_se_ana                   = -G0_ana;
-  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) { ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data()(_, 0, 0) - nca_se_ana)), eps); }
+  // The self-energy is diagonal with the same entry in every occupation sector, so check every diagonal
+  // entry of every block against the closed form and every off-diagonal entry against zero.
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) {
+    auto nca_se_block = nca_se[b].data();
+    for (int d = 0; d < nca_se_block.extent(1); ++d) {
+      ASSERT_LE(nda::max_element(nda::abs(nca_se_block(_, d, d) - nca_se_ana)), eps);
+    }
+    ASSERT_LE(max_offdiag(nca_se_block), eps);
+  }
   // compare to manual block-sparse NCA
   auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
   auto nca_se_manual        = NCA_bs(D.hyb.values, D.hyb.values_reflect, G_bdof, Fq);
@@ -94,6 +102,7 @@ TEST(two_fermions, const_hyb_se) {
     auto nca_se_dense_block = get_tensor_in_atom_diag_subspace(nca_se_dense, b, ad);
     ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_dense_block)), eps);
   }
+  ASSERT_LE(max_offdiag(nca_se_dense), eps);
 
   // ----- OCA test -----
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
@@ -103,7 +112,13 @@ TEST(two_fermions, const_hyb_se) {
     double t      = rel2abs(dlr_it(i)); // t = tau / beta
     oca_se_ana(i) = 0.25 * exp(-t * ln4) * t * t * beta * beta;
   }
-  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) { ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data()(_, 0, 0) - oca_se_ana)), eps); }
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) {
+    auto oca_se_block = oca_se[b].data();
+    for (int d = 0; d < oca_se_block.extent(1); ++d) {
+      ASSERT_LE(nda::max_element(nda::abs(oca_se_block(_, d, d) - oca_se_ana)), eps);
+    }
+    ASSERT_LE(max_offdiag(oca_se_block), eps);
+  }
   // compare to manual block-sparse OCA
   auto oca_se_manual = OCA_bs(D.hyb.values, D.hyb.poles, itops, beta, G_bdof, Fq);
   for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) {
@@ -118,6 +133,7 @@ TEST(two_fermions, const_hyb_se) {
     auto oca_se_dense_block = get_tensor_in_atom_diag_subspace(oca_se_dense, b, ad);
     ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_dense_block)), eps);
   }
+  ASSERT_LE(max_offdiag(oca_se_dense), eps);
 
   // ----- third-order test -----
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
@@ -127,11 +143,17 @@ TEST(two_fermions, const_hyb_se) {
     double t              = rel2abs(dlr_it(i)); // t = tau / beta
     third_order_se_ana(i) = -1.0 / 96 * exp(-t * ln4) * pow(t, 4) * pow(beta, 4);
   }
-  // third_order_se has three blocks: 1x1, 2x2, and 1x1. Check that all diagonal entries equal the analytical expression
+  // third_order_se has three blocks: 1x1, 2x2, and 1x1. Check that all diagonal entries equal the
+  // analytical expression, and that the 2x2 block's off-diagonal entries vanish.
   for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) {
-    ASSERT_LE(nda::max_element(nda::abs(third_order_se[b].data()(_, 0, 0) - third_order_se_ana)), eps);
+    auto third_order_se_block = third_order_se[b].data();
+    for (int d = 0; d < third_order_se_block.extent(1); ++d) {
+      ASSERT_LE(nda::max_element(nda::abs(third_order_se_block(_, d, d) - third_order_se_ana)), eps);
+    }
+    ASSERT_LE(max_offdiag(third_order_se_block), eps);
   }
-  ASSERT_LE(nda::max_element(nda::abs(third_order_se[1].data()(_, 1, 1) - third_order_se_ana)), eps);
+  // Check that 2x2 block is indeed 2x2
+  ASSERT_EQ(third_order_se[1].data().extent(1), 2);
 }
 
 /**
@@ -200,6 +222,9 @@ TEST(two_fermions, const_hyb_spgf) {
   }
   ASSERT_LE(nda::max_element(nda::abs(oca_spgf(_, 0, 0) - oca_spgf_ana)), eps);
   ASSERT_LE(nda::max_element(nda::abs(oca_spgf(_, 1, 1) - oca_spgf_ana)), eps);
+  // There are no spin-flip terms in H or Delta, so the spin off-diagonal blocks vanish identically
+  ASSERT_EQ(oca_spgf.extent(1), 2);
+  ASSERT_LE(max_offdiag(oca_spgf), eps);
   // compare to manual block-sparse OCA Green's function evaluator
   auto oca_gf_manual = OCA_gf_bs(D.hyb.poles, itops, beta, G_bdof, Fq);
   ASSERT_LE(nda::max_element(nda::abs(oca_spgf - oca_gf_manual)), eps);
@@ -220,6 +245,8 @@ TEST(two_fermions, const_hyb_spgf) {
   third_order_spgf_ana = third_order_spgf_ana / 16.0;
   ASSERT_LE(nda::max_element(nda::abs(third_order_spgf(_, 0, 0) - 2 * third_order_spgf_ana)), eps);
   ASSERT_LE(nda::max_element(nda::abs(third_order_spgf(_, 1, 1) - 2 * third_order_spgf_ana)), eps);
+  ASSERT_EQ(third_order_spgf.extent(1), 2);
+  ASSERT_LE(max_offdiag(third_order_spgf), eps);
 }
 
 /**
@@ -264,6 +291,11 @@ TEST(two_fermions, one_hyb_pole_se) {
   auto block_N = nda::zeros<int>(ad.n_subspaces());
   for (int b = 0; b < ad.n_subspaces(); ++b) { block_N(b) = __builtin_popcountl(ad.get_fock_states(b)[0]); }
 
+  // Check that the maximum block dimension is 2
+  int max_block_dim = 0;
+  for (int b = 0; b < ad.n_subspaces(); ++b) { max_block_dim = std::max<int>(max_block_dim, ad.get_fock_states(b).size()); }
+  ASSERT_EQ(max_block_dim, 2);
+
   // Set up diagram evaluator for self-energy evaluation
   DiagramEvaluator D(hyb_poles, hyb_coeffs, G_ppsc[0].mesh(), ad);
 
@@ -305,6 +337,8 @@ TEST(two_fermions, one_hyb_pole_se) {
     auto nca_se_dense_block = get_tensor_in_atom_diag_subspace(nca_se_dense, b, ad);
     ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_dense_block)), eps);
   }
+  ASSERT_EQ(nca_se_dense.extent(1), 4);
+  ASSERT_LE(max_offdiag(nca_se_dense), eps);
 
   // ----- OCA test -----
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
@@ -342,6 +376,8 @@ TEST(two_fermions, one_hyb_pole_se) {
     auto oca_se_dense_block = get_tensor_in_atom_diag_subspace(oca_se_dense, b, ad);
     ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_dense_block)), eps);
   }
+  ASSERT_EQ(oca_se_dense.extent(1), 4);
+  ASSERT_LE(max_offdiag(oca_se_dense), eps);
 
   // ----- third-order test -----
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
