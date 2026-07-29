@@ -26,10 +26,10 @@ using c2py::operator""_a;
 using _c2py_cls_0                                            = fastdiagram;
 template <> constexpr bool c2py::is_wrapped<_c2py_cls_0>     = true;
 template <> inline constexpr auto c2py::tp_name<_c2py_cls_0> = "triqs_xca.impurity.Fastdiagram";
-static auto _c2py_init_0                                     = c2py::dispatcher_c_kw_t{c2py::c_constructor<
-                                       _c2py_cls_0, double, double, cppdlr::imtime_ops,
-                                       nda::basic_array<std::complex<double>, 3, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>>,
-                                       nda::basic_array<std::complex<double>, 3, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>>>(
+static const auto _c2py_init_0                               = c2py::dispatcher_c_kw_t{c2py::c_constructor<
+   _c2py_cls_0, double, double, cppdlr::imtime_ops,
+   nda::basic_array<std::complex<double>, 3, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>>,
+   nda::basic_array<std::complex<double>, 3, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>>>(
    "beta", "lambda", "itops", "F", "F_dag")};
 template <> constexpr initproc c2py::tp_init<_c2py_cls_0>    = c2py::pyfkw_constructor<_c2py_init_0>;
 template <>
