@@ -250,6 +250,231 @@ TEST(two_fermions, const_hyb_spgf) {
 }
 
 /**
+ * @brief Test evaluation of the self-energy for a two-fermion system with an off-diagonal (Hermitian) hybridization
+ *
+ * @details Same model as two_fermions.const_hyb_se (U = mu = 0, a single hybridization pole at omega = 0, so that
+ * Delta(tau) = -M/2 is tau-independent), except that the orbital-space amplitude matrix is the Hermitian
+ * M = {{1, alpha}, {alpha, 1}} instead of I_2. The closed forms are derived in the "Off-diagonal (Hermitian)
+ * hybridization" section of examples/two_fermion_analytical_solutions.ipynb. For Hermitian M the self-energy stays
+ * diagonal in the Fock basis at every order (the off-diagonal entries an off-diagonal hybridization generates are
+ * proportional to the antisymmetric part M_ud - M_du, which vanishes here), with the same entry in every occupation
+ * sector. NCA is linear in Delta and only sees M_ll = 1, so it is unchanged from the diagonal case; OCA and third
+ * order pick up alpha^2 corrections. Setting alpha = 0 reproduces the two_fermions.const_hyb_se references.
+ */
+TEST(two_fermions, hermitian_hyb_se) {
+  double beta   = 2.0;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-12;
+  auto dlr_rf   = build_dlr_rf(Lambda, eps);
+  auto itops    = imtime_ops(Lambda, dlr_rf);
+  int r         = itops.rank();
+
+  // One pole at zero gives the constant hybridization; the amplitude matrix is overwritten below
+  auto two_fermion_model = two_fermion_model_helper(beta, Lambda, eps, 0.0, 0.0, 0.0);
+  auto &hyb_coeffs       = two_fermion_model.hyb_coeffs;
+  auto &hyb_poles        = two_fermion_model.hyb_poles;
+  auto &ad               = two_fermion_model.ad;
+  auto &G_ppsc           = two_fermion_model.G_ppsc;
+  auto &G_bdof           = two_fermion_model.G_bdof;
+
+  // Replace the identity amplitude matrix by the Hermitian M = {{1, alpha}, {alpha, 1}}
+  double alpha        = 0.4;
+  hyb_coeffs(0, 0, 1) = alpha;
+  hyb_coeffs(0, 1, 0) = alpha;
+
+  auto dlr_it = itops.get_itnodes();
+  auto G0_ana = nda::zeros<double>(r);
+  double ln4  = std::numbers::ln2 * 2;
+  for (int i = 0; i < r; ++i) {
+    double t  = rel2abs(dlr_it(i));
+    G0_ana(i) = -exp(-t * ln4);
+  }
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) { ASSERT_LE(nda::max_element(nda::abs(G_bdof.get_block(b)(_, 0, 0) - G0_ana)), eps); }
+
+  DiagramEvaluator D(hyb_poles, hyb_coeffs, G_ppsc[0].mesh(), ad);
+
+  // ----- NCA test -----
+  nda::array<int, 2> topology1 = {{0, 1}};
+  auto nca_se                  = D.compute_self_energy(G_ppsc, topology1);
+  auto nca_se_ana              = nda::zeros<double>(r);
+  nca_se_ana                   = -G0_ana; // independent of alpha
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) {
+    auto nca_se_block = nca_se[b].data();
+    for (int d = 0; d < nca_se_block.extent(1); ++d) { ASSERT_LE(nda::max_element(nda::abs(nca_se_block(_, d, d) - nca_se_ana)), eps); }
+    ASSERT_LE(max_offdiag(nca_se_block), eps);
+  }
+  // compare to manual block-sparse NCA
+  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
+  auto nca_se_manual        = NCA_bs(D.hyb.values, D.hyb.values_reflect, G_bdof, Fq);
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) {
+    // NCA_bs and DiagramEvaluator::compute_self_energy use opposite overall sign conventions for the
+    // self-energy (cf. the "-Sigma_Diagram_calc" negation in test_block_sparse_NCA_manual.cpp), hence "+".
+    ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_manual.get_block(b))), eps);
+  }
+  // compare to manual dense NCA
+  auto dlr_it_abs               = cppdlr::rel2abs(dlr_it);
+  auto H_dense                  = get_full_h_atomic(ad);
+  auto Gt_dense                 = Hmat_to_Gtmat(H_dense, beta, dlr_it_abs);
+  auto [Fs_dense, F_dags_dense] = get_operators_dense(ad);
+  auto nca_se_dense             = NCA_dense(D.hyb.values, D.hyb.values_reflect, Gt_dense, Fs_dense, F_dags_dense);
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) {
+    auto nca_se_dense_block = get_tensor_in_atom_diag_subspace(nca_se_dense, b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_dense_block)), eps);
+  }
+  ASSERT_EQ(nca_se_dense.extent(1), 4);
+  ASSERT_LE(max_offdiag(nca_se_dense), eps);
+
+  // ----- OCA test -----
+  // The alpha = 0 value carries a factor -1; the Hermitian M replaces it by alpha^2 - 1
+  nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
+  auto oca_se                  = D.compute_self_energy(G_ppsc, topology2);
+  auto oca_se_ana              = nda::zeros<double>(r);
+  for (int i = 0; i < r; ++i) {
+    double tau    = beta * rel2abs(dlr_it(i));
+    oca_se_ana(i) = 0.25 * (alpha * alpha - 1) * exp(-tau / beta * ln4) * tau * tau;
+  }
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) {
+    auto oca_se_block = oca_se[b].data();
+    for (int d = 0; d < oca_se_block.extent(1); ++d) { ASSERT_LE(nda::max_element(nda::abs(oca_se_block(_, d, d) - oca_se_ana)), eps); }
+    ASSERT_LE(max_offdiag(oca_se_block), eps);
+  }
+  // compare to manual block-sparse OCA
+  auto oca_se_manual = OCA_bs(D.hyb.values, D.hyb.poles, itops, beta, G_bdof, Fq);
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) {
+    // Unlike NCA (odd order), OCA (even order) does not need the sign flip; the (-1) per hybridization
+    // line in NCA_bs/OCA_bs cancels against the extra line at second order.
+    ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_manual.get_block(b))), eps);
+  }
+  // compare to manual dense OCA
+  auto oca_se_dense =
+     OCA_dense(D.hyb.values, D.hyb.coeffs, D.hyb.values_reflect, D.hyb.coeffs, D.hyb.poles, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) {
+    auto oca_se_dense_block = get_tensor_in_atom_diag_subspace(oca_se_dense, b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_dense_block)), eps);
+  }
+  ASSERT_EQ(oca_se_dense.extent(1), 4);
+  ASSERT_LE(max_offdiag(oca_se_dense), eps);
+
+  // ----- third-order test -----
+  // The alpha = 0 value carries a factor 1/3 (relative to tau^4 / 32); the Hermitian M replaces it by alpha^2 + 1/3
+  nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
+  auto third_order_se          = D.compute_self_energy(G_ppsc, topology3);
+  auto third_order_se_ana      = nda::zeros<double>(r);
+  for (int i = 0; i < r; ++i) {
+    double tau            = beta * rel2abs(dlr_it(i));
+    third_order_se_ana(i) = (3 * alpha * alpha + 1) / 96.0 * exp(-tau / beta * ln4) * pow(tau, 4);
+  }
+  // third_order_se has three blocks: 1x1, 2x2, and 1x1. Check that all diagonal entries equal the
+  // analytical expression, and that the 2x2 block's off-diagonal entries vanish.
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) {
+    auto third_order_se_block = third_order_se[b].data();
+    for (int d = 0; d < third_order_se_block.extent(1); ++d) {
+      ASSERT_LE(nda::max_element(nda::abs(third_order_se_block(_, d, d) - third_order_se_ana)), eps);
+    }
+    ASSERT_LE(max_offdiag(third_order_se_block), eps);
+  }
+  ASSERT_EQ(third_order_se[1].data().extent(1), 2);
+}
+
+/**
+ * @brief Test evaluation of the single-particle Green's function for a two-fermion system with an off-diagonal
+ * (Hermitian) hybridization
+ *
+ * @details Same model as two_fermions.hermitian_hyb_se: U = mu = 0 and Delta(tau) = -M/2 with the Hermitian
+ * M = {{1, alpha}, {alpha, 1}}. Unlike the self-energy, the single-particle Green's function does acquire
+ * off-diagonal orbital entries here, linear in alpha; the closed forms are derived in the "Off-diagonal (Hermitian)
+ * hybridization" section of examples/two_fermion_analytical_solutions.ipynb. Setting alpha = 0 reproduces the
+ * two_fermions.const_hyb_spgf references.
+ */
+TEST(two_fermions, hermitian_hyb_spgf) {
+  double beta   = 2.0;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-12;
+  auto dlr_rf   = build_dlr_rf(Lambda, eps);
+  auto itops    = imtime_ops(Lambda, dlr_rf);
+  int r         = itops.rank();
+
+  auto two_fermion_model = two_fermion_model_helper(beta, Lambda, eps, 0.0, 0.0, 0.0);
+  auto &hyb_coeffs       = two_fermion_model.hyb_coeffs;
+  auto &hyb_poles        = two_fermion_model.hyb_poles;
+  auto &ad               = two_fermion_model.ad;
+  auto &G_ppsc           = two_fermion_model.G_ppsc;
+
+  double alpha        = 0.4;
+  hyb_coeffs(0, 0, 1) = alpha;
+  hyb_coeffs(0, 1, 0) = alpha;
+
+  auto dlr_it = itops.get_itnodes();
+
+  DiagramEvaluator D(hyb_poles, hyb_coeffs, G_ppsc[0].mesh(), ad);
+
+  // ----- NCA test -----
+  // First order has no hybridization line, so it does not see M at all
+  nda::array<int, 2> topology1 = {{0, 1}};
+  auto nca_spgf                = D.compute_single_ptcle_gf(G_ppsc, topology1);
+  auto nca_spgf_ana            = nda::zeros<double>(r, 2, 2);
+  nca_spgf_ana(_, 0, 0)        = 0.5;
+  nca_spgf_ana(_, 1, 1)        = 0.5;
+  ASSERT_LE(nda::max_element(nda::abs(nca_spgf - nca_spgf_ana)), eps);
+  // compare to manual block-sparse NCA Green's function evaluator
+  BlockDiagOpFun G_bdof(G_ppsc);
+  std::vector<nda::array<dcomplex, 3>> G_refl_blocks;
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) { G_refl_blocks.push_back(nda::make_regular(itops.reflect(G_bdof.get_block(b)))); }
+  nda::vector<int> G_zero_block_indices(G_bdof.get_num_block_cols());
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) { G_zero_block_indices(b) = G_bdof.get_zero_block_index(b); }
+  BlockDiagOpFun G_bdof_refl(G_refl_blocks, G_zero_block_indices);
+  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
+  auto nca_gf_manual        = NCA_gf_bs(G_bdof, G_bdof_refl, Fq);
+  ASSERT_LE(nda::max_element(nda::abs(nca_spgf - nca_gf_manual)), eps);
+  // compare to manual dense NCA Green's function evaluator
+  auto dlr_it_abs               = cppdlr::rel2abs(dlr_it);
+  auto H_dense                  = get_full_h_atomic(ad);
+  auto Gt_dense                 = Hmat_to_Gtmat(H_dense, beta, dlr_it_abs);
+  auto Gt_dense_refl            = itops.reflect(Gt_dense);
+  auto [Fs_dense, F_dags_dense] = get_operators_dense(ad);
+  auto nca_gf_dense             = NCA_gf_dense(Gt_dense, Gt_dense_refl, Fs_dense, F_dags_dense);
+  ASSERT_LE(nda::max_element(nda::abs(nca_spgf - nca_gf_dense)), eps);
+
+  // ----- OCA test -----
+  // g_aa = tau (beta - tau) / 4, g_ab = -alpha tau (beta - tau) / 4
+  nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
+  auto oca_spgf                = D.compute_single_ptcle_gf(G_ppsc, topology2);
+  auto oca_spgf_ana            = nda::zeros<double>(r, 2, 2);
+  for (int i = 0; i < r; ++i) {
+    double tau            = beta * rel2abs(dlr_it(i));
+    double diag           = 0.25 * tau * (beta - tau);
+    oca_spgf_ana(i, 0, 0) = diag;
+    oca_spgf_ana(i, 1, 1) = diag;
+    oca_spgf_ana(i, 0, 1) = -alpha * diag;
+    oca_spgf_ana(i, 1, 0) = -alpha * diag;
+  }
+  ASSERT_EQ(oca_spgf.extent(1), 2);
+  ASSERT_LE(nda::max_element(nda::abs(oca_spgf - oca_spgf_ana)), eps);
+  // compare to manual block-sparse OCA Green's function evaluator
+  auto oca_gf_manual = OCA_gf_bs(D.hyb.poles, itops, beta, G_bdof, Fq);
+  ASSERT_LE(nda::max_element(nda::abs(oca_spgf - oca_gf_manual)), eps);
+  // compare to manual dense OCA Green's function evaluator
+  auto oca_gf_dense = OCA_gf_dense(D.hyb.coeffs, D.hyb.coeffs, D.hyb.poles, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
+  ASSERT_LE(nda::max_element(nda::abs(oca_spgf - oca_gf_dense)), eps);
+
+  // ----- third-order test -----
+  // g_aa = (alpha^2 + 1) tau^2 (beta - tau)^2 / 32, g_ab = alpha tau^2 (beta - tau)^2 / 16
+  nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
+  auto third_order_spgf        = D.compute_single_ptcle_gf(G_ppsc, topology3);
+  auto third_order_spgf_ana    = nda::zeros<double>(r, 2, 2);
+  for (int i = 0; i < r; ++i) {
+    double tau                    = beta * rel2abs(dlr_it(i));
+    double base                   = tau * tau * (beta - tau) * (beta - tau);
+    third_order_spgf_ana(i, 0, 0) = (alpha * alpha + 1) * base / 32.0;
+    third_order_spgf_ana(i, 1, 1) = (alpha * alpha + 1) * base / 32.0;
+    third_order_spgf_ana(i, 0, 1) = alpha * base / 16.0;
+    third_order_spgf_ana(i, 1, 0) = alpha * base / 16.0;
+  }
+  ASSERT_EQ(third_order_spgf.extent(1), 2);
+  ASSERT_LE(nda::max_element(nda::abs(third_order_spgf - third_order_spgf_ana)), eps);
+}
+
+/**
  * @brief Test evaluation of the self-energy for a two-fermion system with a hybridization formed from a single pole
  *
  * @details This tests the evaluation of the first-, second-, and third-order self-energy diagrams,
