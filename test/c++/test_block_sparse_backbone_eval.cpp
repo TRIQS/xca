@@ -575,7 +575,14 @@ TEST(Backbone, OCA_BDOF_construct) {
   }
 }
 
-TEST(Backbone, spin_flip_fermion) {
+/**
+ * @brief Compare block-sparse and dense OCA self-energies for the spin-flip fermion model
+ *
+ * @param[in] use_particle_number_sym if true, the atom_diag subspaces are labeled by the particle
+ * number N, so that all field operators share a single symmetry set; if false, the subspaces come
+ * from autopartitioning alone and the field operators are spread over several symmetry sets.
+ */
+static void check_spin_flip_fermion(bool use_particle_number_sym) {
   double beta   = 2.0;
   double Lambda = 20.0 * beta;
   double eps    = 1.0e-6;
@@ -604,13 +611,16 @@ TEST(Backbone, spin_flip_fermion) {
   }
   for (int i = 0; i < norb; i++) { fop_set.insert("up", i); }
 
-  // Construct particle number operator
-  triqs::operators::many_body_operator_complex N;
-  for (int kap = 0; kap < norb; ++kap) { N += n("up", kap) + n("do", kap); }
-  std::vector<triqs::operators::many_body_operator_complex> sym_ops = {N};
-
-  // create atom_diag object
-  triqs::atom_diag::atom_diag<true> ad(H, fop_set, sym_ops);
+  // create atom_diag object, either from the particle number as a quantum number or by autopartitioning
+  auto ad = [&]() {
+    if (use_particle_number_sym) {
+      triqs::operators::many_body_operator_complex N;
+      for (int kap = 0; kap < norb; ++kap) { N += n("up", kap) + n("do", kap); }
+      std::vector<triqs::operators::many_body_operator_complex> sym_ops = {N};
+      return triqs::atom_diag::atom_diag<true>(H, fop_set, sym_ops);
+    }
+    return triqs::atom_diag::atom_diag<true>(H, fop_set);
+  }();
 
   // get blocks of Hamiltonian and compute noninteracting Green's function
   auto [H_blocks, H_block_inds] = get_hamiltonian_blocks(ad);
@@ -651,76 +661,9 @@ TEST(Backbone, spin_flip_fermion) {
   }
 }
 
-TEST(Backbone, spin_flip_fermion_sym_sets) {
-  double beta   = 2.0;
-  double Lambda = 20.0 * beta;
-  double eps    = 1.0e-6;
+TEST(Backbone, spin_flip_fermion) { check_spin_flip_fermion(true); }
 
-  // DLR generation
-  auto dlr_rf = build_dlr_rf(Lambda, eps);
-  auto itops  = imtime_ops(Lambda, dlr_rf);
-
-  int norb             = 2;
-  int nn               = 2 * norb; // 2 * number of orbitals
-  auto [hyb, hyb_refl] = discrete_bath_spin_flip_helper(beta, Lambda, eps, nn);
-  auto hyb_coeffs      = itops.vals2coefs(hyb); // hybridization DLR coeffs
-  hyb_refl             = hyb;
-  auto hyb_refl_coeffs = hyb_coeffs;
-
-  // set up Hamiltonian
-  triqs::operators::many_body_operator_complex H;
-  triqs::atom_diag::fundamental_operator_set fop_set;
-
-  double mu = 0.25;
-  double U  = 1.0;
-  double V  = 0.1;
-  for (int i = 0; i < norb; i++) {
-    H += U * n("up", i) * n("do", i) + mu * (n("up", i) + n("do", i)) + V * (c_dag("up", i) * c("do", i) + c_dag("do", i) * c("up", i));
-    fop_set.insert("do", i);
-  }
-  for (int i = 0; i < norb; i++) { fop_set.insert("up", i); }
-
-  // create atom_diag object
-  triqs::atom_diag::atom_diag<true> ad(H, fop_set);
-
-  // get blocks of Hamiltonian and compute noninteracting Green's function
-  auto [H_blocks, H_block_inds] = get_hamiltonian_blocks(ad);
-  auto dlr_it                   = itops.get_itnodes();
-  auto dlr_it_abs               = cppdlr::rel2abs(dlr_it);
-  auto Gt                       = ad_to_atom_prop(ad, beta, itops);
-  auto Gt_block_sizes           = Gt.get_block_sizes();
-
-  // generate creation/annihilation operators in block-sparse storage
-  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
-
-  // set up backbone and diagram evaluator
-  nda::array<int, 2> topology = {{0, 2}, {1, 3}};
-  auto B                      = Backbone(topology, nn);
-  DiagramEvaluator D(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), hyb_coeffs, Fq);
-  auto start = std::chrono::high_resolution_clock::now();
-  // D.eval_self_energy(B);
-  auto result_gf                         = D.compute_self_energy(Gt, topology);
-  auto end                               = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> duration = end - start;
-  auto result                            = BlockDiagOpFun(result_gf);
-
-  // get dense Gt, field operators
-  auto H_mat    = get_full_h_atomic(ad);
-  auto Gt_dense = Hmat_to_Gtmat(H_mat, beta, dlr_it_abs);
-  auto Fset     = get_operators_dense(ad, hyb_coeffs);
-
-  DenseDiagramEvaluator D2(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
-  start = std::chrono::high_resolution_clock::now();
-  D2.eval_self_energy(Gt_dense, B);
-  end               = std::chrono::high_resolution_clock::now();
-  duration          = end - start;
-  auto result_dense = D2.Sigma;
-
-  for (int i = 0; i < Gt_block_sizes.size(); i++) {
-    auto result_dense_block = get_tensor_in_atom_diag_subspace(result_dense, i, ad);
-    ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense_block)), eps);
-  }
-}
+TEST(Backbone, spin_flip_fermion_sym_sets) { check_spin_flip_fermion(false); }
 
 TEST(Backbone, OCA_gf_construct) {
   double beta   = 2.0;
