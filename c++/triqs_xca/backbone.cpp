@@ -263,11 +263,12 @@ void Backbone::set_flat_index(int flat_ix, nda::vector_const_view<double> hyb_po
 
   this->f_ix = flat_ix;
   int p      = hyb_poles.size();
-  int o_ix   = f_ix % o_ix_max; // orbital indices
-  f_ix /= o_ix_max;
+  int rem    = flat_ix;
+  int o_ix   = rem % o_ix_max; // orbital indices
+  rem /= o_ix_max;
   int p_ix_max = static_cast<int>(pow(p, m - 1));
-  int p_ix     = f_ix % p_ix_max; // pole indices
-  int fb_ix    = f_ix / p_ix_max; // directions
+  int p_ix     = rem % p_ix_max; // pole indices
+  int fb_ix    = rem / p_ix_max; // directions
 
   set_directions(fb_ix);
   set_pole_inds(p_ix, hyb_poles);
@@ -354,11 +355,12 @@ void CorrelatorBackbone::set_flat_index(int flat_ix, nda::vector_const_view<doub
 
   this->f_ix = flat_ix;
   int p      = hyb_poles.size();
-  int o_ix   = f_ix % o_ix_max; // orbital indices
-  f_ix /= o_ix_max;
+  int rem    = flat_ix;
+  int o_ix   = rem % o_ix_max; // orbital indices
+  rem /= o_ix_max;
   int p_ix_max = static_cast<int>(pow(p, m - 1));
-  int p_ix     = f_ix % p_ix_max; // pole indices
-  int fb_ix    = f_ix / p_ix_max; // directions
+  int p_ix     = rem % p_ix_max; // pole indices
+  int fb_ix    = rem / p_ix_max; // directions
 
   set_directions(fb_ix);
   set_pole_inds(p_ix, hyb_poles);
