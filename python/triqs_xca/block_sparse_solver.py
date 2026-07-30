@@ -137,7 +137,8 @@ class BlockSparseSolver(object):
         #np.testing.assert_array_almost_equal(np.array([ float(t) for t in self.mesh_tau]), ito.get_itnodes() * beta)
         np.testing.assert_array_almost_equal(self.mesh_tau.dlr_freq, ito.get_rfnodes())
 
-        self.dysons = [DysonItPPSC(self.beta, ito, G0_block.data) for _, G0_block in self.G0]
+        self._ito = ito
+        self.dysons = None  # deferred: sysmat allocated on first call to solve_dyson
     
         self.timer.stop()
         self.timer.stop()
@@ -575,6 +576,9 @@ class BlockSparseSolver(object):
         assert type(Sigma) is BlockGf, 'Sigma must be a BlockGf'
 
         G = self.get_zero_pseudo_particle_propagator()
+
+        if self.dysons is None:
+            self.dysons = [DysonItPPSC(self.beta, self._ito, G0_block.data) for _, G0_block in self.G0]
 
         for dyson, (bidx, sigma_b) in zip(self.dysons, Sigma):
             #if is_root(): print(f'solve_dyson: block {bidx}, sigma_b.data.shape = {sigma_b.data.shape}')
