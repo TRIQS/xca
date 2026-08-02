@@ -189,7 +189,7 @@ def solve_slater_condon_bethe_half_filling(
     print(f'N_tot_exp = {S.N_tot_exp}')
 
     if is_root():
-        filename = f'data_l_{S.l}_order_{S.order}_beta_{S.beta}.h5'
+        filename = f'data_l_{S.l}_order_{S.order}_beta_{S.beta}_eps_{eps:g}.h5'
         with HDFArchive(filename, 'w') as ar:
             ar['S'] = S
 
@@ -269,7 +269,7 @@ def one_se_iter_slater_condon_bethe_half_filling(
     # elapsed = t_end - t_start
 
     if is_root():
-        filename = f"{'dense' if dense else 'bs'}_self_energy_l_{l}_order_{order}_beta_{S.beta}.h5"
+        filename = f"{'dense' if dense else 'bs'}_self_energy_l_{l}_order_{order}_beta_{S.beta}_eps_{eps:g}.h5"
         output_filenames = [filename]
         # [PROFILING ADDITION] For MPI runs, also write per-rank HDF5 outputs to profile individual processes
         if comm.Get_size() > 1:
@@ -280,6 +280,7 @@ def one_se_iter_slater_condon_bethe_half_filling(
             with HDFArchive(output_filename, 'w') as ar:
                 ar['l'] = l
                 ar['order'] = order
+                ar['eps'] = eps
                 # [PROFILING ADDITION] Store rank metadata for MPI profiling
                 ar['rank'] = rank
                 ar['comm_size'] = comm.Get_size()
@@ -347,10 +348,11 @@ def one_spgf_iter_slater_condon_bethe_half_filling(
     elapsed = t_end - t_start
 
     if is_root():
-        filename = f'{'dense' if dense else 'bs'}_spgf_l_{l}_order_{order}_beta_{S.beta}.h5'
+        filename = f'{'dense' if dense else 'bs'}_spgf_l_{l}_order_{order}_beta_{S.beta}_eps_{eps:g}.h5'
         with HDFArchive(filename, 'w') as ar:
             ar['l'] = l
             ar['order'] = order
+            ar['eps'] = eps
             ar['G'] = spgf
             ar['elapsed_time'] = elapsed
 
