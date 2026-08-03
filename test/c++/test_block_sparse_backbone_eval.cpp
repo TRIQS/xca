@@ -43,38 +43,14 @@ using triqs_xca::atom_diag::get_operators_dense;
 using triqs_xca::atom_diag::get_tensor_in_atom_diag_subspace;
 
 /**
- * @brief Assert that two Backbone objects describe the same diagram
- */
-void expect_same_backbone(Backbone &A, Backbone &B) {
-  ASSERT_EQ(A.m, B.m);
-  for (int i = 0; i < A.m; ++i) { ASSERT_EQ(A.get_fb(i), B.get_fb(i)); }
-  for (int i = 0; i < A.m - 1; ++i) {
-    ASSERT_EQ(A.get_pole_ind(i), B.get_pole_ind(i));
-    ASSERT_EQ(A.get_prefactor_Ksign(i), B.get_prefactor_Ksign(i));
-    ASSERT_EQ(A.get_prefactor_Kexp(i), B.get_prefactor_Kexp(i));
-  }
-  ASSERT_EQ(A.prefactor_sign, B.prefactor_sign);
-  for (int v = 0; v < 2 * A.m; ++v) {
-    ASSERT_EQ(A.has_vertex_bar(v), B.has_vertex_bar(v));
-    ASSERT_EQ(A.has_vertex_dag(v), B.has_vertex_dag(v));
-    ASSERT_EQ(A.get_vertex_hyb_ind(v), B.get_vertex_hyb_ind(v));
-    ASSERT_EQ(A.get_vertex_Ksign(v), B.get_vertex_Ksign(v));
-    ASSERT_EQ(A.get_vertex_orb(v), B.get_vertex_orb(v));
-  }
-  for (int e = 0; e < 2 * A.m - 1; ++e) {
-    for (int p = 0; p < A.m - 1; ++p) { ASSERT_EQ(A.get_edge(e, p), B.get_edge(e, p)); }
-  }
-}
-
-/**
  * @brief Test creation of a Backbone object
  *
  * @details For a fixed third-order topology and a fixed pair of pole indices,
  * this loops over all 2^m line-direction indices and checks, for each of them,
  * that (i) the generated vertices, edges and prefactor agree with values derived
- * by hand from the diagram rules; (ii) the three ways of specifying a backbone
+ * by hand from the diagram rules; (ii) all three ways of specifying a backbone
  * (index vectors, per-component integer indices, and a single flat index) give
- * the same diagram; and (iii) resetting a Backbone and setting it again
+ * that same diagram; and (iii) resetting a Backbone and setting it again
  * reproduces a freshly constructed one, which is how the diagram loop in the
  * evaluators reuses a single object.
  *
@@ -186,6 +162,7 @@ TEST(Backbone, indexing) {
         for (int p = 0; p < m - 1; ++p) { ASSERT_EQ(X.get_edge(e, p), exp_edges(e, p)); }
       }
       for (int i = 0; i < m - 1; ++i) {
+        ASSERT_EQ(X.get_pole_ind(i), pole_inds(i));
         ASSERT_EQ(X.get_prefactor_Ksign(i), exp_pKsign(i));
         ASSERT_EQ(X.get_prefactor_Kexp(i), exp_pKexp(i));
       }
@@ -211,13 +188,13 @@ TEST(Backbone, indexing) {
     B2.set_directions(fb_ix);
     B2.set_pole_inds(p_ix, dlr_rf);
     B2.set_orb_inds(o_ix);
-    expect_same_backbone(B, B2);
+    expect_generated(B2);
 
     // --- Check that setting the indices from a single flat index gives the same diagram ---
     int f_ix = o_ix + p_ix * n * n + fb_ix * n * n * r * r;
     auto B3  = Backbone(topology, n);
     B3.set_flat_index(f_ix, dlr_rf);
-    expect_same_backbone(B, B3);
+    expect_generated(B3);
     ASSERT_EQ(B3.get_flat_index(), f_ix);
   }
 }
@@ -225,7 +202,8 @@ TEST(Backbone, indexing) {
 /**
  * @brief Test computation of several diagrams for a spinless fermion with a constant hybridization
  *
- * @details This tests the evaluation of the first-, second-, and third-order self-energy diagrams.
+ * @details This tests the evaluation of the first-, second-, and third-order self-energy diagrams by comparing analytical calculations carried out 
+ * in examples/one_fermion_analytical_solutions.ipynb to the results of calls to the DiagramEvaluator compute_self_energy routine.
  */
 TEST(Backbone, one_fermion_three_orders_const_hyb) {
   // Generate DLR imaginary-time object
@@ -282,6 +260,17 @@ TEST(Backbone, one_fermion_three_orders_const_hyb) {
     ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_dense_block)), eps);
   }
   ASSERT_LE(max_offdiag(nca_se_dense), eps);
+  // Compare with the dense diagram evaluator, which sums the same backbones as the block-sparse one but
+  // over the full Hilbert space, so its self-energy carries the same overall sign convention.
+  std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> G0_dense_blocks{triqs::gfs::gf<triqs::mesh::dlr_imtime>(G0_ppsc[0].mesh(), Gt_dense)};
+  auto G0_ppsc_dense = triqs::gfs::block_gf<triqs::mesh::dlr_imtime>(G0_dense_blocks);
+  DenseDiagramEvaluator D_dense(hyb_poles, hyb_coeffs, G0_ppsc[0].mesh(), ad);
+  auto nca_se_dde = D_dense.compute_self_energy(G0_ppsc_dense, topology1);
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    auto nca_se_dde_block = get_tensor_in_atom_diag_subspace(nca_se_dde[0].data(), b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() - nca_se_dde_block)), eps);
+  }
+  ASSERT_LE(max_offdiag(nca_se_dde[0].data()), eps);
 
   // ----- OCA test -----
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
@@ -303,6 +292,13 @@ TEST(Backbone, one_fermion_three_orders_const_hyb) {
     ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_dense_block)), eps);
   }
   ASSERT_LE(max_offdiag(oca_se_dense), eps);
+  // Compare with the dense diagram evaluator
+  auto oca_se_dde = D_dense.compute_self_energy(G0_ppsc_dense, topology2);
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    auto oca_se_dde_block = get_tensor_in_atom_diag_subspace(oca_se_dde[0].data(), b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_dde_block)), eps);
+  }
+  ASSERT_LE(max_offdiag(oca_se_dde[0].data()), eps);
 
   // ----- third-order test -----
   nda::array<int, 2> topology = {{0, 3}, {1, 4}, {2, 5}};
@@ -319,6 +315,13 @@ TEST(Backbone, one_fermion_three_orders_const_hyb) {
   }
   ASSERT_LE(nda::max_element(nda::abs(third_order_se[0].data()(_, 0, 0) - third_order_se_ana)), eps);
   ASSERT_LE(nda::max_element(nda::abs(third_order_se[1].data()(_, 0, 0) - third_order_se_ana)), eps);
+  // Compare with the dense diagram evaluator
+  auto third_order_se_dde = D_dense.compute_self_energy(G0_ppsc_dense, topology);
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    auto third_order_se_dde_block = get_tensor_in_atom_diag_subspace(third_order_se_dde[0].data(), b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(third_order_se[b].data() - third_order_se_dde_block)), eps);
+  }
+  ASSERT_LE(max_offdiag(third_order_se_dde[0].data()), eps);
 }
 
 /**
@@ -385,6 +388,17 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
     ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_dense_block)), eps);
   }
   ASSERT_LE(max_offdiag(nca_se_dense), eps);
+  // compare with the dense diagram evaluator, which sums the same backbones as the block-sparse one but
+  // over the full Hilbert space, so its self-energy carries the same overall sign convention
+  std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> G0_dense_blocks{triqs::gfs::gf<triqs::mesh::dlr_imtime>(G0_ppsc[0].mesh(), Gt0_dense)};
+  auto G0_ppsc_dense = triqs::gfs::block_gf<triqs::mesh::dlr_imtime>(G0_dense_blocks);
+  DenseDiagramEvaluator D_dense(hyb_poles, hyb_coeffs, G0_ppsc[0].mesh(), ad);
+  auto nca_se_dde = D_dense.compute_self_energy(G0_ppsc_dense, topology1);
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    auto nca_se_dde_block = get_tensor_in_atom_diag_subspace(nca_se_dde[0].data(), b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() - nca_se_dde_block)), eps);
+  }
+  ASSERT_LE(max_offdiag(nca_se_dde[0].data()), eps);
 
   // OCA
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
@@ -406,6 +420,13 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
     ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_dense_block)), eps);
   }
   ASSERT_LE(max_offdiag(oca_se_dense), eps);
+  // compare with the dense diagram evaluator
+  auto oca_se_dde = D_dense.compute_self_energy(G0_ppsc_dense, topology2);
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    auto oca_se_dde_block = get_tensor_in_atom_diag_subspace(oca_se_dde[0].data(), b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_dde_block)), eps);
+  }
+  ASSERT_LE(max_offdiag(oca_se_dde[0].data()), eps);
 
   // third order
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
@@ -423,6 +444,13 @@ TEST(Backbone, one_fermion_three_orders_hyb_one_pole) {
   }
   ASSERT_LE(nda::max_element(nda::abs(third_order_se_ana(_, 0) - third_order_se[0].data()(_, 0, 0))), eps);
   ASSERT_LE(nda::max_element(nda::abs(third_order_se_ana(_, 1) - third_order_se[1].data()(_, 0, 0))), eps);
+  // compare with the dense diagram evaluator
+  auto third_order_se_dde = D_dense.compute_self_energy(G0_ppsc_dense, topology3);
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    auto third_order_se_dde_block = get_tensor_in_atom_diag_subspace(third_order_se_dde[0].data(), b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(third_order_se[b].data() - third_order_se_dde_block)), eps);
+  }
+  ASSERT_LE(max_offdiag(third_order_se_dde[0].data()), eps);
 }
 
 /**
@@ -518,6 +546,17 @@ TEST(Backbone, one_fermion_three_orders_hyb_two_pole) {
     ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_dense_block)), eps);
   }
   ASSERT_LE(max_offdiag(nca_se_dense), eps);
+  // compare with the dense diagram evaluator, which sums the same backbones as the block-sparse one but
+  // over the full Hilbert space, so its self-energy carries the same overall sign convention
+  std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> G0_dense_blocks{triqs::gfs::gf<triqs::mesh::dlr_imtime>(G0_ppsc[0].mesh(), Gt0_dense)};
+  auto G0_ppsc_dense = triqs::gfs::block_gf<triqs::mesh::dlr_imtime>(G0_dense_blocks);
+  DenseDiagramEvaluator D_dense(hyb_poles, hyb_coeffs, G0_ppsc[0].mesh(), ad);
+  auto nca_se_dde = D_dense.compute_self_energy(G0_ppsc_dense, topology1);
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    auto nca_se_dde_block = get_tensor_in_atom_diag_subspace(nca_se_dde[0].data(), b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() - nca_se_dde_block)), eps);
+  }
+  ASSERT_LE(max_offdiag(nca_se_dde[0].data()), eps);
 
   // ----- OCA test -----
   // Still identically zero: the combinatorial argument (creation/annihilation operators must alternate
@@ -541,6 +580,13 @@ TEST(Backbone, one_fermion_three_orders_hyb_two_pole) {
     ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_dense_block)), eps);
   }
   ASSERT_LE(max_offdiag(oca_se_dense), eps);
+  // compare with the dense diagram evaluator
+  auto oca_se_dde = D_dense.compute_self_energy(G0_ppsc_dense, topology2);
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    auto oca_se_dde_block = get_tensor_in_atom_diag_subspace(oca_se_dde[0].data(), b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_dde_block)), eps);
+  }
+  ASSERT_LE(max_offdiag(oca_se_dde[0].data()), eps);
 
   // ----- third-order test -----
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
@@ -562,6 +608,14 @@ TEST(Backbone, one_fermion_three_orders_hyb_two_pole) {
     ASSERT_LE(std::abs(se00_val - se00_ref[k]), eps);
     ASSERT_LE(std::abs(se11_val - se11_ref[k]), eps);
   }
+
+  // compare with the dense diagram evaluator
+  auto third_order_se_dde = D_dense.compute_self_energy(G0_ppsc_dense, topology3);
+  for (int b = 0; b < G0_bdof.get_num_block_cols(); ++b) {
+    auto third_order_se_dde_block = get_tensor_in_atom_diag_subspace(third_order_se_dde[0].data(), b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(third_order_se[b].data() - third_order_se_dde_block)), eps);
+  }
+  ASSERT_LE(max_offdiag(third_order_se_dde[0].data()), eps);
 
   // ----- trapezoidal cross-check -----
   // Independent, in-repo verification of third_order_se, computed by direct trapezoidal quadrature

@@ -103,6 +103,17 @@ TEST(two_fermions, const_hyb_se) {
     ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() + nca_se_dense_block)), eps);
   }
   ASSERT_LE(max_offdiag(nca_se_dense), eps);
+  // compare to the dense diagram evaluator, which sums the same backbones as the block-sparse one but
+  // over the full Hilbert space, so its self-energy carries the same overall sign convention
+  std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> G_dense_blocks{triqs::gfs::gf<triqs::mesh::dlr_imtime>(G_ppsc[0].mesh(), Gt_dense)};
+  auto G_ppsc_dense = triqs::gfs::block_gf<triqs::mesh::dlr_imtime>(G_dense_blocks);
+  DenseDiagramEvaluator D_dense(hyb_poles, hyb_coeffs, G_ppsc[0].mesh(), ad);
+  auto nca_se_dde = D_dense.compute_self_energy(G_ppsc_dense, topology1);
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) {
+    auto nca_se_dde_block = get_tensor_in_atom_diag_subspace(nca_se_dde[0].data(), b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() - nca_se_dde_block)), eps);
+  }
+  ASSERT_LE(max_offdiag(nca_se_dde[0].data()), eps);
 
   // ----- OCA test -----
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
@@ -134,6 +145,13 @@ TEST(two_fermions, const_hyb_se) {
     ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_dense_block)), eps);
   }
   ASSERT_LE(max_offdiag(oca_se_dense), eps);
+  // compare to the dense diagram evaluator
+  auto oca_se_dde = D_dense.compute_self_energy(G_ppsc_dense, topology2);
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) {
+    auto oca_se_dde_block = get_tensor_in_atom_diag_subspace(oca_se_dde[0].data(), b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_dde_block)), eps);
+  }
+  ASSERT_LE(max_offdiag(oca_se_dde[0].data()), eps);
 
   // ----- third-order test -----
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
@@ -154,6 +172,13 @@ TEST(two_fermions, const_hyb_se) {
   }
   // Check that 2x2 block is indeed 2x2
   ASSERT_EQ(third_order_se[1].data().extent(1), 2);
+  // compare to the dense diagram evaluator
+  auto third_order_se_dde = D_dense.compute_self_energy(G_ppsc_dense, topology3);
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) {
+    auto third_order_se_dde_block = get_tensor_in_atom_diag_subspace(third_order_se_dde[0].data(), b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(third_order_se[b].data() - third_order_se_dde_block)), eps);
+  }
+  ASSERT_LE(max_offdiag(third_order_se_dde[0].data()), eps);
 }
 
 /**
@@ -211,6 +236,13 @@ TEST(two_fermions, const_hyb_spgf) {
   auto [Fs_dense, F_dags_dense] = get_operators_dense(ad);
   auto nca_gf_dense             = NCA_gf_dense(Gt_dense, Gt_dense_refl, Fs_dense, F_dags_dense);
   ASSERT_LE(nda::max_element(nda::abs(nca_spgf - nca_gf_dense)), eps);
+  // compare to the dense diagram evaluator, which sums the same backbones as the block-sparse one but
+  // over the full Hilbert space rather than block by block
+  std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> G_dense_blocks{triqs::gfs::gf<triqs::mesh::dlr_imtime>(G_ppsc[0].mesh(), Gt_dense)};
+  auto G_ppsc_dense = triqs::gfs::block_gf<triqs::mesh::dlr_imtime>(G_dense_blocks);
+  DenseDiagramEvaluator D_dense(hyb_poles, hyb_coeffs, G_ppsc[0].mesh(), ad);
+  auto nca_spgf_dde = D_dense.compute_single_ptcle_gf(G_ppsc_dense, topology1);
+  ASSERT_LE(nda::max_element(nda::abs(nca_spgf - nca_spgf_dde)), eps);
 
   // ----- OCA test -----
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
@@ -231,6 +263,9 @@ TEST(two_fermions, const_hyb_spgf) {
   // compare to manual dense OCA Green's function evaluator
   auto oca_gf_dense = OCA_gf_dense(D.hyb.coeffs, D.hyb.coeffs, D.hyb.poles, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
   ASSERT_LE(nda::max_element(nda::abs(oca_spgf - oca_gf_dense)), eps);
+  // compare to the dense diagram evaluator
+  auto oca_spgf_dde = D_dense.compute_single_ptcle_gf(G_ppsc_dense, topology2);
+  ASSERT_LE(nda::max_element(nda::abs(oca_spgf - oca_spgf_dde)), eps);
 
   // ----- third-order test -----
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
@@ -247,6 +282,9 @@ TEST(two_fermions, const_hyb_spgf) {
   ASSERT_LE(nda::max_element(nda::abs(third_order_spgf(_, 1, 1) - 2 * third_order_spgf_ana)), eps);
   ASSERT_EQ(third_order_spgf.extent(1), 2);
   ASSERT_LE(max_offdiag(third_order_spgf), eps);
+  // compare to the dense diagram evaluator
+  auto third_order_spgf_dde = D_dense.compute_single_ptcle_gf(G_ppsc_dense, topology3);
+  ASSERT_LE(nda::max_element(nda::abs(third_order_spgf - third_order_spgf_dde)), eps);
 }
 
 /**
@@ -323,6 +361,17 @@ TEST(two_fermions, hermitian_hyb_se) {
   }
   ASSERT_EQ(nca_se_dense.extent(1), 4);
   ASSERT_LE(max_offdiag(nca_se_dense), eps);
+  // compare to the dense diagram evaluator, which sums the same backbones as the block-sparse one but
+  // over the full Hilbert space, so its self-energy carries the same overall sign convention
+  std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> G_dense_blocks{triqs::gfs::gf<triqs::mesh::dlr_imtime>(G_ppsc[0].mesh(), Gt_dense)};
+  auto G_ppsc_dense = triqs::gfs::block_gf<triqs::mesh::dlr_imtime>(G_dense_blocks);
+  DenseDiagramEvaluator D_dense(hyb_poles, hyb_coeffs, G_ppsc[0].mesh(), ad);
+  auto nca_se_dde = D_dense.compute_self_energy(G_ppsc_dense, topology1);
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) {
+    auto nca_se_dde_block = get_tensor_in_atom_diag_subspace(nca_se_dde[0].data(), b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() - nca_se_dde_block)), eps);
+  }
+  ASSERT_LE(max_offdiag(nca_se_dde[0].data()), eps);
 
   // ----- OCA test -----
   // The alpha = 0 value carries a factor -1; the Hermitian M replaces it by alpha^2 - 1
@@ -354,6 +403,13 @@ TEST(two_fermions, hermitian_hyb_se) {
   }
   ASSERT_EQ(oca_se_dense.extent(1), 4);
   ASSERT_LE(max_offdiag(oca_se_dense), eps);
+  // compare to the dense diagram evaluator
+  auto oca_se_dde = D_dense.compute_self_energy(G_ppsc_dense, topology2);
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) {
+    auto oca_se_dde_block = get_tensor_in_atom_diag_subspace(oca_se_dde[0].data(), b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_dde_block)), eps);
+  }
+  ASSERT_LE(max_offdiag(oca_se_dde[0].data()), eps);
 
   // ----- third-order test -----
   // The alpha = 0 value carries a factor 1/3 (relative to tau^4 / 32); the Hermitian M replaces it by alpha^2 + 1/3
@@ -374,6 +430,13 @@ TEST(two_fermions, hermitian_hyb_se) {
     ASSERT_LE(max_offdiag(third_order_se_block), eps);
   }
   ASSERT_EQ(third_order_se[1].data().extent(1), 2);
+  // compare to the dense diagram evaluator
+  auto third_order_se_dde = D_dense.compute_self_energy(G_ppsc_dense, topology3);
+  for (int b = 0; b < G_bdof.get_num_block_cols(); ++b) {
+    auto third_order_se_dde_block = get_tensor_in_atom_diag_subspace(third_order_se_dde[0].data(), b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(third_order_se[b].data() - third_order_se_dde_block)), eps);
+  }
+  ASSERT_LE(max_offdiag(third_order_se_dde[0].data()), eps);
 }
 
 /**
@@ -434,6 +497,13 @@ TEST(two_fermions, hermitian_hyb_spgf) {
   auto [Fs_dense, F_dags_dense] = get_operators_dense(ad);
   auto nca_gf_dense             = NCA_gf_dense(Gt_dense, Gt_dense_refl, Fs_dense, F_dags_dense);
   ASSERT_LE(nda::max_element(nda::abs(nca_spgf - nca_gf_dense)), eps);
+  // compare to the dense diagram evaluator, which sums the same backbones as the block-sparse one but
+  // over the full Hilbert space rather than block by block
+  std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> G_dense_blocks{triqs::gfs::gf<triqs::mesh::dlr_imtime>(G_ppsc[0].mesh(), Gt_dense)};
+  auto G_ppsc_dense = triqs::gfs::block_gf<triqs::mesh::dlr_imtime>(G_dense_blocks);
+  DenseDiagramEvaluator D_dense(hyb_poles, hyb_coeffs, G_ppsc[0].mesh(), ad);
+  auto nca_spgf_dde = D_dense.compute_single_ptcle_gf(G_ppsc_dense, topology1);
+  ASSERT_LE(nda::max_element(nda::abs(nca_spgf - nca_spgf_dde)), eps);
 
   // ----- OCA test -----
   // g_aa = tau (beta - tau) / 4, g_ab = -alpha tau (beta - tau) / 4
@@ -456,6 +526,9 @@ TEST(two_fermions, hermitian_hyb_spgf) {
   // compare to manual dense OCA Green's function evaluator
   auto oca_gf_dense = OCA_gf_dense(D.hyb.coeffs, D.hyb.coeffs, D.hyb.poles, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
   ASSERT_LE(nda::max_element(nda::abs(oca_spgf - oca_gf_dense)), eps);
+  // compare to the dense diagram evaluator
+  auto oca_spgf_dde = D_dense.compute_single_ptcle_gf(G_ppsc_dense, topology2);
+  ASSERT_LE(nda::max_element(nda::abs(oca_spgf - oca_spgf_dde)), eps);
 
   // ----- third-order test -----
   // g_aa = (alpha^2 + 1) tau^2 (beta - tau)^2 / 32, g_ab = alpha tau^2 (beta - tau)^2 / 16
@@ -472,6 +545,9 @@ TEST(two_fermions, hermitian_hyb_spgf) {
   }
   ASSERT_EQ(third_order_spgf.extent(1), 2);
   ASSERT_LE(nda::max_element(nda::abs(third_order_spgf - third_order_spgf_ana)), eps);
+  // compare to the dense diagram evaluator
+  auto third_order_spgf_dde = D_dense.compute_single_ptcle_gf(G_ppsc_dense, topology3);
+  ASSERT_LE(nda::max_element(nda::abs(third_order_spgf - third_order_spgf_dde)), eps);
 }
 
 /**
@@ -564,6 +640,17 @@ TEST(two_fermions, one_hyb_pole_se) {
   }
   ASSERT_EQ(nca_se_dense.extent(1), 4);
   ASSERT_LE(max_offdiag(nca_se_dense), eps);
+  // compare to the dense diagram evaluator, which sums the same backbones as the block-sparse one but
+  // over the full Hilbert space, so its self-energy carries the same overall sign convention
+  std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> G_dense_blocks{triqs::gfs::gf<triqs::mesh::dlr_imtime>(G_ppsc[0].mesh(), Gt_dense)};
+  auto G_ppsc_dense = triqs::gfs::block_gf<triqs::mesh::dlr_imtime>(G_dense_blocks);
+  DenseDiagramEvaluator D_dense(hyb_poles, hyb_coeffs, G_ppsc[0].mesh(), ad);
+  auto nca_se_dde = D_dense.compute_self_energy(G_ppsc_dense, topology1);
+  for (int b = 0; b < ad.n_subspaces(); ++b) {
+    auto nca_se_dde_block = get_tensor_in_atom_diag_subspace(nca_se_dde[0].data(), b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(nca_se[b].data() - nca_se_dde_block)), eps);
+  }
+  ASSERT_LE(max_offdiag(nca_se_dde[0].data()), eps);
 
   // ----- OCA test -----
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
@@ -603,6 +690,13 @@ TEST(two_fermions, one_hyb_pole_se) {
   }
   ASSERT_EQ(oca_se_dense.extent(1), 4);
   ASSERT_LE(max_offdiag(oca_se_dense), eps);
+  // compare to the dense diagram evaluator
+  auto oca_se_dde = D_dense.compute_self_energy(G_ppsc_dense, topology2);
+  for (int b = 0; b < ad.n_subspaces(); ++b) {
+    auto oca_se_dde_block = get_tensor_in_atom_diag_subspace(oca_se_dde[0].data(), b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(oca_se[b].data() - oca_se_dde_block)), eps);
+  }
+  ASSERT_LE(max_offdiag(oca_se_dde[0].data()), eps);
 
   // ----- third-order test -----
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
@@ -626,6 +720,13 @@ TEST(two_fermions, one_hyb_pole_se) {
       }
     }
   }
+  // compare to the dense diagram evaluator
+  auto third_order_se_dde = D_dense.compute_self_energy(G_ppsc_dense, topology3);
+  for (int b = 0; b < ad.n_subspaces(); ++b) {
+    auto third_order_se_dde_block = get_tensor_in_atom_diag_subspace(third_order_se_dde[0].data(), b, ad);
+    ASSERT_LE(nda::max_element(nda::abs(third_order_se[b].data() - third_order_se_dde_block)), eps);
+  }
+  ASSERT_LE(max_offdiag(third_order_se_dde[0].data()), eps);
 }
 
 /**
@@ -683,6 +784,13 @@ TEST(two_fermions, one_hyb_pole_spgf) {
   auto [Fs_dense, F_dags_dense] = get_operators_dense(ad);
   auto nca_gf_dense             = NCA_gf_dense(Gt_dense, Gt_dense_refl, Fs_dense, F_dags_dense);
   ASSERT_LE(nda::max_element(nda::abs(nca_spgf - nca_gf_dense)), eps);
+  // compare to the dense diagram evaluator, which sums the same backbones as the block-sparse one but
+  // over the full Hilbert space rather than block by block
+  std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> G_dense_blocks{triqs::gfs::gf<triqs::mesh::dlr_imtime>(G_ppsc[0].mesh(), Gt_dense)};
+  auto G_ppsc_dense = triqs::gfs::block_gf<triqs::mesh::dlr_imtime>(G_dense_blocks);
+  DenseDiagramEvaluator D_dense(hyb_poles, hyb_coeffs, G_ppsc[0].mesh(), ad);
+  auto nca_spgf_dde = D_dense.compute_single_ptcle_gf(G_ppsc_dense, topology1);
+  ASSERT_LE(nda::max_element(nda::abs(nca_spgf - nca_spgf_dde)), eps);
 
   // ----- OCA test -----
   nda::array<int, 2> topology2 = {{0, 2}, {1, 3}};
@@ -706,6 +814,9 @@ TEST(two_fermions, one_hyb_pole_spgf) {
   // compare to manual dense OCA Green's function evaluator
   auto oca_gf_dense = OCA_gf_dense(D.hyb.coeffs, D.hyb.coeffs, D.hyb.poles, itops, beta, Gt_dense, Fs_dense, F_dags_dense);
   ASSERT_LE(nda::max_element(nda::abs(spgf - oca_gf_dense)), eps);
+  // compare to the dense diagram evaluator
+  auto oca_spgf_dde = D_dense.compute_single_ptcle_gf(G_ppsc_dense, topology2);
+  ASSERT_LE(nda::max_element(nda::abs(spgf - oca_spgf_dde)), eps);
 
   // ----- third-order test -----
   nda::array<int, 2> topology3 = {{0, 3}, {1, 4}, {2, 5}};
@@ -725,4 +836,7 @@ TEST(two_fermions, one_hyb_pole_spgf) {
   }
   ASSERT_LE(nda::max_element(nda::abs(third_order_spgf(_, 0, 1))), eps);
   ASSERT_LE(nda::max_element(nda::abs(third_order_spgf(_, 1, 0))), eps);
+  // compare to the dense diagram evaluator
+  auto third_order_spgf_dde = D_dense.compute_single_ptcle_gf(G_ppsc_dense, topology3);
+  ASSERT_LE(nda::max_element(nda::abs(third_order_spgf - third_order_spgf_dde)), eps);
 }
