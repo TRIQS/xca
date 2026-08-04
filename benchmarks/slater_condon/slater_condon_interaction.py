@@ -198,12 +198,14 @@ def solve_slater_condon_bethe_half_filling(
 def one_se_iter_slater_condon_bethe_half_filling(
         conserved_operators,
         dense=False,
+        eval_by_pairs=False,
         l=2, # d-orbitals angular momentum quantum number
         Fs=[3.0, 0.5, 0.3], # Slater-Condon interaction parameters for d-orbitals
         beta=1.0,
-        order=1, 
+        order=1,
         eps=1e-3,
         ppsc_tol=1e-2,
+        output_dir=None,
         ):
 
     section_times = {}
@@ -256,7 +258,10 @@ def one_se_iter_slater_condon_bethe_half_filling(
         # comm.Barrier()
         t_start = MPI.Wtime()
         t_section = perf_counter()
-        Sigma = S._BlockSparseSolver__eval_pseudo_particle_self_energy_order(S.G, order, connected=True)
+        if eval_by_pairs:
+            Sigma = S.eval_pseudo_particle_self_energy_order_by_pairs(S.G, order)
+        else:
+            Sigma = S._BlockSparseSolver__eval_pseudo_particle_self_energy_order(S.G, order, connected=True)
         section_times['block_sparse_eval'] = perf_counter() - t_section
         # comm.Barrier()
         t_end = MPI.Wtime()
@@ -269,7 +274,11 @@ def one_se_iter_slater_condon_bethe_half_filling(
     # elapsed = t_end - t_start
 
     if is_root():
-        filename = f"{'dense' if dense else 'bs'}_self_energy_l_{l}_order_{order}_beta_{S.beta}_eps_{eps:g}.h5"
+        prefix = 'pairs_bs' if (eval_by_pairs and not dense) else ('dense' if dense else 'bs')
+        filename = f"{prefix}_self_energy_l_{l}_order_{order}_beta_{S.beta}_eps_{eps:g}.h5"
+        if output_dir:
+            import os
+            filename = os.path.join(output_dir, filename)
         output_filenames = [filename]
         # [PROFILING ADDITION] For MPI runs, also write per-rank HDF5 outputs to profile individual processes
         if comm.Get_size() > 1:
