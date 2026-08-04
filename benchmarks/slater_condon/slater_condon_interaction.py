@@ -163,7 +163,10 @@ def _prepare_dense_triqs_solver(S, H, verbose=False):
     S.S.G_iaa = S.S.G0_iaa.copy()
 
     delta_iaa = S._TriqsSolver__from_blockgf_to_array(S.Delta_tau)
-    S.S.set_hybridization(delta_iaa, compress=True, verbose=verbose)
+    # Only initialize Deltat/Deltat_reflect/dlr_if_dense. The hyb_decomposition
+    # is called separately (lines 236-237 in one_se_iter) with the polefitting
+    # poles from polefitting_dlr_triqs.
+    S.S.fd.hyb_init(delta_iaa, poledlrflag=False)
 
     return delta_iaa
 
