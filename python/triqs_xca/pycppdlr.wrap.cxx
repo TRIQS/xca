@@ -27,22 +27,22 @@ using c2py::operator""_a;
 using _c2py_cls_0                                            = cppdlr::imtime_ops;
 template <> constexpr bool c2py::is_wrapped<_c2py_cls_0>     = true;
 template <> inline constexpr auto c2py::tp_name<_c2py_cls_0> = "triqs_xca.pycppdlr.ImTimeOps";
-static auto _c2py_init_0                                     = c2py::dispatcher_c_kw_t{
+static const auto _c2py_init_0                               = c2py::dispatcher_c_kw_t{
    c2py::c_constructor<
-                                          _c2py_cls_0, double,
-                                          nda::basic_array_view<const double, 1, nda::C_stride_layout, 'V', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>, bool>(
+      _c2py_cls_0, double,
+      nda::basic_array_view<const double, 1, nda::C_stride_layout, 'V', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>, bool>(
       "lambda", "dlr_rf", "symmetrize"),
    c2py::c_constructor<
-                                          _c2py_cls_0, double,
-                                          nda::basic_array_view<const double, 1, nda::C_stride_layout, 'V', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>>(
+      _c2py_cls_0, double,
+      nda::basic_array_view<const double, 1, nda::C_stride_layout, 'V', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>>(
       "lambda", "dlr_rf"),
    c2py::c_constructor<
-                                          _c2py_cls_0, double,
-                                          nda::basic_array_view<const double, 1, nda::C_stride_layout, 'V', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>,
-                                          nda::basic_array_view<const double, 1, nda::C_stride_layout, 'V', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>,
-                                          nda::basic_array_view<const double, 2, nda::C_stride_layout, 'M', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>,
-                                          nda::basic_array_view<const double, 2, nda::C_stride_layout, 'M', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>,
-                                          nda::basic_array_view<const int, 1, nda::C_stride_layout, 'V', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>>(
+      _c2py_cls_0, double,
+      nda::basic_array_view<const double, 1, nda::C_stride_layout, 'V', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>,
+      nda::basic_array_view<const double, 1, nda::C_stride_layout, 'V', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>,
+      nda::basic_array_view<const double, 2, nda::C_stride_layout, 'M', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>,
+      nda::basic_array_view<const double, 2, nda::C_stride_layout, 'M', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>,
+      nda::basic_array_view<const int, 1, nda::C_stride_layout, 'V', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>>(
       "lambda", "dlr_rf", "dlr_it", "cf2it", "it2cf_lu", "it2cf_piv"),
    c2py::c_constructor<_c2py_cls_0>()};
 template <> constexpr initproc c2py::tp_init<_c2py_cls_0>    = c2py::pyfkw_constructor<_c2py_init_0>;
