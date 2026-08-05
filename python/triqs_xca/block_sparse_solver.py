@@ -632,6 +632,37 @@ class BlockSparseSolver(object):
         return Sigma
     
     
+    def eval_pseudo_particle_self_energy_order_by_pairs(self, G, order, verbose=False):
+
+        Sigma = self.get_zero_pseudo_particle_propagator()
+
+        for sign, topology in all_connected_pairings(order):
+            if verbose and is_root(): print(f'SIGMA: O{order} topo {topology} sign {sign:+d}')
+            topology = np.array(topology, dtype=np.int32)
+            Sigma += pow(-1, order) * sign * \
+                self.__eval_pseudo_particle_self_energy_topology_loop_by_pairs(G, topology, verbose=verbose)
+
+        return Sigma
+
+
+    def __eval_pseudo_particle_self_energy_topology_loop_by_pairs(self, G, topology, verbose=False):
+
+        order = len(topology)
+        n_max = self.d.get_num_self_energy_backbones(topology)
+        # compute_self_energy_by_pairs(f_ix) evaluates both directions of the hybridization line
+        # connected to vertex 0, so pass only the f_ix whose own fb(0) == 0. That bit sits above the
+        # orbital and pole indices in the flat index, with stride n_max // 2**order.
+        n_p = n_max // (2**order)
+        n_vec = scatter_array_over_ranks(np.array([f for f in range(n_max) if (f // n_p) % 2 == 0], dtype=np.int32))
+
+        Sigma = self.get_zero_pseudo_particle_propagator()
+        Sigma = pow(-1, order+1) * self.d.compute_self_energy_by_pairs(G, topology, n_vec)
+        for bidx, sigma_b in Sigma:
+            sigma_b.data[:] = mpi.all_reduce(sigma_b.data)
+
+        return Sigma
+
+
     def eval_pseudo_particle_self_energy_topology(self, G, topology):
         order = len(topology)
         return self.d.compute_self_energy(G, topology)
