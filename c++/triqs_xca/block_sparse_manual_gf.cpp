@@ -104,7 +104,7 @@ nda::array<dcomplex, 3> OCA_gf_tpz(nda::array_const_view<dcomplex, 3> hyb_coeffs
     auto const &Flams = (fb) ? Fs(_, _, _) : F_dags(_, _, _);
     auto const &Fnus  = (fb) ? F_dags(_, _, _) : Fs(_, _, _);
     auto const &hyb   = (fb) ? hyb_eq : hyb_refl_eq;
-    int sfM           = 1; // (fb) ? 1 : -1;
+    int sfM           = (fb) ? 1 : -1; // minus sign for backward line
 
     for (int kap = 0; kap < n; kap++) {
       for (int mu = 0; mu < n; mu++) {

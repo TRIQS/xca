@@ -16,8 +16,6 @@ using cppdlr::imtime_ops;
 nda::array<dcomplex, 3> NCA_gf_dense(nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Gt_refl,
                                      nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags);
 
-// Following are TODO
-
 /**
  * @brief Evaluate NCA Green's function using block-sparse storage
  * @param[in] Gt pseudoparticle Green's function

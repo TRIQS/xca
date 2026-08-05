@@ -30,6 +30,8 @@ using triqs_xca::block_sparse::OCA_dense;
 using triqs_xca::block_sparse::OCA_gf_dense;
 
 using triqs_xca::block_sparse::eval_eq;
+using triqs_xca::block_sparse::OCA_gf_tpz;
+using triqs_xca::block_sparse::OCA_tpz;
 using triqs_xca::block_sparse::third_order_tpz;
 
 using triqs_xca::atom_diag::ad_to_atom_prop;
@@ -225,6 +227,26 @@ namespace {
     }
   }
 
+  // Hybridization at the DLR imaginary-time nodes of s.itops, which is what the trapezoidal routines
+  // interpolate onto their own equispaced grid. The beta/Lambda/eps overload of coefs2vals hardcodes a
+  // symmetrized grid internally, so the itops-based overload is the one that matches the rest of the setup.
+  nda::array<dcomplex, 3> hyb_at_dlr_nodes(OneFermionSetup &s) {
+    return triqs_xca::hyb::coefs2vals(s.beta, s.itops, s.model.hyb_coeffs, s.model.hyb_poles);
+  }
+
+  // Compare a block-sparse result against a dense result that already lives on the equispaced quadrature
+  // grid, re-sampling the former onto that grid. grid_range selects the points to compare, since the
+  // quadrature routines leave grid endpoints they never visit at zero.
+  void expect_blocks_match_eq(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> bs, nda::array_const_view<dcomplex, 3> dense_eq, OneFermionSetup &s,
+                              int n_quad, nda::range grid_range, double tol) {
+    for (int b = 0; b < s.nblocks(); ++b) {
+      SCOPED_TRACE("block " + std::to_string(b));
+      auto bs_eq       = eval_eq(s.itops, bs[b].data(), n_quad);
+      auto dense_block = get_tensor_in_atom_diag_subspace(dense_eq, b, s.model.ad);
+      EXPECT_LE(max_dev(bs_eq(grid_range, _, _), dense_block(grid_range, _, _)), tol);
+    }
+  }
+
   // Compare a diagonal entry of a block-sparse result against a closed-form reference.
   void expect_diag_close(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> bs, int b, nda::array_const_view<double, 1> ref,
                          OneFermionSetup const &s) {
@@ -307,6 +329,21 @@ namespace {
     expect_blocks_match(oca_se, oca_se_manual, s);
   }
 
+  /**
+   * @brief Compare an OCA self-energy with direct trapezoidal quadrature of the same diagram
+   *
+   * @details OCA_tpz shares none of the backbone enumeration or analytic DLR edge integration of the
+   * diagram evaluators, so this is an independent check of the machinery rather than of one evaluator
+   * against another. The tolerance is set by the quadrature error at n_quad, not by eps.
+   */
+  void check_oca_se_tpz(OneFermionSetup &s, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> oca_se, int n_quad = 20, double tol = 2.0e-3) {
+    SCOPED_TRACE("OCA self-energy vs trapezoidal quadrature");
+    auto oca_se_tpz = OCA_tpz(hyb_at_dlr_nodes(s), s.itops, s.beta, s.Gt_dense, s.Fs_dense, n_quad);
+    // OCA_tpz's outer loop starts at i = 1, leaving grid point 0 untouched, so skip it.
+    expect_blocks_match_eq(oca_se, oca_se_tpz, s, n_quad, nda::range(1, n_quad + 1), tol);
+    EXPECT_LE(max_offdiag(oca_se_tpz), tol);
+  }
+
   // Compare an NCA single-particle Green's function with the dense and block-sparse first-order-only evaluators.
   void check_nca_gf_manual(OneFermionSetup &s, nda::array_const_view<dcomplex, 3> nca_gf) {
     SCOPED_TRACE("manual NCA single-particle gf evaluators");
@@ -323,6 +360,30 @@ namespace {
     EXPECT_LE(max_dev(oca_gf, oca_gf_dense), s.eps);
     auto oca_gf_manual = OCA_gf_bs(s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
     EXPECT_LE(max_dev(oca_gf, oca_gf_manual), s.eps);
+  }
+
+  /**
+   * @brief Compare an OCA single-particle Green's function with direct trapezoidal quadrature of the diagram
+   *
+   * @details The single-particle analogue of check_oca_se_tpz. Unlike OCA_tpz, OCA_gf_tpz takes DLR
+   * coefficients rather than values and does not build the reflected hybridization itself, so the
+   * -reflect(hyb) convention that OCA_tpz applies internally is reproduced here.
+   *
+   * @note OCA vanishes identically for a single fermion, so in these tests both sides are zero. The
+   * agreement was checked separately on the two-fermion model of two_fermion_model_helper, where OCA does
+   * not vanish: the two agree to ~2e-4 at n_quad = 20, i.e. to quadrature error.
+   */
+  void check_oca_gf_tpz(OneFermionSetup &s, nda::array_const_view<dcomplex, 3> oca_gf, int n_quad = 20, double tol = 2.0e-3) {
+    SCOPED_TRACE("OCA single-particle gf vs trapezoidal quadrature");
+    auto hyb             = hyb_at_dlr_nodes(s);
+    auto hyb_coeffs      = s.itops.vals2coefs(hyb);
+    auto hyb_refl_coeffs = s.itops.vals2coefs(nda::make_regular(-s.itops.reflect(hyb)));
+    auto Gt_coeffs       = s.itops.vals2coefs(s.Gt_dense);
+    auto oca_gf_tpz      = OCA_gf_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
+    auto oca_gf_eq       = eval_eq(s.itops, oca_gf, n_quad);
+    // OCA_gf_tpz's outer loop runs over 1 <= i <= n_quad - 1, leaving both grid endpoints untouched.
+    auto interior = nda::range(1, n_quad);
+    EXPECT_LE(max_dev(oca_gf_eq(interior, _, _), oca_gf_tpz(interior, _, _)), tol);
   }
 
 } // namespace
@@ -347,6 +408,7 @@ TEST(one_fermion, const_hyb_se) {
   auto oca_se = check_se_diagram_evaluators(s, max_crossing_topology(2));
   expect_blocks_zero(oca_se, s); // OCA contribution should be identically zero
   check_oca_se_manual(s, oca_se);
+  check_oca_se_tpz(s, oca_se);
 
   // ----- third-order test -----
   // There are no manual third-order evaluators, so only the diagram evaluators are compared here.
@@ -383,6 +445,7 @@ TEST(one_fermion, one_hyb_pole_se) {
   auto oca_se = check_se_diagram_evaluators(s, max_crossing_topology(2));
   expect_blocks_zero(oca_se, s);
   check_oca_se_manual(s, oca_se);
+  check_oca_se_tpz(s, oca_se);
 
   // ----- third-order test -----
   // There are no manual third-order evaluators, so only the diagram evaluators are compared here.
@@ -439,6 +502,7 @@ TEST(one_fermion, two_hyb_poles_se) {
   auto oca_se = check_se_diagram_evaluators(s, max_crossing_topology(2));
   expect_blocks_zero(oca_se, s);
   check_oca_se_manual(s, oca_se);
+  check_oca_se_tpz(s, oca_se);
 
   // ----- third-order test -----
   // There are no manual third-order evaluators, so only the diagram evaluators are compared here.
@@ -464,11 +528,8 @@ TEST(one_fermion, two_hyb_poles_se) {
   // Independent verification of third_order_se, computed by direct trapezoidal quadrature
   // (third_order_tpz, c++/triqs_xca/block_sparse_manual.hpp) of the same topology {{0,3},{1,4},{2,5}}.
   //
-  // itops-based overload: the beta/Lambda/eps convenience overload hardcodes a symmetrized grid internally
-  auto hyb_dense = triqs_xca::hyb::coefs2vals(beta, s.itops, s.model.hyb_coeffs, s.model.hyb_poles);
-
   int n_quad              = 20;
-  auto third_order_se_tpz = third_order_tpz(hyb_dense, s.itops, beta, s.Gt_dense, s.Fs_dense, n_quad);
+  auto third_order_se_tpz = third_order_tpz(hyb_at_dlr_nodes(s), s.itops, beta, s.Gt_dense, s.Fs_dense, n_quad);
   auto third_order_se0_eq = eval_eq(s.itops, third_order_se[0].data(), n_quad);
   auto third_order_se1_eq = eval_eq(s.itops, third_order_se[1].data(), n_quad);
 
@@ -496,6 +557,7 @@ TEST(one_fermion, const_hyb_spgf) {
   auto oca_gf = check_gf_diagram_evaluators(s, max_crossing_topology(2));
   ASSERT_LE(nda::max_element(nda::abs(oca_gf)), s.eps); // OCA contribution should be identically zero
   check_oca_gf_manual(s, oca_gf);
+  check_oca_gf_tpz(s, oca_gf);
 
   // ----- third-order test -----
   // There are no manual third-order evaluators, so only the two diagram evaluators are compared here.
@@ -527,6 +589,7 @@ TEST(one_fermion, one_hyb_pole_spgf) {
   auto oca_gf = check_gf_diagram_evaluators(s, max_crossing_topology(2));
   ASSERT_LE(nda::max_element(nda::abs(oca_gf)), s.eps); // OCA contribution should be identically zero
   check_oca_gf_manual(s, oca_gf);
+  check_oca_gf_tpz(s, oca_gf);
 
   // ----- third-order test -----
   // There are no manual third-order evaluators, so only the two diagram evaluators are compared here.
@@ -563,6 +626,7 @@ TEST(one_fermion, two_hyb_poles_spgf) {
   auto oca_gf = check_gf_diagram_evaluators(s, max_crossing_topology(2));
   ASSERT_LE(nda::max_element(nda::abs(oca_gf)), s.eps);
   check_oca_gf_manual(s, oca_gf);
+  check_oca_gf_tpz(s, oca_gf);
 
   // ----- third-order test -----
   // There are no manual third-order evaluators, so only the two diagram evaluators are compared here.
