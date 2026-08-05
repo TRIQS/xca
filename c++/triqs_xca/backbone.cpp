@@ -274,6 +274,13 @@ void Backbone::set_flat_index(int flat_ix, nda::vector_const_view<double> hyb_po
   set_orb_inds(o_ix);
 }
 
+void Backbone::reverse_hyb_line_zero() {
+  fb(0) = 1 - fb(0);
+  int vct0 = topology(0, 1);
+  vertices[0].set_dag(!vertices[0].has_dag());
+  vertices[vct0].set_dag(!vertices[vct0].has_dag());
+}
+
 void Backbone::reset_all_inds() {
   reset_directions();
   reset_pole_inds();
