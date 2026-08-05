@@ -103,6 +103,33 @@ namespace triqs_xca::dense {
     return std::vector{sigma_gf};
   }
 
+  triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DenseDiagramEvaluator::compute_self_energy_by_pairs(gf_vt G_ppsc,
+                                                                                                    nda::array_const_view<int, 2> topology) {
+    Backbone backbone(topology, n);
+    eval_self_energy_by_pairs(G_ppsc[0].data(), backbone);
+    auto sigma_gf = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, this->Sigma);
+    reset();
+    return std::vector{sigma_gf};
+  }
+
+  triqs::gfs::block_gf<triqs::mesh::dlr_imtime>
+  DenseDiagramEvaluator::compute_self_energy_by_pairs(gf_vt G_ppsc, nda::array_const_view<int, 2> topology, int f_ix) {
+    Backbone backbone(topology, n);
+    eval_self_energy_fixed_index_pair(G_ppsc[0].data(), backbone, f_ix);
+    auto sigma_gf = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, this->Sigma);
+    reset();
+    return std::vector{sigma_gf};
+  }
+
+  triqs::gfs::block_gf<triqs::mesh::dlr_imtime>
+  DenseDiagramEvaluator::compute_self_energy_by_pairs(gf_vt G_ppsc, nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec) {
+    Backbone backbone(topology, n);
+    for (int f_ix : f_ix_vec) eval_self_energy_fixed_index_pair(G_ppsc[0].data(), backbone, f_ix);
+    auto sigma_gf = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, this->Sigma);
+    reset();
+    return std::vector{sigma_gf};
+  }
+
   void DenseDiagramEvaluator::multiply_left_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, int v_ix) {
     int o_ix = backbone.get_vertex_orb(v_ix); // orbital index
     int l_ix = backbone.get_pole_ind(backbone.get_vertex_hyb_ind(v_ix));
@@ -166,6 +193,51 @@ namespace triqs_xca::dense {
     for (int f_ix = 0; f_ix < f_ix_max; f_ix++) {
       eval_self_energy_fixed_indices(Gt, backbone, f_ix); // evaluate the diagram with these directions, poles, and orbital indices
     }
+  }
+
+  void DenseDiagramEvaluator::eval_self_energy_by_pairs(nda::array_const_view<dcomplex, 3> Gt, Backbone &backbone) {
+    // eval_self_energy_fixed_index_pair(f_ix) evaluates both values of fb(0) (the direction of the
+    // hybridization line connected to vertex 0) for the (orbital, pole, fb(1), ...) combination
+    // encoded by f_ix. To cover every diagram exactly once, only call it for f_ix whose own
+    // fb(0) == 0, i.e. fb_ix = f_ix / (o_ix_max * p_ix_max) is even.
+    int f_ix_max = get_num_self_energy_backbones(backbone);
+    int p_ix_max = static_cast<int>(pow(hyb.poles.size(), backbone.m - 1));
+    int n_p      = backbone.o_ix_max * p_ix_max;
+    for (int f_ix = 0; f_ix < f_ix_max; ++f_ix) {
+      if ((f_ix / n_p) % 2 == 0) { eval_self_energy_fixed_index_pair(Gt, backbone, f_ix); }
+    }
+  }
+
+  void DenseDiagramEvaluator::eval_self_energy_fixed_index_pair(nda::array_const_view<dcomplex, 3> Gt, Backbone &backbone, int f_ix) {
+    int m    = backbone.m;
+    int vct0 = backbone.get_topology(0, 1);
+
+    backbone.set_flat_index(f_ix, hyb.poles);
+
+    T = Gt;
+    for (int v = 1; v < vct0; v++) {
+      multiply_left_vertex(T, backbone, v);
+      integrate_left_edge(T, Gt, backbone, v);
+    }
+    U(_, _, _) = T(_, _, _);
+    multiply_left_vertex_and_right_zero_vertex(T, backbone, vct0);
+    backbone.reverse_hyb_line_zero();
+    multiply_left_vertex_and_right_zero_vertex(U, backbone, vct0);
+    backbone.reverse_hyb_line_zero();
+    T = T - U;
+
+    for (int v = vct0 + 1; v < 2 * m; v++) {
+      integrate_left_edge(T, Gt, backbone, v - 1);
+      multiply_left_vertex(T, backbone, v);
+    }
+
+    multiply_prefactor(T, backbone);
+    int diag_order_sign = (m % 2 == 0) ? -1 : 1;
+    if (backbone.get_fb(0) == 0) diag_order_sign *= -1;
+    T *= diag_order_sign * backbone.prefactor_sign;
+    Sigma += T;
+
+    backbone.reset_all_inds();
   }
 
   void DenseDiagramEvaluator::eval_self_energy_fixed_indices(nda::array_const_view<dcomplex, 3> Gt, Backbone &backbone, int f_ix) {

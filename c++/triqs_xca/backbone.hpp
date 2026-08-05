@@ -104,6 +104,7 @@ class Backbone {
   set_flat_index(int flat_ix,
                  nda::vector_const_view<double> hyb_poles); // set directions, pole indices, and orbital indices from a single integer index.
   // In terms of fb_ix, p_ix, and o_ix, f_ix = o_ix + n^(m-1) * p_ix + (n * r)^(m-1) * fb_ix, where r is the number of hybridization indices.
+  void reverse_hyb_line_zero(); // reverse the direction of the hybridization line connected to vertex 0
   void reset_all_inds();
 
   int m;              // order

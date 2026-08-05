@@ -80,6 +80,10 @@ namespace triqs_xca::dense {
     C2PY_IGNORE void eval_self_energy(nda::array_const_view<dcomplex, 3> Gt, Backbone &backbone);
     // evaluate a diagram with fixed orbital indices, poles, and line directions in dense storage, including prefactor
     C2PY_IGNORE void eval_self_energy_fixed_indices(nda::array_const_view<dcomplex, 3> Gt, Backbone &backbone, int f_ix);
+    // evaluate a pair of diagrams differing only in the direction of the line connected to the zero vertex
+    C2PY_IGNORE void eval_self_energy_fixed_index_pair(nda::array_const_view<dcomplex, 3> Gt, Backbone &backbone, int f_ix);
+    // evaluate all pairs of diagrams for given topology
+    C2PY_IGNORE void eval_self_energy_by_pairs(nda::array_const_view<dcomplex, 3> Gt, Backbone &backbone);
     // get number of backbones for given topology
     C2PY_IGNORE int get_num_self_energy_backbones(Backbone &backbone);
 
@@ -89,6 +93,13 @@ namespace triqs_xca::dense {
                                                                       int f_ix); // compute self-energy for given topology and flat index
     triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy(gf_vt G_ppsc, nda::array_const_view<int, 2> topology,
                                                                       nda::array_const_view<int, 1> f_ix_vec); // compute self-energy for given topology and flat index vector
+    triqs::gfs::block_gf<triqs::mesh::dlr_imtime>
+    compute_self_energy_by_pairs(gf_vt G_ppsc, nda::array_const_view<int, 2> topology); // compute self-energy for all pairs of diagrams
+    triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy_by_pairs(gf_vt G_ppsc, nda::array_const_view<int, 2> topology,
+                                                                               int f_ix); // compute self-energy for a single pair
+    triqs::gfs::block_gf<triqs::mesh::dlr_imtime>
+    compute_self_energy_by_pairs(gf_vt G_ppsc, nda::array_const_view<int, 2> topology,
+                                 nda::array_const_view<int, 1> f_ix_vec); // compute self-energy for a vector of pairs
     // get number of backbones for given topology
     int get_num_self_energy_backbones(nda::array_const_view<int, 2> topology);
 
