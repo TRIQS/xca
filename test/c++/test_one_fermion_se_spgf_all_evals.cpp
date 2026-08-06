@@ -32,6 +32,7 @@ using triqs_xca::block_sparse::OCA_gf_dense;
 using triqs_xca::block_sparse::eval_eq;
 using triqs_xca::block_sparse::OCA_gf_tpz;
 using triqs_xca::block_sparse::OCA_tpz;
+using triqs_xca::block_sparse::third_order_gf_tpz;
 using triqs_xca::block_sparse::third_order_tpz;
 
 using triqs_xca::atom_diag::ad_to_atom_prop;
@@ -362,12 +363,26 @@ namespace {
     EXPECT_LE(max_dev(oca_gf, oca_gf_manual), s.eps);
   }
 
+  // The three DLR-coefficient arrays that the *_gf_tpz routines take: unlike OCA_tpz and third_order_tpz they
+  // want coefficients rather than values, and they do not build the reflected hybridization themselves, so the
+  // -reflect(hyb) convention that OCA_tpz applies internally is reproduced here.
+  std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> gf_tpz_coeffs(OneFermionSetup &s) {
+    auto hyb = hyb_at_dlr_nodes(s);
+    return {s.itops.vals2coefs(hyb), s.itops.vals2coefs(nda::make_regular(-s.itops.reflect(hyb))), s.itops.vals2coefs(s.Gt_dense)};
+  }
+
+  // Compare a correlator against a quadrature result on the equispaced grid. Both *_gf_tpz routines run their
+  // outer loop over 1 <= i <= n_quad - 1, leaving the two grid endpoints untouched, so those are skipped.
+  void expect_matches_tpz(nda::array_const_view<dcomplex, 3> gf, nda::array_const_view<dcomplex, 3> tpz, OneFermionSetup &s, int n_quad, double tol) {
+    auto gf_eq    = eval_eq(s.itops, gf, n_quad);
+    auto interior = nda::range(1, n_quad);
+    EXPECT_LE(max_dev(gf_eq(interior, _, _), tpz(interior, _, _)), tol);
+  }
+
   /**
    * @brief Compare an OCA single-particle Green's function with direct trapezoidal quadrature of the diagram
    *
-   * @details The single-particle analogue of check_oca_se_tpz. Unlike OCA_tpz, OCA_gf_tpz takes DLR
-   * coefficients rather than values and does not build the reflected hybridization itself, so the
-   * -reflect(hyb) convention that OCA_tpz applies internally is reproduced here.
+   * @details The single-particle analogue of check_oca_se_tpz.
    *
    * @note OCA vanishes identically for a single fermion, so in these tests both sides are zero. The
    * agreement was checked separately on the two-fermion model of two_fermion_model_helper, where OCA does
@@ -375,15 +390,26 @@ namespace {
    */
   void check_oca_gf_tpz(OneFermionSetup &s, nda::array_const_view<dcomplex, 3> oca_gf, int n_quad = 20, double tol = 2.0e-3) {
     SCOPED_TRACE("OCA single-particle gf vs trapezoidal quadrature");
-    auto hyb             = hyb_at_dlr_nodes(s);
-    auto hyb_coeffs      = s.itops.vals2coefs(hyb);
-    auto hyb_refl_coeffs = s.itops.vals2coefs(nda::make_regular(-s.itops.reflect(hyb)));
-    auto Gt_coeffs       = s.itops.vals2coefs(s.Gt_dense);
-    auto oca_gf_tpz      = OCA_gf_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
-    auto oca_gf_eq       = eval_eq(s.itops, oca_gf, n_quad);
-    // OCA_gf_tpz's outer loop runs over 1 <= i <= n_quad - 1, leaving both grid endpoints untouched.
-    auto interior = nda::range(1, n_quad);
-    EXPECT_LE(max_dev(oca_gf_eq(interior, _, _), oca_gf_tpz(interior, _, _)), tol);
+    auto [hyb_coeffs, hyb_refl_coeffs, Gt_coeffs] = gf_tpz_coeffs(s);
+    auto oca_gf_tpz                               = OCA_gf_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
+    expect_matches_tpz(oca_gf, oca_gf_tpz, s, n_quad, tol);
+  }
+
+  /**
+   * @brief Compare a third-order single-particle Green's function with direct trapezoidal quadrature
+   *
+   * @details Same idea as check_oca_gf_tpz one order up, and the only third-order check here that goes
+   * through neither the diagram evaluators nor the tabulated notebook values. Unlike the OCA case this
+   * diagram does not vanish for a single fermion, so the comparison has real content: the deviations from
+   * the evaluator at n_quad = 20 are 5.7e-4 (constant hybridization), 3.9e-5 (one pole) and 3.2e-4 (two
+   * poles), and they fall off as O(dt^2) with n_quad, so the default tolerance is set by the quadrature
+   * error rather than by eps.
+   */
+  void check_third_order_gf_tpz(OneFermionSetup &s, nda::array_const_view<dcomplex, 3> third_order_gf, int n_quad = 20, double tol = 2.0e-3) {
+    SCOPED_TRACE("third-order single-particle gf vs trapezoidal quadrature");
+    auto [hyb_coeffs, hyb_refl_coeffs, Gt_coeffs] = gf_tpz_coeffs(s);
+    auto third_order_gf_tpz_result                = third_order_gf_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
+    expect_matches_tpz(third_order_gf, third_order_gf_tpz_result, s, n_quad, tol);
   }
 
 } // namespace
@@ -569,6 +595,7 @@ TEST(one_fermion, const_hyb_spgf) {
     return halfbeta4 * (1.0 - t) * (1.0 - t) * t * t / 2.0;
   });
   ASSERT_LE(max_dev(third_order_gf(_, 0, 0), third_order_gf_ana), s.eps);
+  check_third_order_gf_tpz(s, third_order_gf);
 }
 
 /**
@@ -600,6 +627,7 @@ TEST(one_fermion, one_hyb_pole_spgf) {
        / (2 * om * om * (1 + exp(-beta * om)) * (exp(beta * om) + 1));
   });
   ASSERT_LE(max_dev(third_order_gf(_, 0, 0), third_order_gf_ana), s.eps);
+  check_third_order_gf_tpz(s, third_order_gf);
 }
 
 /**
@@ -643,4 +671,5 @@ TEST(one_fermion, two_hyb_poles_spgf) {
     dcomplex gf_val = s.itops.coefs2eval(third_order_gf_coeffs, tau_pts[k]);
     ASSERT_LE(std::abs(gf_val - gf_ref[k]), s.eps);
   }
+  check_third_order_gf_tpz(s, third_order_gf);
 }
