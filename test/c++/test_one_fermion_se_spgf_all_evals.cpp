@@ -60,6 +60,12 @@ using triqs_xca::atom_diag::get_tensor_in_atom_diag_subspace;
  * The last two routines above are not wrapped and exist just for testing purposes. For third-order diagrams, there are no analogues to these last
  * two evaluators, as we are testing that the (Dense)DiagramEvaluator routines do in fact work at arbitrary order.
  *
+ * For third-order diagram evaluation, there are comparisons to all of the above routines except, obviously, the last two routines above, and no 
+ * third-order analogues exist. 
+ *
+ * For OCA and third-order diagrams, there are also comparisons to routines which compute integrals using trapezoidal quadrature. The number of 
+ * quadrature points prioritizes brief test runtime over achieving accuracy competitive with the prior tests.
+ *
  * Every test differs only in its hybridization and in its analytic reference values; the model setup and the evaluator-vs-evaluator comparisons are 
  * shared through the OneFermionSetup bundle and the check_* helpers below, so each test body is essentially its closed-form reference plus a list 
  * of named checks.
