@@ -334,6 +334,19 @@ namespace triqs_xca::block_sparse {
   BlockDiagOpFun BOFtoBDOF(BlockOpFun const &A);
 
   /**
+ * @brief Exponentiate an already-diagonalized block-diagonal Hamiltonian into the atomic
+ * (pseudo-particle) propagator G(\tau) = -exp(-\tau (H + \eta_0)), with \eta_0 = log(Z)/\beta
+ * chosen so that Tr G(\beta) = -1.
+ * @param[in] evals per-block eigenvalues of H
+ * @param[in] evecs per-block eigenvectors in columns, so that H_B = U_B diag(E_B) U_B^\dagger
+ * @param[in] Z partition function consistent with evals
+ * @param[in] beta inverse temperature
+ * @param[in] dlr_it_abs imaginary time nodes in absolute format
+ */
+  BlockDiagOpFun atom_prop_from_eigensystem(std::vector<nda::array<double, 1>> const &evals, std::vector<nda::array<dcomplex, 2>> const &evecs,
+                                            double Z, double beta, nda::vector_const_view<double> dlr_it_abs);
+
+  /**
  * @brief Compute noninteracting Green's function from Hamiltonian as a BDOF
  * @param[in] H_blocks vector of blocks of Hamiltonian
  * @param[in] H_block_inds vector, -1 if Hamiltonian has zero block in corresponding block column
@@ -361,11 +374,9 @@ namespace triqs_xca::block_sparse {
    * @param[in] G_ppsc Pseudo-particle Green's function
    * @return Expectation value -Tr[G(\beta) O]
    */
-  template<bool isComplex>
-  dcomplex expectation_value(
-    triqs::operators::many_body_operator_real const &op, 
-    triqs::atom_diag::atom_diag<isComplex> const &ad, 
-    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc); 
+  template <bool isComplex>
+  dcomplex expectation_value(triqs::operators::many_body_operator_real const &op, triqs::atom_diag::atom_diag<isComplex> const &ad,
+                             triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc);
 
   /**
    * @brief Compute the Volterra "convolution" of two pseudo-particle Green's functions
@@ -373,9 +384,8 @@ namespace triqs_xca::block_sparse {
    * @param[in] G2 Right Green's function
    * @return Convolution (G1 * G2)(\tau)
    */
-  triqs::gfs::block_gf<triqs::mesh::dlr_imtime> convolve_ppsc(
-    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G1, 
-    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G2);
+  triqs::gfs::block_gf<triqs::mesh::dlr_imtime> convolve_ppsc(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G1,
+                                                              triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G2);
 
   /**
    * @brief Take the trace of a pseudo-particle Green's function
@@ -383,6 +393,5 @@ namespace triqs_xca::block_sparse {
    * @returns Trace Tr[G(\beta)]
    */
   dcomplex trace(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G);
-
 
 } // namespace triqs_xca::block_sparse

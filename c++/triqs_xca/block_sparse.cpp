@@ -10,8 +10,8 @@ namespace triqs_xca::block_sparse {
 
   using cppdlr::_;
 
-  using nda::linalg::matmul;
   using nda::range;
+  using nda::linalg::matmul;
 
   /////////////// BlockDiagOpFun (BDOF) class ///////////////
   BlockDiagOpFun::BlockDiagOpFun(std::vector<nda::array<dcomplex, 3>> &blocks, nda::vector_const_view<int> zero_block_indices)
@@ -643,49 +643,65 @@ namespace triqs_xca::block_sparse {
     return BlockDiagOpFun(diag_blocks, zero_block_indices);
   }
 
+  BlockDiagOpFun atom_prop_from_eigensystem(std::vector<nda::array<double, 1>> const &evals, std::vector<nda::array<dcomplex, 2>> const &evecs,
+                                            double Z, double beta, nda::vector_const_view<double> dlr_it_abs) {
+
+    int num_block_cols = evals.size();
+    int r              = dlr_it_abs.size();
+    double eta_0       = std::log(Z) / beta;
+
+    std::vector<nda::array<dcomplex, 3>> blocks(num_block_cols);
+    for (int i = 0; i < num_block_cols; i++) {
+      int n     = evals[i].size();
+      blocks[i] = nda::array<dcomplex, 3>(r, n, n);
+
+      auto Udag    = nda::make_regular(nda::dagger(evecs[i]));
+      auto Gt_temp = nda::zeros<dcomplex>(n, n);
+      for (int t = 0; t < r; t++) {
+        for (int j = 0; j < n; j++) { Gt_temp(j, j) = -std::exp(-beta * dlr_it_abs(t) * (evals[i](j) + eta_0)); }
+        blocks[i](t, _, _) = matmul(evecs[i], matmul(Gt_temp, Udag));
+      }
+    }
+
+    // no block of the propagator is ever zero: a zero block of H still gives G_B(\tau) = -exp(-\tau \eta_0) I
+    auto zero_block_indices = nda::zeros<int>(num_block_cols);
+    return {blocks, zero_block_indices};
+  }
+
   BlockDiagOpFun nonint_gf_BDOF(std::vector<nda::array<dcomplex, 2>> H_blocks, nda::vector<int> H_block_inds, double beta,
                                 nda::vector_const_view<double> dlr_it_abs) {
 
     int num_block_cols = H_block_inds.size();
-    nda::vector<int> H_block_sizes(num_block_cols);
-    for (int i = 0; i < num_block_cols; i++) { H_block_sizes(i) = H_blocks[i].extent(0); }
 
-    int r = dlr_it_abs.size();
-
-    dcomplex tr_exp_minusbetaH = 0;
-    std::vector<nda::array<dcomplex, 1>> H_evals(num_block_cols);
+    std::vector<nda::array<double, 1>> H_evals(num_block_cols);
     std::vector<nda::array<dcomplex, 2>> H_evecs(num_block_cols);
     for (int i = 0; i < num_block_cols; i++) {
-      if (H_block_inds(i) != -1) {
-        if (H_block_sizes(i) == 1) {
-          H_evals[i] = nda::array<dcomplex, 1>{H_blocks[i](0, 0)};
-          H_evecs[i] = nda::array<dcomplex, 2>{{1}};
-        } else {
-          auto H_block_eig = nda::linalg::eigh(H_blocks[i]);
-          H_evals[i]       = std::get<0>(H_block_eig);
-          H_evecs[i]       = std::get<1>(H_block_eig);
-        }
-        tr_exp_minusbetaH += nda::sum(exp(-beta * H_evals[i]));
+      int n = H_blocks[i].extent(0);
+      if (H_block_inds(i) == -1) { // zero block, eigensystem is trivial
+        H_evals[i] = nda::zeros<double>(n);
+        H_evecs[i] = nda::eye<dcomplex>(n);
+      } else if (n == 1) {
+        H_evals[i] = nda::array<double, 1>{H_blocks[i](0, 0).real()};
+        H_evecs[i] = nda::array<dcomplex, 2>{{1}};
       } else {
-        H_evals[i] = nda::zeros<dcomplex>(H_block_sizes(i));
-        H_evecs[i] = nda::eye<dcomplex>(H_block_sizes(i));
-        tr_exp_minusbetaH += 1.0 * H_block_sizes(i); // 0 entry in the diagonal
+        auto H_block_eig = nda::linalg::eigh(H_blocks[i]);
+        H_evals[i]       = std::get<0>(H_block_eig);
+        H_evecs[i]       = std::get<1>(H_block_eig);
       }
     }
 
-    auto eta_0 = nda::log(tr_exp_minusbetaH) / beta;
-    auto Gt    = BlockDiagOpFun(r, H_block_sizes);
+    // shift by the ground state energy before exponentiating, mirroring triqs::atom_diag; the shift
+    // cancels against eta_0 inside atom_prop_from_eigensystem and keeps exp(-beta E) in range
+    double E0 = nda::min_element(H_evals[0]);
+    for (int i = 1; i < num_block_cols; i++) { E0 = std::min(E0, nda::min_element(H_evals[i])); }
+
+    double Z = 0;
     for (int i = 0; i < num_block_cols; i++) {
-      auto Gt_block = nda::array<dcomplex, 3>(r, H_block_sizes(i), H_block_sizes(i));
-      auto Gt_temp  = nda::make_regular(0 * H_blocks[i]);
-      for (int t = 0; t < r; t++) {
-        for (int j = 0; j < H_block_sizes(i); j++) { Gt_temp(j, j) = -exp(-beta * dlr_it_abs(t) * (H_evals[i](j) + eta_0)); }
-        Gt_block(t, _, _) = matmul(H_evecs[i], matmul(Gt_temp, nda::transpose(H_evecs[i])));
-      }
-      Gt.set_block(i, Gt_block);
+      H_evals[i] -= E0;
+      Z += nda::sum(nda::exp(-beta * H_evals[i]));
     }
 
-    return Gt;
+    return atom_prop_from_eigensystem(H_evals, H_evecs, Z, beta, dlr_it_abs);
   }
 
   triqs::gfs::block_gf<triqs::mesh::dlr_imtime> BDOF_to_block_gf(BlockDiagOpFun const &BDOF, double beta, double Lambda, double eps) {
@@ -709,54 +725,45 @@ namespace triqs_xca::block_sparse {
     return {gf_vec};
   }
 
-  template<bool isComplex>
-  dcomplex expectation_value(
-    triqs::operators::many_body_operator_real const &op, 
-    triqs::atom_diag::atom_diag<isComplex> const &ad, 
-    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc) {
+  template <bool isComplex>
+  dcomplex expectation_value(triqs::operators::many_body_operator_real const &op, triqs::atom_diag::atom_diag<isComplex> const &ad,
+                             triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc) {
 
     auto op_blocks = ad.get_op_mat(op);
-    auto beta = G_ppsc[0].mesh().beta();
+    auto beta      = G_ppsc[0].mesh().beta();
 
     dcomplex sum = 0;
 
-    for( auto bidx : range(op_blocks.block_mat.size()) ) {
-      assert( op_blocks.connection[bidx] == bidx );
-      if( op_blocks.block_mat[bidx].shape(0) == 0 ) continue; // skip empty blocks
-      auto g_dlr = make_gf_dlr(G_ppsc[bidx]);
-      auto U = ad.get_unitary_matrix(bidx);      
+    for (auto bidx : range(op_blocks.block_mat.size())) {
+      assert(op_blocks.connection[bidx] == bidx);
+      if (op_blocks.block_mat[bidx].shape(0) == 0) continue; // skip empty blocks
+      auto g_dlr         = make_gf_dlr(G_ppsc[bidx]);
+      auto U             = ad.get_unitary_matrix(bidx);
       auto op_mat_transf = U * op_blocks.block_mat[bidx] * nda::conj(nda::transpose(U));
       sum += -trace(matmul(op_mat_transf, g_dlr(beta)));
     }
 
-  return sum;
+    return sum;
   }
- 
-  template
-  dcomplex expectation_value(
-    triqs::operators::many_body_operator_real const &op, 
-    triqs::atom_diag::atom_diag<false> const &ad, 
-    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc);
 
-  template
-  dcomplex expectation_value(
-    triqs::operators::many_body_operator_real const &op, 
-    triqs::atom_diag::atom_diag<true> const &ad, 
-    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc);
+  template dcomplex expectation_value(triqs::operators::many_body_operator_real const &op, triqs::atom_diag::atom_diag<false> const &ad,
+                                      triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc);
 
-  triqs::gfs::block_gf<triqs::mesh::dlr_imtime> convolve_ppsc(
-    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G1, 
-    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G2) {
+  template dcomplex expectation_value(triqs::operators::many_body_operator_real const &op, triqs::atom_diag::atom_diag<true> const &ad,
+                                      triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc);
 
-    assert( G1[0].mesh() == G2[0].mesh() );
+  triqs::gfs::block_gf<triqs::mesh::dlr_imtime> convolve_ppsc(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G1,
+                                                              triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G2) {
 
-    auto mesh = G1[0].mesh();
-    auto beta = mesh.beta();
+    assert(G1[0].mesh() == G2[0].mesh());
+
+    auto mesh  = G1[0].mesh();
+    auto beta  = mesh.beta();
     auto itops = mesh.dlr_it();
 
     std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> gg_vec;
 
-    for ( auto [g1, g2] : itertools::zip(G1, G2)) {
+    for (auto [g1, g2] : itertools::zip(G1, G2)) {
       auto gg = itops.convolve(beta, itops.vals2coefs(g1.data()), itops.vals2coefs(g2.data()), cppdlr::TIME_ORDERED);
       gg_vec.emplace_back(triqs::gfs::gf<triqs::mesh::dlr_imtime>(mesh, gg));
     }
@@ -767,13 +774,12 @@ namespace triqs_xca::block_sparse {
   dcomplex trace(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G) {
 
     dcomplex trace = 0;
-    for( auto g : G) {
+    for (auto g : G) {
       double beta = g.mesh().beta();
-      auto g_dlr = make_gf_dlr(g);
+      auto g_dlr  = make_gf_dlr(g);
       trace += nda::trace(g_dlr(beta));
     }
     return trace;
   }
-
 
 } // namespace triqs_xca::block_sparse
