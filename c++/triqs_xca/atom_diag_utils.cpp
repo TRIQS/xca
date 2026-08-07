@@ -185,8 +185,7 @@ namespace triqs_xca::atom_diag {
     }
 
     template <bool IsComplex>
-    std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>>
-    get_operators_dense_impl(const triqs_atom_diag_t<IsComplex> &ad) {
+    std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> get_operators_dense_impl(const triqs_atom_diag_t<IsComplex> &ad) {
 
       int norb = ad.get_fops().size();
       int N    = ad.get_full_hilbert_space_dim();
@@ -273,82 +272,42 @@ namespace triqs_xca::atom_diag {
     return std::make_tuple(H_blocks, H_block_inds);
   }
 
-  template <typename T>
-  std::vector<nda::array<T, 3>> H_to_atom_prop_blocks(std::vector<nda::array<dcomplex, 2>> &H_blocks, nda::vector_const_view<long> H_block_inds,
-                                                      double beta, imtime_ops &itops) {
-    int r                      = itops.rank();
-    dcomplex tr_exp_minusbetaH = 0;
-    std::vector<nda::array<dcomplex, 1>> H_evals(H_blocks.size());
-    std::vector<nda::array<dcomplex, 2>> H_evecs(H_blocks.size());
-    for (int i = 0; i < H_block_inds.size(); ++i) {
-      if (H_block_inds(i) != -1) {
-        if (H_blocks[i].extent(0) == 1) {
-          H_evals[i] = nda::array<dcomplex, 1>{H_blocks[i](0, 0)};
-          H_evecs[i] = nda::array<dcomplex, 2>{{1}};
-        } else {
-          auto H_block_eig = nda::linalg::eigh(H_blocks[i]);
-          H_evals[i]       = std::get<0>(H_block_eig);
-          H_evecs[i]       = std::get<1>(H_block_eig);
-        }
-        tr_exp_minusbetaH += nda::sum(exp(-beta * H_evals[i]));
-      } else {
-        H_evals[i] = nda::zeros<dcomplex>(H_blocks[i].extent(0));
-        H_evecs[i] = nda::eye<dcomplex>(H_blocks[i].extent(0));
-        tr_exp_minusbetaH += 1.0 * H_blocks[i].extent(0); // 0 entry in the diagonal
-      }
-    }
-
-    auto eta_0      = nda::log(tr_exp_minusbetaH) / beta;
-    auto dlr_it     = itops.get_itnodes();
-    auto dlr_it_abs = cppdlr::rel2abs(dlr_it);
-    std::vector<nda::array<T, 3>> ap_blocks(H_block_inds.size());
-    for (int i = 0; i < H_block_inds.size(); ++i) {
-      ap_blocks[i] = nda::array<T, 3>(r, H_blocks[i].extent(0), H_blocks[i].extent(1));
-      auto Gt_temp = nda::make_regular(0 * H_blocks[i]);
-      for (int t = 0; t < r; t++) {
-        for (int j = 0; j < H_blocks[i].extent(0); j++) { Gt_temp(j, j) = -exp(-beta * dlr_it_abs(t) * (H_evals[i](j) + eta_0)); }
-        ap_blocks[i](t, _, _) = matmul(H_evecs[i], matmul(Gt_temp, nda::transpose(H_evecs[i])));
-      }
-    }
-
-    return ap_blocks;
-  }
-
   BlockDiagOpFun ad_to_atom_prop(const triqs_atom_diag &ad, double beta, imtime_ops &itops) {
-    // Get Hamiltonian blocks and block indices
-    auto [H_blocks, H_block_inds] = get_hamiltonian_blocks(ad);
+    // atom_diag has already diagonalized every invariant subspace, with the ground state energy
+    // subtracted from the eigenvalues; partition_function sums the matching Boltzmann weights
+    int n_sub                = ad.n_subspaces();
+    auto const &eigensystems = ad.get_eigensystems();
 
-    // Compute atomic propagator blocks
-    std::vector<nda::array<dcomplex, 3>> ap_blocks = H_to_atom_prop_blocks<dcomplex>(H_blocks, H_block_inds, beta, itops);
+    std::vector<nda::array<double, 1>> evals(n_sub);
+    std::vector<nda::array<dcomplex, 2>> evecs(n_sub);
+    for (int s = 0; s < n_sub; ++s) {
+      evals[s] = eigensystems[s].eigenvalues;
+      evecs[s] = eigensystems[s].unitary_matrix;
+    }
 
-    // Create BlockDiagOpFun
-    auto zero_block_indices = nda::ones<int>(H_block_inds.size());
-    return {ap_blocks, zero_block_indices};
+    double Z        = triqs::atom_diag::partition_function(ad, beta);
+    auto dlr_it_abs = cppdlr::rel2abs(itops.get_itnodes());
+
+    return block_sparse::atom_prop_from_eigensystem(evals, evecs, Z, beta, dlr_it_abs);
   }
 
   triqs::gfs::block_gf<triqs::mesh::dlr_imtime> ad_to_atom_prop(const triqs_atom_diag &ad, double beta, double Lambda, double eps) {
-    // Get Hamiltonian blocks and block indices
-    auto [H_blocks, H_block_inds] = get_hamiltonian_blocks(ad);
-
-    // Compute atomic propagator blocks
-    auto dlr_rf                                    = cppdlr::build_dlr_rf(Lambda, eps);
-    auto itops                                     = imtime_ops(Lambda, dlr_rf);
-    std::vector<nda::array<dcomplex, 3>> ap_blocks = H_to_atom_prop_blocks<dcomplex>(H_blocks, H_block_inds, beta, itops);
+    auto dlr_rf = cppdlr::build_dlr_rf(Lambda, eps);
+    auto itops  = imtime_ops(Lambda, dlr_rf);
+    auto ap     = ad_to_atom_prop(ad, beta, itops);
 
     // Create vector of gf<dlr_imtime>
-    std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> gf_blocks(H_block_inds.size());
+    std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> gf_blocks(ap.get_num_block_cols());
     triqs::mesh::dlr_imtime tau_mesh(beta, triqs::mesh::Fermion, Lambda / beta, eps, false);
-    for (int i = 0; i < H_block_inds.size(); ++i) { gf_blocks[i] = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, ap_blocks[i]); }
+    for (int i = 0; i < ap.get_num_block_cols(); ++i) { gf_blocks[i] = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, ap.get_block(i)); }
     return {gf_blocks};
   }
 
-  std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const triqs_atom_diag_t<true> &ad,
-                                                                nda::array_const_view<dcomplex, 3> hyb_coeffs) {
+  std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const triqs_atom_diag_t<true> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
     return get_operators_impl(ad, hyb_coeffs);
   }
 
-  std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const triqs_atom_diag_t<false> &ad,
-                                                                nda::array_const_view<dcomplex, 3> hyb_coeffs) {
+  std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const triqs_atom_diag_t<false> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
     return get_operators_impl(ad, hyb_coeffs);
   }
 
