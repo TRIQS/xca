@@ -40,7 +40,6 @@ namespace triqs_xca::block_sparse {
     int get_zero_block_index(int i) const;
     int get_num_time_nodes() const;
     void add_block(int i, nda::array_const_view<dcomplex, 3> block);
-    static std::string hdf5_format();
 
     /**
    * @brief Constructor for BlockDiagOpFun
@@ -325,13 +324,6 @@ namespace triqs_xca::block_sparse {
  * @param[in] F BlockOp3D
  */
   BlockOp3D operator*(const dcomplex c, const BlockOp3D &F);
-
-  /**
- * @brief Convert a BlockOpFun with diagonal structure to a BlockDiagOpFun
- * @param[in] A BlockOpFun
- * @return BlockDiagOpFun
- */
-  BlockDiagOpFun BOFtoBDOF(BlockOpFun const &A);
 
   /**
  * @brief Exponentiate an already-diagonalized block-diagonal Hamiltonian into the atomic

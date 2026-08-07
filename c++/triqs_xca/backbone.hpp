@@ -141,7 +141,6 @@ class Backbone {
   int get_fb(int i);
   int get_orb_ind(int i);
   int get_flat_index();
-  int get_vertex_direction(int vertex_idx);
 
   /**
    * @brief Constructor for Backbone

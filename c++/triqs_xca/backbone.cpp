@@ -302,15 +302,6 @@ int Backbone::get_fb(int i) { return fb(i); }
 int Backbone::get_orb_ind(int i) { return orb_inds(i); }
 int Backbone::get_flat_index() { return f_ix; }
 
-int Backbone::get_vertex_direction(int vertex_idx) {
-  // Find which row of topology contains this vertex and return the corresponding fb value
-  for (int i = 0; i < m; i++) {
-    if (topology(i, 0) == vertex_idx || topology(i, 1) == vertex_idx) { return fb(i); }
-  }
-  // If vertex not found in topology, throw an error
-  throw std::invalid_argument("Vertex index " + std::to_string(vertex_idx) + " not found in topology");
-}
-
 CorrelatorBackbone::CorrelatorBackbone(nda::array<int, 2> topology, int n) : Backbone(topology, n) { fb_ix_max = static_cast<int>(pow(2, m - 1)); }
 
 void CorrelatorBackbone::set_directions(int fb_ix) {
