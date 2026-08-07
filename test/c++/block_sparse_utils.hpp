@@ -9,6 +9,7 @@
 using nda::dcomplex;
 
 using triqs_xca::block_sparse::BlockDiagOpFun;
+using triqs_xca::block_sparse::BlockOp;
 using triqs_xca::block_sparse::BlockOpSymQuartet;
 
 struct FermionModelData {
@@ -95,6 +96,23 @@ std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> discrete_bath_spin_
 triqs::atom_diag::atom_diag<true> two_band_atom_diag_helper();
 
 /**
+ * @brief Helper function for setting up the spin-flip fermion model's atom_diag object
+ *
+ * @details The Hamiltonian is H = sum_i [U n_up,i n_do,i + mu (n_up,i + n_do,i) + V (c^dag_up,i c_do,i + c^dag_do,i c_up,i)], whose spin-flip term
+ * couples the two spin species on each orbital.
+ *
+ * @param[in] norb Number of orbitals
+ * @param[in] use_particle_number_sym If true, the atom_diag subspaces are labeled by the particle number N, so that all field operators share a
+ * single symmetry set; if false, the subspaces come from autopartitioning alone and the field operators are spread over several symmetry sets
+ * @param[in] mu Chemical potential
+ * @param[in] U Interaction strength
+ * @param[in] V Spin-flip amplitude
+ * @return triqs::atom_diag::atom_diag<true> object representing the spin-flip model's atomic Hamiltonian
+ */
+triqs::atom_diag::atom_diag<true> spin_flip_atom_diag_helper(int norb, bool use_particle_number_sym, double mu = 0.25, double U = 1.0,
+                                                             double V = 0.1);
+
+/**
  * @brief Helper function for setting up the two-band model in dense storage
  * @param[in] beta Inverse temperature
  * @param[in] Lambda DLR cutoff parameter
@@ -113,6 +131,36 @@ std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>, nda::array<dcomplex
  */
 std::tuple<BlockDiagOpFun, BlockOpSymQuartet, nda::vector<int>> two_band_helper(double beta, double Lambda, double eps,
                                                                                 nda::array_const_view<dcomplex, 3> hyb_coeffs);
+
+/**
+ * @brief Helper function for making dense objects compatible with a block-sparse evaluation that discards the block structure
+ *
+ * @details The trivial sparsity pattern is a single block spanning the whole Hilbert space and a single symmetry set holding every flavor, so a
+ * block-sparse evaluator built from the result sums the same backbones as a dense one.
+ *
+ * @param[in] Gt_dense Atomic propagator over the full Hilbert space
+ * @param[in] Fs_dense Annihilation operators in dense storage
+ * @param[in] F_dags_dense Creation operators in dense storage
+ * @param[in] hyb_coeffs Hybridization function coefficients
+ * @param[in] nflav Number of flavors
+ * @return Pair of the propagator as a one-block BDOF and the field operators as a one-set BlockOpSymQuartet
+ */
+std::pair<BlockDiagOpFun, BlockOpSymQuartet> trivial_sparsity_helper(nda::array<dcomplex, 3> Gt_dense, nda::array<dcomplex, 3> Fs_dense,
+                                                                     nda::array<dcomplex, 3> F_dags_dense,
+                                                                     nda::array_const_view<dcomplex, 3> hyb_coeffs, int nflav);
+
+/**
+ * @brief Split a BlockOpSymQuartet into the per-flavor BlockOp lists that eval_correlator takes
+ *
+ * @details eval_correlator predates the symmetry-set storage and still wants one BlockOp per flavor, so each flavor has to be picked out of whichever
+ * symmetry set holds it: Fq.sym_set_labels(oidx) says which set, and Fq.sym_set_inds(oidx) says where within that set. Block-columns in which the
+ * operator has no block are filled with a 1x1 zero, which is the placeholder the block-sparse routines expect.
+ *
+ * @param[in] Fq Field operators in symmetry-set storage
+ * @param[in] nflav Number of flavors
+ * @return Pair of the annihilation and creation operators, one BlockOp per flavor
+ */
+std::pair<std::vector<BlockOp>, std::vector<BlockOp>> make_correlator_ops(BlockOpSymQuartet &Fq, int nflav);
 
 /**
  * @brief Largest absolute value taken by any off-diagonal entry of a (time, n, n) tensor

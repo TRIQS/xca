@@ -13,7 +13,17 @@ using cppdlr::imtime_ops;
 
 using triqs_xca::block_sparse::nonint_gf_BDOF;
 
-TEST(BlockSparseMisc, compute_nonint_gf) {
+/**
+ * @file test_block_diag_op_fun.cpp
+ *
+ * @brief Tests of the BlockDiagOpFun container itself, independently of any diagram
+ *
+ * @details The tests here build a BlockDiagOpFun by each of the routes the rest of the library uses -- from a block-diagonal Hamiltonian via
+ * nonint_gf_BDOF, and from a triqs block_gf -- and check the stored blocks against dense storage of the same object, along with the bookkeeping
+ * (block count, block sizes, and which blocks are recorded as zero) that the diagram evaluators rely on.
+ */
+
+TEST(BlockDiagOpFun, compute_nonint_gf) {
   // DLR parameters
   double beta   = 2.0;
   double Lambda = 1000 * beta;
@@ -69,7 +79,7 @@ TEST(BlockSparseMisc, compute_nonint_gf) {
   ASSERT_LE(nda::max_element(nda::abs(Gt_mat(_, range(15, 16), range(15, 16)) - Gt.get_block(4))), 1e-13);
 }
 
-TEST(BlockSparseMisc, block_gf_to_BDOF) {
+TEST(BlockDiagOpFun, block_gf_to_BDOF) {
   double beta   = 1;
   double Lambda = 10 * beta;
   double eps    = 1.0e-6;

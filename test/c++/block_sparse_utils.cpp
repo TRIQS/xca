@@ -270,6 +270,32 @@ triqs::atom_diag::atom_diag<true> two_band_atom_diag_helper() {
   return ad;
 }
 
+triqs::atom_diag::atom_diag<true> spin_flip_atom_diag_helper(int norb, bool use_particle_number_sym, double mu, double U, double V) {
+  // Helper function for setting up the spin-flip model, whose Hamiltonian couples the two spin species on each orbital
+  using triqs::operators::c;
+  using triqs::operators::c_dag;
+  using triqs::operators::many_body_operator_complex;
+  using triqs::operators::n;
+
+  many_body_operator_complex H;
+  triqs::atom_diag::fundamental_operator_set fop_set;
+
+  for (int i = 0; i < norb; i++) {
+    H += U * n("up", i) * n("do", i) + mu * (n("up", i) + n("do", i)) + V * (c_dag("up", i) * c("do", i) + c_dag("do", i) * c("up", i));
+    fop_set.insert("do", i);
+  }
+  for (int i = 0; i < norb; i++) { fop_set.insert("up", i); }
+
+  // create atom_diag object, either from the particle number as a quantum number or by autopartitioning
+  if (use_particle_number_sym) {
+    many_body_operator_complex N;
+    for (int kap = 0; kap < norb; ++kap) { N += n("up", kap) + n("do", kap); }
+    std::vector<many_body_operator_complex> sym_ops = {N};
+    return triqs::atom_diag::atom_diag<true>(H, fop_set, sym_ops);
+  }
+  return triqs::atom_diag::atom_diag<true>(H, fop_set);
+}
+
 std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> two_band_dense_helper(double beta, double Lambda, double eps) {
 
   auto dlr_rf        = build_dlr_rf(Lambda, eps);
@@ -298,4 +324,52 @@ std::tuple<BlockDiagOpFun, BlockOpSymQuartet, nda::vector<int>> two_band_helper(
   auto [Fq, sym_set_labels]     = triqs_xca::atom_diag::get_operators(ad, hyb_coeffs);
 
   return std::make_tuple(Gt, Fq, sym_set_labels);
+}
+
+std::pair<BlockDiagOpFun, BlockOpSymQuartet> trivial_sparsity_helper(nda::array<dcomplex, 3> Gt_dense, nda::array<dcomplex, 3> Fs_dense,
+                                                                     nda::array<dcomplex, 3> F_dags_dense,
+                                                                     nda::array_const_view<dcomplex, 3> hyb_coeffs, int nflav) {
+  // Helper function for wrapping dense objects in the trivial sparsity pattern: one block, one symmetry set
+
+  nda::vector<int> triv_bi{0};
+  std::vector<nda::array<dcomplex, 3>> Gt_dense_vec{std::move(Gt_dense)};
+  BlockDiagOpFun Gt_triv(Gt_dense_vec, triv_bi);
+
+  std::vector<nda::array<dcomplex, 3>> Fs_dense_vec{std::move(Fs_dense)};
+  auto F_sym_triv = BlockOpSymSet(triv_bi, Fs_dense_vec);
+  std::vector<nda::array<dcomplex, 3>> F_dags_dense_vec{std::move(F_dags_dense)};
+  auto F_dag_sym_triv      = BlockOpSymSet(triv_bi, F_dags_dense_vec);
+  auto sym_set_labels_triv = nda::zeros<long>(nflav);
+  auto Fq_triv             = BlockOpSymQuartet({F_sym_triv}, {F_dag_sym_triv}, hyb_coeffs, sym_set_labels_triv);
+
+  return std::make_pair(Gt_triv, Fq_triv);
+}
+
+std::pair<std::vector<BlockOp>, std::vector<BlockOp>> make_correlator_ops(BlockOpSymQuartet &Fq, int nflav) {
+  // Helper function for picking the per-flavor BlockOp lists that eval_correlator takes out of symmetry-set storage
+
+  std::vector<BlockOp> mu_ops, kap_ops;
+  for (int oidx = 0; oidx < nflav; ++oidx) {
+    auto &F     = Fq.Fs[Fq.sym_set_labels(oidx)];
+    auto &F_dag = Fq.F_dags[Fq.sym_set_labels(oidx)];
+    int i       = Fq.sym_set_inds(oidx);
+    std::vector<nda::array<dcomplex, 2>> mu_blocks, kap_blocks;
+    for (int j = 0; j < F.get_num_block_cols(); ++j) {
+      if (F.get_block_index(j) != -1) {
+        mu_blocks.emplace_back(F.get_block(j)(i, _, _));
+      } else {
+        mu_blocks.emplace_back(nda::zeros<dcomplex>(1, 1));
+      }
+      if (F_dag.get_block_index(j) != -1) {
+        kap_blocks.emplace_back(F_dag.get_block(j)(i, _, _));
+      } else {
+        kap_blocks.emplace_back(nda::zeros<dcomplex>(1, 1));
+      }
+    }
+    nda::vector<int> mu_block_indices = F.get_block_indices()(_);
+    mu_ops.emplace_back(mu_block_indices, mu_blocks);
+    nda::vector<int> kap_block_indices = F_dag.get_block_indices()(_);
+    kap_ops.emplace_back(kap_block_indices, kap_blocks);
+  }
+  return {mu_ops, kap_ops};
 }
