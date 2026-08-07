@@ -40,14 +40,6 @@ nda::array<dcomplex, 3> NCA_dense(nda::array_const_view<dcomplex, 3> hyb, nda::a
                                   nda::array_const_view<dcomplex, 3> F_dags);
 
 /**
- * @brief Build matrix of evaluations of K at imag times and real freqs
- * @param[in] dlr_it DLR imaginary time nodes
- * @param[in] dlr_rf DLR real frequencies
- * @return matrix of K evalutions
- */
-nda::array<double, 2> K_mat(nda::vector_const_view<double> dlr_it, nda::vector_const_view<double> dlr_rf, double beta);
-
-/**
  * @brief Evaluate OCA using block-sparse storage
  * @param[in] hyb hybridization function at imaginary time nodes
  * @param[in] itops cppdlr imaginary time object
@@ -146,9 +138,5 @@ nda::array<dcomplex, 3> OCA_tpz(nda::array_const_view<dcomplex, 3> hyb, imtime_o
  */
 nda::array<dcomplex, 3> third_order_tpz(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta,
                                         nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Fs, int n_quad);
-
-nda::array<dcomplex, 3> third_order_dense_partial(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta,
-                                                  nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Fs,
-                                                  nda::array_const_view<dcomplex, 3> F_dags);
 
 } // namespace triqs_xca::block_sparse

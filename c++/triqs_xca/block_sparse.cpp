@@ -622,27 +622,6 @@ namespace triqs_xca::block_sparse {
     return product;
   }
 
-  BlockDiagOpFun BOFtoBDOF(BlockOpFun const &A) {
-    // Convert a BlockOpFun with diagonal structure to a BlockDiagOpFun
-    // @param[in] A BlockOpFun
-    // @return BlockDiagOpFun
-
-    int num_block_cols      = A.get_num_block_cols();
-    auto diag_blocks        = A.get_blocks();
-    auto zero_block_indices = nda::zeros<int>(num_block_cols);
-    for (int i = 0; i < num_block_cols; i++) {
-      int block_index = A.get_block_index(i);
-      if (block_index == -1) {
-        diag_blocks[i]        = nda::zeros<dcomplex>(1, 1, 1);
-        zero_block_indices(i) = -1;
-      } else if (block_index != i) {
-        throw std::invalid_argument("BOF is not diagonal");
-      }
-    }
-
-    return BlockDiagOpFun(diag_blocks, zero_block_indices);
-  }
-
   BlockDiagOpFun atom_prop_from_eigensystem(std::vector<nda::array<double, 1>> const &evals, std::vector<nda::array<dcomplex, 2>> const &evecs,
                                             double Z, double beta, nda::vector_const_view<double> dlr_it_abs) {
 
@@ -708,8 +687,10 @@ namespace triqs_xca::block_sparse {
     auto dlr_rf = cppdlr::build_dlr_rf(Lambda, eps);
     auto itops  = cppdlr::imtime_ops(Lambda, dlr_rf);
 
-    // triqs gf mesh
-    auto t_mesh = triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda, eps, false);
+    // triqs gf mesh. dlr_imtime takes the energy cutoff w_max = Lambda / beta and rebuilds the DLR grid
+    // from w_max * beta, so passing Lambda directly would attach a mesh built on Lambda * beta to data
+    // sampled on the Lambda grid above.
+    auto t_mesh = triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda / beta, eps, false);
     // create vector of gf
     std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> gf_vec(BDOF.get_num_block_cols());
 
