@@ -23,28 +23,32 @@ using triqs_xca::block_sparse::nonint_gf_BDOF;
  * (block count, block sizes, and which blocks are recorded as zero) that the diagram evaluators rely on.
  */
 
+/**
+ * @brief Test the generation of a BlockDiagOpFun atomic propagator
+ */
 TEST(BlockDiagOpFun, compute_nonint_gf) {
-  // DLR parameters
-  double beta   = 2.0;
-  double Lambda = 1000 * beta;
-  double eps    = 1.0e-10;
-  // DLR generation
+  // DLR setup
+  double beta        = 2.0;
+  double Lambda      = 1000 * beta;
+  double eps         = 1.0e-10;
   auto dlr_rf        = build_dlr_rf(Lambda, eps);
   auto itops         = imtime_ops(Lambda, dlr_rf);
   auto const &dlr_it = itops.get_itnodes();
   auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
   int r              = itops.rank();
 
-  // the following variables can be read from the output of benchmarks/atom_diag_to_text.py
+  // generate blocks of Hamiltonian
   int num_blocks = 5;                                        // number of blocks in Hamiltonian
   std::vector<nda::array<dcomplex, 2>> H_blocks(num_blocks); // Hamiltonian in sparse storage
-  H_blocks[0]                           = nda::make_regular(-1 * nda::eye<dcomplex>(4));
-  H_blocks[1]                           = {{-0.6, 0, 0, 0, 0, 0},   {0, 8.27955e-19, 0, 0, 0.2, 0}, {0, 0, -0.4, 0.2, 0, 0},
-                                           {0, 0, 0.2, -0.4, 0, 0}, {0, 0.2, 0, 0, 8.27955e-19, 0}, {0, 0, 0, 0, 0, -0.6}};
-  H_blocks[2]                           = {{0}};
-  H_blocks[3]                           = nda::make_regular(2 * nda::eye<dcomplex>(4));
-  H_blocks[4]                           = {{6}};
-  nda::vector<int> H_block_inds         = {0, 0, -1, 0, 0};
+  H_blocks[0]                   = nda::make_regular(-1 * nda::eye<dcomplex>(4));
+  H_blocks[1]                   = {{-0.6, 0, 0, 0, 0, 0},   {0, 8.27955e-19, 0, 0, 0.2, 0}, {0, 0, -0.4, 0.2, 0, 0},
+                                   {0, 0, 0.2, -0.4, 0, 0}, {0, 0.2, 0, 0, 8.27955e-19, 0}, {0, 0, 0, 0, 0, -0.6}};
+  H_blocks[2]                   = {{0}};
+  H_blocks[3]                   = nda::make_regular(2 * nda::eye<dcomplex>(4));
+  H_blocks[4]                   = {{6}};
+  nda::vector<int> H_block_inds = {0, 0, -1, 0, 0}; // block 2 is zero
+
+  // use blocks to fill in dense Hamiltonian
   auto H_dense                          = nda::zeros<dcomplex>(16, 16); // Hamiltonian in dense storage
   H_dense(range(0, 4), range(0, 4))     = H_blocks[0];
   H_dense(range(4, 10), range(4, 10))   = H_blocks[1];
@@ -65,13 +69,14 @@ TEST(BlockDiagOpFun, compute_nonint_gf) {
   for (int i = 0; i < 16; i++) { Gbeta(i, i) = -exp(-beta * H_loc_eval(i)); }
   Gbeta = matmul(Gbeta, nda::transpose(H_loc_evec));
   Gbeta = matmul(H_loc_evec, Gbeta);
+
   // check that trace of noninteracting Green's function from dense
   // Hamiltonian at tau = beta has trace 1
   ASSERT_LE(nda::abs(nda::trace(Gbeta) + 1), 1e-13);
 
-  auto Gt = nonint_gf_BDOF(H_blocks, H_block_inds, beta, dlr_it_abs);
   // check that the noninteracting Green's function, computing from the
   // sparse- and dense-storage Hamiltonians are the same
+  auto Gt = nonint_gf_BDOF(H_blocks, H_block_inds, beta, dlr_it_abs);
   ASSERT_LE(nda::max_element(nda::abs(Gt_mat(_, range(0, 4), range(0, 4)) - Gt.get_block(0))), 1e-13);
   ASSERT_LE(nda::max_element(nda::abs(Gt_mat(_, range(4, 10), range(4, 10)) - Gt.get_block(1))), 1e-13);
   ASSERT_LE(nda::max_element(nda::abs(Gt_mat(_, range(10, 11), range(10, 11)) - Gt.get_block(2))), 1e-13);
@@ -79,6 +84,9 @@ TEST(BlockDiagOpFun, compute_nonint_gf) {
   ASSERT_LE(nda::max_element(nda::abs(Gt_mat(_, range(15, 16), range(15, 16)) - Gt.get_block(4))), 1e-13);
 }
 
+/**
+ * @brief Test the creation of a BlockDiagOpFun from a triqs block_gf
+ */
 TEST(BlockDiagOpFun, block_gf_to_BDOF) {
   double beta   = 1;
   double Lambda = 10 * beta;
@@ -87,6 +95,7 @@ TEST(BlockDiagOpFun, block_gf_to_BDOF) {
   auto iw_dlr_mesh  = triqs::mesh::dlr_imfreq(beta, triqs::mesh::Fermion, Lambda, eps);
   auto tau_dlr_mesh = triqs::mesh::dlr_imtime(iw_dlr_mesh);
 
+  // generate a triqs block_gf on this imaginary time mesh
   auto g = triqs::gfs::block_gf<triqs::mesh::dlr_imtime>{
      {"bl0", "bl1"},
      {triqs::gfs::gf<triqs::mesh::dlr_imtime>{{tau_dlr_mesh}, {2, 2}}, triqs::gfs::gf<triqs::mesh::dlr_imtime>{{tau_dlr_mesh}, {3, 3}}}};
@@ -98,6 +107,8 @@ TEST(BlockDiagOpFun, block_gf_to_BDOF) {
   for (auto tau : g[1].mesh()) {
     g[1][tau] = nda::matrix<dcomplex>{{2.0 + 0.1 * tau, 0.3, 0.0}, {0.3, 2.5 + 0.1 * tau, 0.4}, {0.0, 0.4, 3.0 + 0.1 * tau}};
   }
+
+  // Construct a BlockDiagOpFun from the triqs block_gf and check properties
   auto BDOF = BlockDiagOpFun(g);
   ASSERT_EQ(BDOF.get_num_block_cols(), 2);
   ASSERT_EQ(BDOF.get_block_size(0), 2);
