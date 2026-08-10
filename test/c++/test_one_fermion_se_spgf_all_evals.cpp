@@ -10,6 +10,7 @@
 #include <triqs_xca/block_sparse_manual.hpp>
 #include <triqs_xca/block_sparse_manual_gf.hpp>
 #include <triqs_xca/hyb.hpp>
+#include <triqs_xca/topology.hpp>
 
 #include <triqs_xca/strong_cpl.hpp>
 
@@ -34,6 +35,8 @@ using triqs_xca::block_sparse::OCA_gf_tpz;
 using triqs_xca::block_sparse::OCA_tpz;
 using triqs_xca::block_sparse::third_order_gf_tpz;
 using triqs_xca::block_sparse::third_order_tpz;
+
+using triqs_xca::topology::topology_parity;
 
 using triqs_xca::atom_diag::ad_to_atom_prop;
 using triqs_xca::atom_diag::get_full_h_atomic;
@@ -281,8 +284,22 @@ namespace {
   // ---------------------------------------------------------------------------------------------------
 
   /**
+   * @brief Cancel the fermionic topology sign that the diagram evaluators apply internally
+   *
+   * @details Both diagram evaluators multiply each backbone by the fermionic permutation parity of its
+   * topology (Backbone::get_parity). The analytic references below, the manual N/OCA routines and the
+   * trapezoidal routines all predate that convention and carry no such factor, so the parity is divided
+   * back out once here, at the point where a diagram-evaluator result leaves the evaluator-vs-evaluator
+   * comparisons. Same cancellation as the "Cancel topology sign, accounted for in dense diag eval"
+   * negations in test_block_sparse_backbone_eval.cpp, but written for arbitrary order rather than
+   * hardcoded for OCA: the parity is +1 at first order and -1 at second and third.
+   */
+  double parity_of(nda::array_const_view<int, 2> topology) { return static_cast<double>(topology_parity(topology)); }
+
+  /**
    * @brief Evaluate the self-energy for a topology with every general-order evaluator and compare them
-   * @return The block-sparse self-energy, for the caller to compare against its analytic reference
+   * @return The block-sparse self-energy with the topology sign cancelled, for the caller to compare
+   *         against its analytic reference
    */
   triqs::gfs::block_gf<triqs::mesh::dlr_imtime> check_se_diagram_evaluators(OneFermionSetup &s, nda::array_const_view<int, 2> topology) {
     SCOPED_TRACE("self-energy evaluators at order " + std::to_string(topology.extent(0)));
@@ -295,18 +312,23 @@ namespace {
     // block-sparse diagram evaluator, compared with the dense one
     auto se = s.D.compute_self_energy(s.model.G_ppsc, topology);
     expect_blocks_match_dense(se, se_dde[0].data(), s);
+    // all three evaluators agree, so cancel the topology sign once, on the way out (see parity_of)
+    auto parity = parity_of(topology);
+    for (int b = 0; b < s.nblocks(); ++b) { se[b].data() *= parity; }
     return se;
   }
 
   /**
    * @brief Evaluate the single-particle Green's function for a topology with both block-sparse and dense diagram evaluators
-   * @return The block-sparse Green's function, for the caller to compare against its analytic reference
+   * @return The block-sparse Green's function with the topology sign cancelled, for the caller to compare
+   *         against its analytic reference
    */
   nda::array<dcomplex, 3> check_gf_diagram_evaluators(OneFermionSetup &s, nda::array_const_view<int, 2> topology) {
     SCOPED_TRACE("single-particle gf evaluators at order " + std::to_string(topology.extent(0)));
     auto gf_dde = s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, topology);
     auto gf     = s.D.compute_single_ptcle_gf(s.model.G_ppsc, topology);
     EXPECT_LE(max_dev(gf, gf_dde), s.eps);
+    gf *= parity_of(topology); // cancel the topology sign once, on the way out (see parity_of)
     return gf;
   }
 

@@ -8,6 +8,7 @@
 #include <triqs_xca/block_sparse_backbone.hpp>
 #include <triqs_xca/block_sparse_manual.hpp>
 #include <triqs_xca/block_sparse_manual_gf.hpp>
+#include <triqs_xca/topology.hpp>
 
 #include <triqs_xca/strong_cpl.hpp>
 
@@ -24,6 +25,8 @@ using triqs_xca::block_sparse::NCA_dense;
 using triqs_xca::block_sparse::NCA_gf_dense;
 using triqs_xca::block_sparse::OCA_dense;
 using triqs_xca::block_sparse::OCA_gf_dense;
+
+using triqs_xca::topology::topology_parity;
 
 using triqs_xca::atom_diag::ad_to_atom_prop;
 using triqs_xca::atom_diag::get_full_h_atomic;
@@ -258,8 +261,16 @@ namespace {
   // ---------------------------------------------------------------------------------------------------
 
   /**
+   * @brief Cancel the fermionic topology sign that the diagram evaluators apply internally
+   *
+   * @details Used primarily for comparisons in tests.
+   */
+  double parity_of(nda::array_const_view<int, 2> topology) { return static_cast<double>(topology_parity(topology)); }
+
+  /**
    * @brief Evaluate the self-energy for a topology with both diagram evaluators and compare them
-   * @return The block-sparse self-energy, for the caller to compare against its analytic reference
+   * @return The block-sparse self-energy with the topology sign cancelled, for the caller to compare
+   *         against its analytic reference
    */
   triqs::gfs::block_gf<triqs::mesh::dlr_imtime> check_se_diagram_evaluators(TwoFermionSetup &s, nda::array_const_view<int, 2> topology) {
     SCOPED_TRACE("self-energy evaluators at order " + std::to_string(topology.extent(0)));
@@ -269,12 +280,16 @@ namespace {
     // block-sparse diagram evaluator, compared with the dense one
     auto se = s.D.compute_self_energy(s.model.G_ppsc, topology);
     expect_blocks_match_dense(se, se_dde[0].data(), s);
+    // both evaluators agree, so cancel the topology sign once, on the way out (see parity_of)
+    auto parity = parity_of(topology);
+    for (int b = 0; b < s.nblocks(); ++b) { se[b].data() *= parity; }
     return se;
   }
 
   /**
    * @brief Evaluate the single-particle Green's function for a topology with both diagram evaluators
-   * @return The block-sparse Green's function, for the caller to compare against its analytic reference
+   * @return The block-sparse Green's function with the topology sign cancelled, for the caller to compare
+   *         against its analytic reference
    */
   nda::array<dcomplex, 3> check_gf_diagram_evaluators(TwoFermionSetup &s, nda::array_const_view<int, 2> topology) {
     SCOPED_TRACE("single-particle gf evaluators at order " + std::to_string(topology.extent(0)));
@@ -282,6 +297,7 @@ namespace {
     auto gf     = s.D.compute_single_ptcle_gf(s.model.G_ppsc, topology);
     EXPECT_EQ(gf.extent(1), 2); // the two orbitals
     EXPECT_LE(max_dev(gf, gf_dde), s.eps);
+    gf *= parity_of(topology); // cancel the topology sign once, on the way out (see parity_of)
     return gf;
   }
 
