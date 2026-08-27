@@ -33,7 +33,12 @@ def _N_tot_operator(l):
 def _slater_condon_mu_wmax(l, Fs):
     """Return half-filling chemical potential and recommended DLR cutoff."""
 
-    if l == 2:
+    if l == 3:
+        assert( len(Fs) == 4 )
+        F0, F2, F4, F6 = Fs
+        mu = 13/2*F0 - 2/15*F2 - 1/11*F4 - 50/429*F6   # half-filling of the f-shell
+        w_max = 150.0 * F0    # 14 electrons; exact spectral span is 24.5*F0 
+    elif l == 2:
         assert( len(Fs) == 3 )
         F0, F2, F4 = Fs
         mu = (45*F0 - 70/49*F2 - 630/441*F4) / 10. # For half-filling of the d-shell
@@ -49,7 +54,7 @@ def _slater_condon_mu_wmax(l, Fs):
         mu = F0 / 2. # For half-filling of the s-shell
         w_max = F0 # 2 electrons with energy scale F0
     else:
-        raise NotImplementedError('Only l=0 (s-orbitals), l=1 (p-orbitals), and l=2 (d-orbitals) are implemented for now.')
+        raise NotImplementedError('Only l=0 (s-orbitals), l=1 (p), l=2 (d), and l=3 (f) are implemented for now.')
 
     return mu, w_max
 
