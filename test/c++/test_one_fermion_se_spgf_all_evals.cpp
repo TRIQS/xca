@@ -60,6 +60,8 @@ using triqs_xca::atom_diag::get_tensor_in_full_hilbert_space;
  * - `N/OCA_(gf_)dense`, a routine that can only evaluate N/OCA with dense matmuls
  * - `N/OCA_(gf_)bs`, a routine that can only evaluate N/OCA taking advantage of block-sparsity
  *
+ * When comparisons are carried out, block-sparse results are converted to dense formats so that all outputs are the same type and shape.
+ *
  * The last two routines above are not wrapped and exist just for testing purposes. For third-order diagrams, there are no analogues to these last
  * two evaluators, as we are testing that the (Dense)DiagramEvaluator routines do in fact work at arbitrary order.
  *
@@ -69,9 +71,11 @@ using triqs_xca::atom_diag::get_tensor_in_full_hilbert_space;
  * For OCA and third-order diagrams, there are also comparisons to routines which compute integrals using trapezoidal quadrature. The number of 
  * quadrature points prioritizes brief test runtime over achieving accuracy competitive with the prior tests.
  *
- * Every test differs only in its hybridization and in its analytic reference values; the model setup and the evaluator-vs-evaluator comparisons are 
- * shared through the OneFermionSetup bundle and the check_* helpers below, so each test body is essentially its closed-form reference plus a list 
- * of named checks.
+ * Both diagram evaluators multiply each backbone by the fermionic permutation parity of its topology (Backbone::get_parity), while the analytic
+ * references, the manual N/OCA routines and the trapezoidal routines carry no such factor. Every evaluator result is therefore multiplied by
+ * topology_parity to divide that sign back out, which is what the "ensure sign is correct" comments in the compute sections refer to. This is the
+ * same cancellation as the "Cancel topology sign, accounted for in dense diag eval" negations in test_block_sparse_backbone_eval.cpp, but for
+ * arbitrary order rather than hardcoded for OCA: the parity is +1 at first order and -1 at second and third.
  */
 
 namespace {
@@ -216,188 +220,14 @@ namespace {
     }
     return topology;
   }
-
-  // ---------------------------------------------------------------------------------------------------
-  // Evaluator comparison
-  // ---------------------------------------------------------------------------------------------------
-
-  /**
-   * @brief Cancel the fermionic topology sign that the diagram evaluators apply internally
-   *
-   * @details Both diagram evaluators multiply each backbone by the fermionic permutation parity of its
-   * topology (Backbone::get_parity). The analytic references below, the manual N/OCA routines and the
-   * trapezoidal routines all predate that convention and carry no such factor, so the parity is divided
-   * back out once here, at the point where a diagram-evaluator result leaves the evaluator-vs-evaluator
-   * comparisons. Same cancellation as the "Cancel topology sign, accounted for in dense diag eval"
-   * negations in test_block_sparse_backbone_eval.cpp, but written for arbitrary order rather than
-   * hardcoded for OCA: the parity is +1 at first order and -1 at second and third.
-   */
-  double parity_of(nda::array_const_view<int, 2> topology) { return static_cast<double>(topology_parity(topology)); }
-
-  /**
-   * @brief Evaluate the self-energy for a topology with every general-order evaluator and compare them
-   * @return The block-sparse self-energy with the topology sign cancelled, for the caller to compare
-   *         against its analytic reference
-   */
-  triqs::gfs::block_gf<triqs::mesh::dlr_imtime> check_se_diagram_evaluators(OneFermionSetup &s, nda::array_const_view<int, 2> topology) {
-    SCOPED_TRACE("self-energy evaluators at order " + std::to_string(topology.extent(0)));
-    // dense diagram evaluator
-    auto se_dde = s.D_dense.compute_self_energy(s.G0_ppsc_dense, topology);
-    EXPECT_LE(max_offdiag(se_dde[0].data()), s.eps);
-    // dense diagram evaluator, evaluating the backbones using the pairs optimization
-    auto se_pairs = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, topology);
-    EXPECT_LE(nda::max_element(nda::abs(se_dde[0].data() - se_pairs[0].data())), s.eps);
-    // block-sparse diagram evaluator, compared with the dense one
-    auto se = s.D.compute_self_energy(s.model.G_ppsc, topology);
-    EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(se, s.model.ad) - se_dde[0].data())), s.eps);
-    // all three evaluators agree, so cancel the topology sign once, on the way out (see parity_of)
-    auto parity = parity_of(topology);
-    for (int b = 0; b < s.nblocks(); ++b) { se[b].data() *= parity; }
-    return se;
-  }
-
-  /**
-   * @brief Evaluate the single-particle Green's function for a topology with both block-sparse and dense diagram evaluators
-   * @return The block-sparse Green's function with the topology sign cancelled, for the caller to compare
-   *         against its analytic reference
-   */
-  nda::array<dcomplex, 3> check_gf_diagram_evaluators(OneFermionSetup &s, nda::array_const_view<int, 2> topology) {
-    SCOPED_TRACE("single-particle gf evaluators at order " + std::to_string(topology.extent(0)));
-    auto gf_dde = s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, topology);
-    auto gf     = s.D.compute_single_ptcle_gf(s.model.G_ppsc, topology);
-    EXPECT_LE(nda::max_element(nda::abs(gf - gf_dde)), s.eps);
-    gf *= parity_of(topology); // cancel the topology sign once, on the way out (see parity_of)
-    return gf;
-  }
-
-  // Compare an NCA self-energy with the dense and block-sparse evaluators that can only do first order.
-  void check_nca_se_manual(OneFermionSetup &s, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> nca_se) {
-    SCOPED_TRACE("manual NCA self-energy evaluators");
-    // NCA_bs/NCA_dense and DiagramEvaluator::compute_self_energy use opposite overall sign conventions for
-    // the self-energy (cf. the "-Sigma_Diagram_calc" negation in test_block_sparse_NCA_manual.cpp), hence
-    // the sign = -1 below.
-    auto nca_se_dense = NCA_dense(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
-    EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(nca_se, s.model.ad) + nca_se_dense)), s.eps);
-    EXPECT_LE(max_offdiag(nca_se_dense), s.eps);
-    auto nca_se_manual = NCA_bs(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
-    // the DLR rank is passed explicitly because a BlockDiagOpFun that vanishes identically flags every block zero
-    // and so carries no time axis of its own, as happens in check_oca_se_manual below
-    EXPECT_LE(nda::max_element(
-                 nda::abs(get_tensor_in_full_hilbert_space(nca_se, s.model.ad) + get_tensor_in_full_hilbert_space(nca_se_manual, s.model.ad, s.r))),
-              s.eps);
-  }
-
-  // Compare an OCA self-energy with the dense and block-sparse evaluators that can only do second order.
-  void check_oca_se_manual(OneFermionSetup &s, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> oca_se) {
-    SCOPED_TRACE("manual OCA self-energy evaluators");
-    // Unlike NCA (odd order), OCA (even order) needs no sign flip: the (-1) per hybridization line in
-    // NCA_bs/OCA_bs cancels against the extra line at second order.
-    auto oca_se_dense = OCA_dense(s.D.hyb.values, s.D.hyb.coeffs, s.D.hyb.values_reflect, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense,
-                                  s.Fs_dense, s.F_dags_dense);
-    EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(oca_se, s.model.ad) - oca_se_dense)), s.eps);
-    EXPECT_LE(max_offdiag(oca_se_dense), s.eps);
-    auto oca_se_manual = OCA_bs(s.D.hyb.values, s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
-    // OCA vanishes identically for a single fermion, so every block of oca_se_manual is flagged zero and the DLR
-    // rank has to come from the setup rather than from the result
-    EXPECT_LE(nda::max_element(
-                 nda::abs(get_tensor_in_full_hilbert_space(oca_se, s.model.ad) - get_tensor_in_full_hilbert_space(oca_se_manual, s.model.ad, s.r))),
-              s.eps);
-  }
-
-  /**
-   * @brief Compare an OCA self-energy with direct trapezoidal quadrature of the same diagram
-   *
-   * @details OCA_tpz shares none of the backbone enumeration or analytic DLR edge integration of the
-   * diagram evaluators, so this is an independent check of the machinery rather than of one evaluator
-   * against another. The tolerance is set by the quadrature error at n_quad, not by eps.
-   */
-  void check_oca_se_tpz(OneFermionSetup &s, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> oca_se, int n_quad = 20, double tol = 2.0e-3) {
-    SCOPED_TRACE("OCA self-energy vs trapezoidal quadrature");
-    // the itops overload of coefs2vals; the beta/Lambda/eps one hardcodes a symmetrized grid internally
-    auto oca_se_tpz =
-       OCA_tpz(triqs_xca::hyb::coefs2vals(s.beta, s.itops, s.model.hyb_coeffs, s.model.hyb_poles), s.itops, s.beta, s.Gt_dense, s.Fs_dense, n_quad);
-    // Resampling onto the equispaced grid commutes with the scatter to the full Hilbert space, since eval_eq
-    // acts on the time axis of each entry independently.
-    auto oca_se_eq = eval_eq(s.itops, get_tensor_in_full_hilbert_space(oca_se, s.model.ad), n_quad);
-    // OCA_tpz's outer loop starts at i = 1, leaving grid point 0 untouched, so skip it.
-    auto visited = nda::range(1, n_quad + 1);
-    EXPECT_LE(nda::max_element(nda::abs(oca_se_eq(visited, _, _) - oca_se_tpz(visited, _, _))), tol);
-    EXPECT_LE(max_offdiag(oca_se_tpz), tol);
-  }
-
-  // Compare an NCA single-particle Green's function with the dense and block-sparse first-order-only evaluators.
-  void check_nca_gf_manual(OneFermionSetup &s, nda::array_const_view<dcomplex, 3> nca_gf) {
-    SCOPED_TRACE("manual NCA single-particle gf evaluators");
-    auto nca_gf_dense = NCA_gf_dense(s.Gt_dense, s.Gt_dense_refl, s.Fs_dense, s.F_dags_dense);
-    EXPECT_LE(nda::max_element(nda::abs(nca_gf - nca_gf_dense)), s.eps);
-    auto nca_gf_manual = NCA_gf_bs(s.model.G_bdof, s.model.G_bdof.reflect(s.itops), s.Fq);
-    EXPECT_LE(nda::max_element(nda::abs(nca_gf - nca_gf_manual)), s.eps);
-  }
-
-  // Compare an OCA single-particle Green's function with the dense and block-sparse second-order-only evaluators.
-  void check_oca_gf_manual(OneFermionSetup &s, nda::array_const_view<dcomplex, 3> oca_gf) {
-    SCOPED_TRACE("manual OCA single-particle gf evaluators");
-    auto oca_gf_dense = OCA_gf_dense(s.D.hyb.coeffs, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
-    EXPECT_LE(nda::max_element(nda::abs(oca_gf - oca_gf_dense)), s.eps);
-    auto oca_gf_manual = OCA_gf_bs(s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
-    EXPECT_LE(nda::max_element(nda::abs(oca_gf - oca_gf_manual)), s.eps);
-  }
-
-  // The three DLR-coefficient arrays that the *_gf_tpz routines take: unlike OCA_tpz and third_order_tpz they
-  // want coefficients rather than values, and they do not build the reflected hybridization themselves, so the
-  // -reflect(hyb) convention that OCA_tpz applies internally is reproduced here.
-  std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> gf_tpz_coeffs(OneFermionSetup &s) {
-    // the itops overload of coefs2vals; the beta/Lambda/eps one hardcodes a symmetrized grid internally
-    auto hyb = triqs_xca::hyb::coefs2vals(s.beta, s.itops, s.model.hyb_coeffs, s.model.hyb_poles);
-    return {s.itops.vals2coefs(hyb), s.itops.vals2coefs(nda::make_regular(-s.itops.reflect(hyb))), s.itops.vals2coefs(s.Gt_dense)};
-  }
-
-  // Compare a correlator against a quadrature result on the equispaced grid. Both *_gf_tpz routines run their
-  // outer loop over 1 <= i <= n_quad - 1, leaving the two grid endpoints untouched, so those are skipped.
-  void expect_matches_tpz(nda::array_const_view<dcomplex, 3> gf, nda::array_const_view<dcomplex, 3> tpz, OneFermionSetup &s, int n_quad, double tol) {
-    auto gf_eq    = eval_eq(s.itops, gf, n_quad);
-    auto interior = nda::range(1, n_quad);
-    EXPECT_LE(nda::max_element(nda::abs(gf_eq(interior, _, _) - tpz(interior, _, _))), tol);
-  }
-
-  /**
-   * @brief Compare an OCA single-particle Green's function with direct trapezoidal quadrature of the diagram
-   *
-   * @details The single-particle analogue of check_oca_se_tpz.
-   *
-   * @note OCA vanishes identically for a single fermion, so in these tests both sides are zero. The
-   * agreement was checked separately on the two-fermion model of two_fermion_model_helper, where OCA does
-   * not vanish: the two agree to ~2e-4 at n_quad = 20, i.e. to quadrature error.
-   */
-  void check_oca_gf_tpz(OneFermionSetup &s, nda::array_const_view<dcomplex, 3> oca_gf, int n_quad = 20, double tol = 2.0e-3) {
-    SCOPED_TRACE("OCA single-particle gf vs trapezoidal quadrature");
-    auto [hyb_coeffs, hyb_refl_coeffs, Gt_coeffs] = gf_tpz_coeffs(s);
-    auto oca_gf_tpz                               = OCA_gf_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
-    expect_matches_tpz(oca_gf, oca_gf_tpz, s, n_quad, tol);
-  }
-
-  /**
-   * @brief Compare a third-order single-particle Green's function with direct trapezoidal quadrature
-   *
-   * @details Same idea as check_oca_gf_tpz one order up, and the only third-order check here that goes
-   * through neither the diagram evaluators nor the tabulated notebook values. Unlike the OCA case this
-   * diagram does not vanish for a single fermion, so the comparison has real content: the deviations from
-   * the evaluator at n_quad = 20 are 5.7e-4 (constant hybridization), 3.9e-5 (one pole) and 3.2e-4 (two
-   * poles), and they fall off as O(dt^2) with n_quad, so the default tolerance is set by the quadrature
-   * error rather than by eps.
-   */
-  void check_third_order_gf_tpz(OneFermionSetup &s, nda::array_const_view<dcomplex, 3> third_order_gf, int n_quad = 20, double tol = 2.0e-3) {
-    SCOPED_TRACE("third-order single-particle gf vs trapezoidal quadrature");
-    auto [hyb_coeffs, hyb_refl_coeffs, Gt_coeffs] = gf_tpz_coeffs(s);
-    auto third_order_gf_tpz_result                = third_order_gf_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
-    expect_matches_tpz(third_order_gf, third_order_gf_tpz_result, s, n_quad, tol);
-  }
-
 } // namespace
 
 /**
  * @brief Test computation of several diagrams for a spinless fermion with a constant hybridization
- *
+ * * Every test differs only in its hybridization and in its analytic reference values. The model setup is shared through the OneFermionSetup bundle,
+ * but each test body then runs every evaluator itself and holds all of its own comparisons, so that the list of routines being cross-checked at each
+ * order is visible in the test rather than behind a helper. Each order reads the same way: compute with every method, compute the analytic
+ * reference, then compare.
  * @details This tests the evaluation of the first-, second-, and third-order self-energy diagrams by comparing analytical calculations carried out
  * in examples/one_fermion_analytical_solutions.ipynb to the results of calls to the DiagramEvaluator compute_self_energy routine.
  */
@@ -405,40 +235,115 @@ TEST(one_fermion, const_hyb_se) {
   double beta   = 2.0;
   double Lambda = 20.0 * beta;
   double eps    = 1.0e-10;
-  // Delta(tau) = K(tau, 0), which is tau-independent
-  OneFermionSetup s{beta, Lambda, eps, /*poles=*/{0.0}, /*coeffs=*/{1.0}};
+  // Delta(tau) = K(tau, om), which is tau-independent at om = 0
+  double om = 0.0;
+  double c  = 1.0;
+  // Create a struct for generating propagators, operators, diagram evaluators, atom_diag object used in tests
+  OneFermionSetup s{beta, Lambda, eps, /*poles=*/{om}, /*coeffs=*/{c}};
+
+  // Before testing self-energy contributions, check atomic propagator is correct
   auto G0_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
   G0_ana(_, 0, 0) = tau_ref(s.dlr_it, [](double t) { return -exp(-t * std::numbers::ln2); }); // the atom has H = 0
   G0_ana(_, 1, 1) = G0_ana(_, 0, 0);                                                          // same in both sectors
   EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(s.model.G_bdof, s.model.ad) - G0_ana)), eps);
 
-  // ----- NCA test -----
-  auto nca_se         = check_se_diagram_evaluators(s, max_crossing_topology(1));
-  auto nca_se_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
-  nca_se_ana(_, 0, 0) = tau_ref(s.dlr_it, [](double t) { return exp(-t * std::numbers::ln2) / 2; }); // = -G0_ana / 2
-  nca_se_ana(_, 1, 1) = nca_se_ana(_, 0, 0);                                                         // same in both sectors
-  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(nca_se, s.model.ad) - nca_se_ana)), eps);
-  check_nca_se_manual(s, nca_se);
+  // parameters for trapezoidal routines
+  int n_quad     = 20;
+  double tpz_tol = 2.0e-3; // ~2x the empirically observed n_quad=20 error (~9.2e-4)
+  // the itops overload of coefs2vals; the beta/Lambda/eps one hardcodes a symmetrized grid internally
+  auto hyb = triqs_xca::hyb::coefs2vals(s.beta, s.itops, s.model.hyb_coeffs, s.model.hyb_poles);
 
-  // ----- OCA test -----
-  auto oca_se = check_se_diagram_evaluators(s, max_crossing_topology(2));
-  // OCA contributes identically zero
-  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(oca_se, s.model.ad))), eps);
-  check_oca_se_manual(s, oca_se);
-  check_oca_se_tpz(s, oca_se);
+  // ----- NCA -----
+  auto nca_topology = max_crossing_topology(1); // = {0, 1}
+  // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
+  auto nca_bs = nda::make_regular(topology_parity(nca_topology)
+                                  * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, nca_topology), s.model.ad));
+  // compute using DenseDiagramEvaluator, and ensure sign is correct
+  auto nca_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, nca_topology);
+  auto nca_dense    = nda::make_regular(topology_parity(nca_topology) * nca_dense_gf[0].data());
+  // DenseDiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
+  auto nca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, nca_topology);
+  auto nca_pairs    = nda::make_regular(topology_parity(nca_topology) * nca_pairs_gf[0].data());
+  // manual dense routine, and change sign
+  auto nca_manual_dense = nda::make_regular(-NCA_dense(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense));
+  // manual block-sparse routine, convert to dense format, and change sign
+  auto nca_manual_bdof = NCA_bs(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
+  auto nca_manual_bs   = nda::make_regular(-get_tensor_in_full_hilbert_space(nca_manual_bdof, s.model.ad, s.r));
 
-  // ----- third-order test -----
-  // There are no manual third-order evaluators, so only the diagram evaluators are compared here.
-  auto third_order_se         = check_se_diagram_evaluators(s, max_crossing_topology(3));
-  auto third_order_se_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
-  third_order_se_ana(_, 0, 0) = tau_ref(s.dlr_it, [beta](double t) {
+  // compute analytical reference
+  auto nca_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
+  nca_ana(_, 0, 0) = tau_ref(s.dlr_it, [](double t) { return exp(-t * std::numbers::ln2) / 2; }); // = -G0_ana / 2
+  nca_ana(_, 1, 1) = nca_ana(_, 0, 0);                                                            // same in both sectors
+
+  // compare
+  EXPECT_LE(nda::max_element(nda::abs(nca_bs - nca_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_dense - nca_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_pairs - nca_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_manual_dense - nca_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_manual_bs - nca_ana)), eps);
+
+  // ----- OCA -----
+  auto oca_topology = max_crossing_topology(2); // = {{0, 2}, {1, 3}}
+  // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
+  auto oca_bs = nda::make_regular(topology_parity(oca_topology)
+                                  * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, oca_topology), s.model.ad));
+  // compute using DenseDiagramEvaluator, and ensure sign is correct
+  auto oca_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, oca_topology);
+  auto oca_dense    = nda::make_regular(topology_parity(oca_topology) * oca_dense_gf[0].data());
+  // DenseDiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
+  auto oca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, oca_topology);
+  auto oca_pairs    = nda::make_regular(topology_parity(oca_topology) * oca_pairs_gf[0].data());
+  // manual dense routine
+  auto oca_manual_dense = OCA_dense(s.D.hyb.values, s.D.hyb.coeffs, s.D.hyb.values_reflect, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta,
+                                    s.Gt_dense, s.Fs_dense, s.F_dags_dense);
+  // manual block-sparse routine, and convert to dense format
+  auto oca_manual_bdof = OCA_bs(s.D.hyb.values, s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
+  auto oca_manual_bs   = get_tensor_in_full_hilbert_space(oca_manual_bdof, s.model.ad, s.r);
+  // compute using trapezoidal quadrature
+  auto oca_tpz   = OCA_tpz(hyb, s.itops, s.beta, s.Gt_dense, s.Fs_dense, n_quad);
+  auto oca_bs_eq = eval_eq(s.itops, oca_bs, n_quad);
+
+  // no analytical reference here because the expected result is zero
+
+  // compare
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_dense)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(oca_dense - oca_pairs)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_dense)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_bs)), eps);
+  EXPECT_LE(max_offdiag(oca_dense), eps);
+  // OCA_tpz's outer loop starts at i = 1, leaving grid point 0 untouched, so skip it
+  auto visited = nda::range(1, n_quad + 1);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs_eq(visited, _, _) - oca_tpz(visited, _, _))), tpz_tol);
+  EXPECT_LE(max_offdiag(oca_tpz), tpz_tol);
+
+  // ----- third order -----
+  auto third_topology = max_crossing_topology(3); // = {{0, 3}, {1, 4}, {2, 5}}
+  // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
+  auto third_bs = nda::make_regular(topology_parity(third_topology)
+                                    * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, third_topology), s.model.ad));
+  // compute using DenseDiagramEvaluator, and ensure sign is correct
+  auto third_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, third_topology);
+  auto third_dense    = nda::make_regular(topology_parity(third_topology) * third_dense_gf[0].data());
+  // DenseDiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
+  auto third_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, third_topology);
+  auto third_pairs    = nda::make_regular(topology_parity(third_topology) * third_pairs_gf[0].data());
+  // no manual third-order routine
+
+  // compute analytical reference
+  auto third_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
+  third_ana(_, 0, 0) = tau_ref(s.dlr_it, [beta](double t) {
     double bt4 = beta * t;
     bt4        = bt4 * bt4;
     bt4        = bt4 * bt4;
     return bt4 * exp(-t * std::numbers::ln2) / 192.0;
   });
-  third_order_se_ana(_, 1, 1) = third_order_se_ana(_, 0, 0); // same in both sectors
-  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(third_order_se, s.model.ad) - third_order_se_ana)), eps);
+  third_ana(_, 1, 1) = third_ana(_, 0, 0); // same in both sectors
+
+  // compare
+  EXPECT_LE(nda::max_element(nda::abs(third_bs - third_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(third_dense - third_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(third_pairs - third_ana)), eps);
 }
 
 /**
@@ -450,43 +355,119 @@ TEST(one_fermion, one_hyb_pole_se) {
   double beta   = 1.0;
   double Lambda = 20.0 * beta;
   double eps    = 1.0e-10;
-  OneFermionSetup s{beta, Lambda, eps, /*poles=*/{0.8}, /*coeffs=*/{1.0}};
-  double om       = s.model.hyb_poles(0);
+  // Delta(tau) = c K(tau, om)
+  double om = 0.8;
+  double c  = 1.0;
+  // Create a struct for generating propagators, operators, diagram evaluators, atom_diag object used in tests
+  OneFermionSetup s{beta, Lambda, eps, /*poles=*/{om}, /*coeffs=*/{c}};
+
+  // Before testing self-energy contributions, check atomic propagator is correct
   auto G0_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
   G0_ana(_, 0, 0) = tau_ref(s.dlr_it, [](double t) { return -exp(-t * std::numbers::ln2); }); // the atom has H = 0
   G0_ana(_, 1, 1) = G0_ana(_, 0, 0);                                                          // same in both sectors
   EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(s.model.G_bdof, s.model.ad) - G0_ana)), eps);
 
-  // ----- NCA test -----
-  auto nca_se         = check_se_diagram_evaluators(s, max_crossing_topology(1));
-  auto nca_se_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
-  nca_se_ana(_, 0, 0) = tau_ref(s.dlr_it, [&](double t) { return exp(-t * std::numbers::ln2) * exp(t * om) / (exp(beta * om) + 1); });
-  nca_se_ana(_, 1, 1) = tau_ref(s.dlr_it, [&](double t) { return exp(-t * std::numbers::ln2) * exp(-t * om) / (exp(-beta * om) + 1); });
-  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(nca_se, s.model.ad) - nca_se_ana)), eps);
-  check_nca_se_manual(s, nca_se);
+  // parameters for trapezoidal routines
+  int n_quad     = 20;
+  double tpz_tol = 2.0e-3; // ~2x the empirically observed n_quad=20 error (~9.2e-4)
+  // the itops overload of coefs2vals; the beta/Lambda/eps one hardcodes a symmetrized grid internally
+  auto hyb = triqs_xca::hyb::coefs2vals(s.beta, s.itops, s.model.hyb_coeffs, s.model.hyb_poles);
 
-  // ----- OCA test -----
-  auto oca_se = check_se_diagram_evaluators(s, max_crossing_topology(2));
-  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(oca_se, s.model.ad))), eps);
-  check_oca_se_manual(s, oca_se);
-  check_oca_se_tpz(s, oca_se);
+  // ----- NCA -----
+  auto nca_topology = max_crossing_topology(1); // = {0, 1}
+  // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
+  auto nca_bs = nda::make_regular(topology_parity(nca_topology)
+                                  * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, nca_topology), s.model.ad));
+  // compute using DenseDiagramEvaluator, and ensure sign is correct
+  auto nca_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, nca_topology);
+  auto nca_dense    = nda::make_regular(topology_parity(nca_topology) * nca_dense_gf[0].data());
+  // DenseDiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
+  auto nca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, nca_topology);
+  auto nca_pairs    = nda::make_regular(topology_parity(nca_topology) * nca_pairs_gf[0].data());
+  // manual dense routine, and change sign
+  auto nca_manual_dense = nda::make_regular(-NCA_dense(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense));
+  // manual block-sparse routine, convert to dense format, and change sign
+  auto nca_manual_bdof = NCA_bs(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
+  auto nca_manual_bs   = nda::make_regular(-get_tensor_in_full_hilbert_space(nca_manual_bdof, s.model.ad, s.r));
 
-  // ----- third-order test -----
-  // There are no manual third-order evaluators, so only the diagram evaluators are compared here.
-  auto third_order_se         = check_se_diagram_evaluators(s, max_crossing_topology(3));
-  double denom                = om * (exp(beta * om) + 1);
-  denom                       = denom * denom * denom;
-  denom                       = 2 * om * denom;
-  auto third_order_se_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
-  third_order_se_ana(_, 0, 0) = tau_ref(s.dlr_it, [&](double t) {
+  // compute analytical reference
+  auto nca_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
+  nca_ana(_, 0, 0) = tau_ref(s.dlr_it, [&](double t) { return exp(-t * std::numbers::ln2) * exp(t * om) / (exp(beta * om) + 1); });
+  nca_ana(_, 1, 1) = tau_ref(s.dlr_it, [&](double t) { return exp(-t * std::numbers::ln2) * exp(-t * om) / (exp(-beta * om) + 1); });
+
+  // compare
+  EXPECT_LE(nda::max_element(nda::abs(nca_bs - nca_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_dense - nca_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_pairs - nca_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_manual_dense - nca_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_manual_bs - nca_ana)), eps);
+
+  // ----- OCA -----
+  auto oca_topology = max_crossing_topology(2); // = {{0, 2}, {1, 3}}
+  // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
+  auto oca_bs = nda::make_regular(topology_parity(oca_topology)
+                                  * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, oca_topology), s.model.ad));
+  // compute using DenseDiagramEvaluator, and ensure sign is correct
+  auto oca_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, oca_topology);
+  auto oca_dense    = nda::make_regular(topology_parity(oca_topology) * oca_dense_gf[0].data());
+  // DenseDiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
+  auto oca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, oca_topology);
+  auto oca_pairs    = nda::make_regular(topology_parity(oca_topology) * oca_pairs_gf[0].data());
+  // manual dense routine
+  auto oca_manual_dense = OCA_dense(s.D.hyb.values, s.D.hyb.coeffs, s.D.hyb.values_reflect, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta,
+                                    s.Gt_dense, s.Fs_dense, s.F_dags_dense);
+  // manual block-sparse routine, and convert to dense format
+  auto oca_manual_bdof = OCA_bs(s.D.hyb.values, s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
+  auto oca_manual_bs   = get_tensor_in_full_hilbert_space(oca_manual_bdof, s.model.ad, s.r);
+  // compute using trapezoidal quadrature
+  auto oca_tpz   = OCA_tpz(hyb, s.itops, s.beta, s.Gt_dense, s.Fs_dense, n_quad);
+  auto oca_bs_eq = eval_eq(s.itops, oca_bs, n_quad);
+
+  // no analytical reference here because the expected result is zero
+
+  // compare
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_dense)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(oca_dense - oca_pairs)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_dense)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_bs)), eps);
+  EXPECT_LE(max_offdiag(oca_dense), eps);
+  // OCA_tpz's outer loop starts at i = 1, leaving grid point 0 untouched, so skip it
+  auto visited = nda::range(1, n_quad + 1);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs_eq(visited, _, _) - oca_tpz(visited, _, _))), tpz_tol);
+  EXPECT_LE(max_offdiag(oca_tpz), tpz_tol);
+
+  // ----- third order -----
+  auto third_topology = max_crossing_topology(3); // = {{0, 3}, {1, 4}, {2, 5}}
+  // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
+  auto third_bs = nda::make_regular(topology_parity(third_topology)
+                                    * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, third_topology), s.model.ad));
+  // compute using DenseDiagramEvaluator, and ensure sign is correct
+  auto third_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, third_topology);
+  auto third_dense    = nda::make_regular(topology_parity(third_topology) * third_dense_gf[0].data());
+  // DenseDiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
+  auto third_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, third_topology);
+  auto third_pairs    = nda::make_regular(topology_parity(third_topology) * third_pairs_gf[0].data());
+  // no manual third-order routine
+
+  // compute analytical reference
+  double denom       = om * (exp(beta * om) + 1);
+  denom              = denom * denom * denom;
+  denom              = 2 * om * denom;
+  auto third_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
+  third_ana(_, 0, 0) = tau_ref(s.dlr_it, [&](double t) {
     double tom = t * om;
     return (tom * tom * exp(tom) - 4 * tom * exp(tom) - 2 * tom + 6 * exp(tom) - 6) * exp(beta * om) * exp(-t * std::numbers::ln2) / denom;
   });
-  third_order_se_ana(_, 1, 1) = tau_ref(s.dlr_it, [&](double t) {
+  third_ana(_, 1, 1) = tau_ref(s.dlr_it, [&](double t) {
     double tom = t * om;
     return (tom * tom + 4 * tom + 2 * (tom - 3) * exp(tom) + 6) * exp(om * (2 * beta - t)) * exp(-t * std::numbers::ln2) / denom;
   });
-  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(third_order_se, s.model.ad) - third_order_se_ana)), eps);
+
+  // compare
+  EXPECT_LE(nda::max_element(nda::abs(third_bs - third_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(third_dense - third_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(third_pairs - third_ana)), eps);
 }
 
 /**
@@ -499,77 +480,131 @@ TEST(one_fermion, two_hyb_poles_se) {
   double beta   = 1.0;
   double Lambda = 20.0 * beta;
   double eps    = 1.0e-10;
-  // Delta(tau) = K(tau, 0.6) + 2 K(tau, -0.9)
-  OneFermionSetup s{beta, Lambda, eps, /*poles=*/{0.6, -0.9}, /*coeffs=*/{1.0, 2.0}};
-  double om1      = s.model.hyb_poles(0);
-  double om2      = s.model.hyb_poles(1);
-  double c1       = s.model.hyb_coeffs(0, 0, 0).real();
-  double c2       = s.model.hyb_coeffs(1, 0, 0).real();
+  // Delta(tau) = c1 K(tau, om1) + c2 K(tau, om2)
+  double om1 = 0.6;
+  double om2 = -0.9;
+  double c1  = 1.0;
+  double c2  = 2.0;
+  // Create a struct for generating propagators, operators, diagram evaluators, atom_diag object used in tests
+  OneFermionSetup s{beta, Lambda, eps, /*poles=*/{om1, om2}, /*coeffs=*/{c1, c2}};
+
+  // Before testing self-energy contributions, check atomic propagator is correct
   auto G0_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
   G0_ana(_, 0, 0) = tau_ref(s.dlr_it, [](double t) { return -exp(-t * std::numbers::ln2); }); // the atom has H = 0
   G0_ana(_, 1, 1) = G0_ana(_, 0, 0);                                                          // same in both sectors
   EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(s.model.G_bdof, s.model.ad) - G0_ana)), eps);
 
-  // ----- NCA test -----
-  // First order is linear in Delta, so the analytic reference is just the coefficient-weighted sum of
-  // the single-pole NCA formula over the two poles.
-  auto nca_se         = check_se_diagram_evaluators(s, max_crossing_topology(1));
-  auto nca_se_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
-  nca_se_ana(_, 0, 0) = tau_ref(s.dlr_it, [&](double t) {
+  // parameters for trapezoidal routines
+  int n_quad     = 20;
+  double tpz_tol = 2.0e-3; // ~2x the empirically observed n_quad=20 error (~9.2e-4)
+  // the itops overload of coefs2vals; the beta/Lambda/eps one hardcodes a symmetrized grid internally
+  auto hyb = triqs_xca::hyb::coefs2vals(s.beta, s.itops, s.model.hyb_coeffs, s.model.hyb_poles);
+
+  // ----- NCA -----
+  auto nca_topology = max_crossing_topology(1); // = {0, 1}
+  // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
+  auto nca_bs = nda::make_regular(topology_parity(nca_topology)
+                                  * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, nca_topology), s.model.ad));
+  // compute using DenseDiagramEvaluator, and ensure sign is correct
+  auto nca_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, nca_topology);
+  auto nca_dense    = nda::make_regular(topology_parity(nca_topology) * nca_dense_gf[0].data());
+  // DenseDiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
+  auto nca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, nca_topology);
+  auto nca_pairs    = nda::make_regular(topology_parity(nca_topology) * nca_pairs_gf[0].data());
+  // manual dense routine, and change sign
+  auto nca_manual_dense = nda::make_regular(-NCA_dense(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense));
+  // manual block-sparse routine, convert to dense format, and change sign
+  auto nca_manual_bdof = NCA_bs(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
+  auto nca_manual_bs   = nda::make_regular(-get_tensor_in_full_hilbert_space(nca_manual_bdof, s.model.ad, s.r));
+
+  // compute analytical reference
+  auto nca_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
+  nca_ana(_, 0, 0) = tau_ref(s.dlr_it, [&](double t) {
     return c1 * exp(-t * std::numbers::ln2) * exp(t * om1) / (exp(beta * om1) + 1)
        + c2 * exp(-t * std::numbers::ln2) * exp(t * om2) / (exp(beta * om2) + 1);
   });
-  nca_se_ana(_, 1, 1) = tau_ref(s.dlr_it, [&](double t) {
+  nca_ana(_, 1, 1) = tau_ref(s.dlr_it, [&](double t) {
     return c1 * exp(-t * std::numbers::ln2) * exp(-t * om1) / (exp(-beta * om1) + 1)
        + c2 * exp(-t * std::numbers::ln2) * exp(-t * om2) / (exp(-beta * om2) + 1);
   });
-  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(nca_se, s.model.ad) - nca_se_ana)), eps);
-  check_nca_se_manual(s, nca_se);
 
-  // ----- OCA test -----
-  // Still identically zero: the combinatorial argument (creation/annihilation operators must alternate
-  // for a single fermion level) doesn't depend on how many poles Delta has.
-  auto oca_se = check_se_diagram_evaluators(s, max_crossing_topology(2));
-  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(oca_se, s.model.ad))), eps);
-  check_oca_se_manual(s, oca_se);
-  check_oca_se_tpz(s, oca_se);
+  // compare
+  EXPECT_LE(nda::max_element(nda::abs(nca_bs - nca_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_dense - nca_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_pairs - nca_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_manual_dense - nca_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_manual_bs - nca_ana)), eps);
 
-  // ----- third-order test -----
-  // There are no manual third-order evaluators, so only the diagram evaluators are compared here.
-  auto third_order_se       = check_se_diagram_evaluators(s, max_crossing_topology(3));
-  auto third_order_se_dense = get_tensor_in_full_hilbert_space(third_order_se, s.model.ad);
-  auto se00_coeffs          = s.itops.vals2coefs(third_order_se_dense(_, 0, 0));
-  auto se11_coeffs          = s.itops.vals2coefs(third_order_se_dense(_, 1, 1));
+  // ----- OCA -----
+  auto oca_topology = max_crossing_topology(2); // = {{0, 2}, {1, 3}}
+  // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
+  auto oca_bs = nda::make_regular(topology_parity(oca_topology)
+                                  * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, oca_topology), s.model.ad));
+  // compute using DenseDiagramEvaluator, and ensure sign is correct
+  auto oca_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, oca_topology);
+  auto oca_dense    = nda::make_regular(topology_parity(oca_topology) * oca_dense_gf[0].data());
+  // DenseDiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
+  auto oca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, oca_topology);
+  auto oca_pairs    = nda::make_regular(topology_parity(oca_topology) * oca_pairs_gf[0].data());
+  // manual dense routine
+  auto oca_manual_dense = OCA_dense(s.D.hyb.values, s.D.hyb.coeffs, s.D.hyb.values_reflect, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta,
+                                    s.Gt_dense, s.Fs_dense, s.F_dags_dense);
+  // manual block-sparse routine, and convert to dense format
+  auto oca_manual_bdof = OCA_bs(s.D.hyb.values, s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
+  auto oca_manual_bs   = get_tensor_in_full_hilbert_space(oca_manual_bdof, s.model.ad, s.r);
+  // compute using trapezoidal quadrature
+  auto oca_tpz   = OCA_tpz(hyb, s.itops, s.beta, s.Gt_dense, s.Fs_dense, n_quad);
+  auto oca_bs_eq = eval_eq(s.itops, oca_bs, n_quad);
 
-  // Reference values for Sigma_00(tau), Sigma_11(tau) at beta=1, omega_1=0.6, omega_2=-0.9, computed from
-  // the closed form in one_fermion_two_poles_analytical_solutions.ipynb and cross-validated there against
-  // independent brute-force nested quadrature of the undecomposed diagram integral.
+  // no analytical reference here because the expected result is zero
+
+  // compare
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_dense)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(oca_dense - oca_pairs)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_dense)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_bs)), eps);
+  EXPECT_LE(max_offdiag(oca_dense), eps);
+  // OCA_tpz's outer loop starts at i = 1, leaving grid point 0 untouched, so skip it
+  auto visited = nda::range(1, n_quad + 1);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs_eq(visited, _, _) - oca_tpz(visited, _, _))), tpz_tol);
+  EXPECT_LE(max_offdiag(oca_tpz), tpz_tol);
+
+  // ----- third order -----
+  auto third_topology = max_crossing_topology(3); // = {{0, 3}, {1, 4}, {2, 5}}
+  // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
+  auto third_bs = nda::make_regular(topology_parity(third_topology)
+                                    * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, third_topology), s.model.ad));
+  // compute using DenseDiagramEvaluator, and ensure sign is correct
+  auto third_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, third_topology);
+  auto third_dense    = nda::make_regular(topology_parity(third_topology) * third_dense_gf[0].data());
+  // DenseDiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
+  auto third_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, third_topology);
+  auto third_pairs    = nda::make_regular(topology_parity(third_topology) * third_pairs_gf[0].data());
+  // no manual third-order routine
+  // compute using trapezoidal rule
+  auto third_tpz = third_order_tpz(hyb, s.itops, s.beta, s.Gt_dense, s.Fs_dense, n_quad);
+  // evaluate block-sparse results on equispaced grid to compare against the output of the trapezoidal routine above
+  auto third_bs_eq = eval_eq(s.itops, third_bs, n_quad);
+
+  // analytical reference: computed from the closed form in one_fermion_two_poles_analytical_solutions.ipynb and cross-validated there against
+  // brute-force nested quadrature of the undecomposed diagram integral
   std::vector<double> tau_pts  = {0.1, 0.3, 0.5, 0.7, 0.9};
   std::vector<double> se00_ref = {0.000014094454748, 0.000890679147681, 0.005485107140040, 0.017223807607182, 0.039435093044707};
   std::vector<double> se11_ref = {0.000010136868438, 0.000699571262738, 0.004714452501594, 0.016214271857205, 0.040647750033025};
 
+  // compare
+  auto se00_coeffs = s.itops.vals2coefs(third_bs(_, 0, 0));
+  auto se11_coeffs = s.itops.vals2coefs(third_bs(_, 1, 1));
   for (size_t k = 0; k < tau_pts.size(); ++k) {
-    dcomplex se00_val = s.itops.coefs2eval(se00_coeffs, tau_pts[k]);
-    dcomplex se11_val = s.itops.coefs2eval(se11_coeffs, tau_pts[k]);
-    ASSERT_LE(std::abs(se00_val - se00_ref[k]), eps);
-    ASSERT_LE(std::abs(se11_val - se11_ref[k]), eps);
+    ASSERT_LE(std::abs(s.itops.coefs2eval(se00_coeffs, tau_pts[k]) - se00_ref[k]), eps);
+    ASSERT_LE(std::abs(s.itops.coefs2eval(se11_coeffs, tau_pts[k]) - se11_ref[k]), eps);
   }
-
-  // ----- trapezoidal third-order comparison -----
-  // Independent verification of third_order_se, computed by direct trapezoidal quadrature
-  // (third_order_tpz, c++/triqs_xca/block_sparse_manual.hpp) of the same topology {{0,3},{1,4},{2,5}}.
-  //
-  int n_quad = 20;
-  // the itops overload of coefs2vals; the beta/Lambda/eps one hardcodes a symmetrized grid internally
-  auto third_order_se_tpz = third_order_tpz(triqs_xca::hyb::coefs2vals(s.beta, s.itops, s.model.hyb_coeffs, s.model.hyb_poles), s.itops, beta,
-                                            s.Gt_dense, s.Fs_dense, n_quad);
-  // Resampling onto the equispaced grid commutes with the scatter to the full Hilbert space, since eval_eq
-  // acts on the time axis of each entry independently. The scattered self-energy is exactly diagonal, so
-  // comparing the whole tensor also bounds the off-diagonal entries of the quadrature result.
-  auto third_order_se_eq = eval_eq(s.itops, get_tensor_in_full_hilbert_space(third_order_se, s.model.ad), n_quad);
-
-  double tpz_tol = 2.0e-3; // ~2x the empirically observed n_quad=20 error (~9.2e-4)
-  ASSERT_LE(nda::max_element(nda::abs(third_order_se_eq - third_order_se_tpz)), tpz_tol);
+  EXPECT_LE(nda::max_element(nda::abs(third_bs - third_dense)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(third_dense - third_pairs)), eps);
+  EXPECT_LE(max_offdiag(third_dense), eps);
+  // third_bs is exactly diagonal, so comparing whole tensors also bounds the quadrature result's off-diagonals
+  EXPECT_LE(nda::max_element(nda::abs(third_bs_eq - third_tpz)), tpz_tol);
 }
 
 /**
@@ -581,32 +616,93 @@ TEST(one_fermion, const_hyb_spgf) {
   double beta   = 2.0;
   double Lambda = 20.0 * beta;
   double eps    = 1.0e-10;
-  // Delta(tau) = K(tau, 0), which is tau-independent
-  OneFermionSetup s{beta, Lambda, eps, /*poles=*/{0.0}, /*coeffs=*/{1.0}};
+  // Delta(tau) = K(tau, om), which is tau-independent at om = 0
+  double om = 0.0;
+  double c  = 1.0;
+  // Create a struct for generating propagators, operators, diagram evaluators, atom_diag object used in tests
+  OneFermionSetup s{beta, Lambda, eps, /*poles=*/{om}, /*coeffs=*/{c}};
 
-  // ----- NCA test -----
-  auto nca_gf     = check_gf_diagram_evaluators(s, max_crossing_topology(1));
-  auto nca_gf_ana = nda::make_regular(nda::ones<dcomplex>(s.r) / 2);
-  ASSERT_LE(nda::max_element(nda::abs(nca_gf(_, 0, 0) - nca_gf_ana)), eps);
-  check_nca_gf_manual(s, nca_gf);
+  // parameters for trapezoidal routines
+  int n_quad     = 20;
+  double tpz_tol = 2.0e-3; // ~2x the empirically observed n_quad=20 error
+  // the itops overload of coefs2vals; the beta/Lambda/eps one hardcodes a symmetrized grid internally
+  auto hyb = triqs_xca::hyb::coefs2vals(s.beta, s.itops, s.model.hyb_coeffs, s.model.hyb_poles);
+  // unlike OCA_tpz and third_order_tpz, the *_gf_tpz routines want DLR coefficients rather than values, and
+  // they do not build the reflected hybridization themselves, so the -reflect(hyb) convention is applied here
+  auto hyb_coeffs      = s.itops.vals2coefs(hyb);
+  auto hyb_refl_coeffs = s.itops.vals2coefs(nda::make_regular(-s.itops.reflect(hyb)));
+  auto Gt_coeffs       = s.itops.vals2coefs(s.Gt_dense);
 
-  // ----- OCA test -----
-  auto oca_gf = check_gf_diagram_evaluators(s, max_crossing_topology(2));
-  ASSERT_LE(nda::max_element(nda::abs(oca_gf)), eps); // OCA contribution should be identically zero
-  check_oca_gf_manual(s, oca_gf);
-  check_oca_gf_tpz(s, oca_gf);
+  // ----- NCA -----
+  auto nca_topology = max_crossing_topology(1); // = {0, 1}
+  // compute using DiagramEvaluator, and ensure sign is correct
+  auto nca_bs = nda::make_regular(topology_parity(nca_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, nca_topology));
+  // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
+  auto nca_dense = nda::make_regular(topology_parity(nca_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, nca_topology));
+  // manual dense routine
+  auto nca_manual_dense = NCA_gf_dense(s.Gt_dense, s.Gt_dense_refl, s.Fs_dense, s.F_dags_dense);
+  // manual block-sparse routine
+  auto nca_manual_bs = NCA_gf_bs(s.model.G_bdof, s.model.G_bdof.reflect(s.itops), s.Fq);
 
-  // ----- third-order test -----
-  // There are no manual third-order evaluators, so only the two diagram evaluators are compared here.
-  auto third_order_gf     = check_gf_diagram_evaluators(s, max_crossing_topology(3));
-  auto third_order_gf_ana = tau_ref(s.dlr_it, [beta](double t) {
+  // compute analytical reference: first order has no hybridization line, so it is the constant 1/2
+  auto nca_ana     = nda::zeros<dcomplex>(s.r, 1, 1);
+  nca_ana(_, 0, 0) = 0.5;
+
+  // compare
+  EXPECT_LE(nda::max_element(nda::abs(nca_bs - nca_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_dense - nca_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_manual_dense - nca_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_manual_bs - nca_ana)), eps);
+
+  // ----- OCA -----
+  auto oca_topology = max_crossing_topology(2); // = {{0, 2}, {1, 3}}
+  // compute using DiagramEvaluator, and ensure sign is correct
+  auto oca_bs = nda::make_regular(topology_parity(oca_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, oca_topology));
+  // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
+  auto oca_dense = nda::make_regular(topology_parity(oca_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, oca_topology));
+  // manual dense routine
+  auto oca_manual_dense = OCA_gf_dense(s.D.hyb.coeffs, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
+  // manual block-sparse routine
+  auto oca_manual_bs = OCA_gf_bs(s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
+  // compute using trapezoidal quadrature
+  auto oca_tpz   = OCA_gf_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
+  auto oca_bs_eq = eval_eq(s.itops, oca_bs, n_quad);
+
+  // no analytical reference here because the expected result is zero
+
+  // compare
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_dense)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_dense)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_bs)), eps);
+  // both *_gf_tpz routines run their outer loop over 1 <= i <= n_quad - 1, so both grid endpoints are skipped
+  auto interior = nda::range(1, n_quad);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs_eq(interior, _, _) - oca_tpz(interior, _, _))), tpz_tol);
+
+  // ----- third order -----
+  auto third_topology = max_crossing_topology(3); // = {{0, 3}, {1, 4}, {2, 5}}
+  // compute using DiagramEvaluator, and ensure sign is correct
+  auto third_bs = nda::make_regular(topology_parity(third_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, third_topology));
+  // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
+  auto third_dense = nda::make_regular(topology_parity(third_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, third_topology));
+  // no manual third-order routine
+  // compute using trapezoidal quadrature
+  auto third_tpz   = third_order_gf_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
+  auto third_bs_eq = eval_eq(s.itops, third_bs, n_quad);
+
+  // compute analytical reference
+  auto third_ana     = nda::zeros<dcomplex>(s.r, 1, 1);
+  third_ana(_, 0, 0) = tau_ref(s.dlr_it, [beta](double t) {
     double halfbeta   = beta / 2.0;
     double halfbetasq = halfbeta * halfbeta;
     double halfbeta4  = halfbetasq * halfbetasq;
     return halfbeta4 * (1.0 - t) * (1.0 - t) * t * t / 2.0;
   });
-  ASSERT_LE(nda::max_element(nda::abs(third_order_gf(_, 0, 0) - third_order_gf_ana)), eps);
-  check_third_order_gf_tpz(s, third_order_gf);
+
+  // compare
+  EXPECT_LE(nda::max_element(nda::abs(third_bs - third_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(third_dense - third_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(third_bs_eq(interior, _, _) - third_tpz(interior, _, _))), tpz_tol);
 }
 
 /**
@@ -618,30 +714,91 @@ TEST(one_fermion, one_hyb_pole_spgf) {
   double beta   = 1.0;
   double Lambda = 20.0 * beta;
   double eps    = 1.0e-10;
-  OneFermionSetup s{beta, Lambda, eps, /*poles=*/{0.8}, /*coeffs=*/{1.0}};
+  // Delta(tau) = c K(tau, om)
+  double om = 0.8;
+  double c  = 1.0;
+  // Create a struct for generating propagators, operators, diagram evaluators, atom_diag object used in tests
+  OneFermionSetup s{beta, Lambda, eps, /*poles=*/{om}, /*coeffs=*/{c}};
 
-  // ----- NCA test -----
-  auto nca_gf     = check_gf_diagram_evaluators(s, max_crossing_topology(1));
-  auto nca_gf_ana = nda::make_regular(nda::ones<dcomplex>(s.r) / 2);
-  ASSERT_LE(nda::max_element(nda::abs(nca_gf(_, 0, 0) - nca_gf_ana)), eps);
-  check_nca_gf_manual(s, nca_gf);
+  // parameters for trapezoidal routines
+  int n_quad     = 20;
+  double tpz_tol = 2.0e-3; // ~2x the empirically observed n_quad=20 error
+  // the itops overload of coefs2vals; the beta/Lambda/eps one hardcodes a symmetrized grid internally
+  auto hyb = triqs_xca::hyb::coefs2vals(s.beta, s.itops, s.model.hyb_coeffs, s.model.hyb_poles);
+  // unlike OCA_tpz and third_order_tpz, the *_gf_tpz routines want DLR coefficients rather than values, and
+  // they do not build the reflected hybridization themselves, so the -reflect(hyb) convention is applied here
+  auto hyb_coeffs      = s.itops.vals2coefs(hyb);
+  auto hyb_refl_coeffs = s.itops.vals2coefs(nda::make_regular(-s.itops.reflect(hyb)));
+  auto Gt_coeffs       = s.itops.vals2coefs(s.Gt_dense);
 
-  // ----- OCA test -----
-  auto oca_gf = check_gf_diagram_evaluators(s, max_crossing_topology(2));
-  ASSERT_LE(nda::max_element(nda::abs(oca_gf)), eps); // OCA contribution should be identically zero
-  check_oca_gf_manual(s, oca_gf);
-  check_oca_gf_tpz(s, oca_gf);
+  // ----- NCA -----
+  auto nca_topology = max_crossing_topology(1); // = {0, 1}
+  // compute using DiagramEvaluator, and ensure sign is correct
+  auto nca_bs = nda::make_regular(topology_parity(nca_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, nca_topology));
+  // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
+  auto nca_dense = nda::make_regular(topology_parity(nca_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, nca_topology));
+  // manual dense routine
+  auto nca_manual_dense = NCA_gf_dense(s.Gt_dense, s.Gt_dense_refl, s.Fs_dense, s.F_dags_dense);
+  // manual block-sparse routine
+  auto nca_manual_bs = NCA_gf_bs(s.model.G_bdof, s.model.G_bdof.reflect(s.itops), s.Fq);
 
-  // ----- third-order test -----
-  // There are no manual third-order evaluators, so only the two diagram evaluators are compared here.
-  auto third_order_gf     = check_gf_diagram_evaluators(s, max_crossing_topology(3));
-  double om               = s.model.hyb_poles(0);
-  auto third_order_gf_ana = tau_ref(s.dlr_it, [beta, om](double t) {
+  // compute analytical reference: first order has no hybridization line, so it is the constant 1/2
+  auto nca_ana     = nda::zeros<dcomplex>(s.r, 1, 1);
+  nca_ana(_, 0, 0) = 0.5;
+
+  // compare
+  EXPECT_LE(nda::max_element(nda::abs(nca_bs - nca_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_dense - nca_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_manual_dense - nca_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_manual_bs - nca_ana)), eps);
+
+  // ----- OCA -----
+  auto oca_topology = max_crossing_topology(2); // = {{0, 2}, {1, 3}}
+  // compute using DiagramEvaluator, and ensure sign is correct
+  auto oca_bs = nda::make_regular(topology_parity(oca_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, oca_topology));
+  // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
+  auto oca_dense = nda::make_regular(topology_parity(oca_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, oca_topology));
+  // manual dense routine
+  auto oca_manual_dense = OCA_gf_dense(s.D.hyb.coeffs, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
+  // manual block-sparse routine
+  auto oca_manual_bs = OCA_gf_bs(s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
+  // compute using trapezoidal quadrature
+  auto oca_tpz   = OCA_gf_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
+  auto oca_bs_eq = eval_eq(s.itops, oca_bs, n_quad);
+
+  // no analytical reference here because the expected result is zero
+
+  // compare
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_dense)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_dense)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_bs)), eps);
+  // both *_gf_tpz routines run their outer loop over 1 <= i <= n_quad - 1, so both grid endpoints are skipped
+  auto interior = nda::range(1, n_quad);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs_eq(interior, _, _) - oca_tpz(interior, _, _))), tpz_tol);
+
+  // ----- third order -----
+  auto third_topology = max_crossing_topology(3); // = {{0, 3}, {1, 4}, {2, 5}}
+  // compute using DiagramEvaluator, and ensure sign is correct
+  auto third_bs = nda::make_regular(topology_parity(third_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, third_topology));
+  // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
+  auto third_dense = nda::make_regular(topology_parity(third_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, third_topology));
+  // no manual third-order routine
+  // compute using trapezoidal quadrature
+  auto third_tpz   = third_order_gf_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
+  auto third_bs_eq = eval_eq(s.itops, third_bs, n_quad);
+
+  // compute analytical reference
+  auto third_ana     = nda::zeros<dcomplex>(s.r, 1, 1);
+  third_ana(_, 0, 0) = tau_ref(s.dlr_it, [beta, om](double t) {
     return (t + (exp(-om * t) - 1.0) / om) * (t - beta + (exp(om * (beta - t)) - 1.0) / om)
        / (2 * om * om * (1 + exp(-beta * om)) * (exp(beta * om) + 1));
   });
-  ASSERT_LE(nda::max_element(nda::abs(third_order_gf(_, 0, 0) - third_order_gf_ana)), eps);
-  check_third_order_gf_tpz(s, third_order_gf);
+
+  // compare
+  EXPECT_LE(nda::max_element(nda::abs(third_bs - third_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(third_dense - third_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(third_bs_eq(interior, _, _) - third_tpz(interior, _, _))), tpz_tol);
 }
 
 /**
@@ -655,39 +812,91 @@ TEST(one_fermion, two_hyb_poles_spgf) {
   double beta   = 1.0;
   double Lambda = 20.0 * beta;
   double eps    = 1.0e-10;
-  // Delta(tau) = K(tau, 0.6) + 2 K(tau, -0.9)
-  OneFermionSetup s{beta, Lambda, eps, /*poles=*/{0.6, -0.9}, /*coeffs=*/{1.0, 2.0}};
+  // Delta(tau) = c1 K(tau, om1) + c2 K(tau, om2)
+  double om1 = 0.6;
+  double om2 = -0.9;
+  double c1  = 1.0;
+  double c2  = 2.0;
+  // Create a struct for generating propagators, operators, diagram evaluators, atom_diag object used in tests
+  OneFermionSetup s{beta, Lambda, eps, /*poles=*/{om1, om2}, /*coeffs=*/{c1, c2}};
 
-  // ----- NCA test -----
-  // NCA is independent of the hybridization (no Delta lines at this order), so the reference is the same
-  // constant 1/2 seen in the const-hybridization and one-pole tests above.
-  auto nca_gf     = check_gf_diagram_evaluators(s, max_crossing_topology(1));
-  auto nca_gf_ana = nda::make_regular(nda::ones<dcomplex>(s.r) / 2);
-  ASSERT_LE(nda::max_element(nda::abs(nca_gf(_, 0, 0) - nca_gf_ana)), eps);
-  check_nca_gf_manual(s, nca_gf);
+  // parameters for trapezoidal routines
+  int n_quad     = 20;
+  double tpz_tol = 2.0e-3; // ~2x the empirically observed n_quad=20 error
+  // the itops overload of coefs2vals; the beta/Lambda/eps one hardcodes a symmetrized grid internally
+  auto hyb = triqs_xca::hyb::coefs2vals(s.beta, s.itops, s.model.hyb_coeffs, s.model.hyb_poles);
+  // unlike OCA_tpz and third_order_tpz, the *_gf_tpz routines want DLR coefficients rather than values, and
+  // they do not build the reflected hybridization themselves, so the -reflect(hyb) convention is applied here
+  auto hyb_coeffs      = s.itops.vals2coefs(hyb);
+  auto hyb_refl_coeffs = s.itops.vals2coefs(nda::make_regular(-s.itops.reflect(hyb)));
+  auto Gt_coeffs       = s.itops.vals2coefs(s.Gt_dense);
 
-  // ----- OCA test -----
-  // Still identically zero: the combinatorial argument (creation/annihilation operators must alternate
-  // for a single fermion level) doesn't depend on how many poles Delta has.
-  auto oca_gf = check_gf_diagram_evaluators(s, max_crossing_topology(2));
-  ASSERT_LE(nda::max_element(nda::abs(oca_gf)), eps);
-  check_oca_gf_manual(s, oca_gf);
-  check_oca_gf_tpz(s, oca_gf);
+  // ----- NCA -----
+  auto nca_topology = max_crossing_topology(1); // = {0, 1}
+  // compute using DiagramEvaluator, and ensure sign is correct
+  auto nca_bs = nda::make_regular(topology_parity(nca_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, nca_topology));
+  // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
+  auto nca_dense = nda::make_regular(topology_parity(nca_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, nca_topology));
+  // manual dense routine
+  auto nca_manual_dense = NCA_gf_dense(s.Gt_dense, s.Gt_dense_refl, s.Fs_dense, s.F_dags_dense);
+  // manual block-sparse routine
+  auto nca_manual_bs = NCA_gf_bs(s.model.G_bdof, s.model.G_bdof.reflect(s.itops), s.Fq);
 
-  // ----- third-order test -----
-  // There are no manual third-order evaluators, so only the two diagram evaluators are compared here.
-  auto third_order_gf        = check_gf_diagram_evaluators(s, max_crossing_topology(3));
-  auto third_order_gf_coeffs = s.itops.vals2coefs(third_order_gf(_, 0, 0));
+  // compute analytical reference: first order has no hybridization line, so it does not see Delta at all and
+  // is the same constant 1/2 as in the const-hybridization and one-pole tests above
+  auto nca_ana     = nda::zeros<dcomplex>(s.r, 1, 1);
+  nca_ana(_, 0, 0) = 0.5;
 
-  // Reference values for g_3(tau) at beta=1, omega_1=0.6, omega_2=-0.9, computed from the closed form
-  // in one_fermion_two_poles_analytical_solutions.ipynb and cross-validated there against independent
-  // brute-force nested quadrature of the undecomposed diagram integral.
+  // compare
+  EXPECT_LE(nda::max_element(nda::abs(nca_bs - nca_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_dense - nca_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_manual_dense - nca_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_manual_bs - nca_ana)), eps);
+
+  // ----- OCA -----
+  auto oca_topology = max_crossing_topology(2); // = {{0, 2}, {1, 3}}
+  // compute using DiagramEvaluator, and ensure sign is correct
+  auto oca_bs = nda::make_regular(topology_parity(oca_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, oca_topology));
+  // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
+  auto oca_dense = nda::make_regular(topology_parity(oca_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, oca_topology));
+  // manual dense routine
+  auto oca_manual_dense = OCA_gf_dense(s.D.hyb.coeffs, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
+  // manual block-sparse routine
+  auto oca_manual_bs = OCA_gf_bs(s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
+  // compute using trapezoidal quadrature
+  auto oca_tpz   = OCA_gf_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
+  auto oca_bs_eq = eval_eq(s.itops, oca_bs, n_quad);
+
+  // no analytical reference here because the expected result is zero
+
+  // compare
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_dense)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_dense)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_bs)), eps);
+  // both *_gf_tpz routines run their outer loop over 1 <= i <= n_quad - 1, so both grid endpoints are skipped
+  auto interior = nda::range(1, n_quad);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs_eq(interior, _, _) - oca_tpz(interior, _, _))), tpz_tol);
+
+  // ----- third order -----
+  auto third_topology = max_crossing_topology(3); // = {{0, 3}, {1, 4}, {2, 5}}
+  // compute using DiagramEvaluator, and ensure sign is correct
+  auto third_bs = nda::make_regular(topology_parity(third_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, third_topology));
+  // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
+  auto third_dense = nda::make_regular(topology_parity(third_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, third_topology));
+  // no manual third-order routine
+  // compute using trapezoidal quadrature
+  auto third_tpz   = third_order_gf_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
+  auto third_bs_eq = eval_eq(s.itops, third_bs, n_quad);
+
+  // analytical reference: computed from the closed form in one_fermion_two_poles_analytical_solutions.ipynb and
+  // cross-validated there against brute-force nested quadrature of the undecomposed diagram integral
   std::vector<double> tau_pts = {0.1, 0.3, 0.5, 0.7, 0.9};
   std::vector<double> gf_ref  = {0.001818250732044, 0.010263216835087, 0.015229427191986, 0.011360586534472, 0.002226904649606};
 
-  for (size_t k = 0; k < tau_pts.size(); ++k) {
-    dcomplex gf_val = s.itops.coefs2eval(third_order_gf_coeffs, tau_pts[k]);
-    ASSERT_LE(std::abs(gf_val - gf_ref[k]), eps);
-  }
-  check_third_order_gf_tpz(s, third_order_gf);
+  // compare
+  auto third_bs_coeffs = s.itops.vals2coefs(third_bs(_, 0, 0));
+  for (size_t k = 0; k < tau_pts.size(); ++k) { ASSERT_LE(std::abs(s.itops.coefs2eval(third_bs_coeffs, tau_pts[k]) - gf_ref[k]), eps); }
+  EXPECT_LE(nda::max_element(nda::abs(third_bs - third_dense)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(third_bs_eq(interior, _, _) - third_tpz(interior, _, _))), tpz_tol);
 }
