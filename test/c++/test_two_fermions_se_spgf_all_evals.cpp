@@ -80,6 +80,12 @@ namespace {
    *
    * Each test constructs one directly from its own beta, Lambda = 20 beta and eps, so that those values
    * stay in scope for the analytic references and tolerances in the test body.
+   *
+   * The Hilbert space is four-dimensional and splits into the occupation sectors N = 0, 1, 2 of dimensions
+   * 1, 2, 1. Every self-energy here is diagonal in the Fock basis, with Fock state f carrying the entry of
+   * sector N = popcount(f) -- so state 0 holds N = 0, states 1 and 2 hold N = 1, and state 3 holds N = 2.
+   * The analytic references in the tests are written directly as dense 4x4 matrices in that layout, which is
+   * what get_tensor_in_full_hilbert_space produces, so the two can be subtracted whole.
    */
   struct TwoFermionSetup {
     double beta;
@@ -190,37 +196,6 @@ namespace {
       topology(i, 1) = i + order;
     }
     return topology;
-  }
-
-  // Every diagonal entry of every block equals ref, and every off-diagonal entry vanishes. This is the
-  // structure the self-energy has whenever Delta is tau-independent: diagonal in the Fock basis, with the
-  // same entry in every occupation sector.
-  void expect_diag_all_blocks(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> bs, nda::array_const_view<double, 1> ref, TwoFermionSetup const &s) {
-    for (int b = 0; b < s.nblocks(); ++b) {
-      SCOPED_TRACE("block " + std::to_string(b));
-      auto block = bs[b].data();
-      for (int d = 0; d < block.extent(1); ++d) { EXPECT_LE(nda::max_element(nda::abs(block(_, d, d) - ref)), s.eps); }
-      EXPECT_LE(max_offdiag(block), s.eps);
-    }
-  }
-
-  // Same, but with one reference per occupation sector (the columns of ref are N = 0, 1, 2), which is what a
-  // tau-dependent hybridization produces. Blocks are matched to sectors by the particle number of their Fock
-  // states rather than by block order.
-  void expect_diag_by_sector(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> bs, nda::array_const_view<double, 2> ref, TwoFermionSetup const &s) {
-    for (int b = 0; b < s.nblocks(); ++b) {
-      SCOPED_TRACE("block " + std::to_string(b) + ", occupation sector N = " + std::to_string(s.block_N(b)));
-      auto block = bs[b].data();
-      for (int d = 0; d < block.extent(1); ++d) { EXPECT_LE(nda::max_element(nda::abs(block(_, d, d) - ref(_, s.block_N(b)))), s.eps); }
-      EXPECT_LE(max_offdiag(block), s.eps);
-    }
-  }
-
-  // The atomic propagator is -4^{-tau/beta} in all three models, since U = mu = 0 in all of them.
-  void expect_free_propagator(TwoFermionSetup const &s) {
-    SCOPED_TRACE("atomic propagator");
-    auto G0_ana = tau_ref(s.dlr_it, [](double t) { return -exp(-t * 2 * std::numbers::ln2); });
-    for (int b = 0; b < s.nblocks(); ++b) { EXPECT_LE(nda::max_element(nda::abs(s.model.G_bdof.get_block(b)(_, 0, 0) - G0_ana)), s.eps); }
   }
 
   // The atom_diag object splits into the occupation sectors N = 0, 1, 2, of dimensions 1, 2, 1 -- so the
@@ -364,27 +339,37 @@ TEST(two_fermions, const_hyb_se) {
   double eps    = 1.0e-12;
   // a single hybridization pole at omega = 0 makes Delta(tau) = -M/2 tau-independent
   TwoFermionSetup s{beta, Lambda, eps, /*hyb_pole=*/0.0};
-  double ln4 = 2 * std::numbers::ln2;
-  expect_free_propagator(s);
+  double ln4   = 2 * std::numbers::ln2;
+  auto G0_ana  = nda::zeros<dcomplex>(s.r, 4, 4);
+  auto G0_diag = tau_ref(s.dlr_it, [](double t) { return -exp(-t * 2 * std::numbers::ln2); });
+  for (int f = 0; f < 4; ++f) { G0_ana(_, f, f) = G0_diag; } // U = mu = 0, so every Fock state has the same weight
+  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(s.model.G_bdof, s.model.ad) - G0_ana)), eps);
   expect_block_structure(s);
 
   // ----- NCA test -----
-  auto nca_se     = check_se_diagram_evaluators(s, max_crossing_topology(1));
-  auto nca_se_ana = tau_ref(s.dlr_it, [&](double t) { return exp(-t * ln4); }); // = -G0_ana
-  expect_diag_all_blocks(nca_se, nca_se_ana, s);
+  auto nca_se      = check_se_diagram_evaluators(s, max_crossing_topology(1));
+  auto nca_se_ana  = nda::zeros<dcomplex>(s.r, 4, 4);
+  auto nca_se_diag = tau_ref(s.dlr_it, [&](double t) { return exp(-t * ln4); }); // = -G0_ana
+  // Delta is tau-independent, so every Fock state carries the same entry
+  for (int f = 0; f < 4; ++f) { nca_se_ana(_, f, f) = nca_se_diag; }
+  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(nca_se, s.model.ad) - nca_se_ana)), eps);
   check_nca_se_manual(s, nca_se);
 
   // ----- OCA test -----
-  auto oca_se     = check_se_diagram_evaluators(s, max_crossing_topology(2));
-  auto oca_se_ana = tau_ref(s.dlr_it, [&](double t) { return -0.25 * exp(-t * ln4) * t * t * beta * beta; });
-  expect_diag_all_blocks(oca_se, oca_se_ana, s);
+  auto oca_se      = check_se_diagram_evaluators(s, max_crossing_topology(2));
+  auto oca_se_ana  = nda::zeros<dcomplex>(s.r, 4, 4);
+  auto oca_se_diag = tau_ref(s.dlr_it, [&](double t) { return -0.25 * exp(-t * ln4) * t * t * beta * beta; });
+  for (int f = 0; f < 4; ++f) { oca_se_ana(_, f, f) = oca_se_diag; }
+  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(oca_se, s.model.ad) - oca_se_ana)), eps);
   check_oca_se_manual(s, oca_se);
 
   // ----- third-order test -----
   // There are no manual third-order evaluators, so only the diagram evaluators are compared here.
-  auto third_order_se     = check_se_diagram_evaluators(s, max_crossing_topology(3));
-  auto third_order_se_ana = tau_ref(s.dlr_it, [&](double t) { return 1.0 / 96 * exp(-t * ln4) * pow(t, 4) * pow(beta, 4); });
-  expect_diag_all_blocks(third_order_se, third_order_se_ana, s);
+  auto third_order_se      = check_se_diagram_evaluators(s, max_crossing_topology(3));
+  auto third_order_se_ana  = nda::zeros<dcomplex>(s.r, 4, 4);
+  auto third_order_se_diag = tau_ref(s.dlr_it, [&](double t) { return 1.0 / 96 * exp(-t * ln4) * pow(t, 4) * pow(beta, 4); });
+  for (int f = 0; f < 4; ++f) { third_order_se_ana(_, f, f) = third_order_se_diag; }
+  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(third_order_se, s.model.ad) - third_order_se_ana)), eps);
 }
 
 /**
@@ -441,34 +426,43 @@ TEST(two_fermions, hermitian_hyb_se) {
   double Lambda = 20.0 * beta;
   double eps    = 1.0e-12;
   TwoFermionSetup s{beta, Lambda, eps, /*hyb_pole=*/0.0, alpha};
-  double ln4 = 2 * std::numbers::ln2;
-  expect_free_propagator(s);
+  double ln4   = 2 * std::numbers::ln2;
+  auto G0_ana  = nda::zeros<dcomplex>(s.r, 4, 4);
+  auto G0_diag = tau_ref(s.dlr_it, [](double t) { return -exp(-t * 2 * std::numbers::ln2); });
+  for (int f = 0; f < 4; ++f) { G0_ana(_, f, f) = G0_diag; } // U = mu = 0, so every Fock state has the same weight
+  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(s.model.G_bdof, s.model.ad) - G0_ana)), eps);
   expect_block_structure(s);
 
   // ----- NCA test -----
-  auto nca_se     = check_se_diagram_evaluators(s, max_crossing_topology(1));
-  auto nca_se_ana = tau_ref(s.dlr_it, [&](double t) { return exp(-t * ln4); }); // = -G0_ana, independent of alpha
-  expect_diag_all_blocks(nca_se, nca_se_ana, s);
+  auto nca_se      = check_se_diagram_evaluators(s, max_crossing_topology(1));
+  auto nca_se_ana  = nda::zeros<dcomplex>(s.r, 4, 4);
+  auto nca_se_diag = tau_ref(s.dlr_it, [&](double t) { return exp(-t * ln4); }); // = -G0_ana, independent of alpha
+  for (int f = 0; f < 4; ++f) { nca_se_ana(_, f, f) = nca_se_diag; }
+  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(nca_se, s.model.ad) - nca_se_ana)), eps);
   check_nca_se_manual(s, nca_se);
 
   // ----- OCA test -----
   // The alpha = 0 value carries a factor -1; the Hermitian M replaces it by alpha^2 - 1
-  auto oca_se     = check_se_diagram_evaluators(s, max_crossing_topology(2));
-  auto oca_se_ana = tau_ref(s.dlr_it, [&](double t) {
+  auto oca_se      = check_se_diagram_evaluators(s, max_crossing_topology(2));
+  auto oca_se_ana  = nda::zeros<dcomplex>(s.r, 4, 4);
+  auto oca_se_diag = tau_ref(s.dlr_it, [&](double t) {
     double tau = beta * t;
     return 0.25 * (alpha * alpha - 1) * exp(-t * ln4) * tau * tau;
   });
-  expect_diag_all_blocks(oca_se, oca_se_ana, s);
+  for (int f = 0; f < 4; ++f) { oca_se_ana(_, f, f) = oca_se_diag; }
+  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(oca_se, s.model.ad) - oca_se_ana)), eps);
   check_oca_se_manual(s, oca_se);
 
   // ----- third-order test -----
   // The alpha = 0 value carries a factor 1/3 (relative to tau^4 / 32); the Hermitian M replaces it by alpha^2 + 1/3
-  auto third_order_se     = check_se_diagram_evaluators(s, max_crossing_topology(3));
-  auto third_order_se_ana = tau_ref(s.dlr_it, [&](double t) {
+  auto third_order_se      = check_se_diagram_evaluators(s, max_crossing_topology(3));
+  auto third_order_se_ana  = nda::zeros<dcomplex>(s.r, 4, 4);
+  auto third_order_se_diag = tau_ref(s.dlr_it, [&](double t) {
     double tau = beta * t;
     return (3 * alpha * alpha + 1) / 96.0 * exp(-t * ln4) * pow(tau, 4);
   });
-  expect_diag_all_blocks(third_order_se, third_order_se_ana, s);
+  for (int f = 0; f < 4; ++f) { third_order_se_ana(_, f, f) = third_order_se_diag; }
+  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(third_order_se, s.model.ad) - third_order_se_ana)), eps);
 }
 
 /**
@@ -533,56 +527,63 @@ TEST(two_fermions, one_hyb_pole_se) {
   double eps    = 1.0e-12;
   // Delta(tau) = K(tau, omega) I_2
   TwoFermionSetup s{beta, Lambda, eps, /*hyb_pole=*/-1.5};
-  double ln4 = 2 * std::numbers::ln2;
-  double om  = s.model.hyb_poles(0);
-  expect_free_propagator(s);
+  double ln4   = 2 * std::numbers::ln2;
+  double om    = s.model.hyb_poles(0);
+  auto G0_ana  = nda::zeros<dcomplex>(s.r, 4, 4);
+  auto G0_diag = tau_ref(s.dlr_it, [](double t) { return -exp(-t * 2 * std::numbers::ln2); });
+  for (int f = 0; f < 4; ++f) { G0_ana(_, f, f) = G0_diag; } // U = mu = 0, so every Fock state has the same weight
+  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(s.model.G_bdof, s.model.ad) - G0_ana)), eps);
   expect_block_structure(s);
 
   // ----- NCA test -----
-  auto nca_se     = check_se_diagram_evaluators(s, max_crossing_topology(1));
-  auto nca_se_ana = nda::zeros<double>(s.r, 3); // columns are the occupation sectors N = 0, 1, 2
+  auto nca_se = check_se_diagram_evaluators(s, max_crossing_topology(1));
+  // Fock states 0, {1, 2} and 3 hold the occupation sectors N = 0, 1 and 2
+  auto nca_se_ana = nda::zeros<dcomplex>(s.r, 4, 4);
   for (int i = 0; i < s.r; ++i) {
-    double t         = rel2abs(s.dlr_it(i)); // t = tau / beta
-    double tau       = beta * t;
-    double g4        = exp(-t * ln4);
-    nca_se_ana(i, 0) = 2 * g4 * exp(om * tau) / (exp(beta * om) + 1);
-    nca_se_ana(i, 2) = 2 * g4 * exp(-om * tau) / (exp(-beta * om) + 1);
-    nca_se_ana(i, 1) = 0.5 * (nca_se_ana(i, 0) + nca_se_ana(i, 2));
+    double t            = rel2abs(s.dlr_it(i)); // t = tau / beta
+    double tau          = beta * t;
+    double g4           = exp(-t * ln4);
+    nca_se_ana(i, 0, 0) = 2 * g4 * exp(om * tau) / (exp(beta * om) + 1);
+    nca_se_ana(i, 3, 3) = 2 * g4 * exp(-om * tau) / (exp(-beta * om) + 1);
+    nca_se_ana(i, 1, 1) = 0.5 * (nca_se_ana(i, 0, 0) + nca_se_ana(i, 3, 3));
+    nca_se_ana(i, 2, 2) = nca_se_ana(i, 1, 1);
   }
-  expect_diag_by_sector(nca_se, nca_se_ana, s);
+  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(nca_se, s.model.ad) - nca_se_ana)), eps);
   check_nca_se_manual(s, nca_se);
 
   // ----- OCA test -----
   auto oca_se     = check_se_diagram_evaluators(s, max_crossing_topology(2));
-  auto oca_se_ana = nda::zeros<double>(s.r, 3);
+  auto oca_se_ana = nda::zeros<dcomplex>(s.r, 4, 4);
   double denom2   = om * om * (exp(beta * om) + 1) * (exp(beta * om) + 1);
   for (int i = 0; i < s.r; ++i) {
-    double t         = rel2abs(s.dlr_it(i)); // t = tau / beta
-    double tau       = beta * t;
-    double tom       = om * tau;
-    double g4        = exp(-t * ln4);
-    oca_se_ana(i, 0) = -2 * g4 * (exp(tom) - tom - 1) * exp(tom) / denom2;
-    oca_se_ana(i, 1) = -g4 * (exp(tom) - 1) * (exp(tom) - 1) * exp(om * (beta - tau)) / denom2;
-    oca_se_ana(i, 2) = -2 * g4 * (tom * exp(tom) - exp(tom) + 1) * exp(2 * om * (beta - tau)) / denom2;
+    double t            = rel2abs(s.dlr_it(i)); // t = tau / beta
+    double tau          = beta * t;
+    double tom          = om * tau;
+    double g4           = exp(-t * ln4);
+    oca_se_ana(i, 0, 0) = -2 * g4 * (exp(tom) - tom - 1) * exp(tom) / denom2;
+    oca_se_ana(i, 1, 1) = -g4 * (exp(tom) - 1) * (exp(tom) - 1) * exp(om * (beta - tau)) / denom2;
+    oca_se_ana(i, 2, 2) = oca_se_ana(i, 1, 1);
+    oca_se_ana(i, 3, 3) = -2 * g4 * (tom * exp(tom) - exp(tom) + 1) * exp(2 * om * (beta - tau)) / denom2;
   }
-  expect_diag_by_sector(oca_se, oca_se_ana, s);
+  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(oca_se, s.model.ad) - oca_se_ana)), eps);
   check_oca_se_manual(s, oca_se);
 
   // ----- third-order test -----
   // There are no manual third-order evaluators, so only the diagram evaluators are compared here.
   auto third_order_se     = check_se_diagram_evaluators(s, max_crossing_topology(3));
-  auto third_order_se_ana = nda::zeros<double>(s.r, 3);
+  auto third_order_se_ana = nda::zeros<dcomplex>(s.r, 4, 4);
   double denom3           = om * om * om * om * (exp(beta * om) + 1) * (exp(beta * om) + 1) * (exp(beta * om) + 1);
   for (int i = 0; i < s.r; ++i) {
-    double t                 = rel2abs(s.dlr_it(i)); // t = tau / beta
-    double tau               = beta * t;
-    double tom               = om * tau;
-    double g4                = exp(-t * ln4);
-    third_order_se_ana(i, 0) = g4 * (tom * tom * exp(tom) - 4 * tom * exp(tom) - 2 * tom + 6 * exp(tom) - 6) * exp(beta * om) / denom3;
-    third_order_se_ana(i, 2) = g4 * (tom * tom + 4 * tom + 2 * (tom - 3) * exp(tom) + 6) * exp(om * (2 * beta - tau)) / denom3;
-    third_order_se_ana(i, 1) = 0.5 * (third_order_se_ana(i, 0) + third_order_se_ana(i, 2));
+    double t                    = rel2abs(s.dlr_it(i)); // t = tau / beta
+    double tau                  = beta * t;
+    double tom                  = om * tau;
+    double g4                   = exp(-t * ln4);
+    third_order_se_ana(i, 0, 0) = g4 * (tom * tom * exp(tom) - 4 * tom * exp(tom) - 2 * tom + 6 * exp(tom) - 6) * exp(beta * om) / denom3;
+    third_order_se_ana(i, 3, 3) = g4 * (tom * tom + 4 * tom + 2 * (tom - 3) * exp(tom) + 6) * exp(om * (2 * beta - tau)) / denom3;
+    third_order_se_ana(i, 1, 1) = 0.5 * (third_order_se_ana(i, 0, 0) + third_order_se_ana(i, 3, 3));
+    third_order_se_ana(i, 2, 2) = third_order_se_ana(i, 1, 1);
   }
-  expect_diag_by_sector(third_order_se, third_order_se_ana, s);
+  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(third_order_se, s.model.ad) - third_order_se_ana)), eps);
 }
 
 /**
