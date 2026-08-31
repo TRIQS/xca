@@ -42,7 +42,7 @@ using triqs_xca::atom_diag::ad_to_atom_prop;
 using triqs_xca::atom_diag::get_full_h_atomic;
 using triqs_xca::atom_diag::get_operators;
 using triqs_xca::atom_diag::get_operators_dense;
-using triqs_xca::atom_diag::get_tensor_in_atom_diag_subspace;
+using triqs_xca::atom_diag::get_tensor_in_full_hilbert_space;
 
 /**
  * @file test_one_fermion_se_spgf_all_evals.cpp
@@ -81,27 +81,29 @@ namespace {
   // ---------------------------------------------------------------------------------------------------
 
   /**
-   * @brief One-fermion model (trivial atomic Hamiltonian H = 0, one orbital) with the two-pole
-   * hybridization Delta(tau) = K(tau, 0.6) + 2 * K(tau, -0.9)
+   * @brief One-fermion model (trivial atomic Hamiltonian H = 0, one orbital) with the hybridization
+   * Delta(tau) = sum_k coeffs[k] K(tau, poles[k])
    *
-   * @details Same atom as one_fermion_model_helper (block_sparse_utils.cpp); that helper only builds
-   * single-pole hybridizations, so the two-pole cases construct their coefficients here.
+   * @details Same atom as the one-fermion helper in block_sparse_utils.cpp; that helper only builds
+   * single-pole hybridizations, so the general sum over poles is assembled here.
+   *
+   * @param[in] poles Hybridization poles omega_k
+   * @param[in] coeffs Coefficients c_k, one per pole
    */
-  FermionModelData two_pole_model(double beta, double Lambda, double eps) {
-    int p    = 2;
+  FermionModelData one_fermion_model(double beta, double Lambda, double eps, std::vector<double> const &poles, std::vector<dcomplex> const &coeffs) {
+    int p    = poles.size();
     int norb = 1;
     nda::array<dcomplex, 3> hyb_coeffs(p, norb, norb);
-    hyb_coeffs(0, 0, 0) = 1.0;
-    hyb_coeffs(1, 0, 0) = 2.0;
     nda::vector<double> hyb_poles(p);
-    hyb_poles(0) = 0.6;
-    hyb_poles(1) = -0.9;
+    for (int k = 0; k < p; ++k) {
+      hyb_coeffs(k, 0, 0) = coeffs[k];
+      hyb_poles(k)        = poles[k];
+    }
 
-    many_body_operator_complex H;
+    // H = 0: a single spinless level at mu = 0
     double mu = 0.0;
-    many_body_operator_complex N;
-    N = n("0", 0);
-    H = -mu * N;
+    many_body_operator_complex H;
+    H = -mu * n("0", 0);
 
     triqs::atom_diag::fundamental_operator_set fop_set;
     fop_set.insert("0", 0);
@@ -118,6 +120,9 @@ namespace {
    *
    * @details The dense objects sum the same backbones as the block-sparse ones but over the full Hilbert
    * space rather than block by block, so the two carry the same overall self-energy sign convention.
+   *
+   * Each test constructs one directly from its own beta, Lambda = 20 beta and eps, so that those values
+   * stay in scope for the analytic references and tolerances in the test body.
    */
   struct OneFermionSetup {
     double beta;
@@ -138,20 +143,25 @@ namespace {
     DiagramEvaluator D;
     BlockOpSymQuartet Fq; // field operators of the block-sparse evaluator
 
-    OneFermionSetup(double beta_, double Lambda_, double eps_, FermionModelData model_)
+    /**
+     * @brief Build the DLR grid, the model and every dense fixture from the physical parameters
+     * @param[in] poles Hybridization poles omega_k
+     * @param[in] coeffs Coefficients c_k in Delta(tau) = sum_k c_k K(tau, omega_k)
+     */
+    OneFermionSetup(double beta_, double Lambda_, double eps_, std::vector<double> const &poles, std::vector<dcomplex> const &coeffs)
        : beta(beta_),
          Lambda(Lambda_),
          eps(eps_),
          itops(Lambda_, build_dlr_rf(Lambda_, eps_)),
          dlr_it(itops.get_itnodes()),
          r(itops.rank()),
-         model(std::move(model_)),
-         Gt_dense(Hmat_to_Gtmat(get_full_h_atomic(model.ad), beta_, cppdlr::rel2abs(dlr_it))),
+         model(one_fermion_model(beta_, Lambda_, eps_, poles, coeffs)),
+         Gt_dense(make_dense_propagator(model.ad, beta_, dlr_it)),
          Gt_dense_refl(itops.reflect(Gt_dense)),
          G0_ppsc_dense(wrap_dense(model.G_ppsc[0].mesh(), Gt_dense)),
          D_dense(model.hyb_poles, model.hyb_coeffs, model.G_ppsc[0].mesh(), model.ad),
          D(model.hyb_poles, model.hyb_coeffs, model.G_ppsc[0].mesh(), model.ad),
-         Fq(std::get<0>(get_operators(model.ad, model.hyb_coeffs))) {
+         Fq(make_field_operators(model.ad, model.hyb_coeffs)) {
       auto [Fs, F_dags] = get_operators_dense(model.ad);
       Fs_dense          = std::move(Fs);
       F_dags_dense      = std::move(F_dags);
@@ -160,6 +170,19 @@ namespace {
     int nblocks() const { return model.G_bdof.get_num_block_cols(); }
 
     private:
+    // The atomic propagator over the full Hilbert space, rebuilt from the Hamiltonian rather than taken from the
+    // block-sparse model, so that the dense evaluators are fed through an independent code path.
+    static nda::array<dcomplex, 3> make_dense_propagator(triqs::atom_diag::atom_diag<true> const &ad, double beta,
+                                                         nda::vector_const_view<double> dlr_it) {
+      return Hmat_to_Gtmat(get_full_h_atomic(ad), beta, cppdlr::rel2abs(dlr_it));
+    }
+
+    // The field operators of the block-sparse evaluator. get_operators also returns the symmetry set labels,
+    // which none of these tests use.
+    static BlockOpSymQuartet make_field_operators(triqs::atom_diag::atom_diag<true> const &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
+      return std::get<0>(get_operators(ad, hyb_coeffs));
+    }
+
     // The dense propagator as a one-block block_gf, which is what the dense evaluator takes.
     static triqs::gfs::block_gf<triqs::mesh::dlr_imtime> wrap_dense(triqs::mesh::dlr_imtime const &mesh, nda::array_const_view<dcomplex, 3> Gt) {
       std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> blocks{triqs::gfs::gf<triqs::mesh::dlr_imtime>(mesh, Gt)};
@@ -167,24 +190,9 @@ namespace {
     }
   };
 
-  // All six tests use the same DLR parameters, and differ only in beta and in the hybridization.
-  OneFermionSetup one_pole_setup(double beta, double hyb_pole = 0.0, double eps = 1.0e-10) {
-    double Lambda = 20.0 * beta;
-    return {beta, Lambda, eps, one_fermion_model_helper(beta, Lambda, eps, hyb_pole)};
-  }
-
-  OneFermionSetup two_pole_setup(double beta, double eps = 1.0e-10) {
-    double Lambda = 20.0 * beta;
-    return {beta, Lambda, eps, two_pole_model(beta, Lambda, eps)};
-  }
-
   // ---------------------------------------------------------------------------------------------------
   // Small helpers
   // ---------------------------------------------------------------------------------------------------
-
-  // Largest absolute deviation between two arrays. Pair with EXPECT_LE, as with max_offdiag, so that a
-  // failure prints the deviation that was actually reached.
-  double max_dev(auto const &a, auto const &b) { return nda::max_element(nda::abs(a - b)); }
 
   // Sample an analytic reference function on the DLR nodes. The argument passed to f is t = tau / beta.
   nda::array<double, 1> tau_ref(nda::vector_const_view<double> dlr_it, auto f) {
@@ -216,69 +224,6 @@ namespace {
     return {blocks, zero_block_indices};
   }
 
-  // Compare a block-sparse result, block by block, against the corresponding subspaces of a dense result.
-  // sign = -1 for the evaluators that use the opposite overall self-energy convention (see
-  // check_nca_se_manual).
-  void expect_blocks_match_dense(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> bs, nda::array_const_view<dcomplex, 3> dense,
-                                 OneFermionSetup const &s, double sign = 1.0) {
-    for (int b = 0; b < s.nblocks(); ++b) {
-      SCOPED_TRACE("block " + std::to_string(b));
-      auto dense_block = get_tensor_in_atom_diag_subspace(dense, b, s.model.ad);
-      EXPECT_LE(max_dev(bs[b].data(), sign * dense_block), s.eps);
-    }
-  }
-
-  // Compare two block-sparse results, block by block, with potential sign argument
-  void expect_blocks_match(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> bs, BlockDiagOpFun const &other, OneFermionSetup const &s,
-                           double sign = 1.0) {
-    for (int b = 0; b < s.nblocks(); ++b) {
-      SCOPED_TRACE("block " + std::to_string(b));
-      EXPECT_LE(max_dev(bs[b].data(), sign * other.get_block(b)), s.eps);
-    }
-  }
-
-  // Hybridization at the DLR imaginary-time nodes of s.itops, which is what the trapezoidal routines
-  // interpolate onto their own equispaced grid. The beta/Lambda/eps overload of coefs2vals hardcodes a
-  // symmetrized grid internally, so the itops-based overload is the one that matches the rest of the setup.
-  nda::array<dcomplex, 3> hyb_at_dlr_nodes(OneFermionSetup &s) {
-    return triqs_xca::hyb::coefs2vals(s.beta, s.itops, s.model.hyb_coeffs, s.model.hyb_poles);
-  }
-
-  // Compare a block-sparse result against a dense result that already lives on the equispaced quadrature
-  // grid, re-sampling the former onto that grid. grid_range selects the points to compare, since the
-  // quadrature routines leave grid endpoints they never visit at zero.
-  void expect_blocks_match_eq(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> bs, nda::array_const_view<dcomplex, 3> dense_eq, OneFermionSetup &s,
-                              int n_quad, nda::range grid_range, double tol) {
-    for (int b = 0; b < s.nblocks(); ++b) {
-      SCOPED_TRACE("block " + std::to_string(b));
-      auto bs_eq       = eval_eq(s.itops, bs[b].data(), n_quad);
-      auto dense_block = get_tensor_in_atom_diag_subspace(dense_eq, b, s.model.ad);
-      EXPECT_LE(max_dev(bs_eq(grid_range, _, _), dense_block(grid_range, _, _)), tol);
-    }
-  }
-
-  // Compare a diagonal entry of a block-sparse result against a closed-form reference.
-  void expect_diag_close(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> bs, int b, nda::array_const_view<double, 1> ref,
-                         OneFermionSetup const &s) {
-    SCOPED_TRACE("block " + std::to_string(b));
-    EXPECT_LE(max_dev(bs[b].data()(_, 0, 0), ref), s.eps);
-  }
-
-  // Check that a block-sparse result vanishes identically.
-  void expect_blocks_zero(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> bs, OneFermionSetup const &s) {
-    for (int b = 0; b < s.nblocks(); ++b) {
-      SCOPED_TRACE("block " + std::to_string(b));
-      EXPECT_LE(nda::max_element(nda::abs(bs[b].data()(_, 0, 0))), s.eps);
-    }
-  }
-
-  // The atomic propagator is -exp(-tau ln2) in all three models, since H = 0 in all of them.
-  void expect_atomic_propagator(OneFermionSetup const &s) {
-    SCOPED_TRACE("atomic propagator");
-    auto G0_ana = tau_ref(s.dlr_it, [](double t) { return -exp(-t * std::numbers::ln2); });
-    for (int b = 0; b < s.nblocks(); ++b) { EXPECT_LE(max_dev(s.model.G_bdof.get_block(b)(_, 0, 0), G0_ana), s.eps); }
-  }
-
   // ---------------------------------------------------------------------------------------------------
   // Evaluator comparison
   // ---------------------------------------------------------------------------------------------------
@@ -308,10 +253,10 @@ namespace {
     EXPECT_LE(max_offdiag(se_dde[0].data()), s.eps);
     // dense diagram evaluator, evaluating the backbones using the pairs optimization
     auto se_pairs = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, topology);
-    EXPECT_LE(max_dev(se_dde[0].data(), se_pairs[0].data()), s.eps);
+    EXPECT_LE(nda::max_element(nda::abs(se_dde[0].data() - se_pairs[0].data())), s.eps);
     // block-sparse diagram evaluator, compared with the dense one
     auto se = s.D.compute_self_energy(s.model.G_ppsc, topology);
-    expect_blocks_match_dense(se, se_dde[0].data(), s);
+    EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(se, s.model.ad) - se_dde[0].data())), s.eps);
     // all three evaluators agree, so cancel the topology sign once, on the way out (see parity_of)
     auto parity = parity_of(topology);
     for (int b = 0; b < s.nblocks(); ++b) { se[b].data() *= parity; }
@@ -327,7 +272,7 @@ namespace {
     SCOPED_TRACE("single-particle gf evaluators at order " + std::to_string(topology.extent(0)));
     auto gf_dde = s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, topology);
     auto gf     = s.D.compute_single_ptcle_gf(s.model.G_ppsc, topology);
-    EXPECT_LE(max_dev(gf, gf_dde), s.eps);
+    EXPECT_LE(nda::max_element(nda::abs(gf - gf_dde)), s.eps);
     gf *= parity_of(topology); // cancel the topology sign once, on the way out (see parity_of)
     return gf;
   }
@@ -339,10 +284,14 @@ namespace {
     // the self-energy (cf. the "-Sigma_Diagram_calc" negation in test_block_sparse_NCA_manual.cpp), hence
     // the sign = -1 below.
     auto nca_se_dense = NCA_dense(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
-    expect_blocks_match_dense(nca_se, nca_se_dense, s, -1.0);
+    EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(nca_se, s.model.ad) + nca_se_dense)), s.eps);
     EXPECT_LE(max_offdiag(nca_se_dense), s.eps);
     auto nca_se_manual = NCA_bs(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
-    expect_blocks_match(nca_se, nca_se_manual, s, -1.0);
+    // the DLR rank is passed explicitly because a BlockDiagOpFun that vanishes identically flags every block zero
+    // and so carries no time axis of its own, as happens in check_oca_se_manual below
+    EXPECT_LE(nda::max_element(
+                 nda::abs(get_tensor_in_full_hilbert_space(nca_se, s.model.ad) + get_tensor_in_full_hilbert_space(nca_se_manual, s.model.ad, s.r))),
+              s.eps);
   }
 
   // Compare an OCA self-energy with the dense and block-sparse evaluators that can only do second order.
@@ -352,10 +301,14 @@ namespace {
     // NCA_bs/OCA_bs cancels against the extra line at second order.
     auto oca_se_dense = OCA_dense(s.D.hyb.values, s.D.hyb.coeffs, s.D.hyb.values_reflect, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense,
                                   s.Fs_dense, s.F_dags_dense);
-    expect_blocks_match_dense(oca_se, oca_se_dense, s);
+    EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(oca_se, s.model.ad) - oca_se_dense)), s.eps);
     EXPECT_LE(max_offdiag(oca_se_dense), s.eps);
     auto oca_se_manual = OCA_bs(s.D.hyb.values, s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
-    expect_blocks_match(oca_se, oca_se_manual, s);
+    // OCA vanishes identically for a single fermion, so every block of oca_se_manual is flagged zero and the DLR
+    // rank has to come from the setup rather than from the result
+    EXPECT_LE(nda::max_element(
+                 nda::abs(get_tensor_in_full_hilbert_space(oca_se, s.model.ad) - get_tensor_in_full_hilbert_space(oca_se_manual, s.model.ad, s.r))),
+              s.eps);
   }
 
   /**
@@ -367,9 +320,15 @@ namespace {
    */
   void check_oca_se_tpz(OneFermionSetup &s, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> oca_se, int n_quad = 20, double tol = 2.0e-3) {
     SCOPED_TRACE("OCA self-energy vs trapezoidal quadrature");
-    auto oca_se_tpz = OCA_tpz(hyb_at_dlr_nodes(s), s.itops, s.beta, s.Gt_dense, s.Fs_dense, n_quad);
+    // the itops overload of coefs2vals; the beta/Lambda/eps one hardcodes a symmetrized grid internally
+    auto oca_se_tpz =
+       OCA_tpz(triqs_xca::hyb::coefs2vals(s.beta, s.itops, s.model.hyb_coeffs, s.model.hyb_poles), s.itops, s.beta, s.Gt_dense, s.Fs_dense, n_quad);
+    // Resampling onto the equispaced grid commutes with the scatter to the full Hilbert space, since eval_eq
+    // acts on the time axis of each entry independently.
+    auto oca_se_eq = eval_eq(s.itops, get_tensor_in_full_hilbert_space(oca_se, s.model.ad), n_quad);
     // OCA_tpz's outer loop starts at i = 1, leaving grid point 0 untouched, so skip it.
-    expect_blocks_match_eq(oca_se, oca_se_tpz, s, n_quad, nda::range(1, n_quad + 1), tol);
+    auto visited = nda::range(1, n_quad + 1);
+    EXPECT_LE(nda::max_element(nda::abs(oca_se_eq(visited, _, _) - oca_se_tpz(visited, _, _))), tol);
     EXPECT_LE(max_offdiag(oca_se_tpz), tol);
   }
 
@@ -377,25 +336,26 @@ namespace {
   void check_nca_gf_manual(OneFermionSetup &s, nda::array_const_view<dcomplex, 3> nca_gf) {
     SCOPED_TRACE("manual NCA single-particle gf evaluators");
     auto nca_gf_dense = NCA_gf_dense(s.Gt_dense, s.Gt_dense_refl, s.Fs_dense, s.F_dags_dense);
-    EXPECT_LE(max_dev(nca_gf, nca_gf_dense), s.eps);
+    EXPECT_LE(nda::max_element(nda::abs(nca_gf - nca_gf_dense)), s.eps);
     auto nca_gf_manual = NCA_gf_bs(s.model.G_bdof, reflect_bdof(s.model.G_bdof, s.itops), s.Fq);
-    EXPECT_LE(max_dev(nca_gf, nca_gf_manual), s.eps);
+    EXPECT_LE(nda::max_element(nda::abs(nca_gf - nca_gf_manual)), s.eps);
   }
 
   // Compare an OCA single-particle Green's function with the dense and block-sparse second-order-only evaluators.
   void check_oca_gf_manual(OneFermionSetup &s, nda::array_const_view<dcomplex, 3> oca_gf) {
     SCOPED_TRACE("manual OCA single-particle gf evaluators");
     auto oca_gf_dense = OCA_gf_dense(s.D.hyb.coeffs, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
-    EXPECT_LE(max_dev(oca_gf, oca_gf_dense), s.eps);
+    EXPECT_LE(nda::max_element(nda::abs(oca_gf - oca_gf_dense)), s.eps);
     auto oca_gf_manual = OCA_gf_bs(s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
-    EXPECT_LE(max_dev(oca_gf, oca_gf_manual), s.eps);
+    EXPECT_LE(nda::max_element(nda::abs(oca_gf - oca_gf_manual)), s.eps);
   }
 
   // The three DLR-coefficient arrays that the *_gf_tpz routines take: unlike OCA_tpz and third_order_tpz they
   // want coefficients rather than values, and they do not build the reflected hybridization themselves, so the
   // -reflect(hyb) convention that OCA_tpz applies internally is reproduced here.
   std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> gf_tpz_coeffs(OneFermionSetup &s) {
-    auto hyb = hyb_at_dlr_nodes(s);
+    // the itops overload of coefs2vals; the beta/Lambda/eps one hardcodes a symmetrized grid internally
+    auto hyb = triqs_xca::hyb::coefs2vals(s.beta, s.itops, s.model.hyb_coeffs, s.model.hyb_poles);
     return {s.itops.vals2coefs(hyb), s.itops.vals2coefs(nda::make_regular(-s.itops.reflect(hyb))), s.itops.vals2coefs(s.Gt_dense)};
   }
 
@@ -404,7 +364,7 @@ namespace {
   void expect_matches_tpz(nda::array_const_view<dcomplex, 3> gf, nda::array_const_view<dcomplex, 3> tpz, OneFermionSetup &s, int n_quad, double tol) {
     auto gf_eq    = eval_eq(s.itops, gf, n_quad);
     auto interior = nda::range(1, n_quad);
-    EXPECT_LE(max_dev(gf_eq(interior, _, _), tpz(interior, _, _)), tol);
+    EXPECT_LE(nda::max_element(nda::abs(gf_eq(interior, _, _) - tpz(interior, _, _))), tol);
   }
 
   /**
@@ -449,31 +409,47 @@ namespace {
  * in examples/one_fermion_analytical_solutions.ipynb to the results of calls to the DiagramEvaluator compute_self_energy routine.
  */
 TEST(one_fermion, const_hyb_se) {
-  auto s = one_pole_setup(2.0);
-  expect_atomic_propagator(s);
+  double beta   = 2.0;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-10;
+  // Delta(tau) = K(tau, 0), which is tau-independent
+  OneFermionSetup s{beta, Lambda, eps, /*poles=*/{0.0}, /*coeffs=*/{1.0}};
+  // the atomic propagator is -exp(-tau ln2), since H = 0
+  auto G0_ana = tau_ref(s.dlr_it, [](double t) { return -exp(-t * std::numbers::ln2); });
+  for (int b = 0; b < s.nblocks(); ++b) { EXPECT_LE(nda::max_element(nda::abs(s.model.G_bdof.get_block(b)(_, 0, 0) - G0_ana)), eps); }
 
   // ----- NCA test -----
   auto nca_se     = check_se_diagram_evaluators(s, max_crossing_topology(1));
   auto nca_se_ana = tau_ref(s.dlr_it, [](double t) { return exp(-t * std::numbers::ln2) / 2; }); // = -G0_ana / 2
-  for (int b = 0; b < s.nblocks(); ++b) { expect_diag_close(nca_se, b, nca_se_ana, s); }
+  for (int b = 0; b < s.nblocks(); ++b) {
+    SCOPED_TRACE("block " + std::to_string(b));
+    EXPECT_LE(nda::max_element(nda::abs(nca_se[b].data()(_, 0, 0) - nca_se_ana)), eps);
+  }
   check_nca_se_manual(s, nca_se);
 
   // ----- OCA test -----
   auto oca_se = check_se_diagram_evaluators(s, max_crossing_topology(2));
-  expect_blocks_zero(oca_se, s); // OCA contribution should be identically zero
+  // OCA contributes identically zero
+  for (int b = 0; b < s.nblocks(); ++b) {
+    SCOPED_TRACE("block " + std::to_string(b));
+    EXPECT_LE(nda::max_element(nda::abs(oca_se[b].data()(_, 0, 0))), eps);
+  }
   check_oca_se_manual(s, oca_se);
   check_oca_se_tpz(s, oca_se);
 
   // ----- third-order test -----
   // There are no manual third-order evaluators, so only the diagram evaluators are compared here.
   auto third_order_se     = check_se_diagram_evaluators(s, max_crossing_topology(3));
-  auto third_order_se_ana = tau_ref(s.dlr_it, [beta = s.beta](double t) {
+  auto third_order_se_ana = tau_ref(s.dlr_it, [beta](double t) {
     double bt4 = beta * t;
     bt4        = bt4 * bt4;
     bt4        = bt4 * bt4;
     return bt4 * exp(-t * std::numbers::ln2) / 192.0;
   });
-  for (int b = 0; b < s.nblocks(); ++b) { expect_diag_close(third_order_se, b, third_order_se_ana, s); }
+  for (int b = 0; b < s.nblocks(); ++b) {
+    SCOPED_TRACE("block " + std::to_string(b));
+    EXPECT_LE(nda::max_element(nda::abs(third_order_se[b].data()(_, 0, 0) - third_order_se_ana)), eps);
+  }
 }
 
 /**
@@ -482,22 +458,29 @@ TEST(one_fermion, const_hyb_se) {
  * @details This tests the evaluation of the first-, second-, and third-order self-energy diagrams.
  */
 TEST(one_fermion, one_hyb_pole_se) {
-  auto s      = one_pole_setup(1.0, 0.8);
-  double beta = s.beta;
-  double om   = s.model.hyb_poles(0);
-  expect_atomic_propagator(s);
+  double beta   = 1.0;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-10;
+  OneFermionSetup s{beta, Lambda, eps, /*poles=*/{0.8}, /*coeffs=*/{1.0}};
+  double om = s.model.hyb_poles(0);
+  // the atomic propagator is -exp(-tau ln2), since H = 0
+  auto G0_ana = tau_ref(s.dlr_it, [](double t) { return -exp(-t * std::numbers::ln2); });
+  for (int b = 0; b < s.nblocks(); ++b) { EXPECT_LE(nda::max_element(nda::abs(s.model.G_bdof.get_block(b)(_, 0, 0) - G0_ana)), eps); }
 
   // ----- NCA test -----
   auto nca_se      = check_se_diagram_evaluators(s, max_crossing_topology(1));
   auto nca_se0_ana = tau_ref(s.dlr_it, [&](double t) { return exp(-t * std::numbers::ln2) * exp(t * om) / (exp(beta * om) + 1); });
   auto nca_se1_ana = tau_ref(s.dlr_it, [&](double t) { return exp(-t * std::numbers::ln2) * exp(-t * om) / (exp(-beta * om) + 1); });
-  expect_diag_close(nca_se, 0, nca_se0_ana, s);
-  expect_diag_close(nca_se, 1, nca_se1_ana, s);
+  EXPECT_LE(nda::max_element(nda::abs(nca_se[0].data()(_, 0, 0) - nca_se0_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_se[1].data()(_, 0, 0) - nca_se1_ana)), eps);
   check_nca_se_manual(s, nca_se);
 
   // ----- OCA test -----
   auto oca_se = check_se_diagram_evaluators(s, max_crossing_topology(2));
-  expect_blocks_zero(oca_se, s);
+  for (int b = 0; b < s.nblocks(); ++b) {
+    SCOPED_TRACE("block " + std::to_string(b));
+    EXPECT_LE(nda::max_element(nda::abs(oca_se[b].data()(_, 0, 0))), eps);
+  }
   check_oca_se_manual(s, oca_se);
   check_oca_se_tpz(s, oca_se);
 
@@ -515,8 +498,8 @@ TEST(one_fermion, one_hyb_pole_se) {
     double tom = t * om;
     return (tom * tom + 4 * tom + 2 * (tom - 3) * exp(tom) + 6) * exp(om * (2 * beta - t)) * exp(-t * std::numbers::ln2) / denom;
   });
-  expect_diag_close(third_order_se, 0, third_order_se0_ana, s);
-  expect_diag_close(third_order_se, 1, third_order_se1_ana, s);
+  EXPECT_LE(nda::max_element(nda::abs(third_order_se[0].data()(_, 0, 0) - third_order_se0_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(third_order_se[1].data()(_, 0, 0) - third_order_se1_ana)), eps);
 }
 
 /**
@@ -526,13 +509,18 @@ TEST(one_fermion, one_hyb_pole_se) {
  * two-pole hybridization Delta(tau) = K(tau, omega_1) + 2*K(tau, omega_2).
  */
 TEST(one_fermion, two_hyb_poles_se) {
-  auto s      = two_pole_setup(1.0);
-  double beta = s.beta;
-  double om1  = s.model.hyb_poles(0);
-  double om2  = s.model.hyb_poles(1);
-  double c1   = s.model.hyb_coeffs(0, 0, 0).real();
-  double c2   = s.model.hyb_coeffs(1, 0, 0).real();
-  expect_atomic_propagator(s);
+  double beta   = 1.0;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-10;
+  // Delta(tau) = K(tau, 0.6) + 2 K(tau, -0.9)
+  OneFermionSetup s{beta, Lambda, eps, /*poles=*/{0.6, -0.9}, /*coeffs=*/{1.0, 2.0}};
+  double om1 = s.model.hyb_poles(0);
+  double om2 = s.model.hyb_poles(1);
+  double c1  = s.model.hyb_coeffs(0, 0, 0).real();
+  double c2  = s.model.hyb_coeffs(1, 0, 0).real();
+  // the atomic propagator is -exp(-tau ln2), since H = 0
+  auto G0_ana = tau_ref(s.dlr_it, [](double t) { return -exp(-t * std::numbers::ln2); });
+  for (int b = 0; b < s.nblocks(); ++b) { EXPECT_LE(nda::max_element(nda::abs(s.model.G_bdof.get_block(b)(_, 0, 0) - G0_ana)), eps); }
 
   // ----- NCA test -----
   // First order is linear in Delta, so the analytic reference is just the coefficient-weighted sum of
@@ -546,15 +534,18 @@ TEST(one_fermion, two_hyb_poles_se) {
     return c1 * exp(-t * std::numbers::ln2) * exp(-t * om1) / (exp(-beta * om1) + 1)
        + c2 * exp(-t * std::numbers::ln2) * exp(-t * om2) / (exp(-beta * om2) + 1);
   });
-  expect_diag_close(nca_se, 0, nca_se0_ana, s);
-  expect_diag_close(nca_se, 1, nca_se1_ana, s);
+  EXPECT_LE(nda::max_element(nda::abs(nca_se[0].data()(_, 0, 0) - nca_se0_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(nca_se[1].data()(_, 0, 0) - nca_se1_ana)), eps);
   check_nca_se_manual(s, nca_se);
 
   // ----- OCA test -----
   // Still identically zero: the combinatorial argument (creation/annihilation operators must alternate
   // for a single fermion level) doesn't depend on how many poles Delta has.
   auto oca_se = check_se_diagram_evaluators(s, max_crossing_topology(2));
-  expect_blocks_zero(oca_se, s);
+  for (int b = 0; b < s.nblocks(); ++b) {
+    SCOPED_TRACE("block " + std::to_string(b));
+    EXPECT_LE(nda::max_element(nda::abs(oca_se[b].data()(_, 0, 0))), eps);
+  }
   check_oca_se_manual(s, oca_se);
   check_oca_se_tpz(s, oca_se);
 
@@ -574,22 +565,24 @@ TEST(one_fermion, two_hyb_poles_se) {
   for (size_t k = 0; k < tau_pts.size(); ++k) {
     dcomplex se00_val = s.itops.coefs2eval(se00_coeffs, tau_pts[k]);
     dcomplex se11_val = s.itops.coefs2eval(se11_coeffs, tau_pts[k]);
-    ASSERT_LE(std::abs(se00_val - se00_ref[k]), s.eps);
-    ASSERT_LE(std::abs(se11_val - se11_ref[k]), s.eps);
+    ASSERT_LE(std::abs(se00_val - se00_ref[k]), eps);
+    ASSERT_LE(std::abs(se11_val - se11_ref[k]), eps);
   }
 
   // ----- trapezoidal third-order comparison -----
   // Independent verification of third_order_se, computed by direct trapezoidal quadrature
   // (third_order_tpz, c++/triqs_xca/block_sparse_manual.hpp) of the same topology {{0,3},{1,4},{2,5}}.
   //
-  int n_quad              = 20;
-  auto third_order_se_tpz = third_order_tpz(hyb_at_dlr_nodes(s), s.itops, beta, s.Gt_dense, s.Fs_dense, n_quad);
+  int n_quad = 20;
+  // the itops overload of coefs2vals; the beta/Lambda/eps one hardcodes a symmetrized grid internally
+  auto third_order_se_tpz = third_order_tpz(triqs_xca::hyb::coefs2vals(s.beta, s.itops, s.model.hyb_coeffs, s.model.hyb_poles), s.itops, beta,
+                                            s.Gt_dense, s.Fs_dense, n_quad);
   auto third_order_se0_eq = eval_eq(s.itops, third_order_se[0].data(), n_quad);
   auto third_order_se1_eq = eval_eq(s.itops, third_order_se[1].data(), n_quad);
 
   double tpz_tol = 2.0e-3; // ~2x the empirically observed n_quad=20 error (~9.2e-4)
-  ASSERT_LE(max_dev(third_order_se0_eq(_, 0, 0), third_order_se_tpz(_, 0, 0)), tpz_tol);
-  ASSERT_LE(max_dev(third_order_se1_eq(_, 0, 0), third_order_se_tpz(_, 1, 1)), tpz_tol);
+  ASSERT_LE(nda::max_element(nda::abs(third_order_se0_eq(_, 0, 0) - third_order_se_tpz(_, 0, 0))), tpz_tol);
+  ASSERT_LE(nda::max_element(nda::abs(third_order_se1_eq(_, 0, 0) - third_order_se_tpz(_, 1, 1))), tpz_tol);
   ASSERT_LE(max_offdiag(third_order_se_tpz), tpz_tol);
 }
 
@@ -599,30 +592,34 @@ TEST(one_fermion, two_hyb_poles_se) {
  * @details This tests the evaluation of the first-, second-, and third-order single-particle Green's functions diagrams.
  */
 TEST(one_fermion, const_hyb_spgf) {
-  auto s = one_pole_setup(2.0);
+  double beta   = 2.0;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-10;
+  // Delta(tau) = K(tau, 0), which is tau-independent
+  OneFermionSetup s{beta, Lambda, eps, /*poles=*/{0.0}, /*coeffs=*/{1.0}};
 
   // ----- NCA test -----
   auto nca_gf     = check_gf_diagram_evaluators(s, max_crossing_topology(1));
   auto nca_gf_ana = nda::make_regular(nda::ones<dcomplex>(s.r) / 2);
-  ASSERT_LE(max_dev(nca_gf(_, 0, 0), nca_gf_ana), s.eps);
+  ASSERT_LE(nda::max_element(nda::abs(nca_gf(_, 0, 0) - nca_gf_ana)), eps);
   check_nca_gf_manual(s, nca_gf);
 
   // ----- OCA test -----
   auto oca_gf = check_gf_diagram_evaluators(s, max_crossing_topology(2));
-  ASSERT_LE(nda::max_element(nda::abs(oca_gf)), s.eps); // OCA contribution should be identically zero
+  ASSERT_LE(nda::max_element(nda::abs(oca_gf)), eps); // OCA contribution should be identically zero
   check_oca_gf_manual(s, oca_gf);
   check_oca_gf_tpz(s, oca_gf);
 
   // ----- third-order test -----
   // There are no manual third-order evaluators, so only the two diagram evaluators are compared here.
   auto third_order_gf     = check_gf_diagram_evaluators(s, max_crossing_topology(3));
-  auto third_order_gf_ana = tau_ref(s.dlr_it, [beta = s.beta](double t) {
+  auto third_order_gf_ana = tau_ref(s.dlr_it, [beta](double t) {
     double halfbeta   = beta / 2.0;
     double halfbetasq = halfbeta * halfbeta;
     double halfbeta4  = halfbetasq * halfbetasq;
     return halfbeta4 * (1.0 - t) * (1.0 - t) * t * t / 2.0;
   });
-  ASSERT_LE(max_dev(third_order_gf(_, 0, 0), third_order_gf_ana), s.eps);
+  ASSERT_LE(nda::max_element(nda::abs(third_order_gf(_, 0, 0) - third_order_gf_ana)), eps);
   check_third_order_gf_tpz(s, third_order_gf);
 }
 
@@ -632,17 +629,20 @@ TEST(one_fermion, const_hyb_spgf) {
  * @details This tests the evaluation of the first-, second-, and third-order single-particle Green's functions diagrams.
  */
 TEST(one_fermion, one_hyb_pole_spgf) {
-  auto s = one_pole_setup(1.0, 0.8);
+  double beta   = 1.0;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-10;
+  OneFermionSetup s{beta, Lambda, eps, /*poles=*/{0.8}, /*coeffs=*/{1.0}};
 
   // ----- NCA test -----
   auto nca_gf     = check_gf_diagram_evaluators(s, max_crossing_topology(1));
   auto nca_gf_ana = nda::make_regular(nda::ones<dcomplex>(s.r) / 2);
-  ASSERT_LE(max_dev(nca_gf(_, 0, 0), nca_gf_ana), s.eps);
+  ASSERT_LE(nda::max_element(nda::abs(nca_gf(_, 0, 0) - nca_gf_ana)), eps);
   check_nca_gf_manual(s, nca_gf);
 
   // ----- OCA test -----
   auto oca_gf = check_gf_diagram_evaluators(s, max_crossing_topology(2));
-  ASSERT_LE(nda::max_element(nda::abs(oca_gf)), s.eps); // OCA contribution should be identically zero
+  ASSERT_LE(nda::max_element(nda::abs(oca_gf)), eps); // OCA contribution should be identically zero
   check_oca_gf_manual(s, oca_gf);
   check_oca_gf_tpz(s, oca_gf);
 
@@ -650,11 +650,11 @@ TEST(one_fermion, one_hyb_pole_spgf) {
   // There are no manual third-order evaluators, so only the two diagram evaluators are compared here.
   auto third_order_gf     = check_gf_diagram_evaluators(s, max_crossing_topology(3));
   double om               = s.model.hyb_poles(0);
-  auto third_order_gf_ana = tau_ref(s.dlr_it, [beta = s.beta, om](double t) {
+  auto third_order_gf_ana = tau_ref(s.dlr_it, [beta, om](double t) {
     return (t + (exp(-om * t) - 1.0) / om) * (t - beta + (exp(om * (beta - t)) - 1.0) / om)
        / (2 * om * om * (1 + exp(-beta * om)) * (exp(beta * om) + 1));
   });
-  ASSERT_LE(max_dev(third_order_gf(_, 0, 0), third_order_gf_ana), s.eps);
+  ASSERT_LE(nda::max_element(nda::abs(third_order_gf(_, 0, 0) - third_order_gf_ana)), eps);
   check_third_order_gf_tpz(s, third_order_gf);
 }
 
@@ -666,21 +666,25 @@ TEST(one_fermion, one_hyb_pole_spgf) {
  * two-pole self-energy test `one_fermion.two_hyb_poles_se` above.
  */
 TEST(one_fermion, two_hyb_poles_spgf) {
-  auto s = two_pole_setup(1.0);
+  double beta   = 1.0;
+  double Lambda = 20.0 * beta;
+  double eps    = 1.0e-10;
+  // Delta(tau) = K(tau, 0.6) + 2 K(tau, -0.9)
+  OneFermionSetup s{beta, Lambda, eps, /*poles=*/{0.6, -0.9}, /*coeffs=*/{1.0, 2.0}};
 
   // ----- NCA test -----
   // NCA is independent of the hybridization (no Delta lines at this order), so the reference is the same
   // constant 1/2 seen in the const-hybridization and one-pole tests above.
   auto nca_gf     = check_gf_diagram_evaluators(s, max_crossing_topology(1));
   auto nca_gf_ana = nda::make_regular(nda::ones<dcomplex>(s.r) / 2);
-  ASSERT_LE(max_dev(nca_gf(_, 0, 0), nca_gf_ana), s.eps);
+  ASSERT_LE(nda::max_element(nda::abs(nca_gf(_, 0, 0) - nca_gf_ana)), eps);
   check_nca_gf_manual(s, nca_gf);
 
   // ----- OCA test -----
   // Still identically zero: the combinatorial argument (creation/annihilation operators must alternate
   // for a single fermion level) doesn't depend on how many poles Delta has.
   auto oca_gf = check_gf_diagram_evaluators(s, max_crossing_topology(2));
-  ASSERT_LE(nda::max_element(nda::abs(oca_gf)), s.eps);
+  ASSERT_LE(nda::max_element(nda::abs(oca_gf)), eps);
   check_oca_gf_manual(s, oca_gf);
   check_oca_gf_tpz(s, oca_gf);
 
@@ -697,7 +701,7 @@ TEST(one_fermion, two_hyb_poles_spgf) {
 
   for (size_t k = 0; k < tau_pts.size(); ++k) {
     dcomplex gf_val = s.itops.coefs2eval(third_order_gf_coeffs, tau_pts[k]);
-    ASSERT_LE(std::abs(gf_val - gf_ref[k]), s.eps);
+    ASSERT_LE(std::abs(gf_val - gf_ref[k]), eps);
   }
   check_third_order_gf_tpz(s, third_order_gf);
 }

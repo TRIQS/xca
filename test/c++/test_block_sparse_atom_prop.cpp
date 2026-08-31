@@ -19,6 +19,7 @@ using cppdlr::rel2abs;
 using triqs_xca::atom_diag::ad_to_atom_prop;
 using triqs_xca::atom_diag::get_full_h_atomic;
 using triqs_xca::atom_diag::get_tensor_in_atom_diag_subspace;
+using triqs_xca::atom_diag::get_tensor_in_full_hilbert_space;
 
 using triqs_xca::block_sparse::atom_prop_from_eigensystem;
 using triqs_xca::block_sparse::trace;
@@ -40,12 +41,13 @@ using triqs_xca::block_sparse::trace;
  *   catches a mismatch between the subspace ordering of the eigensystems and the block ordering of the output;
  * - agreement between the BlockDiagOpFun and block_gf overloads, and of the latter's DLR mesh with the
  *   (Lambda, eps) grid its data was sampled on.
+ *
+ * The same Fock state index map is what get_tensor_in_full_hilbert_space uses to spread a block-sparse result over
+ * the whole Hilbert space, so that routine is tested here too: against its inverse, against the dense construction,
+ * and on the zero blocks whose size and position it has to take from the atom_diag object.
  */
 
 namespace {
-
-  // Largest deviation between two arrays of equal shape
-  template <typename A, typename B> double max_dev(A const &a, B const &b) { return nda::max_element(nda::abs(nda::make_regular(a - b))); }
 
   // Reference propagator block -exp(-tau (H_B + eta_0)) built from an eigendecomposition, for tau = beta * t_rel
   nda::array<dcomplex, 3> ref_prop_block(nda::array<double, 1> const &evals, nda::array<dcomplex, 2> const &evecs, double eta_0, double beta,
@@ -104,13 +106,13 @@ TEST(AtomProp, from_eigensystem) {
     ASSERT_EQ(ap.get_block_size(b), evals[b].size());
     // no block of the propagator is ever zero, including the one whose Hamiltonian vanishes
     EXPECT_EQ(ap.get_zero_block_index(b), 0);
-    EXPECT_LE(max_dev(ap.get_block(b), ref_prop_block(evals[b], evecs[b], eta_0, beta, t_abs)), 1e-14);
+    EXPECT_LE(nda::max_element(nda::abs(nda::make_regular(ap.get_block(b) - ref_prop_block(evals[b], evecs[b], eta_0, beta, t_abs)))), 1e-14);
   }
 
   // G(0) = -I on every block
   for (int b = 0; b < 3; ++b) {
     SCOPED_TRACE("block " + std::to_string(b));
-    EXPECT_LE(max_dev(ap.get_block(b)(0, _, _), -1.0 * nda::eye<dcomplex>(ap.get_block_size(b))), 1e-14);
+    EXPECT_LE(nda::max_element(nda::abs(nda::make_regular(ap.get_block(b)(0, _, _) + nda::eye<dcomplex>(ap.get_block_size(b))))), 1e-14);
   }
 
   // Tr G(beta) = -1. This is what fixes eta_0: with the shift dropped the trace would be -Z instead.
@@ -179,9 +181,101 @@ TEST(AtomProp, blocks_match_dense) {
       SCOPED_TRACE("block " + std::to_string(b));
       auto dense_block = get_tensor_in_atom_diag_subspace(Gt_dense, b, ad);
       ASSERT_EQ(ap.get_block_size(b), dense_block.extent(1));
-      EXPECT_LE(max_dev(ap.get_block(b), dense_block), 1e-12);
+      EXPECT_LE(nda::max_element(nda::abs(nda::make_regular(ap.get_block(b) - dense_block))), 1e-12);
     }
   }
+}
+
+/**
+ * @brief Check get_tensor_in_full_hilbert_space against its inverse and against the dense construction
+ *
+ * @details This is the whole-array counterpart of AtomProp.blocks_match_dense above: rather than projecting the
+ * dense propagator into each subspace, it scatters the block-sparse one over the full Hilbert space and subtracts
+ * the two tensors in one go. That comparison is strictly stronger, since it also pins that the dense result carries
+ * no weight outside the blocks. Both partitionings of the spin-flip model are used so that the Fock state index map
+ * is exercised on subspaces whose states are not contiguous.
+ */
+TEST(AtomProp, tensor_in_full_hilbert_space) {
+  double beta   = 2.0;
+  double Lambda = 100 * beta;
+  double eps    = 1e-10;
+
+  auto dlr_rf     = build_dlr_rf(Lambda, eps);
+  auto itops      = imtime_ops(Lambda, dlr_rf);
+  auto dlr_it_abs = rel2abs(itops.get_itnodes());
+
+  for (bool use_particle_number_sym : {true, false}) {
+    SCOPED_TRACE(use_particle_number_sym ? "particle-number symmetry" : "autopartitioned");
+
+    auto ad   = spin_flip_atom_diag_helper(2, use_particle_number_sym);
+    auto ap   = ad_to_atom_prop(ad, beta, itops);
+    auto full = get_tensor_in_full_hilbert_space(ap, ad);
+
+    int dim = ad.get_full_hilbert_space_dim();
+    ASSERT_EQ(full.extent(0), itops.rank());
+    ASSERT_EQ(full.extent(1), dim);
+    ASSERT_EQ(full.extent(2), dim);
+
+    // round trip: projecting each subspace back out recovers the block it came from
+    for (int b = 0; b < ad.n_subspaces(); ++b) {
+      SCOPED_TRACE("block " + std::to_string(b));
+      auto block_back = get_tensor_in_atom_diag_subspace(full, b, ad);
+      EXPECT_LE(nda::max_element(nda::abs(nda::make_regular(block_back - ap.get_block(b)))), 1e-14);
+    }
+
+    // the scattered propagator agrees with the independent dense construction everywhere, not just inside blocks
+    auto Gt_dense = Hmat_to_Gtmat(get_full_h_atomic(ad), beta, dlr_it_abs);
+    EXPECT_LE(nda::max_element(nda::abs(nda::make_regular(full - Gt_dense))), 1e-12);
+
+    // the block_gf overload sees the same data
+    auto bgf = ad_to_atom_prop(ad, beta, Lambda, eps);
+    EXPECT_LE(nda::max_element(nda::abs(nda::make_regular(get_tensor_in_full_hilbert_space(bgf, ad) - full))), 1e-14);
+  }
+}
+
+/**
+ * @brief Check that zero blocks are placed from the atom_diag object rather than read off the propagator
+ *
+ * @details A block flagged zero may hold no storage at all, so its size and position have to come from ad. The
+ * all-zero case additionally has no time axis to infer, which is what the explicit r argument is for.
+ */
+TEST(AtomProp, tensor_in_full_hilbert_space_zero_blocks) {
+  double beta   = 2.0;
+  double Lambda = 100 * beta;
+  double eps    = 1e-10;
+
+  auto itops = imtime_ops(Lambda, build_dlr_rf(Lambda, eps));
+  auto ad    = spin_flip_atom_diag_helper(2, true);
+  int dim    = ad.get_full_hilbert_space_dim();
+  int r      = itops.rank();
+
+  // a propagator whose blocks are all flagged zero: nothing can be read from it, not even the number of time nodes
+  nda::vector<int> block_sizes(ad.n_subspaces());
+  for (int b = 0; b < ad.n_subspaces(); ++b) { block_sizes(b) = ad.get_fock_states(b).size(); }
+  auto G_zero = BlockDiagOpFun(r, block_sizes);
+
+  EXPECT_THROW(get_tensor_in_full_hilbert_space(G_zero, ad), std::invalid_argument);
+  auto full_zero = get_tensor_in_full_hilbert_space(G_zero, ad, r);
+  EXPECT_EQ(full_zero.extent(0), r);
+  EXPECT_EQ(full_zero.extent(1), dim);
+  EXPECT_EQ(full_zero.extent(2), dim);
+  EXPECT_EQ(nda::max_element(nda::abs(full_zero)), 0.0);
+
+  // zeroing one subspace of a real propagator zeroes exactly that subspace's rows and columns
+  auto ap   = ad_to_atom_prop(ad, beta, itops);
+  auto full = get_tensor_in_full_hilbert_space(ap, ad);
+
+  auto ap_zeroed = ap;
+  ap_zeroed.set_block(0, nda::zeros<dcomplex>(r, block_sizes(0), block_sizes(0)));
+  ap_zeroed.set_zero_block_indices();
+  ASSERT_EQ(ap_zeroed.get_zero_block_index(0), -1);
+
+  auto expected = nda::make_regular(full);
+  for (auto state : ad.get_fock_states(0)) {
+    expected(_, state, _) = 0;
+    expected(_, _, state) = 0;
+  }
+  EXPECT_LE(nda::max_element(nda::abs(nda::make_regular(get_tensor_in_full_hilbert_space(ap_zeroed, ad) - expected))), 1e-14);
 }
 
 /**
@@ -214,7 +308,7 @@ TEST(AtomProp, overloads_agree) {
   // same data, block for block
   for (int b = 0; b < ap.get_num_block_cols(); ++b) {
     SCOPED_TRACE("block " + std::to_string(b));
-    EXPECT_LE(max_dev(bgf[b].data(), ap.get_block(b)), 1e-14);
+    EXPECT_LE(nda::max_element(nda::abs(nda::make_regular(bgf[b].data() - ap.get_block(b)))), 1e-14);
   }
 
   // Evaluating off the sample nodes exercises the mesh: compare against -exp(-tau (E + eta_0)) in the eigenbasis.
@@ -235,7 +329,7 @@ TEST(AtomProp, overloads_agree) {
       for (int j = 0; j < n; ++j) { diag(j, j) = -std::exp(-tau * (evals(j) + eta_0)); }
       auto expected = matmul(U, matmul(diag, nda::make_regular(nda::dagger(U))));
 
-      EXPECT_LE(max_dev(g_dlr(tau), expected), 1e-9);
+      EXPECT_LE(nda::max_element(nda::abs(nda::make_regular(g_dlr(tau) - expected))), 1e-9);
     }
   }
 }
