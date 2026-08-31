@@ -192,17 +192,6 @@ namespace {
     return topology;
   }
 
-  // G(beta - tau) as a BDOF, built block by block since BlockDiagOpFun has no reflection routine.
-  BlockDiagOpFun reflect_bdof(BlockDiagOpFun const &G, imtime_ops &itops) {
-    std::vector<nda::array<dcomplex, 3>> blocks;
-    nda::vector<int> zero_block_indices(G.get_num_block_cols());
-    for (int b = 0; b < G.get_num_block_cols(); ++b) {
-      blocks.push_back(nda::make_regular(itops.reflect(G.get_block(b))));
-      zero_block_indices(b) = G.get_zero_block_index(b);
-    }
-    return {blocks, zero_block_indices};
-  }
-
   // Every diagonal entry of every block equals ref, and every off-diagonal entry vanishes. This is the
   // structure the self-energy has whenever Delta is tau-independent: diagonal in the Fock basis, with the
   // same entry in every occupation sector.
@@ -333,7 +322,7 @@ namespace {
     SCOPED_TRACE("manual NCA single-particle gf evaluators");
     auto nca_gf_dense = NCA_gf_dense(s.Gt_dense, s.Gt_dense_refl, s.Fs_dense, s.F_dags_dense);
     EXPECT_LE(nda::max_element(nda::abs(nca_gf - nca_gf_dense)), s.eps);
-    auto nca_gf_manual = NCA_gf_bs(s.model.G_bdof, reflect_bdof(s.model.G_bdof, s.itops), s.Fq);
+    auto nca_gf_manual = NCA_gf_bs(s.model.G_bdof, s.model.G_bdof.reflect(s.itops), s.Fq);
     EXPECT_LE(nda::max_element(nda::abs(nca_gf - nca_gf_manual)), s.eps);
   }
 

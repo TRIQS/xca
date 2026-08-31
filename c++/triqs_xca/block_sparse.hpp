@@ -42,6 +42,17 @@ namespace triqs_xca::block_sparse {
     void add_block(int i, nda::array_const_view<dcomplex, 3> block);
 
     /**
+   * @brief Reflect in imaginary time, G(\tau) -> G(\beta - \tau), block by block
+   *
+   * @details Blocks flagged zero are carried over untouched: a zero block reflects to a zero block, and its
+   * storage may be empty.
+   *
+   * @param[in] itops Imaginary time object defining the DLR nodes the blocks are sampled on
+   * @return A BlockDiagOpFun with the same block structure, holding the reflected blocks
+   */
+    BlockDiagOpFun reflect(cppdlr::imtime_ops const &itops) const;
+
+    /**
    * @brief Constructor for BlockDiagOpFun
    * @param[in] blocks vector of diagonal blocks
    * @param[in] zero_block_indices if i-th entry is -1, then blocks(i) = 0

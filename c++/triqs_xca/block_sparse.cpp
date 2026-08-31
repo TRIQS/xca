@@ -134,6 +134,19 @@ namespace triqs_xca::block_sparse {
     zero_block_indices(i) = 0; // mark block as non-zero
   }
 
+  BlockDiagOpFun BlockDiagOpFun::reflect(cppdlr::imtime_ops const &itops) const {
+    std::vector<nda::array<dcomplex, 3>> reflected(num_block_cols);
+    for (int i = 0; i < num_block_cols; i++) {
+      // a zero block reflects to a zero block, and reflecting it would read storage that may be empty
+      if (zero_block_indices(i) == -1) {
+        reflected[i] = blocks[i];
+      } else {
+        reflected[i] = itops.reflect(blocks[i]);
+      }
+    }
+    return {reflected, zero_block_indices};
+  }
+
   /////////////// BlockOp (BO) class ///////////////
 
   BlockOp::BlockOp(nda::vector<int> &block_indices, std::vector<nda::array<dcomplex, 2>> &blocks)
