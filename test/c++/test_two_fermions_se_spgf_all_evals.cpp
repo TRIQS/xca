@@ -61,6 +61,8 @@ using triqs_xca::atom_diag::get_tensor_in_full_hilbert_space;
  * For third-order diagram evaluation, there are comparisons to all of the above routines except, obviously, the last two routines above, and no 
  * third-order analogues exist. 
  *
+ * Every test uses the maximally-crossing topology at each order, in which hybridization line i joins vertices i and i + order.
+ *
  * All three models take U = mu = 0, so the pseudo-particle propagator is G(tau) = -4^{-tau/beta} I_4 in every
  * one of them and the atom_diag object splits into occupation sectors N = 0, 1, 2 of dimensions 1, 2, 1. The
  * closed forms are derived in examples/two_fermion_analytical_solutions.ipynb. Every test differs only in its
@@ -189,17 +191,6 @@ namespace {
     return ref;
   }
 
-  // Maximally-crossing topology at the given order: hybridization line i joins vertices i and i + order,
-  // i.e. {{0, 1}} at first order, {{0, 2}, {1, 3}} at second, {{0, 3}, {1, 4}, {2, 5}} at third.
-  nda::array<int, 2> max_crossing_topology(int order) {
-    auto topology = nda::zeros<int>(order, 2);
-    for (int i = 0; i < order; ++i) {
-      topology(i, 0) = i;
-      topology(i, 1) = i + order;
-    }
-    return topology;
-  }
-
   // The atom_diag object splits into the occupation sectors N = 0, 1, 2, of dimensions 1, 2, 1 -- so the
   // per-block checks below are not vacuously scalar, and the singly-occupied sector really is 2x2.
   void expect_block_structure(TwoFermionSetup const &s) {
@@ -239,7 +230,7 @@ TEST(two_fermions, const_hyb_se) {
   expect_block_structure(s);
 
   // ----- NCA -----
-  auto nca_topology = max_crossing_topology(1); // = {0, 1}
+  nda::array<int, 2> nca_topology = {{0, 1}};
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto nca_bs = nda::make_regular(topology_parity(nca_topology)
                                   * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, nca_topology), s.model.ad));
@@ -268,7 +259,7 @@ TEST(two_fermions, const_hyb_se) {
   EXPECT_LE(nda::max_element(nda::abs(nca_manual_bs - nca_ana)), eps);
 
   // ----- OCA -----
-  auto oca_topology = max_crossing_topology(2); // = {{0, 2}, {1, 3}}
+  nda::array<int, 2> oca_topology = {{0, 2}, {1, 3}};
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto oca_bs = nda::make_regular(topology_parity(oca_topology)
                                   * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, oca_topology), s.model.ad));
@@ -298,7 +289,7 @@ TEST(two_fermions, const_hyb_se) {
   EXPECT_LE(nda::max_element(nda::abs(oca_manual_bs - oca_ana)), eps);
 
   // ----- third order -----
-  auto third_topology = max_crossing_topology(3); // = {{0, 3}, {1, 4}, {2, 5}}
+  nda::array<int, 2> third_topology = {{0, 3}, {1, 4}, {2, 5}};
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto third_bs = nda::make_regular(topology_parity(third_topology)
                                     * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, third_topology), s.model.ad));
@@ -337,7 +328,7 @@ TEST(two_fermions, const_hyb_spgf) {
   TwoFermionSetup s{beta, Lambda, eps, om, alpha};
 
   // ----- NCA -----
-  auto nca_topology = max_crossing_topology(1); // = {0, 1}
+  nda::array<int, 2> nca_topology = {{0, 1}};
   // compute using DiagramEvaluator, and ensure sign is correct
   auto nca_bs = nda::make_regular(topology_parity(nca_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, nca_topology));
   // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
@@ -360,7 +351,7 @@ TEST(two_fermions, const_hyb_spgf) {
   EXPECT_EQ(nca_bs.extent(1), 2); // the two orbitals
 
   // ----- OCA -----
-  auto oca_topology = max_crossing_topology(2); // = {{0, 2}, {1, 3}}
+  nda::array<int, 2> oca_topology = {{0, 2}, {1, 3}};
   // compute using DiagramEvaluator, and ensure sign is correct
   auto oca_bs = nda::make_regular(topology_parity(oca_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, oca_topology));
   // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
@@ -383,7 +374,7 @@ TEST(two_fermions, const_hyb_spgf) {
   EXPECT_LE(nda::max_element(nda::abs(oca_manual_bs - oca_ana)), eps);
 
   // ----- third order -----
-  auto third_topology = max_crossing_topology(3); // = {{0, 3}, {1, 4}, {2, 5}}
+  nda::array<int, 2> third_topology = {{0, 3}, {1, 4}, {2, 5}};
   // compute using DiagramEvaluator, and ensure sign is correct
   auto third_bs = nda::make_regular(topology_parity(third_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, third_topology));
   // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
@@ -427,7 +418,7 @@ TEST(two_fermions, hermitian_hyb_se) {
   expect_block_structure(s);
 
   // ----- NCA -----
-  auto nca_topology = max_crossing_topology(1); // = {0, 1}
+  nda::array<int, 2> nca_topology = {{0, 1}};
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto nca_bs = nda::make_regular(topology_parity(nca_topology)
                                   * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, nca_topology), s.model.ad));
@@ -456,7 +447,7 @@ TEST(two_fermions, hermitian_hyb_se) {
   EXPECT_LE(nda::max_element(nda::abs(nca_manual_bs - nca_ana)), eps);
 
   // ----- OCA -----
-  auto oca_topology = max_crossing_topology(2); // = {{0, 2}, {1, 3}}
+  nda::array<int, 2> oca_topology = {{0, 2}, {1, 3}};
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto oca_bs = nda::make_regular(topology_parity(oca_topology)
                                   * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, oca_topology), s.model.ad));
@@ -489,7 +480,7 @@ TEST(two_fermions, hermitian_hyb_se) {
   EXPECT_LE(nda::max_element(nda::abs(oca_manual_bs - oca_ana)), eps);
 
   // ----- third order -----
-  auto third_topology = max_crossing_topology(3); // = {{0, 3}, {1, 4}, {2, 5}}
+  nda::array<int, 2> third_topology = {{0, 3}, {1, 4}, {2, 5}};
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto third_bs = nda::make_regular(topology_parity(third_topology)
                                     * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, third_topology), s.model.ad));
@@ -536,7 +527,7 @@ TEST(two_fermions, hermitian_hyb_spgf) {
   TwoFermionSetup s{beta, Lambda, eps, om, alpha};
 
   // ----- NCA -----
-  auto nca_topology = max_crossing_topology(1); // = {0, 1}
+  nda::array<int, 2> nca_topology = {{0, 1}};
   // compute using DiagramEvaluator, and ensure sign is correct
   auto nca_bs = nda::make_regular(topology_parity(nca_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, nca_topology));
   // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
@@ -559,7 +550,7 @@ TEST(two_fermions, hermitian_hyb_spgf) {
   EXPECT_EQ(nca_bs.extent(1), 2); // the two orbitals
 
   // ----- OCA -----
-  auto oca_topology = max_crossing_topology(2); // = {{0, 2}, {1, 3}}
+  nda::array<int, 2> oca_topology = {{0, 2}, {1, 3}};
   // compute using DiagramEvaluator, and ensure sign is correct
   auto oca_bs = nda::make_regular(topology_parity(oca_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, oca_topology));
   // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
@@ -584,7 +575,7 @@ TEST(two_fermions, hermitian_hyb_spgf) {
   EXPECT_LE(nda::max_element(nda::abs(oca_manual_bs - oca_ana)), eps);
 
   // ----- third order -----
-  auto third_topology = max_crossing_topology(3); // = {{0, 3}, {1, 4}, {2, 5}}
+  nda::array<int, 2> third_topology = {{0, 3}, {1, 4}, {2, 5}};
   // compute using DiagramEvaluator, and ensure sign is correct
   auto third_bs = nda::make_regular(topology_parity(third_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, third_topology));
   // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
@@ -629,7 +620,7 @@ TEST(two_fermions, one_hyb_pole_se) {
   expect_block_structure(s);
 
   // ----- NCA -----
-  auto nca_topology = max_crossing_topology(1); // = {0, 1}
+  nda::array<int, 2> nca_topology = {{0, 1}};
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto nca_bs = nda::make_regular(topology_parity(nca_topology)
                                   * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, nca_topology), s.model.ad));
@@ -665,7 +656,7 @@ TEST(two_fermions, one_hyb_pole_se) {
   EXPECT_LE(nda::max_element(nda::abs(nca_manual_bs - nca_ana)), eps);
 
   // ----- OCA -----
-  auto oca_topology = max_crossing_topology(2); // = {{0, 2}, {1, 3}}
+  nda::array<int, 2> oca_topology = {{0, 2}, {1, 3}};
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto oca_bs = nda::make_regular(topology_parity(oca_topology)
                                   * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, oca_topology), s.model.ad));
@@ -704,7 +695,7 @@ TEST(two_fermions, one_hyb_pole_se) {
   EXPECT_LE(nda::max_element(nda::abs(oca_manual_bs - oca_ana)), eps);
 
   // ----- third order -----
-  auto third_topology = max_crossing_topology(3); // = {{0, 3}, {1, 4}, {2, 5}}
+  nda::array<int, 2> third_topology = {{0, 3}, {1, 4}, {2, 5}};
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto third_bs = nda::make_regular(topology_parity(third_topology)
                                     * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, third_topology), s.model.ad));
@@ -757,7 +748,7 @@ TEST(two_fermions, one_hyb_pole_spgf) {
   TwoFermionSetup s{beta, Lambda, eps, om, alpha};
 
   // ----- NCA -----
-  auto nca_topology = max_crossing_topology(1); // = {0, 1}
+  nda::array<int, 2> nca_topology = {{0, 1}};
   // compute using DiagramEvaluator, and ensure sign is correct
   auto nca_bs = nda::make_regular(topology_parity(nca_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, nca_topology));
   // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
@@ -780,7 +771,7 @@ TEST(two_fermions, one_hyb_pole_spgf) {
   EXPECT_EQ(nca_bs.extent(1), 2); // the two orbitals
 
   // ----- OCA -----
-  auto oca_topology = max_crossing_topology(2); // = {{0, 2}, {1, 3}}
+  nda::array<int, 2> oca_topology = {{0, 2}, {1, 3}};
   // compute using DiagramEvaluator, and ensure sign is correct
   auto oca_bs = nda::make_regular(topology_parity(oca_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, oca_topology));
   // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
@@ -808,7 +799,7 @@ TEST(two_fermions, one_hyb_pole_spgf) {
   EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_bs)), eps);
 
   // ----- third order -----
-  auto third_topology = max_crossing_topology(3); // = {{0, 3}, {1, 4}, {2, 5}}
+  nda::array<int, 2> third_topology = {{0, 3}, {1, 4}, {2, 5}};
   // compute using DiagramEvaluator, and ensure sign is correct
   auto third_bs = nda::make_regular(topology_parity(third_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, third_topology));
   // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
