@@ -304,10 +304,8 @@ TEST(one_fermion, const_hyb_se) {
   EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_dense)), eps);
   EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_bs)), eps);
   EXPECT_LE(max_offdiag(oca_dense), eps);
-  // OCA_tpz's outer loop starts at i = 1, leaving grid point 0 untouched, so skip it
-  auto visited = nda::range(1, n_quad + 1);
-  EXPECT_LE(nda::max_element(nda::abs(oca_bs_eq(visited, _, _) - oca_tpz(visited, _, _))), tpz_tol);
-  EXPECT_LE(max_offdiag(oca_tpz), tpz_tol);
+  // oca_bs is exactly diagonal, so comparing whole tensors also bounds the quadrature result's off-diagonals
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs_eq - oca_tpz)), tpz_tol);
 
   // ----- third order -----
   nda::array<int, 2> third_topology = {{0, 3}, {1, 4}, {2, 5}};
@@ -424,10 +422,7 @@ TEST(one_fermion, one_hyb_pole_se) {
   EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_dense)), eps);
   EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_bs)), eps);
   EXPECT_LE(max_offdiag(oca_dense), eps);
-  // OCA_tpz's outer loop starts at i = 1, leaving grid point 0 untouched, so skip it
-  auto visited = nda::range(1, n_quad + 1);
-  EXPECT_LE(nda::max_element(nda::abs(oca_bs_eq(visited, _, _) - oca_tpz(visited, _, _))), tpz_tol);
-  EXPECT_LE(max_offdiag(oca_tpz), tpz_tol);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs_eq - oca_tpz)), tpz_tol);
 
   // ----- third order -----
   nda::array<int, 2> third_topology = {{0, 3}, {1, 4}, {2, 5}};
@@ -557,10 +552,7 @@ TEST(one_fermion, two_hyb_poles_se) {
   EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_dense)), eps);
   EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_bs)), eps);
   EXPECT_LE(max_offdiag(oca_dense), eps);
-  // OCA_tpz's outer loop starts at i = 1, leaving grid point 0 untouched, so skip it
-  auto visited = nda::range(1, n_quad + 1);
-  EXPECT_LE(nda::max_element(nda::abs(oca_bs_eq(visited, _, _) - oca_tpz(visited, _, _))), tpz_tol);
-  EXPECT_LE(max_offdiag(oca_tpz), tpz_tol);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs_eq - oca_tpz)), tpz_tol);
 
   // ----- third order -----
   nda::array<int, 2> third_topology = {{0, 3}, {1, 4}, {2, 5}};
@@ -668,8 +660,7 @@ TEST(one_fermion, const_hyb_spgf) {
   EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_dense)), eps);
   EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_bs)), eps);
   // both *_gf_tpz routines run their outer loop over 1 <= i <= n_quad - 1, so both grid endpoints are skipped
-  auto interior = nda::range(1, n_quad);
-  EXPECT_LE(nda::max_element(nda::abs(oca_bs_eq(interior, _, _) - oca_tpz(interior, _, _))), tpz_tol);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs_eq - oca_tpz)), tpz_tol);
 
   // ----- third order -----
   nda::array<int, 2> third_topology = {{0, 3}, {1, 4}, {2, 5}};
@@ -694,7 +685,7 @@ TEST(one_fermion, const_hyb_spgf) {
   // compare
   EXPECT_LE(nda::max_element(nda::abs(third_bs - third_ana)), eps);
   EXPECT_LE(nda::max_element(nda::abs(third_dense - third_ana)), eps);
-  EXPECT_LE(nda::max_element(nda::abs(third_bs_eq(interior, _, _) - third_tpz(interior, _, _))), tpz_tol);
+  EXPECT_LE(nda::max_element(nda::abs(third_bs_eq - third_tpz)), tpz_tol);
 }
 
 /**
@@ -765,9 +756,7 @@ TEST(one_fermion, one_hyb_pole_spgf) {
   EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_dense)), eps);
   EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_dense)), eps);
   EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_bs)), eps);
-  // both *_gf_tpz routines run their outer loop over 1 <= i <= n_quad - 1, so both grid endpoints are skipped
-  auto interior = nda::range(1, n_quad);
-  EXPECT_LE(nda::max_element(nda::abs(oca_bs_eq(interior, _, _) - oca_tpz(interior, _, _))), tpz_tol);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs_eq - oca_tpz)), tpz_tol);
 
   // ----- third order -----
   nda::array<int, 2> third_topology = {{0, 3}, {1, 4}, {2, 5}};
@@ -790,7 +779,7 @@ TEST(one_fermion, one_hyb_pole_spgf) {
   // compare
   EXPECT_LE(nda::max_element(nda::abs(third_bs - third_ana)), eps);
   EXPECT_LE(nda::max_element(nda::abs(third_dense - third_ana)), eps);
-  EXPECT_LE(nda::max_element(nda::abs(third_bs_eq(interior, _, _) - third_tpz(interior, _, _))), tpz_tol);
+  EXPECT_LE(nda::max_element(nda::abs(third_bs_eq - third_tpz)), tpz_tol);
 }
 
 /**
@@ -866,9 +855,7 @@ TEST(one_fermion, two_hyb_poles_spgf) {
   EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_dense)), eps);
   EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_dense)), eps);
   EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_bs)), eps);
-  // both *_gf_tpz routines run their outer loop over 1 <= i <= n_quad - 1, so both grid endpoints are skipped
-  auto interior = nda::range(1, n_quad);
-  EXPECT_LE(nda::max_element(nda::abs(oca_bs_eq(interior, _, _) - oca_tpz(interior, _, _))), tpz_tol);
+  EXPECT_LE(nda::max_element(nda::abs(oca_bs_eq - oca_tpz)), tpz_tol);
 
   // ----- third order -----
   nda::array<int, 2> third_topology = {{0, 3}, {1, 4}, {2, 5}};
@@ -890,5 +877,5 @@ TEST(one_fermion, two_hyb_poles_spgf) {
   auto third_bs_coeffs = s.itops.vals2coefs(third_bs(_, 0, 0));
   for (size_t k = 0; k < tau_pts.size(); ++k) { ASSERT_LE(std::abs(s.itops.coefs2eval(third_bs_coeffs, tau_pts[k]) - gf_ref[k]), eps); }
   EXPECT_LE(nda::max_element(nda::abs(third_bs - third_dense)), eps);
-  EXPECT_LE(nda::max_element(nda::abs(third_bs_eq(interior, _, _) - third_tpz(interior, _, _))), tpz_tol);
+  EXPECT_LE(nda::max_element(nda::abs(third_bs_eq - third_tpz)), tpz_tol);
 }

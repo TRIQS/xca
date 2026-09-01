@@ -993,7 +993,9 @@ nda::array<dcomplex, 3> OCA_tpz(nda::array_const_view<dcomplex, 3> hyb, imtime_o
         for (int nu = 0; nu < num_Fs; nu++) {
           for (int mu = 0; mu < num_Fs; mu++) {
             for (int kap = 0; kap < num_Fs; kap++) {
-              for (int i = 1; i <= n_quad; i++) {
+              // i = 0 is included so that the whole output grid is covered: the tau_1 loop below is then empty,
+              // leaving Sigma(0) at zero, its exact value since the double integral runs over [0, tau]
+              for (int i = 0; i <= n_quad; i++) {
                 for (int i1 = 1; i1 <= i; i1++) {
                   for (int i2 = 0; i2 <= i1; i2++) {
                     double w = 1.0;
@@ -1082,7 +1084,9 @@ nda::array<dcomplex, 3> third_order_tpz(nda::array_const_view<dcomplex, 3> hyb, 
               for (int o3 = 0; o3 < num_Fs; o3++) {
                 for (int o4 = 0; o4 < num_Fs; o4++) {
                   for (int o5 = 0; o5 < num_Fs; o5++) {
-                    for (int i = 1; i <= n_quad; i++) {
+                    // as in OCA_tpz, i = 0 is included so that the whole output grid is covered: the j4 loop
+                    // below is then empty, leaving Sigma(0) at its exact value of zero
+                    for (int i = 0; i <= n_quad; i++) {
                       for (int j4 = 1; j4 <= i; j4++) {
                         double w4 = (j4 == i) ? 0.5 : 1.0;
                         for (int j3 = 0; j3 <= j4; j3++) {
