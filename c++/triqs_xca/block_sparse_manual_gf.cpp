@@ -109,7 +109,12 @@ namespace triqs_xca::block_sparse {
         for (int mu = 0; mu < n; mu++) {
           for (int lam = 0; lam < n; lam++) {
             for (int nu = 0; nu < n; nu++) {
-              for (int i = 1; i <= n_quad - 1; i++) {
+              // the whole output grid is covered, but both endpoints are degenerate: at i = 0 the tau_1
+              // integral runs over the empty range [0, 0], and at i = n_quad the tau_2 integral runs over
+              // [beta, beta], so each contributes nothing and g stays at its exact endpoint value of zero.
+              // They are skipped rather than summed because a one-point trapezoid rule would not give zero.
+              for (int i = 0; i <= n_quad; i++) {
+                if (i == 0 || i == n_quad) continue;
                 for (int i1 = 0; i1 <= i; i1++) {
                   for (int i2 = i; i2 <= n_quad; i2++) {
                     double w = 1.0;
@@ -180,7 +185,11 @@ namespace triqs_xca::block_sparse {
               for (int o2 = 0; o2 < n; o2++) {
                 for (int o4 = 0; o4 < n; o4++) {
                   for (int o5 = 0; o5 < n; o5++) {
-                    for (int i = 1; i <= n_quad - 1; i++) {
+                    // as in OCA_gf_tpz, both endpoints are degenerate: at i = 0 the vertices on [0, tau]
+                    // collapse to a point and at i = n_quad those on [tau, beta] do, so each contributes
+                    // nothing and g keeps its exact endpoint value of zero
+                    for (int i = 0; i <= n_quad; i++) {
+                      if (i == 0 || i == n_quad) continue;
                       // vertices 1 and 2, both on [0, tau]
                       for (int j2 = 0; j2 <= i; j2++) {
                         double w2 = (j2 == 0 || j2 == i) ? 0.5 : 1.0;
