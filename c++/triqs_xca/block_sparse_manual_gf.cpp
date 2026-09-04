@@ -103,7 +103,8 @@ namespace triqs_xca::block_sparse {
       auto const &Flams = (fb) ? Fs(_, _, _) : F_dags(_, _, _);
       auto const &Fnus  = (fb) ? F_dags(_, _, _) : Fs(_, _, _);
       auto const &hyb   = (fb) ? hyb_eq : hyb_refl_eq;
-      int sfM           = (fb) ? 1 : -1; // minus sign for backward line
+      // hyb_refl_coeffs is the plain reflection of the hybridization and carries no sign of its own,
+      // so a backward line needs no extra factor here.
 
       for (int kap = 0; kap < n; kap++) {
         for (int mu = 0; mu < n; mu++) {
@@ -127,7 +128,7 @@ namespace triqs_xca::block_sparse {
                                      matmul(Fs(mu, _, _),
                                             matmul(Gt_eq(i - i1, _, _), matmul(Flams(lam, _, _), matmul(Gt_eq(i1, _, _), F_dags(kap, _, _))))))));
 
-                    gf_eq(i, mu, kap) += sfM * w * hyb(i2 - i1, nu, lam) * nda::trace(GFGFGFGF);
+                    gf_eq(i, mu, kap) += w * hyb(i2 - i1, nu, lam) * nda::trace(GFGFGFGF);
                   }
                 }
               }
@@ -177,7 +178,8 @@ namespace triqs_xca::block_sparse {
         auto const &F5list = (fb2) ? F_dags(_, _, _) : Fs(_, _, _);
         auto const &hyb1   = (fb1) ? hyb_eq : hyb_refl_eq;
         auto const &hyb2   = (fb2) ? hyb_eq : hyb_refl_eq;
-        int sfM            = ((fb1 + fb2) % 2 == 0) ? 1 : -1; // minus sign per backward line
+        // hyb_refl_coeffs is the plain reflection of the hybridization and carries no sign of its own,
+        // so a backward line needs no extra factor here.
 
         for (int kap = 0; kap < n; kap++) {
           for (int mu = 0; mu < n; mu++) {
@@ -211,7 +213,7 @@ namespace triqs_xca::block_sparse {
                                         matmul(F5list(o5, _, _), matmul(Gt_eq(j5 - j4, _, _), matmul(F4list(o4, _, _), Gt_eq(j4 - i, _, _)))));
                               chain = matmul(left, matmul(Fs(mu, _, _), right));
 
-                              gf_eq(i, mu, kap) += sfM * w * hyb1(j4 - j1, o4, o1) * hyb2(j5 - j2, o5, o2) * nda::trace(chain);
+                              gf_eq(i, mu, kap) += w * hyb1(j4 - j1, o4, o1) * hyb2(j5 - j2, o5, o2) * nda::trace(chain);
                             } // sum over j5
                           } // sum over j4
                         } // sum over j1
