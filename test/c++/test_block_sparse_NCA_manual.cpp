@@ -99,23 +99,23 @@ TEST(BlockSparseNCAManual, simple) {
   for (int t = 0; t < r; ++t) {
     // backward diagram
     temp_dense = matmul(F_up_dense, Gt_dense(t, _, _));
-    NCA_result_dense(t, _, _) -= hyb(0, 0, 0) * matmul(temp_dense, F_up_dag_dense);
+    NCA_result_dense(t, _, _) += hyb(0, 0, 0) * matmul(temp_dense, F_up_dag_dense);
     temp_dense = matmul(F_up_dense, Gt_dense(t, _, _));
-    NCA_result_dense(t, _, _) -= hyb(0, 0, 1) * matmul(temp_dense, F_down_dag_dense);
+    NCA_result_dense(t, _, _) += hyb(0, 0, 1) * matmul(temp_dense, F_down_dag_dense);
     temp_dense = matmul(F_down_dense, Gt_dense(t, _, _));
-    NCA_result_dense(t, _, _) -= hyb(0, 1, 0) * matmul(temp_dense, F_up_dag_dense);
+    NCA_result_dense(t, _, _) += hyb(0, 1, 0) * matmul(temp_dense, F_up_dag_dense);
     temp_dense = matmul(F_down_dense, Gt_dense(t, _, _));
-    NCA_result_dense(t, _, _) -= hyb(0, 1, 1) * matmul(temp_dense, F_down_dag_dense);
+    NCA_result_dense(t, _, _) += hyb(0, 1, 1) * matmul(temp_dense, F_down_dag_dense);
 
     // forward diagram
     temp_dense = matmul(F_up_dag_dense, Gt_dense(t, _, _));
-    NCA_result_dense(t, _, _) -= hyb(0, 0, 0) * matmul(temp_dense, F_up_dense);
+    NCA_result_dense(t, _, _) += hyb(0, 0, 0) * matmul(temp_dense, F_up_dense);
     temp_dense = matmul(F_up_dag_dense, Gt_dense(t, _, _));
-    NCA_result_dense(t, _, _) -= hyb(0, 0, 1) * matmul(temp_dense, F_down_dense);
+    NCA_result_dense(t, _, _) += hyb(0, 0, 1) * matmul(temp_dense, F_down_dense);
     temp_dense = matmul(F_down_dag_dense, Gt_dense(t, _, _));
-    NCA_result_dense(t, _, _) -= hyb(0, 1, 0) * matmul(temp_dense, F_up_dense);
+    NCA_result_dense(t, _, _) += hyb(0, 1, 0) * matmul(temp_dense, F_up_dense);
     temp_dense = matmul(F_down_dag_dense, Gt_dense(t, _, _));
-    NCA_result_dense(t, _, _) -= hyb(0, 1, 1) * matmul(temp_dense, F_down_dense);
+    NCA_result_dense(t, _, _) += hyb(0, 1, 1) * matmul(temp_dense, F_down_dense);
   }
 
   EXPECT_EQ(NCA_result.get_block(0)(_, 0, 0), NCA_result_dense(_, 0, 0));
@@ -162,7 +162,7 @@ TEST(BlockSparseNCAManual, single_exponential) {
   auto NCA_ana              = nda::zeros<dcomplex>(r);
   for (int i = 0; i < r; i++) {
     auto tau   = dlr_it_abs(i);
-    NCA_ana(i) = -exp(-(D + g) * tau) - exp((D - g) * tau);
+    NCA_ana(i) = exp(-(D + g) * tau) + exp((D - g) * tau);
   }
 
   EXPECT_LT(nda::linalg::norm((NCA_result.get_block(0)(_, 0, 0) - NCA_ana), std::numeric_limits<double>::infinity())
@@ -206,7 +206,7 @@ TEST(BlockSparseNCAManual, two_band_discrete_bath_bs_dense) {
   Delta_F_reflect.update_inplace(Delta_decomp_reflect, dlr_it, F_dags_dense, Fs_dense);
   auto fb               = nda::vector<int64_t>(2);
   nda::array<int, 2> D1 = {{0, 1}}; // topology for NCA diagram evaluator
-  auto NCA_old = -Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D1, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
+  auto NCA_old = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D1, Deltat, Deltat_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
 
   auto ad = two_band_atom_diag_helper();
   for (int i = 0; i < NCA_result.get_num_block_cols(); i++) {
@@ -271,7 +271,7 @@ TEST(BlockSparseNCAManual, two_band_semicircle_bath_dense_aaa) {
   auto fb               = nda::vector<int64_t>(2);
   fb(1)                 = 0;
   nda::array<int, 2> D1 = {{0, 1}}; // topology for OCA diagram evaluator
-  auto NCA_old          = -Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D1, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
+  auto NCA_old          = Sigma_Diagram_calc(Delta_F, Delta_F_reflect, D1, hyb, hyb_refl, Gt_dense, itops, beta, Fs_dense, F_dags_dense, fb, true);
 
   ASSERT_LE(nda::max_element(nda::abs(NCA_result - NCA_old)), eps);
 }
