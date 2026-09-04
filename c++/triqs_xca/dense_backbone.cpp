@@ -38,7 +38,7 @@ namespace triqs_xca::dense {
        Tkaps(nda::zeros<dcomplex>(n, r, N, N)), // Largest memory footprint, speeding up multiply_left_vertex_and_right_zero_vertex
        Tmu(nda::zeros<dcomplex>(r, N, N)) {}
 
-  template<bool isComplex>
+  template <bool isComplex>
   DenseDiagramEvaluator::DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
                                                triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<isComplex> const &ad)
      : tau_mesh(tau_mesh),
@@ -60,21 +60,15 @@ namespace triqs_xca::dense {
        Tkaps(nda::zeros<dcomplex>(n, r, N, N)), // Largest memory footprint, speeding up multiply_left_vertex_and_right_zero_vertex
        Tmu(nda::zeros<dcomplex>(r, N, N)) {}
 
-  template DenseDiagramEvaluator::DenseDiagramEvaluator(
-    nda::vector_const_view<double> hyb_poles,
-    nda::array_const_view<dcomplex, 3> hyb_coeffs,
-    triqs::mesh::dlr_imtime tau_mesh,
-    triqs::atom_diag::atom_diag<true> const &ad);
+  template DenseDiagramEvaluator::DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
+                                                        triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<true> const &ad);
 
-  template DenseDiagramEvaluator::DenseDiagramEvaluator(
-    nda::vector_const_view<double> hyb_poles,
-    nda::array_const_view<dcomplex, 3> hyb_coeffs,
-    triqs::mesh::dlr_imtime tau_mesh,
-    triqs::atom_diag::atom_diag<false> const &ad);
+  template DenseDiagramEvaluator::DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
+                                                        triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<false> const &ad);
 
-  template<bool isComplex>
+  template <bool isComplex>
   DenseDiagramEvaluator::DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-                                               triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<isComplex> const &ad, 
+                                               triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<isComplex> const &ad,
                                                std::vector<triqs::operators::many_body_operator_real> const &dynint_ops,
                                                nda::array_const_view<dcomplex, 3> dynint_coeffs)
      : tau_mesh(tau_mesh),
@@ -94,23 +88,17 @@ namespace triqs_xca::dense {
        U(nda::zeros<dcomplex>(r, N, N)),
        GKt(nda::zeros<dcomplex>(r, N, N)),
        Tkaps(nda::zeros<dcomplex>(n, r, N, N)), // Largest memory footprint, speeding up multiply_left_vertex_and_right_zero_vertex
-       Tmu(nda::zeros<dcomplex>(r, N, N)) {}       
+       Tmu(nda::zeros<dcomplex>(r, N, N)) {}
 
-  template DenseDiagramEvaluator::DenseDiagramEvaluator(
-    nda::vector_const_view<double> hyb_poles,
-    nda::array_const_view<dcomplex, 3> hyb_coeffs,
-    triqs::mesh::dlr_imtime tau_mesh,
-    triqs::atom_diag::atom_diag<true> const &ad,
-    std::vector<triqs::operators::many_body_operator_real> const &dynint_ops,
-    nda::array_const_view<dcomplex, 3> dynint_coeffs);
+  template DenseDiagramEvaluator::DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
+                                                        triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<true> const &ad,
+                                                        std::vector<triqs::operators::many_body_operator_real> const &dynint_ops,
+                                                        nda::array_const_view<dcomplex, 3> dynint_coeffs);
 
-  template DenseDiagramEvaluator::DenseDiagramEvaluator(
-    nda::vector_const_view<double> hyb_poles,
-    nda::array_const_view<dcomplex, 3> hyb_coeffs,
-    triqs::mesh::dlr_imtime tau_mesh,
-    triqs::atom_diag::atom_diag<false> const &ad,
-    std::vector<triqs::operators::many_body_operator_real> const &dynint_ops,
-    nda::array_const_view<dcomplex, 3> dynint_coeffs);
+  template DenseDiagramEvaluator::DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
+                                                        triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<false> const &ad,
+                                                        std::vector<triqs::operators::many_body_operator_real> const &dynint_ops,
+                                                        nda::array_const_view<dcomplex, 3> dynint_coeffs);
 
   void DenseDiagramEvaluator::reset() {
     T     = 0;
@@ -218,7 +206,7 @@ namespace triqs_xca::dense {
 
         // set the orbital indices of the vertex connected to zero
         // and compute the fermionic permutation parity of the resulting diagram.
-  
+
         backbone.set_orb_inds_of_0_and_vct0(kap, mu);
         int fermionic_parity = backbone.get_parity();
 
@@ -352,14 +340,16 @@ namespace triqs_xca::dense {
 
     // loop over all flat indices
     for (int f_ix = 0; f_ix < f_ix_max; ++f_ix) {
-      correlator += eval_correlator(Gt, backbone, mu_ops, kap_ops, f_ix, is_fermionic); // evaluate the diagram with these directions, poles, and orbital indices
+      correlator +=
+         eval_correlator(Gt, backbone, mu_ops, kap_ops, f_ix, is_fermionic); // evaluate the diagram with these directions, poles, and orbital indices
     }
 
     return correlator;
   }
 
   nda::array<dcomplex, 3> DenseDiagramEvaluator::eval_correlator(nda::array_const_view<dcomplex, 3> Gt, CorrelatorBackbone &backbone,
-                                                                 nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops, int f_ix, bool is_fermionic) {
+                                                                 nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops, int f_ix,
+                                                                 bool is_fermionic) {
 
     int m = backbone.m;
 
@@ -448,7 +438,8 @@ namespace triqs_xca::dense {
     return eval_correlator(G_ppsc[0].data(), backbone, mu_ops, kap_ops, f_ix);
   }
 
-  nda::array<dcomplex, 3> DenseDiagramEvaluator::compute_single_ptcle_gf(gf_vt G_ppsc, nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec) {
+  nda::array<dcomplex, 3> DenseDiagramEvaluator::compute_single_ptcle_gf(gf_vt G_ppsc, nda::array_const_view<int, 2> topology,
+                                                                         nda::array_const_view<int, 1> f_ix_vec) {
     CorrelatorBackbone backbone(topology, n);
     auto mu_ops  = Fset.Fs;
     auto kap_ops = Fset.F_dags;
@@ -461,38 +452,32 @@ namespace triqs_xca::dense {
 
     nda::array<dcomplex, 3> correlator = nda::zeros<dcomplex>(r, mu_ops.extent(0), kap_ops.extent(0));
 
-    for (auto f_ix : f_ix_vec) {
-      correlator += eval_correlator(G_ppsc[0].data(), backbone, mu_ops, kap_ops, f_ix);
-    }
+    for (auto f_ix : f_ix_vec) { correlator += eval_correlator(G_ppsc[0].data(), backbone, mu_ops, kap_ops, f_ix); }
 
     return correlator;
   }
-  
-  template<bool isComplex>
-  nda::array<dcomplex, 3> DenseDiagramEvaluator::compute_one_time_correlator(gf_vt G_ppsc, 
-      std::vector<triqs::operators::many_body_operator_real> const & ops_tau, 
-      std::vector<triqs::operators::many_body_operator_real> const & ops_0, 
-      triqs::atom_diag::atom_diag<isComplex> const &ad,
-      nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec){
+
+  template <bool isComplex>
+  nda::array<dcomplex, 3>
+  DenseDiagramEvaluator::compute_one_time_correlator(gf_vt G_ppsc, std::vector<triqs::operators::many_body_operator_real> const &ops_tau,
+                                                     std::vector<triqs::operators::many_body_operator_real> const &ops_0,
+                                                     triqs::atom_diag::atom_diag<isComplex> const &ad, nda::array_const_view<int, 2> topology,
+                                                     nda::array_const_view<int, 1> f_ix_vec) {
 
     CorrelatorBackbone backbone(topology, n);
 
     // Check Hilbert space dimension.
-    assert( N == ad.get_full_hilbert_space_dim() );
-    assert( ad.n_subspaces() == 1 );
+    assert(N == ad.get_full_hilbert_space_dim());
+    assert(ad.n_subspaces() == 1);
 
     auto U = ad.get_unitary_matrix(0);
 
-    nda::array<dcomplex, 3> mu_ops = nda::zeros<dcomplex>(ops_tau.size(), N, N);
+    nda::array<dcomplex, 3> mu_ops  = nda::zeros<dcomplex>(ops_tau.size(), N, N);
     nda::array<dcomplex, 3> kap_ops = nda::zeros<dcomplex>(ops_0.size(), N, N);
 
-    for (auto [i, op] : itertools::enumerate(ops_tau)) {
-      mu_ops(i, _, _) = U * ad.get_op_mat(op).block_mat[0] * nda::conj(nda::transpose(U));
-    }
+    for (auto [i, op] : itertools::enumerate(ops_tau)) { mu_ops(i, _, _) = U * ad.get_op_mat(op).block_mat[0] * nda::conj(nda::transpose(U)); }
 
-    for (auto [i, op] : itertools::enumerate(ops_0)) {
-      kap_ops(i, _, _) = U * ad.get_op_mat(op).block_mat[0] * nda::conj(nda::transpose(U));
-    }
+    for (auto [i, op] : itertools::enumerate(ops_0)) { kap_ops(i, _, _) = U * ad.get_op_mat(op).block_mat[0] * nda::conj(nda::transpose(U)); }
 
     nda::array<dcomplex, 3> correlator = nda::zeros<dcomplex>(r, mu_ops.extent(0), kap_ops.extent(0));
 
@@ -504,8 +489,8 @@ namespace triqs_xca::dense {
     for (auto [i, op_tau] : itertools::enumerate(ops_tau)) {
       for (auto [j, op_0] : itertools::enumerate(ops_0)) {
 
-        // test bosonic property: [A, B] = 0 
-        is_fermionic_ops(i, j) = !(op_tau * op_0 - op_0 * op_tau).is_zero(); 
+        // test bosonic property: [A, B] = 0
+        is_fermionic_ops(i, j) = !(op_tau * op_0 - op_0 * op_tau).is_zero();
 
         /*
         std::cout << "i, j = " << i << ", " << j 
@@ -517,7 +502,7 @@ namespace triqs_xca::dense {
 
     // Test that all operators have the same statistics
 
-    for ( auto el : is_fermionic_ops ) {
+    for (auto el : is_fermionic_ops) {
       if (el != is_fermionic_ops(0, 0)) {
         throw std::runtime_error("compute_one_time_correlator: All operators must have the same statistics (either all fermionic or all bosonic).");
       }
@@ -525,26 +510,21 @@ namespace triqs_xca::dense {
 
     bool is_fermionic = is_fermionic_ops(0, 0); // Pass on statistics to diagram evaluator
 
-    for (auto f_ix : f_ix_vec) {
-      correlator += eval_correlator(G_ppsc[0].data(), backbone, mu_ops, kap_ops, f_ix, is_fermionic);
-    }
+    for (auto f_ix : f_ix_vec) { correlator += eval_correlator(G_ppsc[0].data(), backbone, mu_ops, kap_ops, f_ix, is_fermionic); }
 
     return correlator;
   }
 
-  template
-  nda::array<dcomplex, 3> DenseDiagramEvaluator::compute_one_time_correlator(gf_vt G_ppsc, 
-      std::vector<triqs::operators::many_body_operator_real> const & ops_tau, 
-      std::vector<triqs::operators::many_body_operator_real> const & ops_0, 
-      triqs::atom_diag::atom_diag<false> const &ad,
-      nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec);
+  template nda::array<dcomplex, 3>
+  DenseDiagramEvaluator::compute_one_time_correlator(gf_vt G_ppsc, std::vector<triqs::operators::many_body_operator_real> const &ops_tau,
+                                                     std::vector<triqs::operators::many_body_operator_real> const &ops_0,
+                                                     triqs::atom_diag::atom_diag<false> const &ad, nda::array_const_view<int, 2> topology,
+                                                     nda::array_const_view<int, 1> f_ix_vec);
 
+  template nda::array<dcomplex, 3>
+  DenseDiagramEvaluator::compute_one_time_correlator(gf_vt G_ppsc, std::vector<triqs::operators::many_body_operator_real> const &ops_tau,
+                                                     std::vector<triqs::operators::many_body_operator_real> const &ops_0,
+                                                     triqs::atom_diag::atom_diag<true> const &ad, nda::array_const_view<int, 2> topology,
+                                                     nda::array_const_view<int, 1> f_ix_vec);
 
-  template
-  nda::array<dcomplex, 3> DenseDiagramEvaluator::compute_one_time_correlator(gf_vt G_ppsc, 
-      std::vector<triqs::operators::many_body_operator_real> const & ops_tau, 
-      std::vector<triqs::operators::many_body_operator_real> const & ops_0, 
-      triqs::atom_diag::atom_diag<true> const &ad,
-      nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec);
-    
 } // namespace triqs_xca::dense

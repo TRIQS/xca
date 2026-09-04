@@ -2,11 +2,11 @@
 
 namespace triqs_xca::block_sparse {
 
-using nda::dcomplex;
+  using nda::dcomplex;
 
-using cppdlr::imtime_ops;
+  using cppdlr::imtime_ops;
 
-/**
+  /**
  * @brief Evaluate NCA self-energy term using block-sparse storage
  * @param[in] hyb hybridization function
  * @param[in] hyb_refl hyb evaluated at (beta - tau)
@@ -14,20 +14,20 @@ using cppdlr::imtime_ops;
  * @param[in] Fs vector of annihilation operators
  * @return NCA term of self-energy
  */
-BlockDiagOpFun NCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl, const BlockDiagOpFun &Gt,
-                      const std::vector<BlockOp> &Fs);
+  BlockDiagOpFun NCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl, const BlockDiagOpFun &Gt,
+                        const std::vector<BlockOp> &Fs);
 
-/**
+  /**
  * @brief Evaluate NCA self-energy term using block-sparse storage 
  * @param[in] hyb hybridization function
  * @param[in] hyb_refl hybridization function eval'd at (beta - tau)
  * @param[in] Gt pseudoparticle Green's function as a BDOF
  * @param[in] Fq quartet of F operators
  */
-BlockDiagOpFun NCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl, BlockDiagOpFun const &Gt,
-                      const BlockOpSymQuartet &Fq);
+  BlockDiagOpFun NCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl, BlockDiagOpFun const &Gt,
+                        const BlockOpSymQuartet &Fq);
 
-/**
+  /**
  * @brief Evaluate NCA self-energy term using dense storage
  * @param[in] hyb hybridization function
  * @param[in] hyb_refl hyb evaluated at (beta - tau)
@@ -35,11 +35,11 @@ BlockDiagOpFun NCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_v
  * @param[in] Fs vector of annihilation operators
  * @param[in] F_dags vector of creation operators
  */
-nda::array<dcomplex, 3> NCA_dense(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl,
-                                  nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Fs,
-                                  nda::array_const_view<dcomplex, 3> F_dags);
+  nda::array<dcomplex, 3> NCA_dense(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl,
+                                    nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Fs,
+                                    nda::array_const_view<dcomplex, 3> F_dags);
 
-/**
+  /**
  * @brief Evaluate OCA using block-sparse storage
  * @param[in] hyb hybridization function at imaginary time nodes
  * @param[in] itops cppdlr imaginary time object
@@ -48,10 +48,10 @@ nda::array<dcomplex, 3> NCA_dense(nda::array_const_view<dcomplex, 3> hyb, nda::a
  * @param[in] Fs F operator
  * @return OCA term of self-energy
  */
-BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt,
-                      const std::vector<BlockOp> &Fs);
+  BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt,
+                        const std::vector<BlockOp> &Fs);
 
-/**
+  /**
  * @brief Evaluate OCA using block-sparse storage and allow user to provide hybridization poles and coefficients
  * @param[in] hyb hybridization function at imaginary time nodes
  * @param[in] hyb_coeffs hybridization coefficients
@@ -64,12 +64,12 @@ BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops,
  * @param[in] Fs F operator
  * @return OCA term of self-energy
  */
-BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-                      nda::array_const_view<dcomplex, 3> hyb_refl, nda::array_const_view<dcomplex, 3> hyb_refl_coeffs,
-                      nda::vector_const_view<double> hyb_poles, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt,
-                      const std::vector<BlockOp> &Fs);
+  BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_coeffs,
+                        nda::array_const_view<dcomplex, 3> hyb_refl, nda::array_const_view<dcomplex, 3> hyb_refl_coeffs,
+                        nda::vector_const_view<double> hyb_poles, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt,
+                        const std::vector<BlockOp> &Fs);
 
-/**
+  /**
  * @brief Evaluate OCA self-energy using block-sparse storage
  * @param[in] hyb hybridization function at imaginary times
  * @param[in] hyb_poles hybridization poles
@@ -78,12 +78,12 @@ BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_v
  * @param[in] Gt pseudoparticle Green's function as a BDOF
  * @param[in] Fq quartet of F operators
  */
-BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::vector_const_view<double> hyb_poles, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt,
-                      const BlockOpSymQuartet &Fq);
+  BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::vector_const_view<double> hyb_poles, imtime_ops &itops, double beta,
+                        const BlockDiagOpFun &Gt, const BlockOpSymQuartet &Fq);
 
-nda::array<dcomplex, 3> eval_eq(imtime_ops &itops, nda::array_const_view<dcomplex, 3> f, int n_quad);
+  nda::array<dcomplex, 3> eval_eq(imtime_ops &itops, nda::array_const_view<dcomplex, 3> f, int n_quad);
 
-/**
+  /**
  * @brief Evaluate OCA using dense storage
  * @param[in] hyb hybridization function at imaginary time nodes
  * @param[in] itops cppdlr imaginary time object
@@ -92,10 +92,10 @@ nda::array<dcomplex, 3> eval_eq(imtime_ops &itops, nda::array_const_view<dcomple
  * @param[in] Fs F operator
  * @return OCA term of self-energy
  */
-nda::array<dcomplex, 3> OCA_dense(nda::array_const_view<dcomplex, 3> hyb, imtime_ops itops, double beta, nda::array_const_view<dcomplex, 3> Gt,
-                                  nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags);
+  nda::array<dcomplex, 3> OCA_dense(nda::array_const_view<dcomplex, 3> hyb, imtime_ops itops, double beta, nda::array_const_view<dcomplex, 3> Gt,
+                                    nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags);
 
-/**
+  /**
  * @brief Evaluate OCA using dense storage and allow user to provide hybridization poles and coefficients
  * @param[in] hyb hybridization function at imaginary time nodes
  * @param[in] hyb_coeffs hybridization coefficients
@@ -108,12 +108,12 @@ nda::array<dcomplex, 3> OCA_dense(nda::array_const_view<dcomplex, 3> hyb, imtime
  * @param[in] Fs F operator
  * @return OCA term of self-energy
  */
-nda::array<dcomplex, 3> OCA_dense(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-                                  nda::array_const_view<dcomplex, 3> hyb_refl, nda::array_const_view<dcomplex, 3> hyb_refl_coeffs,
-                                  nda::vector_const_view<double> hyb_poles, imtime_ops &itops, double beta, nda::array_const_view<dcomplex, 3> Gt,
-                                  nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags);
+  nda::array<dcomplex, 3> OCA_dense(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_coeffs,
+                                    nda::array_const_view<dcomplex, 3> hyb_refl, nda::array_const_view<dcomplex, 3> hyb_refl_coeffs,
+                                    nda::vector_const_view<double> hyb_poles, imtime_ops &itops, double beta, nda::array_const_view<dcomplex, 3> Gt,
+                                    nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags);
 
-/**
+  /**
  * @brief Evaluate OCA directly using trapezoidal quadrature
  * @param[in] hyb hybridization function at imaginary time nodes
  * @param[in] itops cppdlr imaginary time object
@@ -123,10 +123,10 @@ nda::array<dcomplex, 3> OCA_dense(nda::array_const_view<dcomplex, 3> hyb, nda::a
  * @param[in] n_quad number of quadrature nodes
  * @return OCA term of self-energy
  */
-nda::array<dcomplex, 3> OCA_tpz(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta, nda::array_const_view<dcomplex, 3> Gt,
-                                nda::array_const_view<dcomplex, 3> Fs, int n_quad);
+  nda::array<dcomplex, 3> OCA_tpz(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta, nda::array_const_view<dcomplex, 3> Gt,
+                                  nda::array_const_view<dcomplex, 3> Fs, int n_quad);
 
-/**
+  /**
  * @brief Evaluate the third-order self-energy diagram for topology {{0,3},{1,4},{2,5}} directly using trapezoidal quadrature
  * @param[in] hyb hybridization function at imaginary time nodes
  * @param[in] itops cppdlr imaginary time object
@@ -136,7 +136,7 @@ nda::array<dcomplex, 3> OCA_tpz(nda::array_const_view<dcomplex, 3> hyb, imtime_o
  * @param[in] n_quad number of quadrature nodes
  * @return third-order (topology {{0,3},{1,4},{2,5}}) term of self-energy
  */
-nda::array<dcomplex, 3> third_order_tpz(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta,
-                                        nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Fs, int n_quad);
+  nda::array<dcomplex, 3> third_order_tpz(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta,
+                                          nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Fs, int n_quad);
 
 } // namespace triqs_xca::block_sparse

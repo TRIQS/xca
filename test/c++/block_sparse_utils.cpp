@@ -457,4 +457,3 @@ nda::array<dcomplex, 3> third_order_dense_partial(nda::array_const_view<dcomplex
   }
   return Sigma;
 }
-

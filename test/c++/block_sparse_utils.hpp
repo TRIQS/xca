@@ -9,11 +9,11 @@ using triqs_xca::block_sparse::BlockDiagOpFun;
 using triqs_xca::block_sparse::BlockOpSymQuartet;
 
 struct FermionModelData {
-    nda::array<dcomplex, 3> hyb_coeffs;
-    nda::vector<double> hyb_poles;
-    triqs::atom_diag::atom_diag<true> ad;
-    triqs::gfs::block_gf<triqs::mesh::dlr_imtime> G_ppsc;
-    BlockDiagOpFun G_bdof;
+  nda::array<dcomplex, 3> hyb_coeffs;
+  nda::vector<double> hyb_poles;
+  triqs::atom_diag::atom_diag<true> ad;
+  triqs::gfs::block_gf<triqs::mesh::dlr_imtime> G_ppsc;
+  BlockDiagOpFun G_bdof;
 };
 
 /**
@@ -36,8 +36,7 @@ FermionModelData one_fermion_model_helper(double beta, double Lambda, double eps
  * @param[in] hyb_pole Pole value for the single-pole hybridization decomposition
  * @return FermionModelData containing hybridization coefficients/poles, atom_diag object, and non-interacting propagator
  */
-FermionModelData two_fermion_model_helper(double beta, double Lambda, double eps, double U = 3.0, double mu = 0.0,
-                                          double hyb_pole = -1.5);
+FermionModelData two_fermion_model_helper(double beta, double Lambda, double eps, double U = 3.0, double mu = 0.0, double hyb_pole = -1.5);
 
 /**
  * @brief Convert a Hamiltonian matrix to a non-interacting Green's function matrix in dense storage

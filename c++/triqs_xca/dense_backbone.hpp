@@ -39,11 +39,11 @@ namespace triqs_xca::dense {
     C2PY_IGNORE hyb::Hybridization hyb; // Hybridization object containing hyb and related information
     C2PY_IGNORE DenseFSet Fset;         // DenseFSet (cre/ann operators with and without bars)
 
-    int r; // DLR rank
-    int n; // number of orbitals
+    int r;     // DLR rank
+    int n;     // number of orbitals
     int n_hyb; // number of hybridization operators
     int n_int; // number of interaction operators
-    int N; // number of many body states
+    int N;     // number of many body states
 
     nda::array<dcomplex, 3> Sigma; // array for storing self-energy contribution (final result)
     nda::array<dcomplex, 3> T;     // array for storing intermediate result
@@ -93,8 +93,9 @@ namespace triqs_xca::dense {
     compute_self_energy(gf_vt G_ppsc, nda::array_const_view<int, 2> topology); // compute self-energy for given topology
     triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy(gf_vt G_ppsc, nda::array_const_view<int, 2> topology,
                                                                       int f_ix); // compute self-energy for given topology and flat index
-    triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy(gf_vt G_ppsc, nda::array_const_view<int, 2> topology,
-                                                                      nda::array_const_view<int, 1> f_ix_vec); // compute self-energy for given topology and flat index vector
+    triqs::gfs::block_gf<triqs::mesh::dlr_imtime>
+    compute_self_energy(gf_vt G_ppsc, nda::array_const_view<int, 2> topology,
+                        nda::array_const_view<int, 1> f_ix_vec); // compute self-energy for given topology and flat index vector
     triqs::gfs::block_gf<triqs::mesh::dlr_imtime>
     compute_self_energy_by_pairs(gf_vt G_ppsc, nda::array_const_view<int, 2> topology); // compute self-energy for all pairs of diagrams
     triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy_by_pairs(gf_vt G_ppsc, nda::array_const_view<int, 2> topology,
@@ -110,7 +111,8 @@ namespace triqs_xca::dense {
                                                         nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops, bool is_fermionic = true);
     // evaluate a correlator diagram with fixed orbital indices, poles, and line directions in dense storage, including prefactor
     C2PY_IGNORE nda::array<dcomplex, 3> eval_correlator(nda::array_const_view<dcomplex, 3> Gt, CorrelatorBackbone &backbone,
-                                                        nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops, int f_ix, bool is_fermionic = true);
+                                                        nda::array<dcomplex, 3> mu_ops, nda::array<dcomplex, 3> kap_ops, int f_ix,
+                                                        bool is_fermionic = true);
 
     // compute single particle Green's function for given topology
     nda::array<dcomplex, 3> compute_single_ptcle_gf(gf_vt G_ppsc, nda::array_const_view<int, 2> topology);
@@ -122,12 +124,11 @@ namespace triqs_xca::dense {
     int get_num_single_ptcle_gf_backbones(nda::array_const_view<int, 2> topology);
 
     // compute one time correlator for given operators
-    template<bool isComplex>
-    nda::array<dcomplex, 3> compute_one_time_correlator(gf_vt G_ppsc, 
-      std::vector<triqs::operators::many_body_operator_real> const &ops_tau, 
-      std::vector<triqs::operators::many_body_operator_real> const &ops_0, 
-      triqs::atom_diag::atom_diag<isComplex> const &ad,
-      nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec);
+    template <bool isComplex>
+    nda::array<dcomplex, 3> compute_one_time_correlator(gf_vt G_ppsc, std::vector<triqs::operators::many_body_operator_real> const &ops_tau,
+                                                        std::vector<triqs::operators::many_body_operator_real> const &ops_0,
+                                                        triqs::atom_diag::atom_diag<isComplex> const &ad, nda::array_const_view<int, 2> topology,
+                                                        nda::array_const_view<int, 1> f_ix_vec);
 
     /**
        * @brief Constructor for DenseDiagramEvaluator
@@ -149,7 +150,7 @@ namespace triqs_xca::dense {
        * @param[in] tau_mesh TRIQS imagnary time DLR mesh
        * @param[in] ad TRIQS atom_diag object with Hamiltonian and field operators
        */
-    template<bool isComplex>
+    template <bool isComplex>
     DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs, triqs::mesh::dlr_imtime tau_mesh,
                           triqs::atom_diag::atom_diag<isComplex> const &ad);
 
@@ -162,13 +163,10 @@ namespace triqs_xca::dense {
        * @param[in] dynint_ops vector of many_body_operator_real objects representing the dynamic interactions
        * @param[in] dynint_coeffs array of coefficients for the dynamic interactions (also using hyb_poles)
        */
-    template<bool isComplex>
-    DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs, 
-                          triqs::mesh::dlr_imtime tau_mesh,
-                          triqs::atom_diag::atom_diag<isComplex> const &ad,
-                          std::vector<triqs::operators::many_body_operator_real> const &dynint_ops,
-                          nda::array_const_view<dcomplex, 3> dynint_coeffs
-                          );                          
+    template <bool isComplex>
+    DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs, triqs::mesh::dlr_imtime tau_mesh,
+                          triqs::atom_diag::atom_diag<isComplex> const &ad, std::vector<triqs::operators::many_body_operator_real> const &dynint_ops,
+                          nda::array_const_view<dcomplex, 3> dynint_coeffs);
 
     virtual ~DenseDiagramEvaluator() = default;
   };
