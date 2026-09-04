@@ -36,9 +36,9 @@ def test_block_sparsity_NCA_dense(verbose=True):
     delta_iaa_refl = S.ito.reflect(delta_iaa)
 
     print('--> NCA_dense')
-    Sigma_iaa_NCA = NCA_dense(delta_iaa, delta_iaa_refl, S.G0_iaa, F, F_dag)
+    Sigma_iaa_NCA = pow(-1, 1) * NCA_dense(delta_iaa, delta_iaa_refl, S.G0_iaa, F, F_dag)
     print('--> OCA_dense')
-    Sigma_iaa_OCA = OCA_dense(delta_iaa, S.ito, beta, S.G0_iaa, F, F_dag)
+    Sigma_iaa_OCA = pow(-1, 2) * OCA_dense(delta_iaa, S.ito, beta, S.G0_iaa, F, F_dag)
     print('--> done.')
 
     diff_NCA = np.max(np.abs(Sigma_iaa_NCA - Sigma_iaa_NCA_ref))

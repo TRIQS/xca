@@ -22,7 +22,6 @@ BlockDiagOpFun NCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_v
     // fb = 1 for forward line, 0 for backward line
     auto const &F1list = (fb) ? Fs : F_dags;
     auto const &F2list = (fb) ? F_dags : Fs;
-    int sfM            = -1;
 
     for (int lam = 0; lam < num_Fs; lam++) {
       for (int kap = 0; kap < num_Fs; kap++) {
@@ -56,7 +55,6 @@ BlockDiagOpFun NCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_v
                 block(t, _, _) = hyb_refl(t, kap, lam) * matmul(F2.get_block(ind_path), matmul(Gt.get_block(ind_path)(t, _, _), F1.get_block(i)));
               }
             }
-            block = sfM * block;
             Sigma.add_block(i, block);
           }
         }
@@ -79,7 +77,6 @@ BlockDiagOpFun NCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_v
     // fb = 1 for forward line, 0 for backward line
     auto const &F1 = (fb) ? Fq.Fs[0] : Fq.F_dags[0];
     auto const &F2 = (fb) ? Fq.F_dags[0] : Fq.Fs[0];
-    int sfM        = -1;
 
     for (int lam = 0; lam < n; lam++) {
       for (int kap = 0; kap < n; kap++) {
@@ -115,7 +112,6 @@ BlockDiagOpFun NCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_v
                    * matmul(F2.get_block(ind_path)(lam, _, _), matmul(Gt.get_block(ind_path)(t, _, _), F1.get_block(i)(kap, _, _)));
               }
             }
-            block = sfM * block;
             Sigma.add_block(i, block);
           }
         }
@@ -140,7 +136,6 @@ nda::array<dcomplex, 3> NCA_dense(nda::array_const_view<dcomplex, 3> hyb, nda::a
     // fb = 1 for forward line, 0 for backward line
     auto const &F1list = (fb) ? Fs : F_dags;
     auto const &F2list = (fb) ? F_dags : Fs;
-    int sfM            = -1;
 
     for (int lam = 0; lam < n; lam++) {
       for (int kap = 0; kap < n; kap++) {
@@ -149,9 +144,9 @@ nda::array<dcomplex, 3> NCA_dense(nda::array_const_view<dcomplex, 3> hyb, nda::a
 
         for (int t = 0; t < r; t++) {
           if (fb == 1) {
-            Sigma(t, _, _) += sfM * hyb(t, lam, kap) * matmul(F2, matmul(Gt(t, _, _), F1));
+            Sigma(t, _, _) += hyb(t, lam, kap) * matmul(F2, matmul(Gt(t, _, _), F1));
           } else {
-            Sigma(t, _, _) += sfM * hyb_refl(t, lam, kap) * matmul(F2, matmul(Gt(t, _, _), F1));
+            Sigma(t, _, _) += hyb_refl(t, lam, kap) * matmul(F2, matmul(Gt(t, _, _), F1));
           }
         }
       }

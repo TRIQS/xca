@@ -256,11 +256,11 @@ TEST(one_fermion, const_hyb_se) {
   // DenseDiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
   auto nca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, nca_topology);
   auto nca_pairs    = nda::make_regular(topology_parity(nca_topology) * nca_pairs_gf[0].data());
-  // manual dense routine, and change sign
-  auto nca_manual_dense = nda::make_regular(-NCA_dense(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense));
-  // manual block-sparse routine, convert to dense format, and change sign
+  // manual dense routine
+  auto nca_manual_dense = NCA_dense(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
+  // manual block-sparse routine, convert to dense format
   auto nca_manual_bdof = NCA_bs(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
-  auto nca_manual_bs   = nda::make_regular(-get_tensor_in_full_hilbert_space(nca_manual_bdof, s.model.ad, s.r));
+  auto nca_manual_bs   = get_tensor_in_full_hilbert_space(nca_manual_bdof, s.model.ad, s.r);
 
   // compute analytical reference
   auto nca_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
@@ -374,11 +374,11 @@ TEST(one_fermion, one_hyb_pole_se) {
   // DenseDiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
   auto nca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, nca_topology);
   auto nca_pairs    = nda::make_regular(topology_parity(nca_topology) * nca_pairs_gf[0].data());
-  // manual dense routine, and change sign
-  auto nca_manual_dense = nda::make_regular(-NCA_dense(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense));
-  // manual block-sparse routine, convert to dense format, and change sign
+  // manual dense routine
+  auto nca_manual_dense = NCA_dense(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
+  // manual block-sparse routine, convert to dense format
   auto nca_manual_bdof = NCA_bs(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
-  auto nca_manual_bs   = nda::make_regular(-get_tensor_in_full_hilbert_space(nca_manual_bdof, s.model.ad, s.r));
+  auto nca_manual_bs   = get_tensor_in_full_hilbert_space(nca_manual_bdof, s.model.ad, s.r);
 
   // compute analytical reference
   auto nca_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
@@ -498,11 +498,11 @@ TEST(one_fermion, two_hyb_poles_se) {
   // DenseDiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
   auto nca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, nca_topology);
   auto nca_pairs    = nda::make_regular(topology_parity(nca_topology) * nca_pairs_gf[0].data());
-  // manual dense routine, and change sign
-  auto nca_manual_dense = nda::make_regular(-NCA_dense(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense));
-  // manual block-sparse routine, convert to dense format, and change sign
+  // manual dense routine
+  auto nca_manual_dense = NCA_dense(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
+  // manual block-sparse routine, convert to dense format
   auto nca_manual_bdof = NCA_bs(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
-  auto nca_manual_bs   = nda::make_regular(-get_tensor_in_full_hilbert_space(nca_manual_bdof, s.model.ad, s.r));
+  auto nca_manual_bs   = get_tensor_in_full_hilbert_space(nca_manual_bdof, s.model.ad, s.r);
 
   // compute analytical reference
   auto nca_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
