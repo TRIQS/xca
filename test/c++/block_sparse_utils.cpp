@@ -259,3 +259,202 @@ std::tuple<BlockDiagOpFun, BlockOpSymQuartet, nda::vector<int>> two_band_helper(
 
   return std::make_tuple(Gt, Fq, sym_set_labels);
 }
+
+// ---- test-only reference evaluator, moved out of triqs_xca::block_sparse ----
+using cppdlr::_;
+using cppdlr::imtime_ops;
+using nda::linalg::matmul;
+
+nda::array<dcomplex, 3> third_order_dense_partial(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta,
+                                                  nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Fs,
+                                                  nda::array_const_view<dcomplex, 3> F_dags) {
+  nda::vector_const_view<double> dlr_rf = itops.get_rfnodes();
+  nda::vector_const_view<double> dlr_it = itops.get_itnodes();
+  // number of imaginary time nodes
+  int r = dlr_it.extent(0);
+  int N = Gt.extent(1);
+
+  auto hyb_coeffs      = itops.vals2coefs(hyb); // hybridization DLR coeffs
+  auto hyb_refl        = nda::make_regular(-itops.reflect(hyb));
+  auto hyb_refl_coeffs = itops.vals2coefs(hyb_refl);
+  int n                = Fs.extent(0);
+
+  // compute Fbars and Fdagbars
+  auto Fdagbars  = nda::array<dcomplex, 4>(n, r, N, N);
+  auto Fbarsrefl = nda::array<dcomplex, 4>(n, r, N, N);
+  for (int lam = 0; lam < n; lam++) {
+    for (int l = 0; l < r; l++) {
+      for (int nu = 0; nu < n; nu++) {
+        Fdagbars(lam, l, _, _) += hyb_coeffs(l, nu, lam) * F_dags(nu, _, _);
+        Fbarsrefl(nu, l, _, _) += hyb_refl_coeffs(l, nu, lam) * Fs(lam, _, _);
+      }
+    }
+  }
+
+  // initialize self-energy
+  nda::array<dcomplex, 3> Sigma(r, N, N), T(r, N, N), GKt(r, N, N), Tmu(r, N, N);
+  nda::array<dcomplex, 4> Tkaps(n, r, N, N);
+
+  // just {{0, 2}, {1, 4}, {3, 5}}, forward forward forward, omega_l,l` > 0 for now
+  nda::vector<double> l{9, 7}, poles(2);
+  for (int i = 0; i < 2; i++) poles(i) = dlr_rf(l(i));
+  nda::array<int, 2> topology{{0, 2}, {1, 4}, {3, 5}};
+  int m = 3;
+  nda::vector<int> states(2 * m);
+  states = 0;
+  for (int s = 0; s < pow(n, m - 1); s++) {
+    int s0 = s;
+    for (int i = 1; i < m; i++) {
+      states(topology(i, 0)) = s0 % n;
+      states(topology(i, 1)) = s0 % n;
+      s0                     = s0 / n;
+    }
+
+    T = Gt;
+
+    if (poles(0) <= 0 && poles(1) <= 0) {
+      int v = 1;
+      for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fs(states(v), _, _), T(t, _, _));
+      for (int t = 0; t < r; t++) T(t, _, _) = cppdlr::k_it(dlr_it(t), -1 * poles(1)) * T(t, _, _);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), cppdlr::TIME_ORDERED);
+
+      v = 2;
+      for (int kap = 0; kap < n; kap++) {
+        for (int t = 0; t < r; t++) Tkaps(kap, t, _, _) = matmul(T(t, _, _), Fs(kap, _, _));
+      }
+      T = 0;
+      for (int mu = 0; mu < n; mu++) {
+        Tmu = 0;
+        for (int kap = 0; kap < n; kap++) {
+          for (int t = 0; t < r; t++) Tmu(t, _, _) += hyb(t, mu, kap) * Tkaps(kap, t, _, _);
+        }
+        for (int t = 0; t < r; t++) T(t, _, _) += matmul(F_dags(mu, _, _), Tmu(t, _, _));
+      }
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), cppdlr::TIME_ORDERED);
+
+      v = 3;
+      for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fs(states(v), _, _), T(t, _, _));
+      for (int t = 0; t < r; t++) T(t, _, _) = cppdlr::k_it(dlr_it(t), -1 * poles(0)) * T(t, _, _);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), cppdlr::TIME_ORDERED);
+
+      v = 4;
+      for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fdagbars(states(v), l(1), _, _), T(t, _, _));
+      for (int t = 0; t < r; t++) T(t, _, _) = cppdlr::k_it(dlr_it(t), poles(1)) * T(t, _, _);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), cppdlr::TIME_ORDERED);
+
+      v = 5;
+      for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fdagbars(states(v), l(0), _, _), T(t, _, _));
+      for (int t = 0; t < r; t++) T(t, _, _) = cppdlr::k_it(dlr_it(t), poles(0)) * T(t, _, _);
+
+      T = T / (cppdlr::k_it(0, -1 * poles(0)) * cppdlr::k_it(0, -1 * poles(1)));
+      Sigma += T;
+    } else if (poles(0) <= 0 && poles(1) > 0) {
+      int v = 1;
+      for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fs(states(v), _, _), T(t, _, _));
+      for (int t = 0; t < r; t++) GKt(t, _, _) = cppdlr::k_it(dlr_it(t), poles(1)) * Gt(t, _, _);
+      T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), cppdlr::TIME_ORDERED);
+
+      v = 2;
+      for (int kap = 0; kap < n; kap++) {
+        for (int t = 0; t < r; t++) Tkaps(kap, t, _, _) = matmul(T(t, _, _), Fs(kap, _, _));
+      }
+      T = 0;
+      for (int mu = 0; mu < n; mu++) {
+        Tmu = 0;
+        for (int kap = 0; kap < n; kap++) {
+          for (int t = 0; t < r; t++) Tmu(t, _, _) += hyb(t, mu, kap) * Tkaps(kap, t, _, _);
+        }
+        for (int t = 0; t < r; t++) T(t, _, _) += matmul(F_dags(mu, _, _), Tmu(t, _, _));
+      }
+      T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), cppdlr::TIME_ORDERED);
+
+      v = 3;
+      for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fs(states(v), _, _), T(t, _, _));
+      for (int t = 0; t < r; t++) T(t, _, _) = cppdlr::k_it(dlr_it(t), -poles(0)) * T(t, _, _);
+      T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), cppdlr::TIME_ORDERED);
+
+      v = 4;
+      for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fdagbars(states(v), l(1), _, _), T(t, _, _));
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), cppdlr::TIME_ORDERED);
+
+      v = 5;
+      for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fdagbars(states(v), l(0), _, _), T(t, _, _));
+      for (int t = 0; t < r; t++) T(t, _, _) = cppdlr::k_it(dlr_it(t), poles(0)) * T(t, _, _);
+
+      T = T / (cppdlr::k_it(0, -poles(0)) * cppdlr::k_it(0, poles(1)) * cppdlr::k_it(0, poles(1)));
+      Sigma += T;
+    } else if (poles(0) > 0 && poles(1) <= 0) {
+      int v = 1;
+      for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fs(states(v), _, _), T(t, _, _));
+      for (int t = 0; t < r; t++) T(t, _, _) = cppdlr::k_it(dlr_it(t), -1 * poles(1)) * T(t, _, _);
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), cppdlr::TIME_ORDERED);
+
+      v = 2;
+      for (int kap = 0; kap < n; kap++) {
+        for (int t = 0; t < r; t++) Tkaps(kap, t, _, _) = matmul(T(t, _, _), Fs(kap, _, _));
+      }
+      T = 0;
+      for (int mu = 0; mu < n; mu++) {
+        Tmu = 0;
+        for (int kap = 0; kap < n; kap++) {
+          for (int t = 0; t < r; t++) Tmu(t, _, _) += hyb(t, mu, kap) * Tkaps(kap, t, _, _);
+        }
+        for (int t = 0; t < r; t++) T(t, _, _) += matmul(F_dags(mu, _, _), Tmu(t, _, _));
+      }
+      T = itops.convolve(beta, itops.vals2coefs(Gt), itops.vals2coefs(T), cppdlr::TIME_ORDERED);
+
+      v = 3;
+      for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fs(states(v), _, _), T(t, _, _));
+      for (int t = 0; t < r; t++) GKt(t, _, _) = cppdlr::k_it(dlr_it(t), poles(0)) * Gt(t, _, _);
+      T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), cppdlr::TIME_ORDERED);
+
+      v = 4;
+      for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fdagbars(states(v), l(1), _, _), T(t, _, _));
+      for (int t = 0; t < r; t++) T(t, _, _) = cppdlr::k_it(dlr_it(t), poles(1)) * T(t, _, _);
+      T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), cppdlr::TIME_ORDERED);
+
+      v = 5;
+      for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fdagbars(states(v), l(0), _, _), T(t, _, _));
+
+      T = T / (cppdlr::k_it(0, poles(0)) * cppdlr::k_it(0, -1 * poles(1)));
+      Sigma += T;
+    } else {
+      int v = 1;
+      for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fs(states(v), _, _), T(t, _, _));
+      for (int t = 0; t < r; t++) GKt(t, _, _) = cppdlr::k_it(dlr_it(t), poles(1)) * Gt(t, _, _);
+      T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), cppdlr::TIME_ORDERED);
+
+      v = 2;
+      for (int kap = 0; kap < n; kap++) {
+        for (int t = 0; t < r; t++) Tkaps(kap, t, _, _) = matmul(T(t, _, _), Fs(kap, _, _));
+      }
+      T = 0;
+      for (int mu = 0; mu < n; mu++) {
+        Tmu = 0;
+        for (int kap = 0; kap < n; kap++) {
+          for (int t = 0; t < r; t++) Tmu(t, _, _) += hyb(t, mu, kap) * Tkaps(kap, t, _, _);
+        }
+        for (int t = 0; t < r; t++) T(t, _, _) += matmul(F_dags(mu, _, _), Tmu(t, _, _));
+      }
+      T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), cppdlr::TIME_ORDERED);
+
+      v = 3;
+      for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fs(states(v), _, _), T(t, _, _));
+      for (int t = 0; t < r; t++) GKt(t, _, _) = cppdlr::k_it(dlr_it(t), poles(0)) * cppdlr::k_it(dlr_it(t), poles(1)) * Gt(t, _, _);
+      T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), cppdlr::TIME_ORDERED);
+
+      v = 4;
+      for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fdagbars(states(v), l(1), _, _), T(t, _, _));
+      for (int t = 0; t < r; t++) GKt(t, _, _) = cppdlr::k_it(dlr_it(t), poles(0)) * Gt(t, _, _);
+      T = itops.convolve(beta, itops.vals2coefs(GKt), itops.vals2coefs(T), cppdlr::TIME_ORDERED);
+
+      v = 5;
+      for (int t = 0; t < r; t++) T(t, _, _) = matmul(Fdagbars(states(v), l(0), _, _), T(t, _, _));
+
+      T = T / (cppdlr::k_it(0, poles(0)) * cppdlr::k_it(0, poles(1)) * cppdlr::k_it(0, poles(1)));
+      Sigma += T;
+    }
+  }
+  return Sigma;
+}
+

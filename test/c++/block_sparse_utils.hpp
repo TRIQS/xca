@@ -92,3 +92,14 @@ std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>, nda::array<dcomplex
  */
 std::tuple<BlockDiagOpFun, BlockOpSymQuartet, nda::vector<int>> two_band_helper(double beta, double Lambda, double eps,
                                                                                 nda::array_const_view<dcomplex, 3> hyb_coeffs);
+
+/**
+ * @brief Reference implementation of one third-order self-energy diagram topology, evaluated densely.
+ *
+ * @details Formerly triqs_xca::block_sparse::third_order_dense_partial. It has no callers outside the
+ * tests, so it lives here rather than in the library. Evaluates the topology with all forward
+ * hybridization lines and fixed poles, for comparison against DenseDiagramEvaluator.
+ */
+nda::array<dcomplex, 3> third_order_dense_partial(nda::array_const_view<dcomplex, 3> hyb, cppdlr::imtime_ops &itops, double beta,
+                                                  nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Fs,
+                                                  nda::array_const_view<dcomplex, 3> F_dags);

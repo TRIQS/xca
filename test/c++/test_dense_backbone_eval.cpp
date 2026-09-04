@@ -18,7 +18,6 @@ using triqs_xca::dense::DenseDiagramEvaluator;
 using triqs_xca::dense::DenseFSet;
 
 using triqs_xca::block_sparse::OCA_dense;
-using triqs_xca::block_sparse::third_order_dense_partial;
 
 TEST(DenseBackbone, OCA) {
   int n         = 4;
