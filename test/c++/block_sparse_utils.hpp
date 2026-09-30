@@ -124,3 +124,58 @@ triqs::atom_diag::atom_diag<true> spin_flip_atom_diag_helper(int norb, bool use_
  */
 std::pair<std::vector<BlockOp>, std::vector<BlockOp>> make_correlator_ops(BlockOpSymQuartet &Fq, int nflav);
 
+
+/**
+ * @brief Model with two symmetry sets of unequal size
+ *
+ * @details Orbitals A0 and A1 are mixed by a hopping term and share the conserved particle number N_A, while the decoupled orbital B0 carries its
+ * own conserved N_B, giving the symmetry sets {c_A0, c_A1} of size 2 and {c_B0} of size 1.
+ *
+ * @param[in] partition If true, sym_ops = {N_A, N_B}; if false, sym_ops = {} gives a single subspace
+ * @return triqs::atom_diag::atom_diag<true> object with symmetry sets of size 2 and 1
+ */
+triqs::atom_diag::atom_diag<true> unequal_sym_set_model(bool partition = true);
+
+/**
+ * @brief Hybridization coefficients that are block diagonal with respect to the symmetry sets
+ *
+ * @details Non-symmetric, so that expectations built from it are sensitive to the hyb_coeffs(l, i, j) index order.
+ *
+ * @param[in] labels Symmetry set label of each orbital
+ * @param[in] p Number of hybridization poles
+ * @return Coefficient array of shape (p, norb, norb), zero wherever the two orbitals are in different symmetry sets
+ */
+nda::array<dcomplex, 3> sym_set_diagonal_hyb(nda::vector_const_view<int> labels, int p);
+
+/**
+ * @brief Spinful model with S_z resolved, on which S^+ and S^- are valid single-target operators
+ *
+ * @details H = sum_i [U n_up,i n_do,i + mu (n_up,i + n_do,i)] + t sum_{s,i} (c^dag_s,i c_s,i+1 + h.c.), i.e. the spin-flip model with the V term
+ * traded for a spin-conserving hopping, so that N_up and N_do are separately conserved. With partition = true the subspaces are labeled by
+ * (N_up, N_do), and S^+ = sum_i c^dag_up,i c_do,i maps (N_up, N_do) -> (N_up + 1, N_do - 1), i.e. it is injective and strictly off-block-diagonal.
+ *
+ * @param[in] norb Number of orbitals
+ * @param[in] partition If true, sym_ops = {N_up, N_do}; if false, sym_ops = {}, the single-subspace dense twin
+ * @param[in] mu Chemical potential
+ * @param[in] U Interaction strength
+ * @param[in] t Spin-conserving inter-orbital hopping
+ * @return triqs::atom_diag::atom_diag<true> object with N_up and N_do separately conserved
+ */
+triqs::atom_diag::atom_diag<true> sz_resolved_atom_diag_helper(int norb, bool partition = true, double mu = 0.25, double U = 1.0, double t = 0.3);
+
+/**
+ * @brief Helper function for making dense objects compatible with a block-sparse evaluation that discards the block structure
+ *
+ * @details The trivial sparsity pattern is a single block spanning the whole Hilbert space and a single symmetry set holding every flavor, so a
+ * block-sparse evaluator built from the result sums the same backbones as a dense one.
+ *
+ * @param[in] Gt_dense Atomic propagator over the full Hilbert space
+ * @param[in] Fs_dense Annihilation operators in dense storage
+ * @param[in] F_dags_dense Creation operators in dense storage
+ * @param[in] hyb_coeffs Hybridization function coefficients
+ * @param[in] nflav Number of flavors
+ * @return Pair of the propagator as a one-block BDOF and the field operators as a one-set BlockOpSymQuartet
+ */
+std::pair<BlockDiagOpFun, BlockOpSymQuartet> trivial_sparsity_helper(nda::array<dcomplex, 3> Gt_dense, nda::array<dcomplex, 3> Fs_dense,
+                                                                     nda::array<dcomplex, 3> F_dags_dense,
+                                                                     nda::array_const_view<dcomplex, 3> hyb_coeffs, int nflav);

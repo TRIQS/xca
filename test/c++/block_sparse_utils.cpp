@@ -327,3 +327,89 @@ std::pair<std::vector<BlockOp>, std::vector<BlockOp>> make_correlator_ops(BlockO
   }
   return {mu_ops, kap_ops};
 }
+
+triqs::atom_diag::atom_diag<true> unequal_sym_set_model(bool partition) {
+  // Two symmetry sets of unequal size: {c_A0, c_A1} of size 2 and {c_B0} of size 1
+  using triqs::operators::c;
+  using triqs::operators::c_dag;
+  using triqs::operators::many_body_operator_complex;
+  using triqs::operators::n;
+
+  many_body_operator_complex NA = n("A", 0) + n("A", 1);
+  many_body_operator_complex NB = n("B", 0);
+
+  many_body_operator_complex H;
+  H += 0.3 * NA - 0.7 * NB;
+  H += 0.4 * (c_dag("A", 0) * c("A", 1) + c_dag("A", 1) * c("A", 0));
+  H += 1.1 * n("A", 0) * n("A", 1);
+  H += 0.9 * n("A", 0) * n("B", 0) + 0.5 * n("A", 1) * n("B", 0);
+
+  triqs::atom_diag::fundamental_operator_set fop_set;
+  fop_set.insert("A", 0);
+  fop_set.insert("A", 1);
+  fop_set.insert("B", 0);
+
+  std::vector<many_body_operator_complex> sym_ops;
+  if (partition) sym_ops = {NA, NB};
+  return {H, fop_set, sym_ops};
+}
+
+nda::array<dcomplex, 3> sym_set_diagonal_hyb(nda::vector_const_view<int> labels, int p) {
+  int norb        = static_cast<int>(labels.size());
+  auto hyb_coeffs = nda::zeros<dcomplex>(p, norb, norb);
+  for (int l = 0; l < p; ++l) {
+    for (int i = 0; i < norb; ++i) {
+      for (int j = 0; j < norb; ++j) {
+        if (labels(i) == labels(j)) hyb_coeffs(l, i, j) = 0.3 + 0.1 * l + 0.2 * i - 0.05 * j;
+      }
+    }
+  }
+  return hyb_coeffs;
+}
+
+triqs::atom_diag::atom_diag<true> sz_resolved_atom_diag_helper(int norb, bool partition, double mu, double U, double t) {
+  // Spinful model with N_up and N_do separately conserved, so that S^+ and S^- are valid single-target operators
+  using triqs::operators::c;
+  using triqs::operators::c_dag;
+  using triqs::operators::many_body_operator_complex;
+  using triqs::operators::n;
+
+  many_body_operator_complex H, Nup, Ndo;
+  triqs::atom_diag::fundamental_operator_set fop_set;
+
+  for (int i = 0; i < norb; i++) { fop_set.insert("do", i); }
+  for (int i = 0; i < norb; i++) { fop_set.insert("up", i); }
+
+  for (int i = 0; i < norb; i++) {
+    H += U * n("up", i) * n("do", i) + mu * (n("up", i) + n("do", i));
+    Nup += n("up", i);
+    Ndo += n("do", i);
+  }
+  // Spin-conserving hopping, in place of the spin-flip term, so that S_z stays a good quantum number
+  for (int i = 0; i + 1 < norb; i++) {
+    H += t * (c_dag("up", i) * c("up", i + 1) + c_dag("up", i + 1) * c("up", i) + c_dag("do", i) * c("do", i + 1) + c_dag("do", i + 1) * c("do", i));
+  }
+
+  std::vector<many_body_operator_complex> sym_ops;
+  if (partition) sym_ops = {Nup, Ndo};
+  return triqs::atom_diag::atom_diag<true>(H, fop_set, sym_ops);
+}
+
+std::pair<BlockDiagOpFun, BlockOpSymQuartet> trivial_sparsity_helper(nda::array<dcomplex, 3> Gt_dense, nda::array<dcomplex, 3> Fs_dense,
+                                                                     nda::array<dcomplex, 3> F_dags_dense,
+                                                                     nda::array_const_view<dcomplex, 3> hyb_coeffs, int nflav) {
+  // Helper function for wrapping dense objects in the trivial sparsity pattern: one block, one symmetry set
+
+  nda::vector<int> triv_bi{0};
+  std::vector<nda::array<dcomplex, 3>> Gt_dense_vec{std::move(Gt_dense)};
+  BlockDiagOpFun Gt_triv(Gt_dense_vec, triv_bi);
+
+  std::vector<nda::array<dcomplex, 3>> Fs_dense_vec{std::move(Fs_dense)};
+  auto F_sym_triv = BlockOpSymSet(triv_bi, Fs_dense_vec);
+  std::vector<nda::array<dcomplex, 3>> F_dags_dense_vec{std::move(F_dags_dense)};
+  auto F_dag_sym_triv      = BlockOpSymSet(triv_bi, F_dags_dense_vec);
+  auto sym_set_labels_triv = nda::zeros<long>(nflav);
+  auto Fq_triv             = BlockOpSymQuartet({F_sym_triv}, {F_dag_sym_triv}, hyb_coeffs, sym_set_labels_triv);
+
+  return std::make_pair(Gt_triv, Fq_triv);
+}

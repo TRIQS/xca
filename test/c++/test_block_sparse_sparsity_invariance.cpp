@@ -134,3 +134,91 @@ TEST(SparsityInvariance, spgf_is_indexed_by_orbital) {
   EXPECT_LE(nda::max_element(nda::abs(spgf_vec - ref_dense)), 1.0e-13 * scale)
      << "compute_single_ptcle_gf(G_ppsc, topology, f_ix_vec) disagrees with the dense evaluator";
 }
+
+/**
+ * @brief Check that the [beta, tau] half of the correlator survives a topology whose vertex 0 pairs with vertex 2m-1
+ *
+ * @details eval_correlator() assembles the diagram in two block loops, and the walk of the [beta, tau] loop over w = vct0 + 1 .. 2m-1 is empty
+ * exactly when vct0 == 2m-1. A broken-path flag shared between the loops then keeps the value left by the last block of the first loop, and
+ * on a model with an absent block path the whole [beta, tau] half is dropped. This is a partition dependence, the single-block twin of the
+ * same model comes out right either way. Such topologies are disconnected for m >= 2 and never produced by the solver's enumeration, so
+ * they are written out by hand here.
+ */
+TEST(SparsityInvariance, correlator_keeps_the_beta_tau_side_when_vertex_zero_pairs_with_the_last_vertex) {
+  double beta   = 2.0;
+  double Lambda = 40.0;
+  double eps    = 1.0e-10;
+  int p_poles   = 2;
+
+  // the partitioned model and its single-subspace twin, the correlator is indexed by orbital and needs no basis bridge
+  auto ad                       = unequal_sym_set_model(true);
+  auto ad_flat                  = unequal_sym_set_model(false);
+  int nflav                     = static_cast<int>(ad.get_fops().size());
+  auto labels                   = std::get<1>(get_operators(ad, nda::zeros<dcomplex>(p_poles, nflav, nflav)));
+  auto hyb_coeffs               = sym_set_diagonal_hyb(labels, p_poles);
+  nda::vector<double> hyb_poles = {1.3, -0.8};
+
+  auto dlr_rf = build_dlr_rf(Lambda, eps);
+  auto itops  = imtime_ops(Lambda, dlr_rf);
+
+  auto Gt     = ad_to_atom_prop(ad, beta, itops);
+  auto G_flat = ad_to_atom_prop(ad_flat, beta, Lambda, eps);
+  auto Fq     = std::get<0>(get_operators(ad, hyb_coeffs));
+  DiagramEvaluator D(hyb_poles, hyb_coeffs, G_flat[0].mesh(), ad);
+  auto [mu_ops, kap_ops] = make_correlator_ops(Fq, nflav);
+
+  // The dense reference, and the one-block block-sparse twin of the same model.
+  DenseDiagramEvaluator D_dense(hyb_poles, hyb_coeffs, G_flat[0].mesh(), ad_flat);
+  auto Gt_dense                 = Hmat_to_Gtmat(get_full_h_atomic(ad_flat), beta, cppdlr::rel2abs(itops.get_itnodes()));
+  auto [Fs_dense, F_dags_dense] = get_operators_dense(ad_flat);
+  auto [Gt_triv, Fq_triv]       = trivial_sparsity_helper(Gt_dense, Fs_dense, F_dags_dense, hyb_coeffs, nflav);
+  DiagramEvaluator D_triv(beta, Lambda, eps, hyb_poles, hyb_coeffs, Fq_triv);
+  auto [mu_triv, kap_triv] = make_correlator_ops(Fq_triv, nflav);
+
+  // check that the partitioned side has several blocks and an absent block path, without which the bug is invisible
+  ASSERT_GT(Gt.get_num_block_cols(), 1) << "vacuous test: the partitioned side has a single block";
+  ASSERT_EQ(Gt_triv.get_num_block_cols(), 1);
+  int absent = 0;
+  for (auto const &F : Fq.Fs)
+    for (int j = 0; j < F.get_num_block_cols(); ++j)
+      if (F.get_block_index(j) == -1) ++absent;
+  ASSERT_GT(absent, 0) << "vacuous test: every block path in this model is complete, so no block loop can leave a "
+                          "broken-path flag set for the next one to inherit";
+
+  int n_red_drivers = 0;
+  for (auto topology : {nda::array<int, 2>{{0, 3}, {1, 2}}, nda::array<int, 2>{{0, 5}, {1, 2}, {3, 4}}, nda::array<int, 2>{{0, 2}, {1, 3}},
+                        nda::array<int, 2>{{0, 3}, {1, 4}, {2, 5}}}) {
+
+    int two_m       = 2 * topology.extent(0);
+    bool empty_left = (topology(0, 1) == two_m - 1); // the [beta, tau] walk has no iteration in which to reset
+    if (empty_left) ++n_red_drivers;
+    SCOPED_TRACE("topology " + [&] {
+      std::ostringstream o;
+      o << topology;
+      return o.str();
+    }() + (empty_left ? " (red driver, vct0 == 2m-1)" : " (control, vct0 < 2m-1)"));
+
+    auto ref     = D_dense.compute_single_ptcle_gf(G_flat, topology);
+    double scale = nda::max_element(nda::abs(ref));
+    ASSERT_GT(scale, 0.02) << "vacuous test: the correlator is too small to resolve a dropped half";
+
+    CorrelatorBackbone B(topology, nflav);
+    auto bs = D.eval_correlator(Gt, B, mu_ops, kap_ops);
+
+    CorrelatorBackbone B_triv(topology, nflav);
+    auto triv = D_triv.eval_correlator(Gt_triv, B_triv, mu_triv, kap_triv);
+
+    // the single-block control has no absent path and is insensitive to the bug
+    EXPECT_LE(nda::max_element(nda::abs(triv - ref)), 1.0e-13 * scale)
+       << "the trivial-sparsity block-sparse correlator disagrees with dense - the harness itself is broken, not the "
+          "block bookkeeping";
+
+    EXPECT_LE(nda::max_element(nda::abs(bs - ref)), 1.0e-13 * scale) << "max|dense| = " << scale
+                                                                     << "; the partitioned block-sparse correlator disagrees with dense while the "
+                                                                        "single-block one agrees, i.e. the result depends on the partition";
+  }
+
+  // check that at least one topology pairs vertex 0 with vertex 2m-1
+  ASSERT_GT(n_red_drivers, 0) << "vacuous test: no topology here pairs vertex 0 with vertex 2m-1, which is the only "
+                                 "case in which the [beta, tau] block walk is empty";
+}

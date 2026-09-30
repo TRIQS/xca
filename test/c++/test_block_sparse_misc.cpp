@@ -95,3 +95,36 @@ TEST(BlockSparseMisc, block_gf_to_BDOF) {
   ASSERT_EQ(BDOF.get_zero_block_index(0), -1); // first block is zero
   ASSERT_EQ(BDOF.get_zero_block_index(1), 0);
 }
+
+/**
+ * @brief Check that add_block rejects a contribution whose shape does not match the target block
+ *
+ * @details The assign branch for a block marked zero would silently resize it, and the accumulate branch reads past the contribution's extent
+ * in a build without bounds checks, which turned a 1e-14 cross-symmetry-set contribution into an O(1) change of the self-energy.
+ */
+TEST(BlockDiagOpFun, add_block_rejects_a_wrongly_shaped_contribution) {
+  int r                        = 3;
+  nda::vector<int> block_sizes = {2, 1};
+  auto A                       = triqs_xca::block_sparse::BlockDiagOpFun(r, block_sizes);
+  ASSERT_EQ(A.get_zero_block_index(0), -1) << "premise: this constructor marks every block zero, so the first "
+                                              "add_block below takes the assign branch and the second the accumulate one";
+
+  // the right shape is accepted on both branches
+  ASSERT_NO_THROW(A.add_block(0, nda::zeros<dcomplex>(r, 2, 2))); // assign branch: block 0 starts marked zero
+  ASSERT_NO_THROW(A.add_block(0, nda::zeros<dcomplex>(r, 2, 2))); // accumulate branch: now marked non-zero
+
+  EXPECT_THROW(A.add_block(0, nda::zeros<dcomplex>(r, 1, 2)), std::invalid_argument) << "accumulate branch, wrong rows";
+  EXPECT_THROW(A.add_block(0, nda::zeros<dcomplex>(r, 2, 1)), std::invalid_argument) << "accumulate branch, wrong cols";
+  EXPECT_THROW(A.add_block(0, nda::zeros<dcomplex>(r + 1, 2, 2)), std::invalid_argument) << "accumulate branch, wrong DLR rank";
+  EXPECT_THROW(A.add_block(1, nda::zeros<dcomplex>(r, 2, 2)), std::invalid_argument) << "assign branch, wrong shape";
+
+  // the message must name the block
+  try {
+    A.add_block(1, nda::zeros<dcomplex>(r, 2, 2));
+    FAIL() << "expected a throw";
+  } catch (std::invalid_argument const &e) {
+    std::string msg = e.what();
+    EXPECT_NE(msg.find("add_block"), std::string::npos) << msg;
+    EXPECT_NE(msg.find('1'), std::string::npos) << "the message should name the block index: " << msg;
+  }
+}

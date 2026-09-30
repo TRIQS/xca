@@ -251,6 +251,19 @@ namespace triqs_xca::block_sparse {
   inline constexpr double sym_set_coupling_tol = 1.0e-12;
 
   /**
+ * @brief Throw unless hyb_coeffs is block diagonal in the symmetry sets named by sym_set_labels
+ *
+ * @details The precondition of BlockOpSymQuartet, factored out so that the Fq-only DiagramEvaluator constructor, which takes the quartet and
+ * the coefficients separately, can apply it too. Entries at or below sym_set_coupling_tol * max|hyb_coeffs| are accepted.
+ *
+ * @param[in] hyb_coeffs hybridization coefficients, shape (p, n, n)
+ * @param[in] sym_set_labels symmetry set of each of the n orbital indices
+ * @param[in] who name of the caller, used to prefix the exception message
+ */
+  void check_sym_set_block_diagonal(nda::array_const_view<dcomplex, 3> hyb_coeffs, nda::vector_const_view<long> sym_set_labels,
+                                    std::string const &who);
+
+  /**
  * @class BlockOpSymQuartet (BOSQ)
  * @brief Container for multiple symmetry sets of BOSS 
  */

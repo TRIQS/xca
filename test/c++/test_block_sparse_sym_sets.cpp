@@ -7,6 +7,8 @@
 #include <triqs_xca/block_sparse.hpp>
 #include <triqs_xca/dense.hpp>
 
+#include "block_sparse_utils.hpp"
+
 using nda::dcomplex;
 
 using triqs::operators::c;
@@ -29,50 +31,6 @@ using triqs_xca::atom_diag::get_operators_dense;
  * sanitized build (-DASAN=ON or -DNDA_ENFORCE_BOUNDCHECK), so the barred operators are also compared to the dense reference, which is defined
  * for any coefficient matrix.
  */
-
-namespace {
-
-  /**
-   * @brief Model with two symmetry sets of unequal size: orbitals A0 and A1 are mixed by a hopping term and share the conserved N_A, while the
-   * decoupled orbital B0 carries its own conserved N_B.
-   */
-  triqs::atom_diag::atom_diag<true> unequal_sym_set_model() {
-
-    many_body_operator_complex NA = n("A", 0) + n("A", 1);
-    many_body_operator_complex NB = n("B", 0);
-
-    many_body_operator_complex H;
-    H += 0.3 * NA - 0.7 * NB;
-    H += 0.4 * (c_dag("A", 0) * c("A", 1) + c_dag("A", 1) * c("A", 0));
-    H += 1.1 * n("A", 0) * n("A", 1);
-    H += 0.9 * n("A", 0) * n("B", 0) + 0.5 * n("A", 1) * n("B", 0);
-
-    triqs::atom_diag::fundamental_operator_set fop_set;
-    fop_set.insert("A", 0);
-    fop_set.insert("A", 1);
-    fop_set.insert("B", 0);
-
-    std::vector<many_body_operator_complex> sym_ops = {NA, NB};
-    return {H, fop_set, sym_ops};
-  }
-
-  /**
-   * @brief Hybridization coefficients that are block diagonal with respect to the symmetry sets
-   */
-  nda::array<dcomplex, 3> sym_set_diagonal_hyb(nda::vector_const_view<int> labels, int p) {
-    int norb        = static_cast<int>(labels.size());
-    auto hyb_coeffs = nda::zeros<dcomplex>(p, norb, norb);
-    for (int l = 0; l < p; ++l) {
-      for (int i = 0; i < norb; ++i) {
-        for (int j = 0; j < norb; ++j) {
-          if (labels(i) == labels(j)) hyb_coeffs(l, i, j) = 0.3 + 0.1 * l + 0.2 * i - 0.05 * j;
-        }
-      }
-    }
-    return hyb_coeffs;
-  }
-
-} // namespace
 
 /**
  * @brief Check that the model has two symmetry sets of unequal size, so that the tests below are not vacuous

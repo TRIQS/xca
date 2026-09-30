@@ -130,6 +130,14 @@ namespace triqs_xca::block_sparse {
   }
 
   void BlockDiagOpFun::add_block(int i, nda::array_const_view<dcomplex, 3> block) {
+    // Check the shape before either branch: the assign branch would silently resize the block, and the accumulate branch reads past the
+    // contribution in a build without bounds checks
+    auto want = blocks[i].shape();
+    if (block.shape() != want) {
+      std::ostringstream msg;
+      msg << "BlockDiagOpFun::add_block: block " << i << " has shape " << want << " but the contribution has shape " << block.shape();
+      throw std::invalid_argument(msg.str());
+    }
     if (zero_block_indices(i) == -1) {
       blocks[i] = block;
     } else {
@@ -432,6 +440,57 @@ namespace triqs_xca::block_sparse {
     if (block_indices(i) != -1) { blocks[i](s, t, _, _) += block; }
   }
 
+  void check_sym_set_block_diagonal(nda::array_const_view<dcomplex, 3> hyb_coeffs, nda::vector_const_view<long> sym_set_labels,
+                                    std::string const &who) {
+
+    // Reject hybridization coefficients that couple different symmetry sets, since a barred operator is stored with the block-sparsity pattern
+    // of its own symmetry set and can only hold contributions from operators of that set. The threshold is relative and one-sided, and the
+    // accepted remainder below it is made inert by the p_mu == p_kap restriction in find_path_self_energy(), not by this check.
+    long n         = sym_set_labels.size();
+    int p          = hyb_coeffs.extent(0);
+    double max_abs = 0.0;
+    for (int l = 0; l < p; l++) {
+      for (long i = 0; i < n; i++) {
+        for (long j = 0; j < n; j++) { max_abs = std::max(max_abs, std::abs(hyb_coeffs(l, i, j))); }
+      }
+    }
+
+    // Inf and NaN entries would pass the threshold comparison below
+    if (!std::isfinite(max_abs)) { throw std::invalid_argument(who + ": hyb_coeffs contains a non-finite entry"); }
+
+    double thresh = sym_set_coupling_tol * max_abs; // zero for all-zero coefficients
+    double worst  = 0.0;
+    long worst_l = -1, worst_i = -1, worst_j = -1;
+    long n_bad = 0, n_cross = 0;
+    for (int l = 0; l < p; l++) {
+      for (long i = 0; i < n; i++) {
+        for (long j = 0; j < n; j++) {
+          if (sym_set_labels(i) == sym_set_labels(j)) continue;
+          n_cross++;
+          double a = std::abs(hyb_coeffs(l, i, j));
+          if (a > thresh) {
+            n_bad++;
+            if (a > worst) {
+              worst   = a;
+              worst_l = l;
+              worst_i = i;
+              worst_j = j;
+            }
+          }
+        }
+      }
+    }
+    if (n_bad > 0) {
+      std::ostringstream msg;
+      msg << std::scientific;
+      msg << who << ": hyb_coeffs couples different symmetry sets, which the symmetry-set storage cannot represent. " << n_bad << " of " << n_cross
+          << " cross-set entries exceed the tolerance " << sym_set_coupling_tol << " * max|hyb_coeffs| = " << thresh << "; the largest is "
+          << "|hyb_coeffs(" << worst_l << ", " << worst_i << ", " << worst_j << ")| = " << worst << " (relative " << worst / max_abs
+          << "), coupling symmetry set " << sym_set_labels(worst_i) << " to symmetry set " << sym_set_labels(worst_j) << ".";
+      throw std::invalid_argument(msg.str());
+    }
+  }
+
   ////////////// BlockOpSymQuartet class ///////////////
 
   BlockOpSymQuartet::BlockOpSymQuartet(std::vector<BlockOpSymSet> Fs, std::vector<BlockOpSymSet> F_dags,
@@ -491,49 +550,7 @@ namespace triqs_xca::block_sparse {
       }
     }
 
-    // Reject hybridization coefficients that couple different symmetry sets, since a barred operator is stored with the block-sparsity pattern
-    // of its own symmetry set and can only hold contributions from operators of that set
-    double max_abs = 0.0;
-    for (int l = 0; l < p; l++) {
-      for (long i = 0; i < n; i++) {
-        for (long j = 0; j < n; j++) { max_abs = std::max(max_abs, std::abs(hyb_coeffs(l, i, j))); }
-      }
-    }
-
-    // Inf and NaN entries would pass the threshold comparison below
-    if (!std::isfinite(max_abs)) { throw std::invalid_argument("BlockOpSymQuartet: hyb_coeffs contains a non-finite entry"); }
-
-    double thresh = sym_set_coupling_tol * max_abs; // zero for all-zero coefficients
-    double worst  = 0.0;
-    long worst_l = -1, worst_i = -1, worst_j = -1;
-    long n_bad = 0, n_cross = 0;
-    for (int l = 0; l < p; l++) {
-      for (long i = 0; i < n; i++) {
-        for (long j = 0; j < n; j++) {
-          if (sym_set_labels(i) == sym_set_labels(j)) continue;
-          n_cross++;
-          double a = std::abs(hyb_coeffs(l, i, j));
-          if (a > thresh) {
-            n_bad++;
-            if (a > worst) {
-              worst   = a;
-              worst_l = l;
-              worst_i = i;
-              worst_j = j;
-            }
-          }
-        }
-      }
-    }
-    if (n_bad > 0) {
-      std::ostringstream msg;
-      msg << std::scientific;
-      msg << "BlockOpSymQuartet: hyb_coeffs couples different symmetry sets, which the symmetry-set storage cannot represent. " << n_bad << " of "
-          << n_cross << " cross-set entries exceed the tolerance " << sym_set_coupling_tol << " * max|hyb_coeffs| = " << thresh
-          << "; the largest is |hyb_coeffs(" << worst_l << ", " << worst_i << ", " << worst_j << ")| = " << worst << " (relative " << worst / max_abs
-          << "), coupling symmetry set " << sym_set_labels(worst_i) << " to symmetry set " << sym_set_labels(worst_j) << ".";
-      throw std::invalid_argument(msg.str());
-    }
+    check_sym_set_block_diagonal(hyb_coeffs, sym_set_labels, "BlockOpSymQuartet");
 
     // compute F_dag_bars and F_bars_refl, contracting within each symmetry set only
     for (int l = 0; l < p; l++) {
