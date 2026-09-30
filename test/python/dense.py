@@ -13,15 +13,18 @@ def test_block_sparsity_NCA_dense(verbose=True):
     
     beta = 10.0
     t = 0.5
-    ek = 0.1
     mu = 1/3
+
+    # A complex hermitian, non-symmetric bath with Delta_ab != Delta_ba, which makes the test sensitive to the
+    # hybridization index order of the manual reference evaluators. A real hermitian matrix is symmetric and can not see it.
+    ek = np.array([[0.1, 0.3 + 0.2j], [0.3 - 0.2j, -0.15]])
 
     H = -mu * ( c_dag(0,0) * c(0,0) + c_dag(0,1) * c(0,1) )
     fundamental_operators = [ c(0,i) for i in range(2) ]
 
     S = Solver(beta=beta, lamb=100., eps=1e-10, H_loc=H, fundamental_operators=fundamental_operators)
 
-    delta_iaa = t**2 * S.fd.free_greens(beta, np.diag([ek, ek]))
+    delta_iaa = t**2 * S.fd.free_greens(beta, ek)
     S.set_hybridization(delta_iaa, compress=False)
 
     Sigma_iaa_NCA_ref = S.calc_Sigma(max_order=1)

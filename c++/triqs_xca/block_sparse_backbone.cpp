@@ -213,9 +213,11 @@ void DiagramEvaluator::multiply_left_vertex_and_right_zero_vertex(nda::array_vie
     Tmu_v = 0;
     // Multiply with hybridization function
     for (int kap = 0; kap < Fq.sym_set_sizes(p_kap); kap++) {
-      nda::array_const_view<dcomplex, 1> hyb_oo = is_forward ? 
+      // The backward branch transposes the coefficient index, as the barred operators do for the interior lines, see dense_backbone.cpp.
+      // Reading the same order on both branches breaks unitary invariance under a complex basis rotation
+      nda::array_const_view<dcomplex, 1> hyb_oo = is_forward ?
         hyb.values(_, Fq.sym_set_to_orb(p_mu, mu), Fq.sym_set_to_orb(p_kap, kap)) :
-        hyb.values_reflect(_, Fq.sym_set_to_orb(p_mu, mu), Fq.sym_set_to_orb(p_kap, kap));
+        hyb.values_reflect(_, Fq.sym_set_to_orb(p_kap, kap), Fq.sym_set_to_orb(p_mu, mu));
       for (int t = 0; t < r; t++) Tmu_v(t, _, _) += hyb_sign * hyb_oo(t) * Tkaps_v(kap, t, _, _);
     }
     // Apply F_mu operator from the left at vertex connected to tau = 0
