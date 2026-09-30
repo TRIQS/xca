@@ -685,42 +685,43 @@ int DiagramEvaluator::get_num_single_ptcle_gf_backbones(nda::array_const_view<in
   return static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb.poles.size(), backbone.m - 1));
 }
 
+// Order the operators by orbital index, not by symmetry set, since they index the external legs of the single-particle Green's function
 std::vector<BlockOp> DiagramEvaluator::setup_mu_ops_for_single_ptcle_gf() {
   std::vector<BlockOp> mu_ops;
-  for (auto &F : Fq.Fs) {
-    for (int i = 0; i < F.get_size_sym_set(); ++i) {
-      std::vector<nda::array<dcomplex, 2>> mu_blocks;
-      for (int j = 0; j < F.get_num_block_cols(); ++j) {
-        if (F.get_block_index(j) != -1) {
-          mu_blocks.emplace_back(F.get_block(j)(i, _, _));
-        } else {
-          mu_blocks.emplace_back(nda::zeros<dcomplex>(1, 1));
-        }
+  for (int o_ix = 0; o_ix < n; ++o_ix) {
+    auto &F = Fq.Fs[Fq.sym_set_labels(o_ix)];
+    int i   = static_cast<int>(Fq.sym_set_inds(o_ix));
+    std::vector<nda::array<dcomplex, 2>> mu_blocks;
+    for (int j = 0; j < F.get_num_block_cols(); ++j) {
+      if (F.get_block_index(j) != -1) {
+        mu_blocks.emplace_back(F.get_block(j)(i, _, _));
+      } else {
+        mu_blocks.emplace_back(nda::zeros<dcomplex>(1, 1));
       }
-      nda::vector<int> block_indices = F.get_block_indices()(_);
-      BlockOp mu_op(block_indices, mu_blocks);
-      mu_ops.push_back(mu_op);
     }
+    nda::vector<int> block_indices = F.get_block_indices()(_);
+    BlockOp mu_op(block_indices, mu_blocks);
+    mu_ops.push_back(mu_op);
   }
   return mu_ops;
 }
 
 std::vector<BlockOp> DiagramEvaluator::setup_kap_ops_for_single_ptcle_gf() {
   std::vector<BlockOp> kap_ops;
-  for (auto &F_dag : Fq.F_dags) {
-    for (int i = 0; i < F_dag.get_size_sym_set(); ++i) {
-      std::vector<nda::array<dcomplex, 2>> kap_blocks;
-      for (int j = 0; j < F_dag.get_num_block_cols(); ++j) {
-        if (F_dag.get_block_index(j) != -1) {
-          kap_blocks.emplace_back(F_dag.get_block(j)(i, _, _));
-        } else {
-          kap_blocks.emplace_back(nda::zeros<dcomplex>(1, 1));
-        }
+  for (int o_ix = 0; o_ix < n; ++o_ix) {
+    auto &F_dag = Fq.F_dags[Fq.sym_set_labels(o_ix)];
+    int i       = static_cast<int>(Fq.sym_set_inds(o_ix));
+    std::vector<nda::array<dcomplex, 2>> kap_blocks;
+    for (int j = 0; j < F_dag.get_num_block_cols(); ++j) {
+      if (F_dag.get_block_index(j) != -1) {
+        kap_blocks.emplace_back(F_dag.get_block(j)(i, _, _));
+      } else {
+        kap_blocks.emplace_back(nda::zeros<dcomplex>(1, 1));
       }
-      nda::vector<int> block_indices = F_dag.get_block_indices()(_);
-      BlockOp kap_op(block_indices, kap_blocks);
-      kap_ops.push_back(kap_op);
     }
+    nda::vector<int> block_indices = F_dag.get_block_indices()(_);
+    BlockOp kap_op(block_indices, kap_blocks);
+    kap_ops.push_back(kap_op);
   }
   return kap_ops;
 }

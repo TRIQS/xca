@@ -26,6 +26,7 @@ set(all_tests
   block_sparse_self_cons
   block_sparse_bethe
   block_sparse_normalization
+  block_sparse_spgf_ordering
   bug_bs_one_fermion
   volterra_integral
   one_time_correlator
