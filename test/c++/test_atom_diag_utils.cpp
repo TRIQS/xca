@@ -49,8 +49,12 @@ triqs::atom_diag::atom_diag<true> make_two_orbital_ad(int norb = 2, double mu = 
  * @brief Builds DLR hybridization coefficients for the two-orbital model.
  *
  * Constructs a 4x4 hybridization function Delta(tau) on the DLR grid from two bath levels
- * e = {-3.3, 2.3} with hopping t=1.0 and inter-orbital coupling s=0.5, at beta=2.0
+ * e = {-3.3, 2.3} with hopping t=1.0 and spin-flip coupling s=0.5, at beta=2.0
  * and DLR cutoff Lambda=20. Returns the DLR coefficients of Delta(tau).
+ *
+ * The two orbitals of make_two_orbital_ad() are decoupled, so the field operators fall into the two symmetry sets {do 0, up 0} and
+ * {do 1, up 1}, and the off-diagonal entries are restricted to the same-orbital, opposite-spin pairs (0, 2) and (1, 3). Only the upper
+ * triangle is filled, which makes the bar expectations sensitive to the hyb_coeffs(l, k, m) index order.
  */
 nda::array<dcomplex, 3> make_hyb_coeffs() {
   double s      = 0.5;
@@ -78,7 +82,7 @@ nda::array<dcomplex, 3> make_hyb_coeffs() {
     for (int j = i; j < Deltat.extent(2); j++) {
       if (i == j) {
         Deltat(_, i, j) = Jt(_, 0, 0);
-      } else if ((i == 0 && j == 1) || (i == 1 && j == 0) || (i == 2 && j == 3) || (i == 3 && j == 2)) {
+      } else if ((i == 0 && j == 2) || (i == 1 && j == 3)) { // same orbital, opposite spin: within one symmetry set
         Deltat(_, i, j) = s * Jt(_, 0, 0);
       }
     }
@@ -246,6 +250,12 @@ TEST(AtomDiagUtils, operators) {
   nda::vector<int> expected_sym_set_labels{0, 1, 0, 1}; // do 0 and up 0 have the same sparsity pattern, as do do 1 and up 1
   ASSERT_EQ(sym_set_labels, expected_sym_set_labels);
 
+  // check that hyb_coeffs has off-diagonal entries within a symmetry set
+  ASSERT_GT(nda::max_element(nda::abs(hyb_coeffs(_, 0, 2))), 1.0e-6);
+  ASSERT_GT(nda::max_element(nda::abs(hyb_coeffs(_, 1, 3))), 1.0e-6);
+  ASSERT_EQ(sym_set_labels(0), sym_set_labels(2));
+  ASSERT_EQ(sym_set_labels(1), sym_set_labels(3));
+
   // --- Expected Fs and F_dags blocks ---
   auto [expected_c_mats_fock, expected_cdag_mats_fock] = make_expected_fock_operators(2);
   // Get Fock space sizes and build permutation from ad subspace ordering to original Fock basis
@@ -333,34 +343,23 @@ TEST(AtomDiagUtils, operators) {
   check_sym_sets(Fq.F_dags, expected_cdag_mats);
 
   // --- Expected F_dag_bars and F_bars_refl ---
-  // Precompute position of each orbital within its symmetry set
-  std::vector<int> orbital_position(nflav);
-  for (auto &sym_set_orbital : sym_set_orbitals) {
-    for (size_t pos = 0; pos < sym_set_orbital.size(); ++pos) { orbital_position[sym_set_orbital[pos]] = pos; }
-  }
-
-  // exp_F_dag_bars(m, l, :, :) = sum_k hyb(l, k, m) * cdag(mapped_k, :, :)
-  //   where mapped_k = sym_set_orbitals[set_of(m)][position_of(k)]
-  // exp_F_bars_refl(k, l, :, :) = sum_m hyb(l, k, m) * c(mapped_m, :, :)
-  //   where mapped_m = sym_set_orbitals[set_of(k)][position_of(m)]
+  // Contractions of the hybridization coefficients with the field operators, as in DenseFSet::update_hybridization():
+  //
+  //   exp_F_dag_bars(m, l, :, :)  = +sum_k hyb(l, k, m) * cdag(k, :, :)
+  //   exp_F_bars_refl(m, l, :, :) = -sum_k hyb(l, m, k) * c(k, :, :)
+  //
+  // with hyb_coeffs block diagonal with respect to the symmetry sets
   long p               = hyb_coeffs.extent(0);
   auto exp_F_dag_bars  = nda::zeros<dcomplex>(nflav, p, (long)N, (long)N);
   auto exp_F_bars_refl = nda::zeros<dcomplex>(nflav, p, (long)N, (long)N);
-  for (int m = 0; m < nflav; ++m) {
-    int f_m = sym_set_labels[m];
-    for (long l = 0; l < p; ++l) {
+  for (long l = 0; l < p; ++l) {
+    for (int m = 0; m < nflav; ++m) {
       for (int k = 0; k < nflav; ++k) {
-        int mapped_k = sym_set_orbitals[f_m][orbital_position[k]];
-        exp_F_dag_bars(m, l, _, _) += hyb_coeffs(l, k, m) * expected_cdag_mats(mapped_k, _, _);
-      }
-    }
-  }
-  for (int k = 0; k < nflav; ++k) {
-    int f_k = sym_set_labels[k];
-    for (long l = 0; l < p; ++l) {
-      for (int m = 0; m < nflav; ++m) {
-        int mapped_m = sym_set_orbitals[f_k][orbital_position[m]];
-        exp_F_bars_refl(k, l, _, _) += -hyb_coeffs(l, k, m) * expected_c_mats(mapped_m, _, _); // minus sign convention for F_bars_refl
+        ASSERT_TRUE(sym_set_labels[k] == sym_set_labels[m] || std::abs(hyb_coeffs(l, k, m)) < 1.0e-13)
+           << "hyb_coeffs(" << l << ", " << k << ", " << m << ") couples symmetry sets " << sym_set_labels[k] << " and " << sym_set_labels[m]
+           << ", which the block-sparse storage cannot represent";
+        exp_F_dag_bars(m, l, _, _) += hyb_coeffs(l, k, m) * expected_cdag_mats(k, _, _);
+        exp_F_bars_refl(m, l, _, _) += -hyb_coeffs(l, m, k) * expected_c_mats(k, _, _); // minus sign convention for F_bars_refl
       }
     }
   }

@@ -243,6 +243,14 @@ namespace triqs_xca::block_sparse {
   };
 
   /**
+ * @brief Relative tolerance below which a hybridization coefficient coupling two symmetry sets counts as round-off
+ *
+ * A barred operator is stored with the block-sparsity pattern of its own symmetry set, so BlockOpSymQuartet rejects any cross-set entry
+ * exceeding this tolerance times max|hyb_coeffs|. Structurally zero components of Delta(tau) give exactly zero coefficients, so the tolerance is tight.
+ */
+  inline constexpr double sym_set_coupling_tol = 1.0e-12;
+
+  /**
  * @class BlockOpSymQuartet (BOSQ)
  * @brief Container for multiple symmetry sets of BOSS 
  */

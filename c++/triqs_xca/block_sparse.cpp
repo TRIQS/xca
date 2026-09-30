@@ -1,4 +1,8 @@
+#include <cmath>
 #include <iostream>
+#include <sstream>
+#include <stdexcept>
+#include <string>
 
 #include <itertools/itertools.hpp>
 
@@ -441,6 +445,13 @@ namespace triqs_xca::block_sparse {
     int k = Fs.size();
     if (k != F_dags.size()) { throw std::invalid_argument("Fs and F_dags must have the same number of entries"); }
 
+    long n = sym_set_labels.size(); // number of orbital indices
+    if (hyb_coeffs.extent(1) != n || hyb_coeffs.extent(2) != n) {
+      throw std::invalid_argument("BlockOpSymQuartet: hyb_coeffs must have shape (p, n, n) with n = sym_set_labels.size() = " + std::to_string(n)
+                                  + ", got (" + std::to_string(hyb_coeffs.extent(0)) + ", " + std::to_string(hyb_coeffs.extent(1)) + ", "
+                                  + std::to_string(hyb_coeffs.extent(2)) + ")");
+    }
+
     // initialize F_dag_bars and F_bars_refl
     p                                  = hyb_coeffs.extent(0);
     nda::vector<int> block_indices_dag = F_dags[0].get_block_indices();
@@ -453,7 +464,6 @@ namespace triqs_xca::block_sparse {
     }
 
     // calculate symmetry set indices
-    long n         = sym_set_labels.size();                // number of orbital indices
     long q         = nda::max_element(sym_set_labels) + 1; // number of symmetry sets
     sym_set_inds   = nda::zeros<long>(n);                  // indices of orbital indices in symmetry sets
     sym_set_sizes  = nda::zeros<long>(q);                  // sizes of symmetry sets
@@ -465,24 +475,82 @@ namespace triqs_xca::block_sparse {
       sym_set_to_orb(sym_set_labels(i), sym_set_inds(i)) = i; // map symmetry set index to backbone orbital index
     }
 
-    // compute F_dag_bars and F_bars_refl
+    // the number of symmetry sets must match the number of operator sets
+    if (q != k) {
+      throw std::invalid_argument("BlockOpSymQuartet: sym_set_labels reaches " + std::to_string(q) + " symmetry sets but " + std::to_string(k)
+                                  + " BlockOpSymSet entries were given; every label must name one of Fs[0..Fs.size())");
+    }
+
+    // the symmetry set sizes from the labels must agree with the operator sets
+    for (int i = 0; i < k; i++) {
+      if (sym_set_sizes(i) != Fs[i].get_size_sym_set() || sym_set_sizes(i) != F_dags[i].get_size_sym_set()) {
+        throw std::invalid_argument("BlockOpSymQuartet: symmetry set " + std::to_string(i) + " has " + std::to_string(sym_set_sizes(i))
+                                    + " orbital indices according to sym_set_labels, but Fs[" + std::to_string(i) + "] holds "
+                                    + std::to_string(Fs[i].get_size_sym_set()) + " and F_dags[" + std::to_string(i) + "] holds "
+                                    + std::to_string(F_dags[i].get_size_sym_set()) + " operators");
+      }
+    }
+
+    // Reject hybridization coefficients that couple different symmetry sets, since a barred operator is stored with the block-sparsity pattern
+    // of its own symmetry set and can only hold contributions from operators of that set
+    double max_abs = 0.0;
     for (int l = 0; l < p; l++) {
-      for (int p_lam = 0; p_lam < q; p_lam++) {
-        for (int p_nu = 0; p_nu < q; p_nu++) {
-          for (int lam = 0; lam < sym_set_sizes(p_lam); lam++) {
-            for (int nu = 0; nu < sym_set_sizes(p_nu); nu++) {
-              long lam_orb = sym_set_to_orb(p_lam, lam);
-              long nu_orb  = sym_set_to_orb(p_nu, nu);
-              for (int b = 0; b < F_dags[p_lam].get_num_block_cols(); b++) {
-                if (F_dags[p_lam].get_block_index(b) != -1) {
-                  F_dag_bars[p_lam].add_block(b, lam, l, nda::make_regular(hyb_coeffs(l, nu_orb, lam_orb) * F_dags[p_lam].get_block(b)(nu, _, _)));
-                }
+      for (long i = 0; i < n; i++) {
+        for (long j = 0; j < n; j++) { max_abs = std::max(max_abs, std::abs(hyb_coeffs(l, i, j))); }
+      }
+    }
+
+    // Inf and NaN entries would pass the threshold comparison below
+    if (!std::isfinite(max_abs)) { throw std::invalid_argument("BlockOpSymQuartet: hyb_coeffs contains a non-finite entry"); }
+
+    double thresh = sym_set_coupling_tol * max_abs; // zero for all-zero coefficients
+    double worst  = 0.0;
+    long worst_l = -1, worst_i = -1, worst_j = -1;
+    long n_bad = 0, n_cross = 0;
+    for (int l = 0; l < p; l++) {
+      for (long i = 0; i < n; i++) {
+        for (long j = 0; j < n; j++) {
+          if (sym_set_labels(i) == sym_set_labels(j)) continue;
+          n_cross++;
+          double a = std::abs(hyb_coeffs(l, i, j));
+          if (a > thresh) {
+            n_bad++;
+            if (a > worst) {
+              worst   = a;
+              worst_l = l;
+              worst_i = i;
+              worst_j = j;
+            }
+          }
+        }
+      }
+    }
+    if (n_bad > 0) {
+      std::ostringstream msg;
+      msg << std::scientific;
+      msg << "BlockOpSymQuartet: hyb_coeffs couples different symmetry sets, which the symmetry-set storage cannot represent. " << n_bad << " of "
+          << n_cross << " cross-set entries exceed the tolerance " << sym_set_coupling_tol << " * max|hyb_coeffs| = " << thresh
+          << "; the largest is |hyb_coeffs(" << worst_l << ", " << worst_i << ", " << worst_j << ")| = " << worst << " (relative " << worst / max_abs
+          << "), coupling symmetry set " << sym_set_labels(worst_i) << " to symmetry set " << sym_set_labels(worst_j) << ".";
+      throw std::invalid_argument(msg.str());
+    }
+
+    // compute F_dag_bars and F_bars_refl, contracting within each symmetry set only
+    for (int l = 0; l < p; l++) {
+      for (int p_set = 0; p_set < q; p_set++) {
+        for (int lam = 0; lam < sym_set_sizes(p_set); lam++) {
+          for (int nu = 0; nu < sym_set_sizes(p_set); nu++) {
+            long lam_orb = sym_set_to_orb(p_set, lam);
+            long nu_orb  = sym_set_to_orb(p_set, nu);
+            for (int b = 0; b < F_dags[p_set].get_num_block_cols(); b++) {
+              if (F_dags[p_set].get_block_index(b) != -1) {
+                F_dag_bars[p_set].add_block(b, lam, l, nda::make_regular(hyb_coeffs(l, nu_orb, lam_orb) * F_dags[p_set].get_block(b)(nu, _, _)));
               }
-              for (int b = 0; b < Fs[p_nu].get_num_block_cols(); b++) {
-                if (Fs[p_nu].get_block_index(b) != -1) {
-                  F_bars_refl[p_nu].add_block(
-                     b, nu, l, nda::make_regular(-hyb_coeffs(l, nu_orb, lam_orb) * Fs[p_nu].get_block(b)(lam, _, _))); // Add -1 sign for reflected F
-                }
+            }
+            for (int b = 0; b < Fs[p_set].get_num_block_cols(); b++) {
+              if (Fs[p_set].get_block_index(b) != -1) {
+                F_bars_refl[p_set].add_block(
+                   b, nu, l, nda::make_regular(-hyb_coeffs(l, nu_orb, lam_orb) * Fs[p_set].get_block(b)(lam, _, _))); // Add -1 sign for reflected F
               }
             }
           }

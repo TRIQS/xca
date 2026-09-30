@@ -22,11 +22,12 @@ using triqs_xca::atom_diag::get_operators_dense;
  *
  * @brief Tests of the barred-operator construction in the BlockOpSymQuartet constructor
  *
- * @details The contraction of the hybridization coefficients with the operators of a symmetry set is only defined within one set. A hybridization
- * coupling two different symmetry sets can not be represented by the block-sparse storage and must be rejected by the constructor. With symmetry
- * sets of unequal size, an index mix-up between the sets is an out-of-bounds read that only shows up in a bounds-checked or sanitized build
- * (-DASAN=ON or -DNDA_ENFORCE_BOUNDCHECK), so the barred operators are also compared to the dense reference, which is defined for any coefficient
- * matrix.
+ * @details The contraction of the hybridization coefficients with the operators of a symmetry set is only defined within one set, as in the dense
+ * reference DenseFSet::update_hybridization(). A hybridization coupling two different symmetry sets can not be represented by the block-sparse
+ * storage and must be rejected by the constructor, with the rejection threshold sym_set_coupling_tol relative to max|hyb_coeffs| pinned from both
+ * sides. With symmetry sets of unequal size, an index mix-up between the sets is an out-of-bounds read that only shows up in a bounds-checked or
+ * sanitized build (-DASAN=ON or -DNDA_ENFORCE_BOUNDCHECK), so the barred operators are also compared to the dense reference, which is defined
+ * for any coefficient matrix.
  */
 
 namespace {
@@ -119,9 +120,82 @@ TEST(BlockSparseSymSets, bars_reject_symmetry_set_coupling) {
   hyb_coeffs(0, i_cross, j_cross) = 0.42;
   hyb_coeffs(0, j_cross, i_cross) = 0.42;
 
-  EXPECT_THROW(get_operators(ad, hyb_coeffs), std::exception)
-     << "hyb_coeffs couples orbitals " << i_cross << " and " << j_cross
-     << ", which are in different symmetry sets; the BlockOpSymQuartet constructor drops these terms silently";
+  // match the message, other std::invalid_argument checks sit earlier in the same constructor
+  try {
+    get_operators(ad, hyb_coeffs);
+    FAIL() << "hyb_coeffs couples orbitals " << i_cross << " and " << j_cross
+           << ", which are in different symmetry sets; the BlockOpSymQuartet constructor must reject that";
+  } catch (std::invalid_argument const &e) {
+    EXPECT_NE(std::string(e.what()).find("couples different symmetry sets"), std::string::npos) << e.what();
+  }
+}
+
+/**
+ * @brief Bracket the rejection threshold sym_set_coupling_tol from both sides
+ *
+ * @details Cross-set entries perturbed by 0.5 * tol * max|hyb_coeffs| must be accepted as round-off, and by 2 * tol * max|hyb_coeffs| rejected.
+ * The unperturbed fixture has exactly zero cross-set entries, so only injected noise exercises the threshold.
+ */
+TEST(BlockSparseSymSets, bars_bracket_symmetry_set_coupling_tolerance) {
+
+  using triqs_xca::block_sparse::sym_set_coupling_tol;
+
+  // the bracket below scales with the tolerance, so pin its magnitude directly
+  static_assert(sym_set_coupling_tol > 0.0 && sym_set_coupling_tol <= 1.0e-10,
+                "the guard is only meaningful at a round-off-scale relative tolerance");
+
+  auto ad = unequal_sym_set_model();
+  int p   = 2;
+
+  auto labels = std::get<1>(get_operators(ad, nda::zeros<dcomplex>(p, 3, 3)));
+  // scaled away from 1 to distinguish a relative threshold from an absolute one
+  auto hyb_coeffs = nda::make_regular(1.0e6 * sym_set_diagonal_hyb(labels, p));
+  int norb        = static_cast<int>(labels.size());
+
+  // check that the fixture has cross-set entries and that they are exactly zero
+  ASSERT_GE(nda::max_element(labels) + 1, 2) << "need at least two symmetry sets, got labels " << labels;
+
+  double max_abs = 0.0;
+  int n_cross    = 0;
+  for (int l = 0; l < p; ++l) {
+    for (int i = 0; i < norb; ++i) {
+      for (int j = 0; j < norb; ++j) {
+        max_abs = std::max(max_abs, std::abs(hyb_coeffs(l, i, j)));
+        if (labels(i) != labels(j)) {
+          ++n_cross;
+          ASSERT_EQ(hyb_coeffs(l, i, j), 0.0) << "the fixture must start from exactly zero cross-set entries";
+        }
+      }
+    }
+  }
+  ASSERT_GT(n_cross, 0) << "no cross-set entries to perturb";
+  ASSERT_GT(max_abs, 0.0) << "all-zero coefficients make a relative threshold vacuous";
+
+  // perturb every cross-set entry by +-delta with alternating sign
+  auto perturbed = [&](double delta) {
+    auto coeffs = nda::array<dcomplex, 3>(hyb_coeffs);
+    double sgn  = 1.0;
+    for (int l = 0; l < p; ++l) {
+      for (int i = 0; i < norb; ++i) {
+        for (int j = 0; j < norb; ++j) {
+          if (labels(i) != labels(j)) {
+            coeffs(l, i, j) += sgn * delta;
+            sgn = -sgn;
+          }
+        }
+      }
+    }
+    return coeffs;
+  };
+
+  EXPECT_NO_THROW(get_operators(ad, perturbed(0.5 * sym_set_coupling_tol * max_abs)))
+     << "cross-set entries at 0.5 * tol * max|hyb_coeffs| must be accepted as round-off";
+
+  EXPECT_THROW(get_operators(ad, perturbed(2.0 * sym_set_coupling_tol * max_abs)), std::invalid_argument)
+     << "cross-set entries at 2 * tol * max|hyb_coeffs| must be rejected as a structural violation";
+
+  // the unperturbed fixture must pass
+  EXPECT_NO_THROW(get_operators(ad, hyb_coeffs));
 }
 
 /**
