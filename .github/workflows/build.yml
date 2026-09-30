@@ -29,8 +29,8 @@ jobs:
           #- { os: ubuntu-24.04, cxx: g++-14, clang_cxx: clang++-20 }
           - { os: ubuntu-24.04, cxx: clang++-20, clang_cxx: clang++-20 }
           - { os: ubuntu-24.04-arm, cxx: clang++-20, clang_cxx: clang++-20 }
-          #- { os: macos-15, cxx: g++, clang_cxx: clang++ }
-          - { os: macos-15, cxx: clang++, clang_cxx: clang++ }
+          #- { os: macos-26, cxx: g++, clang_cxx: clang++ }
+          - { os: macos-26, cxx: clang++, clang_cxx: clang++ }
 
     runs-on: ${{ matrix.os }}
 
@@ -107,7 +107,7 @@ jobs:
         echo "PYTHONPATH=$(brew --prefix llvm)/lib/python3.13/site-packages" >> $GITHUB_ENV
         echo "SDKROOT=$(xcrun --show-sdk-path)" >> $GITHUB_ENV
         echo "CPPFLAGS=-I$(brew --prefix libomp)/include $CPPFLAGS" >> $GITHUB_ENV
-        echo "LDFLAGS=-L$(brew --prefix libomp)/lib -L$(brew --prefix llvm)/lib/c++ -L/opt/homebrew/opt/llvm/lib/unwind -lunwind" >> $GITHUB_ENV
+        echo "LDFLAGS=-L$(brew --prefix libomp)/lib -L$(brew --prefix llvm)/lib/c++ -L$(brew --prefix llvm)/lib/unwind -lunwind" >> $GITHUB_ENV
 
     - name: Add clang CXXFLAGS
       if: ${{ contains(matrix.cxx, 'clang') }}
