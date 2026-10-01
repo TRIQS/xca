@@ -12,7 +12,7 @@ Prerequisites
 -------------
 
 #. The :ref:`TRIQS <triqslibs:welcome>` library, see :ref:`TRIQS installation instructions. <triqslibs:triqs_install>`.
-   We are currently depending on the ``unstable`` development branch of TRIQS that has to be compiled from source. (*Note that the packaged versions of TRIQS are not yet supported.*)
+   This version of xca requires TRIQS 4.0.x.
 
    In the following, we assume that TRIQS is installed in the directory ``path_to_triqs``.
 

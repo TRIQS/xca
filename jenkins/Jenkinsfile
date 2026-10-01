@@ -6,8 +6,8 @@ def documentationPlatform = "ubuntu-clang"
    All others use the default (OFF) from c2py. */
 def regenPlatforms = ["ubuntu-clang"]
 /* depend on triqs upstream branch/project */
-/* triqs has no branch matching the xca release branches, so they build against triqs unstable */
-def triqsBranch = "unstable"
+/* the xca release branches do not share their names with the triqs branches, so name the triqs branch explicitly */
+def triqsBranch = "4.0.x"
 def triqsProject = '/CCQ/TRIQS/triqs/' + triqsBranch.replaceAll('/', '%2F')
 /* whether to keep and publish the results */
 def keepInstall = !env.BRANCH_NAME.startsWith("PR-")
