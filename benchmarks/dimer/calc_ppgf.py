@@ -8,7 +8,7 @@ from triqs.operators import c, c_dag, Operator
 from triqs.utility import mpi
 
 from triqs_xca.block_sparse_solver import BlockSparseSolver
-from triqs_xca.block_sparse import convolve_ppsc as conv
+from triqs_xca import convolve_ppsc as conv
 
 
 def diag_blockgf(tau_mesh, vec_tau):

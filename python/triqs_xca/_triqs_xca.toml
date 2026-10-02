@@ -17,7 +17,9 @@ namespaces = ""
 #    if reject_names and reject_names matches Qname : skip X
 #    else keep X.
 #
-match_names = "(triqs_xca::dense::manual::sigma_(nca|oca)$|triqs_xca::dense::DiagramEvaluator)"
+# The two DiagramEvaluator classes are registered through the c2py_module aliases in _triqs_xca.cpp
+# and must not be matched here, or they would both be wrapped under the plain name DiagramEvaluator.
+match_names = "(triqs_xca::dense::manual::sigma_(nca|oca)$|triqs_xca::block_sparse::(expectation_value|convolve_ppsc|trace)$)"
 reject_names = ""
 
 # Only keep elements declared in files matching the pattern

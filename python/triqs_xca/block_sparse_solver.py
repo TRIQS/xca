@@ -13,11 +13,10 @@ from .diag import all_pairings, all_connected_pairings
 
 from cppdlr import DysonItPPSC
 
-from . import block_sparse, dense
-
-from .block_sparse import trace
-from .block_sparse import convolve_ppsc as conv
-from .block_sparse import expectation_value
+from ._triqs_xca import DenseDiagramEvaluator, BlockSparseDiagramEvaluator
+from ._triqs_xca import trace
+from ._triqs_xca import convolve_ppsc as conv
+from ._triqs_xca import expectation_value
 
 from .ase.utils.timing import Timer, timer
 
@@ -52,7 +51,7 @@ class BlockSparseSolver(object):
     conserved_operators : list, optional
         List of conserved operators (``triqs.operators.Operator`` instances). 
         Default is ``'automatic'`` using the autopartition algorithm of ``triqs.atom_diag``.
-        To disable symmetries and use the dense diagram evaluator (``dense.DiagramEvaluator``), pass an empty list ``[]``.
+        To disable symmetries and use the dense diagram evaluator (``DenseDiagramEvaluator``), pass an empty list ``[]``.
     timer : Timer, optional
         Timer for performance measurements. Default: ``None`` (will be setup automatically).
     atom_diag : AtomDiag, optional
@@ -325,14 +324,14 @@ class BlockSparseSolver(object):
         #if is_root(): print(f'Initializing diagram evaluator with use_dense_solver = {self.use_dense_solver}')
         if self.use_dense_solver:
             if self.has_dynamic_interactions:
-                self.d = dense.DiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.atom_diag, self.dynint_ops, self.dynint_coeffs)
+                self.d = DenseDiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.atom_diag, self.dynint_ops, self.dynint_coeffs)
             else:
-                self.d = dense.DiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.atom_diag)
+                self.d = DenseDiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.atom_diag)
         else:
             if self.has_dynamic_interactions:
-                self.d = block_sparse.DiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.atom_diag, self.dynint_ops, self.dynint_coeffs)
+                self.d = BlockSparseDiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.atom_diag, self.dynint_ops, self.dynint_coeffs)
             else:
-                self.d = block_sparse.DiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.atom_diag)
+                self.d = BlockSparseDiagramEvaluator(self.hyb.poles, self.hyb.coefficients, self.mesh_tau, self.atom_diag)
         #if is_root(): print(f'done.')
 
 

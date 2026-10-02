@@ -25,7 +25,7 @@ using c2py::operator""_a;
 // --------- class _c2py_cls_0 -----------
 using _c2py_cls_0                                            = triqs_xca::dense::DiagramEvaluator;
 template <> constexpr bool c2py::is_wrapped<_c2py_cls_0>     = true;
-template <> inline constexpr auto c2py::tp_name<_c2py_cls_0> = "triqs_xca.dense.DiagramEvaluator";
+template <> inline constexpr auto c2py::tp_name<_c2py_cls_0> = "triqs_xca._triqs_xca.DenseDiagramEvaluator";
 static auto _c2py_init_0                                     = c2py::dispatcher_c_kw_t{
    c2py::c_constructor<
                                           _c2py_cls_0,
@@ -244,11 +244,261 @@ contains the Green's functions and creation/annihilation operators needed to
 actually compute the diagram. It also contains temporary arrays required for
 computation.)DOC"
    + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_0>;
+// --------- class _c2py_cls_1 -----------
+using _c2py_cls_1                                            = triqs_xca::block_sparse::DiagramEvaluator;
+template <> constexpr bool c2py::is_wrapped<_c2py_cls_1>     = true;
+template <> inline constexpr auto c2py::tp_name<_c2py_cls_1> = "triqs_xca._triqs_xca.BlockSparseDiagramEvaluator";
+static auto _c2py_init_1                                     = c2py::dispatcher_c_kw_t{
+   c2py::c_constructor<
+                                          _c2py_cls_1,
+                                          nda::basic_array_view<const double, 1, nda::C_stride_layout, 'V', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>,
+                                          nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                                                nda::borrowed<nda::mem::AddressSpace::Host>>,
+                                          triqs::mesh::dlr_imtime, const triqs::atom_diag::atom_diag<1> &>("hyb_poles", "hyb_coeffs", "tau_mesh", "ad"),
+   c2py::c_constructor<
+                                          _c2py_cls_1,
+                                          nda::basic_array_view<const double, 1, nda::C_stride_layout, 'V', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>,
+                                          nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                                                nda::borrowed<nda::mem::AddressSpace::Host>>,
+                                          triqs::mesh::dlr_imtime, const triqs::atom_diag::atom_diag<0> &>("hyb_poles", "hyb_coeffs", "tau_mesh", "ad"),
+   c2py::c_constructor<
+                                          _c2py_cls_1,
+                                          nda::basic_array_view<const double, 1, nda::C_stride_layout, 'V', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>,
+                                          nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                                                nda::borrowed<nda::mem::AddressSpace::Host>>,
+                                          triqs::mesh::dlr_imtime, const triqs::atom_diag::atom_diag<1> &, const std::vector<triqs::operators::many_body_operator_real> &,
+                                          nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                                                nda::borrowed<nda::mem::AddressSpace::Host>>>("hyb_poles", "hyb_coeffs", "tau_mesh", "ad", "dynint_ops", "dynint_coeffs"),
+   c2py::c_constructor<
+                                          _c2py_cls_1,
+                                          nda::basic_array_view<const double, 1, nda::C_stride_layout, 'V', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>,
+                                          nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                                                nda::borrowed<nda::mem::AddressSpace::Host>>,
+                                          triqs::mesh::dlr_imtime, const triqs::atom_diag::atom_diag<0> &, const std::vector<triqs::operators::many_body_operator_real> &,
+                                          nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                                                nda::borrowed<nda::mem::AddressSpace::Host>>>("hyb_poles", "hyb_coeffs", "tau_mesh", "ad", "dynint_ops",
+                                                                                                              "dynint_coeffs")};
+template <> constexpr initproc c2py::tp_init<_c2py_cls_1> = c2py::pyfkw_constructor<_c2py_init_1>;
+template <>
+const std::string c2py::tp_ctor_doc<_c2py_cls_1> = _c2py_init_1.doc(
+   R"DOC(
+[1, 2] Constructor for DiagramEvaluator
+
+------
+
+[3, 4] Constructor for DiagramEvaluator with dynamical interactions
+
+The interaction operators extend the flavour space as the orbital indices [n_hyb, n_hyb + n_int), grouped into their own
+symmetry sets, and the coefficients are extended block-diagonally. hyb_coeffs must cover every fundamental operator of ad.
+
+------
+
+Parameters
+----------
+beta : {par_0}
+   inverse temperature
+Lambda : {par_1}
+   DLR imaginary time cutoff
+eps : {par_2}
+   DLR imaginary time accuracy
+hyb_poles : {par_3}
+   hybridization poles
+hyb_coeffs : {par_4}
+   hybridization function coefficients at imaginary time nodes
+G_ppsc : {par_5}
+   pseudo-particle Green's function at imaginary time nodes
+ad : {par_6}
+   atom_diag object with Hamiltonian and field operators
+tau_mesh : {par_7}
+   TRIQS imaginary time DLR mesh
+dynint_ops : {par_8}
+   the n_int dynamical-interaction operators
+dynint_coeffs : {par_9}
+   dynamical-interaction coefficients, shape (p, n_int, n_int)
+)DOC",
+   {{},
+    {},
+    {},
+    {c2py::python_typename<
+       nda::basic_array_view<const double, 1, nda::C_stride_layout, 'V', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>>()},
+    {c2py::python_typename<nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                                 nda::borrowed<nda::mem::AddressSpace::Host>>>()},
+    {},
+    {c2py::python_typename<const triqs::atom_diag::atom_diag<1> &>(), c2py::python_typename<const triqs::atom_diag::atom_diag<0> &>()},
+    {c2py::python_typename<triqs::mesh::dlr_imtime>()},
+    {c2py::python_typename<const std::vector<triqs::operators::many_body_operator_real> &>()},
+    {c2py::python_typename<nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                                 nda::borrowed<nda::mem::AddressSpace::Host>>>()}});
+// compute_one_time_correlator
+static auto const _c2py_fun_7 = c2py::dispatcher_f_kw_t{
+   c2py::cmethod(
+      [](_c2py_cls_1 &self, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc,
+         const std::vector<triqs::operators::many_body_operator_real> &ops_tau, const std::vector<triqs::operators::many_body_operator_real> &ops_0,
+         const triqs::atom_diag::atom_diag<1> &ad,
+         nda::basic_array_view<const int, 2, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> topology,
+         nda::basic_array_view<const int, 1, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> f_ix_vec)
+         -> decltype(auto) { return self.template compute_one_time_correlator<true>(G_ppsc, ops_tau, ops_0, ad, topology, f_ix_vec); },
+      "self", "G_ppsc", "ops_tau", "ops_0", "ad", "topology", "f_ix_vec"),
+   c2py::cmethod(
+      [](_c2py_cls_1 &self, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc,
+         const std::vector<triqs::operators::many_body_operator_real> &ops_tau, const std::vector<triqs::operators::many_body_operator_real> &ops_0,
+         const triqs::atom_diag::atom_diag<0> &ad,
+         nda::basic_array_view<const int, 2, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> topology,
+         nda::basic_array_view<const int, 1, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> f_ix_vec)
+         -> decltype(auto) { return self.template compute_one_time_correlator<false>(G_ppsc, ops_tau, ops_0, ad, topology, f_ix_vec); },
+      "self", "G_ppsc", "ops_tau", "ops_0", "ad", "topology", "f_ix_vec")};
+
+// compute_self_energy
+static auto const _c2py_fun_8 = c2py::dispatcher_f_kw_t{
+   c2py::cmethod(
+      [](_c2py_cls_1 &self, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc,
+         nda::basic_array_view<const int, 2, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> topology)
+         -> decltype(auto) { return self.compute_self_energy(G_ppsc, topology); },
+      "self", "G_ppsc", "topology"),
+   c2py::cmethod(
+      [](_c2py_cls_1 &self, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc,
+         nda::basic_array_view<const int, 2, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> topology,
+         int f_ix) -> decltype(auto) { return self.compute_self_energy(G_ppsc, topology, f_ix); },
+      "self", "G_ppsc", "topology", "f_ix"),
+   c2py::cmethod(
+      [](_c2py_cls_1 &self, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc,
+         nda::basic_array_view<const int, 2, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> topology,
+         nda::basic_array_view<const int, 1, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> f_ix_vec)
+         -> decltype(auto) { return self.compute_self_energy(G_ppsc, topology, f_ix_vec); },
+      "self", "G_ppsc", "topology", "f_ix_vec")};
+
+// compute_single_ptcle_gf
+static auto const _c2py_fun_9 = c2py::dispatcher_f_kw_t{
+   c2py::cmethod(
+      [](_c2py_cls_1 &self, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc,
+         nda::basic_array_view<const int, 2, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> topology)
+         -> decltype(auto) { return self.compute_single_ptcle_gf(G_ppsc, topology); },
+      "self", "G_ppsc", "topology"),
+   c2py::cmethod(
+      [](_c2py_cls_1 &self, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc,
+         nda::basic_array_view<const int, 2, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> topology,
+         int f_ix) -> decltype(auto) { return self.compute_single_ptcle_gf(G_ppsc, topology, f_ix); },
+      "self", "G_ppsc", "topology", "f_ix"),
+   c2py::cmethod(
+      [](_c2py_cls_1 &self, triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc,
+         nda::basic_array_view<const int, 2, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> topology,
+         nda::basic_array_view<const int, 1, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> f_ix_vec)
+         -> decltype(auto) { return self.compute_single_ptcle_gf(G_ppsc, topology, f_ix_vec); },
+      "self", "G_ppsc", "topology", "f_ix_vec")};
+
+// get_num_self_energy_backbones
+static auto const _c2py_fun_10 = c2py::dispatcher_f_kw_t{c2py::cmethod(
+   [](_c2py_cls_1 &self,
+      nda::basic_array_view<const int, 2, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> topology)
+      -> decltype(auto) { return self.get_num_self_energy_backbones(topology); },
+   "self", "topology")};
+
+// get_num_single_ptcle_gf_backbones
+static auto const _c2py_fun_11 = c2py::dispatcher_f_kw_t{c2py::cmethod(
+   [](_c2py_cls_1 &self,
+      nda::basic_array_view<const int, 2, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> topology)
+      -> decltype(auto) { return self.get_num_single_ptcle_gf_backbones(topology); },
+   "self", "topology")};
+
+// print_self_energy_backbone
+static auto const _c2py_fun_12 = c2py::dispatcher_f_kw_t{c2py::cmethod(
+   [](_c2py_cls_1 &self,
+      nda::basic_array_view<const int, 2, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> topology,
+      int f_ix) -> decltype(auto) { return self.print_self_energy_backbone(topology, f_ix); },
+   "self", "topology", "f_ix")};
+
+// print_single_ptcle_gf_backbone
+static auto const _c2py_fun_13 = c2py::dispatcher_f_kw_t{c2py::cmethod(
+   [](_c2py_cls_1 &self,
+      nda::basic_array_view<const int, 2, nda::C_stride_layout, 'A', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>> topology,
+      int f_ix) -> decltype(auto) { return self.print_single_ptcle_gf_backbone(topology, f_ix); },
+   "self", "topology", "f_ix")};
+
+// reset
+static auto const _c2py_fun_14 = c2py::dispatcher_f_kw_t{c2py::cmethod([](_c2py_cls_1 &self) -> decltype(auto) { return self.reset(); }, "self")};
+
+static const auto _c2py_doc_7  = _c2py_fun_7.doc(R"DOC()DOC");
+static const auto _c2py_doc_8  = _c2py_fun_8.doc(R"DOC()DOC");
+static const auto _c2py_doc_9  = _c2py_fun_9.doc(R"DOC()DOC");
+static const auto _c2py_doc_10 = _c2py_fun_10.doc(R"DOC()DOC");
+static const auto _c2py_doc_11 = _c2py_fun_11.doc(R"DOC()DOC");
+static const auto _c2py_doc_12 = _c2py_fun_12.doc(R"DOC()DOC");
+static const auto _c2py_doc_13 = _c2py_fun_13.doc(R"DOC()DOC");
+static const auto _c2py_doc_14 = _c2py_fun_14.doc(R"DOC()DOC");
+
+// ----- Method table ----
+template <>
+PyMethodDef c2py::tp_methods<_c2py_cls_1>[] = {
+   {"compute_one_time_correlator", (PyCFunction)c2py::pyfkw<_c2py_fun_7>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_7.c_str()},
+   {"compute_self_energy", (PyCFunction)c2py::pyfkw<_c2py_fun_8>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_8.c_str()},
+   {"compute_single_ptcle_gf", (PyCFunction)c2py::pyfkw<_c2py_fun_9>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_9.c_str()},
+   {"get_num_self_energy_backbones", (PyCFunction)c2py::pyfkw<_c2py_fun_10>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_10.c_str()},
+   {"get_num_single_ptcle_gf_backbones", (PyCFunction)c2py::pyfkw<_c2py_fun_11>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_11.c_str()},
+   {"print_self_energy_backbone", (PyCFunction)c2py::pyfkw<_c2py_fun_12>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_12.c_str()},
+   {"print_single_ptcle_gf_backbone", (PyCFunction)c2py::pyfkw<_c2py_fun_13>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_13.c_str()},
+   {"reset", (PyCFunction)c2py::pyfkw<_c2py_fun_14>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_14.c_str()},
+   {nullptr, nullptr, 0, nullptr} // Sentinel
+};
+
+constexpr auto _c2py_doc_member_15 = R"DOC()DOC";
+constexpr auto _c2py_doc_member_16 = R"DOC()DOC";
+constexpr auto _c2py_doc_member_17 = R"DOC()DOC";
+constexpr auto _c2py_doc_member_18 = R"DOC()DOC";
+constexpr auto _c2py_doc_member_19 = R"DOC()DOC";
+constexpr auto _c2py_doc_member_20 = R"DOC()DOC";
+constexpr auto _c2py_doc_member_21 = R"DOC()DOC";
+constexpr auto _c2py_doc_member_22 = R"DOC()DOC";
+constexpr auto _c2py_doc_member_23 = R"DOC()DOC";
+constexpr auto _c2py_doc_member_24 = R"DOC()DOC";
+constexpr auto _c2py_doc_member_25 = R"DOC()DOC";
+constexpr auto _c2py_doc_member_26 = R"DOC()DOC";
+
+// ----- Member and property table ----
+
+template <>
+constinit PyGetSetDef c2py::tp_getset<_c2py_cls_1>[] = {c2py::getsetdef_from_member<&_c2py_cls_1::beta, _c2py_cls_1>("beta", _c2py_doc_member_15),
+                                                        c2py::getsetdef_from_member<&_c2py_cls_1::r, _c2py_cls_1>("r", _c2py_doc_member_16),
+                                                        c2py::getsetdef_from_member<&_c2py_cls_1::n, _c2py_cls_1>("n", _c2py_doc_member_17),
+                                                        c2py::getsetdef_from_member<&_c2py_cls_1::n_hyb, _c2py_cls_1>("n_hyb", _c2py_doc_member_18),
+                                                        c2py::getsetdef_from_member<&_c2py_cls_1::n_int, _c2py_cls_1>("n_int", _c2py_doc_member_19),
+                                                        c2py::getsetdef_from_member<&_c2py_cls_1::q, _c2py_cls_1>("q", _c2py_doc_member_20),
+                                                        c2py::getsetdef_from_member<&_c2py_cls_1::Nmax, _c2py_cls_1>("Nmax", _c2py_doc_member_21),
+                                                        c2py::getsetdef_from_member<&_c2py_cls_1::T, _c2py_cls_1>("T", _c2py_doc_member_22),
+                                                        c2py::getsetdef_from_member<&_c2py_cls_1::U, _c2py_cls_1>("U", _c2py_doc_member_23),
+                                                        c2py::getsetdef_from_member<&_c2py_cls_1::GKt, _c2py_cls_1>("GKt", _c2py_doc_member_24),
+                                                        c2py::getsetdef_from_member<&_c2py_cls_1::Tkaps, _c2py_cls_1>("Tkaps", _c2py_doc_member_25),
+                                                        c2py::getsetdef_from_member<&_c2py_cls_1::Tmu, _c2py_cls_1>("Tmu", _c2py_doc_member_26),
+
+                                                        {nullptr, nullptr, nullptr, nullptr, nullptr}};
+
+template <>
+const std::string c2py::tp_doc<_c2py_cls_1> = R"DOC(Class for evaluating a diagram of a given order and topology in block-sparse storage
+This class is used to evaluate all the backbone decompositions of a given order and topology. It reads the information from a Backbone object
+and contains the Green's functions and creation/annihilation operators needed to actually compute the diagram. It also contains temporary 
+data structures required for computation.)DOC"
+   + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_1>;
 
 // ==================== module functions ====================
 
+// convolve_ppsc
+static auto const _c2py_fun_15 = c2py::dispatcher_f_kw_t{
+   c2py::cfun([](triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G1,
+                 triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G2) { return triqs_xca::block_sparse::convolve_ppsc(G1, G2); },
+              "G1", "G2")};
+
+// expectation_value
+static auto const _c2py_fun_16 = c2py::dispatcher_f_kw_t{
+   c2py::cfun(
+      [](const triqs::operators::many_body_operator_real &op, const triqs::atom_diag::atom_diag<0> &ad,
+         triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc) { return triqs_xca::block_sparse::expectation_value<false>(op, ad, G_ppsc); },
+      "op", "ad", "G_ppsc"),
+   c2py::cfun(
+      [](const triqs::operators::many_body_operator_real &op, const triqs::atom_diag::atom_diag<1> &ad,
+         triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc) { return triqs_xca::block_sparse::expectation_value<true>(op, ad, G_ppsc); },
+      "op", "ad", "G_ppsc")};
+
 // sigma_nca
-static auto const _c2py_fun_7 =
+static auto const _c2py_fun_17 =
    c2py::dispatcher_f_kw_t{c2py::cfun([](nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
                                                                nda::borrowed<nda::mem::AddressSpace::Host>>
                                             hyb,
@@ -267,7 +517,7 @@ static auto const _c2py_fun_7 =
                                       "hyb", "hyb_refl", "Gt", "Fs", "F_dags")};
 
 // sigma_oca
-static auto const _c2py_fun_8 = c2py::dispatcher_f_kw_t{
+static auto const _c2py_fun_18 = c2py::dispatcher_f_kw_t{
    c2py::cfun([](nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
                                        nda::borrowed<nda::mem::AddressSpace::Host>>
                     hyb,
@@ -311,8 +561,54 @@ static auto const _c2py_fun_8 = c2py::dispatcher_f_kw_t{
       },
       "hyb", "hyb_coeffs", "hyb_refl", "hyb_refl_coeffs", "hyb_poles", "itops", "beta", "Gt", "Fs", "F_dags")};
 
-static const auto _c2py_doc_7 =
-   _c2py_fun_7.doc(R"DOC(
+// trace
+static auto const _c2py_fun_19 =
+   c2py::dispatcher_f_kw_t{c2py::cfun([](triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G) { return triqs_xca::block_sparse::trace(G); }, "G")};
+
+static const auto _c2py_doc_15 = _c2py_fun_15.doc(R"DOC(
+Compute the Volterra "convolution" of two pseudo-particle Green's functions
+
+Parameters
+----------
+G1 : {par_0}
+   Left Green's function
+G2 : {par_1}
+   Right Green's function
+
+Returns
+-------
+{ret_0}
+   Convolution (G1 * G2)()
+)DOC",
+                                                  {{c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()},
+                                                   {c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()}},
+                                                  {c2py::python_typename<triqs::gfs::block_gf<triqs::mesh::dlr_imtime>>()});
+static const auto _c2py_doc_16 = _c2py_fun_16.doc(
+   R"DOC(
+Compute the expectation value of the 2nd quantized operator op, <O> = -Tr[O G()]
+using the AtomDiag instance ad to generate a block representation
+and tracing with the many-body density matrix of the pseudo particle Green's function G_ppsc
+
+Parameters
+----------
+op : {par_0}
+   2nd quantization operator
+ad : {par_1}
+   AtomDiag object
+G_ppsc : {par_2}
+   Pseudo-particle Green's function
+
+Returns
+-------
+{ret_0}
+   Expectation value -Tr[G() O]
+)DOC",
+   {{c2py::python_typename<const triqs::operators::many_body_operator_real &>()},
+    {c2py::python_typename<const triqs::atom_diag::atom_diag<0> &>(), c2py::python_typename<const triqs::atom_diag::atom_diag<1> &>()},
+    {c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()}},
+   {c2py::python_typename<nda::dcomplex>()});
+static const auto _c2py_doc_17 =
+   _c2py_fun_17.doc(R"DOC(
 Evaluate NCA self-energy term using dense storage
 
 Parameters
@@ -328,17 +624,17 @@ Fs : {par_3}
 F_dags : {par_4}
    vector of creation operators
 )DOC",
-                   {{c2py::python_typename<nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
-                                                                 nda::borrowed<nda::mem::AddressSpace::Host>>>()},
-                    {c2py::python_typename<nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
-                                                                 nda::borrowed<nda::mem::AddressSpace::Host>>>()},
-                    {c2py::python_typename<nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
-                                                                 nda::borrowed<nda::mem::AddressSpace::Host>>>()},
-                    {c2py::python_typename<nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
-                                                                 nda::borrowed<nda::mem::AddressSpace::Host>>>()},
-                    {c2py::python_typename<nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
-                                                                 nda::borrowed<nda::mem::AddressSpace::Host>>>()}});
-static const auto _c2py_doc_8 = _c2py_fun_8.doc(
+                    {{c2py::python_typename<nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                                                  nda::borrowed<nda::mem::AddressSpace::Host>>>()},
+                     {c2py::python_typename<nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                                                  nda::borrowed<nda::mem::AddressSpace::Host>>>()},
+                     {c2py::python_typename<nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                                                  nda::borrowed<nda::mem::AddressSpace::Host>>>()},
+                     {c2py::python_typename<nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                                                  nda::borrowed<nda::mem::AddressSpace::Host>>>()},
+                     {c2py::python_typename<nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                                                  nda::borrowed<nda::mem::AddressSpace::Host>>>()}});
+static const auto _c2py_doc_18 = _c2py_fun_18.doc(
    R"DOC(
 [1] Evaluate OCA using dense storage
 
@@ -392,11 +688,23 @@ Returns
        nda::basic_array_view<const double, 1, nda::C_stride_layout, 'V', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>>()}},
    {c2py::python_typename<
       nda::basic_array<std::complex<double>, 3, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>>>()});
+static const auto _c2py_doc_19 = _c2py_fun_19.doc(R"DOC(
+Take the trace of a pseudo-particle Green's function
+
+Parameters
+----------
+G : {par_0}
+   Pseudo-particle Green's function
+)DOC",
+                                                  {{c2py::python_typename<triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime>>()}});
 //--------------------- module function table  -----------------------------
 
 static PyMethodDef module_methods[] = {
-   {"sigma_nca", (PyCFunction)c2py::pyfkw<_c2py_fun_7>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_7.c_str()},
-   {"sigma_oca", (PyCFunction)c2py::pyfkw<_c2py_fun_8>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_8.c_str()},
+   {"convolve_ppsc", (PyCFunction)c2py::pyfkw<_c2py_fun_15>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_15.c_str()},
+   {"expectation_value", (PyCFunction)c2py::pyfkw<_c2py_fun_16>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_16.c_str()},
+   {"sigma_nca", (PyCFunction)c2py::pyfkw<_c2py_fun_17>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_17.c_str()},
+   {"sigma_oca", (PyCFunction)c2py::pyfkw<_c2py_fun_18>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_18.c_str()},
+   {"trace", (PyCFunction)c2py::pyfkw<_c2py_fun_19>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_19.c_str()},
    {nullptr, nullptr, 0, nullptr} // Sentinel
 };
 
@@ -405,7 +713,7 @@ static PyMethodDef module_methods[] = {
 //// module doc directly in the code or "" if not present...
 /// Or mandatory ?
 static struct PyModuleDef module_def = {PyModuleDef_HEAD_INIT,
-                                        "dense",           /* name of module */
+                                        "_triqs_xca",      /* name of module */
                                         R"RAWDOC()RAWDOC", /* module documentation, may be NULL */
                                         -1, /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
                                         module_methods,
@@ -416,9 +724,9 @@ static struct PyModuleDef module_def = {PyModuleDef_HEAD_INIT,
 
 //--------------------- module init function -----------------------------
 
-extern "C" __attribute__((visibility("default"))) PyObject *PyInit_dense() {
+extern "C" __attribute__((visibility("default"))) PyObject *PyInit__triqs_xca() {
 
-  if (not c2py::check_python_version("dense")) return NULL;
+  if (not c2py::check_python_version("_triqs_xca")) return NULL;
 
   // import numpy iff 'numpy/arrayobject.h' included
 #ifdef Py_ARRAYOBJECT_H
@@ -429,6 +737,7 @@ extern "C" __attribute__((visibility("default"))) PyObject *PyInit_dense() {
 
   if (PyType_Ready(&c2py::wrap_pytype<c2py::py_range>) < 0) return NULL;
   if (PyType_Ready(&c2py::wrap_pytype<_c2py_cls_0>) < 0) return NULL;
+  if (PyType_Ready(&c2py::wrap_pytype<_c2py_cls_1>) < 0) return NULL;
 
   m = PyModule_Create(&module_def);
   if (m == NULL) return NULL;
@@ -437,7 +746,8 @@ extern "C" __attribute__((visibility("default"))) PyObject *PyInit_dense() {
 
   conv_table[std::type_index(typeid(c2py::py_range)).name()] = &c2py::wrap_pytype<c2py::py_range>;
 #define _add_type(T, N) c2py::add_type_object_to_main<T>(N, m, conv_table)
-  _add_type(_c2py_cls_0, "DiagramEvaluator");
+  _add_type(_c2py_cls_0, "DenseDiagramEvaluator");
+  _add_type(_c2py_cls_1, "BlockSparseDiagramEvaluator");
 #undef _add_type
 
   return m;

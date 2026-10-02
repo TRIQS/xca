@@ -3,7 +3,7 @@
 import itertools
 import numpy as np
 
-from triqs_xca.block_sparse import convolve_ppsc as conv
+from triqs_xca import convolve_ppsc as conv
 
 from triqs.gfs import MeshDLRImTime, BlockGf
 from triqs.gfs import make_gf_imtime

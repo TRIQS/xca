@@ -38,7 +38,7 @@ def test_one_time_correlator(verbose, conserved_operators):
         + soc * c_dag('0', 0) * c('0', 1) + np.conj(soc) *c_dag('0', 1) * c('0', 0)
 
     S = BlockSparseSolver(H_loc, beta, w_max, eps, gf_struct=gf_struct,
-        conserved_operators=conserved_operators, # Triggers no symmetries using dense.DiagramEvaluator
+        conserved_operators=conserved_operators, # Triggers no symmetries using DenseDiagramEvaluator
         )
 
     Delta_w = make_gf_dlr_imfreq(S.Delta_tau['0'])
@@ -67,5 +67,5 @@ def test_one_time_correlator(verbose, conserved_operators):
 
 if __name__ == '__main__':
     verbose = False
-    test_one_time_correlator(verbose=verbose, conserved_operators=[]) # Test dense.DiagramEvaluator
+    test_one_time_correlator(verbose=verbose, conserved_operators=[]) # Test DenseDiagramEvaluator
     test_one_time_correlator(verbose=verbose, conserved_operators='automatic') # Test BlockSparseDiagramEvaluator

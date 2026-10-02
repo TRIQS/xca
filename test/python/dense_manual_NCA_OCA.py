@@ -6,7 +6,7 @@ from triqs.operators import c, c_dag
 
 from cppdlr import ImTimeOps, build_dlr_rf
 
-from triqs_xca.dense import sigma_nca, sigma_oca
+from triqs_xca import sigma_nca, sigma_oca
 from triqs_xca.block_sparse_solver import BlockSparseSolver
 from triqs_xca.block_sparse_solver import hamiltonian_matrix_block, pseudo_particle_block_gf_to_dense
 
