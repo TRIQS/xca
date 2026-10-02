@@ -95,28 +95,20 @@ namespace triqs_xca::atom_diag {
           // Handle annihilation operator
           long cidx = ad.c_connection(oidx, sidx);
           if (cidx >= 0) {
-            auto fock_final   = ad.get_fock_states(cidx);
-            auto fock_initial = ad.get_fock_states(sidx);
-
-            // Get full operator matrix and extract block
-            auto c_full = get_full_operator_matrix(ad, oidx, false);
-            for (int i = 0; i < fock_final.size(); ++i) {
-              for (int j = 0; j < fock_initial.size(); ++j) { c_blocks[gidx][sidx](op_idx_in_group, i, j) = c_full(fock_final[i], fock_initial[j]); }
+            // Get the operator block between the two subspaces
+            auto c_block = *get_operator_block(ad, oidx, false, sidx);
+            for (int i = 0; i < c_block.extent(0); ++i) {
+              for (int j = 0; j < c_block.extent(1); ++j) { c_blocks[gidx][sidx](op_idx_in_group, i, j) = c_block(i, j); }
             }
           }
 
           // Handle creation operator
           long didx = ad.cdag_connection(oidx, sidx);
           if (didx >= 0) {
-            auto fock_final   = ad.get_fock_states(didx);
-            auto fock_initial = ad.get_fock_states(sidx);
-
-            // Get full operator matrix and extract block
-            auto cdag_full = get_full_operator_matrix(ad, oidx, true);
-            for (int i = 0; i < fock_final.size(); ++i) {
-              for (int j = 0; j < fock_initial.size(); ++j) {
-                cdag_blocks[gidx][sidx](op_idx_in_group, i, j) = cdag_full(fock_final[i], fock_initial[j]);
-              }
+            // Get the operator block between the two subspaces
+            auto cdag_block = *get_operator_block(ad, oidx, true, sidx);
+            for (int i = 0; i < cdag_block.extent(0); ++i) {
+              for (int j = 0; j < cdag_block.extent(1); ++j) { cdag_blocks[gidx][sidx](op_idx_in_group, i, j) = cdag_block(i, j); }
             }
           }
         }
@@ -215,23 +207,12 @@ namespace triqs_xca::atom_diag {
   using cppdlr::_;
 
   std::tuple<std::vector<nda::array<dcomplex, 2>>, nda::vector<long>> get_hamiltonian_blocks(const triqs_atom_diag &ad) {
-    // Get full Hamiltonian matrix
-    auto H_mat = get_full_h_atomic(ad);
-
-    // Create permutation based on Fock state ordering
-    std::vector<unsigned long> H_perm;
     std::vector<nda::array<dcomplex, 2>> H_blocks;
     nda::vector<long> H_block_inds(ad.n_subspaces());
 
     for (int s = 0; s < ad.n_subspaces(); ++s) {
-      auto fock_states = ad.get_fock_states(s);
-      for (auto state : fock_states) { H_perm.push_back(state); }
-
-      // Extract block from full matrix
-      nda::array<dcomplex, 2> H_block = nda::zeros<dcomplex>(fock_states.size(), fock_states.size());
-      for (int i = 0; i < fock_states.size(); ++i) {
-        for (int j = 0; j < fock_states.size(); ++j) { H_block(i, j) = H_mat(fock_states[i], fock_states[j]); }
-      }
+      // Hamiltonian block of the subspace in the Fock basis
+      nda::array<dcomplex, 2> H_block = get_hamiltonian_block(ad, s);
       H_blocks.push_back(H_block);
 
       // Check if block is zero

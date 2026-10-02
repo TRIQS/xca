@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include <nda/nda.hpp>
 #include <cppdlr/dlr_imtime.hpp>
 #include <triqs/gfs.hpp>
@@ -16,28 +18,31 @@ namespace triqs_xca::atom_diag {
   using triqs_atom_diag = triqs_atom_diag_t<true>; // Default: complex valued Hamiltonians
 
   /**
- * @brief Utility function to get full Hamiltonian matrix from an AtomDiag object.
- * @param[in] ad AtomDiag object
- */
-  nda::matrix<dcomplex> get_full_h_atomic(const triqs_atom_diag &ad);
-
-  /**
- * @brief Utility function to get full operator matrix from an AtomDiag object.
+ * @brief Block of a fundamental operator acting on one atom_diag subspace, in the Fock basis
+ *
+ * @details atom_diag stores the operator between the eigenbases of two subspaces. The block returned is rotated to the Fock-state
+ * bases, U_target * block * U_source^dagger, so its rows run over the Fock states of the target subspace and its columns over those of
+ * subspace s. Only the memory of these two subspaces is used, never that of the full Hilbert space.
+ *
  * @param[in] ad AtomDiag object
  * @param[in] oidx operator index
- * @param[in] is_creation true for creation operator, false for annihilation operator
+ * @param[in] is_creation true for the creation operator, false for the annihilation operator
+ * @param[in] s source subspace
+ * @return the block, or nullopt if the operator takes subspace s to zero; the target subspace is ad.c_connection(oidx, s) for the
+ * annihilation operator and ad.cdag_connection(oidx, s) for the creation operator
  */
-  nda::matrix<dcomplex> get_full_operator_matrix(const triqs_atom_diag_t<true> &ad, int oidx, bool is_creation);
-  nda::matrix<dcomplex> get_full_operator_matrix(const triqs_atom_diag_t<false> &ad, int oidx, bool is_creation);
+  std::optional<nda::matrix<dcomplex>> get_operator_block(const triqs_atom_diag_t<true> &ad, int oidx, bool is_creation, int s);
+  std::optional<nda::matrix<dcomplex>> get_operator_block(const triqs_atom_diag_t<false> &ad, int oidx, bool is_creation, int s);
 
   /**
- * @brief Get a dense tensor in the full Hilbert resticted to one atom_diag subspace
- * @param[in] tensor_full Full tensor in the Hilbert space
- * @param[in] subspace_index Index of the subspace
+ * @brief Hamiltonian block of one atom_diag subspace in the Fock basis, U (E + E_gs) U^dagger
+ *
+ * @details Rows and columns run over the Fock states of subspace s, in the order of ad.get_fock_states(s). Only the memory of this
+ * subspace is used, never that of the full Hilbert space.
+ *
  * @param[in] ad AtomDiag object
- * @return tensor_subspace Tensor in the subspace
+ * @param[in] s subspace
  */
-  nda::array<dcomplex, 3> get_tensor_in_atom_diag_subspace(nda::array_const_view<dcomplex, 3> tensor_full, int subspace_index,
-                                                           triqs_atom_diag const &ad);
+  nda::matrix<dcomplex> get_hamiltonian_block(const triqs_atom_diag &ad, int s);
 
 } // namespace triqs_xca::atom_diag

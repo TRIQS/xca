@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <triqs_xca/atom_diag_utils.hpp>
+#include <triqs_xca/dense/atom_diag_utils.hpp>
 #include <triqs_xca/block_sparse/atom_diag_utils.hpp>
 
 #include <triqs_xca/dense/diagram_evaluator.hpp>

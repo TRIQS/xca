@@ -6,6 +6,7 @@
 #include <triqs/operators/many_body_operator.hpp>
 
 #include <triqs_xca/atom_diag_utils.hpp>
+#include <triqs_xca/dense/atom_diag_utils.hpp>
 #include <triqs_xca/block_sparse/atom_diag_utils.hpp>
 #include <triqs_xca/block_sparse/block_op.hpp>
 #include <triqs_xca/block_sparse/diagram_evaluator.hpp>

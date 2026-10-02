@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <triqs_xca/atom_diag_utils.hpp>
+#include <triqs_xca/dense/atom_diag_utils.hpp>
 #include <triqs_xca/block_sparse/atom_diag_utils.hpp>
 
 using nda::range;
@@ -16,7 +17,9 @@ using triqs::operators::n;
 
 using triqs_xca::atom_diag::get_full_h_atomic;
 using triqs_xca::atom_diag::get_full_operator_matrix;
+using triqs_xca::atom_diag::get_hamiltonian_block;
 using triqs_xca::atom_diag::get_hamiltonian_blocks;
+using triqs_xca::atom_diag::get_operator_block;
 using triqs_xca::atom_diag::get_operators;
 
 /**
@@ -370,18 +373,22 @@ TEST(AtomDiagUtils, operators) {
 }
 
 /**
- * @brief The full Hamiltonian and its blocks for a model whose diagonalizing unitaries are complex
+ * @brief Three spinless sites with complex hoppings around a closed loop and a nearest-neighbour interaction
  *
- * @details Three sites with complex hoppings around a closed loop, so that no gauge makes the eigenvectors of the one- and two-particle
- * sectors real. The expected matrix is assembled from the Fock-space operator matrices, H = sum_ij h_ij c^dag_i c_j + U n_0 n_1. The
- * transformation of the diagonal energies back to the Fock basis must use the adjoint U^dagger, not the transpose U^T.
+ * @details No gauge makes the eigenvectors of the one- and two-particle sectors real, so the unitaries of the atom_diag object are
+ * complex. The Hamiltonian is H = sum_ij h_ij c^dag_i c_j + U n_0 n_1.
  */
-TEST(AtomDiagUtils, complex_unitary_hamiltonian) {
+struct ComplexHoppingModel {
+  nda::matrix<std::complex<double>> h;
+  double U;
+  triqs::atom_diag::atom_diag<true> ad;
+};
+
+ComplexHoppingModel make_complex_hopping_model() {
   using dc = std::complex<double>;
 
-  int norb = 3;
-  double U = 0.7;
-
+  int norb  = 3;
+  double U  = 0.7;
   nda::matrix<dc> h = {{0.10, dc(0.0, 0.30), dc(0.15, 0.0)}, {dc(0.0, -0.30), -0.20, dc(0.20, -0.10)}, {dc(0.15, 0.0), dc(0.20, 0.10), 0.35}};
 
   triqs::operators::many_body_operator_complex H;
@@ -392,7 +399,19 @@ TEST(AtomDiagUtils, complex_unitary_hamiltonian) {
   }
   H += U * n("up", 0) * n("up", 1);
 
-  triqs::atom_diag::atom_diag<true> ad(H, fop_set);
+  return {h, U, triqs::atom_diag::atom_diag<true>(H, fop_set)};
+}
+
+/**
+ * @brief The full Hamiltonian and its blocks for a model whose diagonalizing unitaries are complex
+ *
+ * @details The expected matrix is assembled from the Fock-space operator matrices, H = sum_ij h_ij c^dag_i c_j + U n_0 n_1. The
+ * transformation of the diagonal energies back to the Fock basis must use the adjoint U^dagger, not the transpose U^T.
+ */
+TEST(AtomDiagUtils, complex_unitary_hamiltonian) {
+  auto model = make_complex_hopping_model();
+  auto &ad   = model.ad;
+  int norb   = model.h.extent(0);
 
   // The unitaries are complex, otherwise this test cannot tell U^T from U^dagger
   double max_imag_U = 0.0;
@@ -413,9 +432,9 @@ TEST(AtomDiagUtils, complex_unitary_hamiltonian) {
   }
   nda::matrix<dcomplex> H_expected = nda::zeros<dcomplex>(N, N);
   for (int i = 0; i < norb; ++i) {
-    for (int j = 0; j < norb; ++j) { H_expected += h(i, j) * nda::matrix<dcomplex>(cdag_mats[i] * c_mats[j]); }
+    for (int j = 0; j < norb; ++j) { H_expected += model.h(i, j) * nda::matrix<dcomplex>(cdag_mats[i] * c_mats[j]); }
   }
-  H_expected += U * nda::matrix<dcomplex>(cdag_mats[0] * c_mats[0] * cdag_mats[1] * c_mats[1]);
+  H_expected += model.U * nda::matrix<dcomplex>(cdag_mats[0] * c_mats[0] * cdag_mats[1] * c_mats[1]);
 
   auto H_mat = get_full_h_atomic(ad);
   EXPECT_LE(nda::max_element(nda::abs(H_mat - nda::dagger(H_mat))), 1e-13) << "the full Hamiltonian must be hermitian";
@@ -431,5 +450,90 @@ TEST(AtomDiagUtils, complex_unitary_hamiltonian) {
         EXPECT_LE(std::abs(H_blocks[s](i, j) - H_expected(fock_states[i], fock_states[j])), 1e-13) << "block " << s << ", entry (" << i << "," << j << ")";
       }
     }
+  }
+}
+
+namespace {
+  double frobenius_norm_squared(nda::matrix<dcomplex> const &M) {
+    double sum = 0.0;
+    for (int i = 0; i < M.extent(0); ++i) {
+      for (int j = 0; j < M.extent(1); ++j) { sum += std::norm(M(i, j)); }
+    }
+    return sum;
+  }
+
+  std::vector<triqs::atom_diag::atom_diag<true>> kernel_test_models() {
+    std::vector<triqs::atom_diag::atom_diag<true>> models;
+    models.push_back(make_two_orbital_ad());
+    models.push_back(make_complex_hopping_model().ad);
+    return models;
+  }
+} // namespace
+
+/**
+ * @brief The subspace-local operator blocks are the blocks of the full operator matrices
+ *
+ * @details get_operator_block sees only the two subspaces it connects. For every operator, creation and annihilation, and every source
+ * subspace its block equals the corresponding rows and columns of the full matrix, a missing block means the operator takes the subspace
+ * to zero, and the blocks together carry all the weight of the full matrix.
+ */
+TEST(AtomDiagUtils, operator_blocks_are_the_blocks_of_the_full_matrices) {
+  for (auto const &ad : kernel_test_models()) {
+    int n_fops = ad.get_fops().size();
+    for (int oidx = 0; oidx < n_fops; ++oidx) {
+      for (bool is_creation : {false, true}) {
+        auto full         = get_full_operator_matrix(ad, oidx, is_creation);
+        double sum_blocks = 0.0;
+
+        for (int s = 0; s < ad.n_subspaces(); ++s) {
+          long target = is_creation ? ad.cdag_connection(oidx, s) : ad.c_connection(oidx, s);
+          auto block  = get_operator_block(ad, oidx, is_creation, s);
+
+          if (!block) {
+            EXPECT_LT(target, 0) << "operator " << oidx << ", subspace " << s;
+            continue;
+          }
+          ASSERT_GE(target, 0) << "operator " << oidx << ", subspace " << s;
+
+          auto f_source = ad.get_fock_states(s);
+          auto f_target = ad.get_fock_states(target);
+          ASSERT_EQ(block->extent(0), f_target.size());
+          ASSERT_EQ(block->extent(1), f_source.size());
+          for (int i = 0; i < f_target.size(); ++i) {
+            for (int j = 0; j < f_source.size(); ++j) {
+              EXPECT_LE(std::abs((*block)(i, j) - full(f_target[i], f_source[j])), 1e-13) << "operator " << oidx << ", subspace " << s;
+            }
+          }
+          sum_blocks += frobenius_norm_squared(*block);
+        }
+        EXPECT_NEAR(sum_blocks, frobenius_norm_squared(full), 1e-12) << "operator " << oidx << (is_creation ? " (creation)" : " (annihilation)");
+      }
+    }
+  }
+}
+
+/**
+ * @brief The subspace-local Hamiltonian blocks are the diagonal blocks of the full Hamiltonian
+ *
+ * @details The full Hamiltonian is block diagonal over the subspaces, so the blocks reproduce it entry by entry and carry all of its weight.
+ */
+TEST(AtomDiagUtils, hamiltonian_blocks_are_the_blocks_of_the_full_matrix) {
+  for (auto const &ad : kernel_test_models()) {
+    auto full         = get_full_h_atomic(ad);
+    double sum_blocks = 0.0;
+
+    for (int s = 0; s < ad.n_subspaces(); ++s) {
+      auto block       = get_hamiltonian_block(ad, s);
+      auto fock_states = ad.get_fock_states(s);
+      ASSERT_EQ(block.extent(0), fock_states.size());
+      ASSERT_EQ(block.extent(1), fock_states.size());
+      for (int i = 0; i < fock_states.size(); ++i) {
+        for (int j = 0; j < fock_states.size(); ++j) {
+          EXPECT_LE(std::abs(block(i, j) - full(fock_states[i], fock_states[j])), 1e-13) << "subspace " << s;
+        }
+      }
+      sum_blocks += frobenius_norm_squared(block);
+    }
+    EXPECT_NEAR(sum_blocks, frobenius_norm_squared(full), 1e-12);
   }
 }
