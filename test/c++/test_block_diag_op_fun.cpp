@@ -149,3 +149,34 @@ TEST(BlockDiagOpFun, add_block_rejects_a_wrongly_shaped_contribution) {
     EXPECT_NE(msg.find('1'), std::string::npos) << "the message should name the block index: " << msg;
   }
 }
+
+
+/**
+ * @brief The adjoint of a block-sparse operator conjugates its blocks
+ *
+ * @details dagger_bs places the adjoint of every block at the transposed block position, so the stored block has to be the conjugate
+ * transpose and not only the transpose, as soon as the block is complex.
+ */
+TEST(BlockOp, dagger_bs_conjugates_complex_blocks) {
+  using dc = std::complex<double>;
+  using triqs_xca::block_sparse::BlockOp;
+  using triqs_xca::block_sparse::dagger_bs;
+
+  // Block column 0 maps to block row 1, block column 1 is zero
+  nda::vector<int> block_indices = {1, -1};
+  nda::array<dcomplex, 2> A      = {{dc(1.0, 0.5), dc(0.0, -2.0), dc(3.0, 1.0)}, {dc(-1.0, 0.25), dc(2.0, 2.0), dc(0.5, -0.75)}};
+  std::vector<nda::array<dcomplex, 2>> blocks{A, nda::zeros<dcomplex>(1, 1)};
+
+  BlockOp F(block_indices, blocks);
+  auto F_dag = dagger_bs(F);
+
+  ASSERT_EQ(F_dag.get_block_indices()[1], 0);
+  EXPECT_EQ(F_dag.get_block_indices()[0], -1);
+
+  auto const &B = F_dag.get_blocks()[1];
+  ASSERT_EQ(B.extent(0), A.extent(1));
+  ASSERT_EQ(B.extent(1), A.extent(0));
+  for (int i = 0; i < B.extent(0); ++i) {
+    for (int j = 0; j < B.extent(1); ++j) { EXPECT_LE(std::abs(B(i, j) - std::conj(A(j, i))), 1e-15) << "entry (" << i << "," << j << ")"; }
+  }
+}

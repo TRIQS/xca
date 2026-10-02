@@ -668,7 +668,7 @@ namespace triqs_xca::block_sparse {
       int j = F.get_block_indices()[i];
       if (j != -1) {
         block_indices_dag[j] = i;
-        blocks_dag[j]        = nda::transpose(F.get_blocks()[i]);
+        blocks_dag[j]        = nda::conj(nda::transpose(F.get_blocks()[i]));
       }
     }
     BlockOp F_dag(block_indices_dag, blocks_dag);
