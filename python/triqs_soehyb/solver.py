@@ -33,7 +33,7 @@ from .adapol_depr.fit_utils_xca import polefitting
 from cppdlr import build_dlr_rf
 from cppdlr import ImTimeOps
 
-from .impurity import Fastdiagram
+from .fastdiagram import Fastdiagram
 from cppdlr import DysonItPPSC
 from .diag import all_connected_pairings
 
@@ -41,13 +41,11 @@ from .ase.utils.timing import Timer, timer
 
 
 def logo():
-    """ https://patorjk.com/software/taag/#p=display&f=Red+Phoenix&t=XCA """
-    return r"""____  ____________     _____
-\   \/  /\_   ___ \   /  _  \
- \     / /    \  \/  /  /_\  \
- /     \ \     \____/    |    \
-/___/\  \ \______  /\____|__  /
-      \_/        \/         \/  [github.com/TRIQS/xca]"""
+    """ https://patorjk.com/software/taag/#p=display&f=Small&t=SoE-HYB """
+    return r"""  ___      ___    _  ___   _____
+ / __| ___| __|__| || \ \ / / _ )
+ \__ \/ _ \ _|___| __ |\ V /| _ \
+ |___/\___/___|  |_||_| |_| |___/  [github.com/TRIQS/soehyb]"""
 
 
 def is_root():

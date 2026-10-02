@@ -25,6 +25,8 @@
 #include <nda/blas/tools.hpp>
 #include "strong_cpl.hpp"
 
+namespace triqs_soehyb {
+
 using namespace cppdlr;
 using namespace nda;
 
@@ -138,3 +140,5 @@ class fastdiagram {
   nda::vector<double> pol_reflect;
   nda::array<dcomplex, 3> weights_reflect;
 };
+
+} // namespace triqs_soehyb

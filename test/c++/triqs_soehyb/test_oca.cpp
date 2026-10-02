@@ -20,7 +20,7 @@
  ******************************************************************************/
 
 #include "triqs_soehyb/strong_cpl.hpp"
-#include "triqs_soehyb/impurity.hpp"
+#include "triqs_soehyb/fastdiagram.hpp"
 #include "nda/nda.hpp"
 #include <cppdlr/cppdlr.hpp>
 #include <cppdlr/dlr_imtime.hpp>
@@ -35,6 +35,7 @@
 
 using namespace cppdlr;
 using namespace nda;
+using namespace triqs_soehyb;
 TEST(OCA, G) {
   double beta        = 1.0;
   double lambda      = 100.0;

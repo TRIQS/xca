@@ -32,6 +32,7 @@
 
 using namespace cppdlr;
 using namespace nda;
+using namespace triqs_soehyb;
 void construct_G_and_Delta(nda::array_view<dcomplex, 3> Gt, nda::array_view<dcomplex, 3> Deltat, nda::vector_const_view<double> dlr_it_actual,
                            double beta, double alpha_1, double alpha_2, int r);
 nda::array<dcomplex, 3> OCAtrue(double alpha_1, double alpha_2, double beta, nda::vector_const_view<double> dlr_it_actual, int r, int N, int dim);

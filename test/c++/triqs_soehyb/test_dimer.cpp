@@ -20,7 +20,7 @@
  ******************************************************************************/
 
 #include "triqs_soehyb/strong_cpl.hpp"
-#include "triqs_soehyb/impurity.hpp"
+#include "triqs_soehyb/fastdiagram.hpp"
 #include "nda/nda.hpp"
 #include <cppdlr/cppdlr.hpp>
 #include <cppdlr/dlr_imtime.hpp>
@@ -35,6 +35,7 @@
 
 using namespace cppdlr;
 using namespace nda;
+using namespace triqs_soehyb;
 
 nda::array<dcomplex, 3> ppsc_free_greens_tau(nda::vector_const_view<double> tau_i, nda::array_view<dcomplex, 2> H_S, double beta);
 nda::array<dcomplex, 3> NCA(nda::array_view<dcomplex, 3> Deltat, nda::array_view<dcomplex, 3> Deltat_reflect, nda::array<dcomplex, 3> G_iaa,

@@ -109,7 +109,7 @@ def test_unitary_invariance_real_rotation(verbose=False):
 
 def test_unitary_invariance_complex_rotation(verbose=False):
     """ A complex rotation exposes an untransposed backward index. The legacy Solver path passes the
-    identical assertion, since impurity.cpp transposes the reflected hybridization at construction. """
+    identical assertion, since fastdiagram.cpp transposes the reflected hybridization at construction. """
     U = np.array([[1.0, 1j], [1.0, -1j]]) / np.sqrt(2)
 
     # the blind rotations are a global phase times a real matrix, for which U^dag U* is proportional to the identity

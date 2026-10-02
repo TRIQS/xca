@@ -21,12 +21,14 @@
 
 #include "utils.hpp"
 #include "strong_cpl.hpp"
-#include "impurity.hpp"
+#include "fastdiagram.hpp"
 #include <cppdlr/dyson_it_ppsc.hpp>
 #include <cppdlr/dlr_kernels.hpp>
 #include <nda/blas/tools.hpp>
 #include <nda/declarations.hpp>
 #include <nda/linalg/matmul.hpp>
+
+namespace triqs_soehyb {
 
 fastdiagram::fastdiagram(double beta, double lambda, imtime_ops itops, nda::array<dcomplex, 3> F, nda::array<dcomplex, 3> F_dag)
    : beta(beta),
@@ -261,3 +263,5 @@ double fastdiagram::partition_function(nda::array<dcomplex, 3> Gt) {
   auto G_dlr = itops.vals2coefs(Gt);
   return -real(trace(itops.coefs2eval(G_dlr, 1.0)));
 }
+
+} // namespace triqs_soehyb

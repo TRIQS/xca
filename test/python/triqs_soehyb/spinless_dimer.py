@@ -29,7 +29,7 @@ from pyed.TriqsExactDiagonalization import TriqsExactDiagonalization
 from cppdlr import build_dlr_rf
 from cppdlr import ImTimeOps
 
-from triqs_soehyb.impurity import Fastdiagram
+from triqs_soehyb.fastdiagram import Fastdiagram
 from triqs_soehyb.solver import Sigma_calc_loop, G_calc_loop, is_root
 
 

@@ -28,6 +28,7 @@
 
 using namespace cppdlr;
 using namespace nda;
+using namespace triqs_soehyb;
 
 TEST(test_dlr, test_dlr_convolve) {
   double lambda = 1;

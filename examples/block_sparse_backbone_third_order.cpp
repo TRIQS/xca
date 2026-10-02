@@ -14,6 +14,9 @@ using cppdlr::imtime_ops;
 using cppdlr::k_it;
 using cppdlr::rel2abs;
 
+using triqs_soehyb::hyb_decomp;
+using triqs_soehyb::hyb_F;
+
 using triqs_xca::block_sparse::nonint_gf_BDOF;
 
 using triqs_xca::block_sparse::BlockDiagOpFun;

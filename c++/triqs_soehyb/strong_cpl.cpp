@@ -31,6 +31,8 @@
 
 #include <triqs/utility/timer.hpp>
 
+namespace triqs_soehyb {
+
 using namespace cppdlr;
 using namespace nda;
 
@@ -742,3 +744,5 @@ dcomplex trace_matmul(nda::array_const_view<dcomplex, 2> M1, nda::array_const_vi
   for (int i = 0; i < n; ++i) { res += linalg::dot(M1(i, _), M2_T(i, _)); }
   return res;
 }
+
+} // namespace triqs_soehyb

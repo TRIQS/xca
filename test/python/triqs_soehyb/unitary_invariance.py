@@ -42,7 +42,7 @@ from pyed.OperatorUtils import operator_single_particle_transform
 
 from cppdlr import build_dlr_rf
 from cppdlr import ImTimeOps
-from triqs_soehyb.impurity import Fastdiagram
+from triqs_soehyb.fastdiagram import Fastdiagram
 from triqs_soehyb.solver import Solver
 
 

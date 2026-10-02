@@ -29,7 +29,7 @@ from pyed.TriqsExactDiagonalization import TriqsExactDiagonalization
 from cppdlr import build_dlr_rf
 from cppdlr import ImTimeOps
 
-from triqs_soehyb.impurity import Fastdiagram
+from triqs_soehyb.fastdiagram import Fastdiagram
 
 
 def NCA_Sigma_ref_impl(ito, beta, tau_i, G_iaa, delta_iaa, F, F_dag):

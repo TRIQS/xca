@@ -11,6 +11,7 @@
 
 using namespace nda;
 using namespace cppdlr;
+using namespace triqs_soehyb;
 
 using triqs_xca::dense::DenseFSet;
 using triqs_xca::dense::DenseDiagramEvaluator;

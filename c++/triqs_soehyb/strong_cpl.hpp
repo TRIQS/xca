@@ -25,6 +25,8 @@
 #include <nda/blas/tools.hpp>
 #include <nda/linalg/matmul.hpp>
 
+namespace triqs_soehyb {
+
 using namespace cppdlr;
 using namespace nda;
 using nda::linalg::matmul;
@@ -207,3 +209,5 @@ nda::array<dcomplex, 3> eval_one_diagram_G(hyb_F &hyb_F_self, hyb_F &hyb_F_refle
                                            nda::vector_const_view<int64_t> fb, int num0, int m, int n, int r, int N, int P);
 
 dcomplex trace_matmul(nda::array_const_view<dcomplex, 2> M1, nda::array_const_view<dcomplex, 2> M2);
+
+} // namespace triqs_soehyb

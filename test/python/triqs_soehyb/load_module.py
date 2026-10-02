@@ -23,7 +23,7 @@ import numpy as np
 
 from cppdlr import build_dlr_rf
 from cppdlr import ImTimeOps
-from triqs_soehyb.impurity import Fastdiagram
+from triqs_soehyb.fastdiagram import Fastdiagram
 
 beta = 1.0
 lamb = 100.0
