@@ -12,6 +12,7 @@
 #include <triqs_xca/hyb.hpp>
 
 #include "block_sparse_utils.hpp"
+#include "dense_utils.hpp"
 
 using cppdlr::build_dlr_rf;
 using cppdlr::imtime_ops;
@@ -25,7 +26,6 @@ using triqs_xca::atom_diag::ad_to_atom_prop;
 using triqs_xca::atom_diag::get_full_h_atomic;
 using triqs_xca::atom_diag::get_operators;
 using triqs_xca::atom_diag::get_operators_dense;
-using triqs_xca::atom_diag::get_tensor_in_atom_diag_subspace;
 
 /**
  * @file test_block_sparse_sparsity_invariance.cpp

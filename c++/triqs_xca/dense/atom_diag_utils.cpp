@@ -92,26 +92,4 @@ namespace triqs_xca::atom_diag {
     return get_full_operator_matrix_impl(ad, oidx, is_creation);
   }
 
-  nda::array<dcomplex, 3> get_tensor_in_atom_diag_subspace(nda::array_const_view<dcomplex, 3> tensor_full, int subspace_index,
-                                                           triqs_atom_diag const &ad) {
-    // Permute a tensor from the full Hilbert space to the Fock state ordered basis
-
-    int r = tensor_full.extent(0);
-
-    std::vector<unsigned long> H_perm;
-    auto fock_states = ad.get_fock_states(subspace_index);
-    for (auto state : fock_states) H_perm.push_back(state);
-
-    int N_sub                               = fock_states.size();
-    nda::array<dcomplex, 3> tensor_subspace = nda::zeros<dcomplex>(r, N_sub, N_sub);
-
-    for (int t = 0; t < r; ++t) {
-      for (int i = 0; i < N_sub; ++i) {
-        for (int j = 0; j < N_sub; ++j) { tensor_subspace(t, i, j) = tensor_full(t, H_perm[i], H_perm[j]); }
-      }
-    }
-
-    return tensor_subspace;
-  }
-
 } // namespace triqs_xca::atom_diag

@@ -42,7 +42,6 @@ using triqs_xca::atom_diag::ad_to_atom_prop;
 using triqs_xca::atom_diag::get_full_h_atomic;
 using triqs_xca::atom_diag::get_operators;
 using triqs_xca::atom_diag::get_operators_dense;
-using triqs_xca::atom_diag::get_tensor_in_full_hilbert_space;
 
 /**
  * @file test_one_fermion_se_spgf_all_evals.cpp

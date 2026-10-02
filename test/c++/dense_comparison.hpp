@@ -15,6 +15,8 @@
 #include <triqs_xca/dense/atom_diag_utils.hpp>
 #include <triqs_xca/block_sparse/block_op.hpp>
 
+#include "dense_utils.hpp"
+
 /**
  * @file dense_comparison.hpp
  *
@@ -41,7 +43,7 @@ inline std::pair<double, double> compare_sigma_with_dense(triqs_xca::block_spars
   double err = 0.0, scale = 0.0;
   for (int b = 0; b < Sigma.get_num_block_cols(); ++b) {
     SCOPED_TRACE("block " + std::to_string(b));
-    auto ref = triqs_xca::atom_diag::get_tensor_in_atom_diag_subspace(Sigma_dense[0].data(), b, ad);
+    auto ref = get_tensor_in_atom_diag_subspace(Sigma_dense[0].data(), b, ad);
     err      = std::max(err, nda::max_element(nda::abs(Sigma.get_block(b) - ref)));
     scale    = std::max(scale, nda::max_element(nda::abs(ref)));
   }

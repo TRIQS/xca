@@ -17,6 +17,7 @@
 #include <cppdlr/cppdlr.hpp>
 
 #include "block_sparse_utils.hpp"
+#include "dense_utils.hpp"
 
 using cppdlr::_;
 using cppdlr::build_dlr_rf;
@@ -34,7 +35,6 @@ using triqs_xca::atom_diag::ad_to_atom_prop;
 using triqs_xca::atom_diag::get_full_h_atomic;
 using triqs_xca::atom_diag::get_operators;
 using triqs_xca::atom_diag::get_operators_dense;
-using triqs_xca::atom_diag::get_tensor_in_full_hilbert_space;
 
 /**
  * @file test_two_fermions_se_spgf_all_evals.cpp

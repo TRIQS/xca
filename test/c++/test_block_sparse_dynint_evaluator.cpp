@@ -29,7 +29,6 @@ using triqs::operators::n;
 
 using triqs_xca::atom_diag::ad_to_atom_prop;
 using triqs_xca::atom_diag::get_operators;
-using triqs_xca::atom_diag::get_tensor_in_atom_diag_subspace;
 using triqs_xca::block_sparse::BlockDiagOpFun;
 using triqs_xca::block_sparse::BlockOpSymQuartet;
 using triqs_xca::block_sparse::DiagramEvaluator;
