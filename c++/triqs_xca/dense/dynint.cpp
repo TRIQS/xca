@@ -20,7 +20,7 @@ namespace triqs_xca::dense::dynint {
         auto ext_coeffs = hyb::get_extended_coefficients(hyb_coeffs, dynint_coeffs);
         int n_ext = ext_coeffs.extent(1);
 
-        auto [Fs, Fdags] = atom_diag::get_operators_dense(ad);
+        auto [Fs, Fdags] = atom_diag::get_operators(ad);
 
         // Create FSet with interactions included as additional operators
 

@@ -27,7 +27,6 @@ using nda::dcomplex;
 using triqs::operators::many_body_operator_real;
 using triqs::operators::n;
 
-using triqs_xca::block_sparse::atom_diag::ad_to_atom_prop;
 using triqs_xca::block_sparse::atom_diag::get_operators;
 using triqs_xca::block_sparse::BlockDiagOpFun;
 using triqs_xca::block_sparse::BlockOpSymQuartet;

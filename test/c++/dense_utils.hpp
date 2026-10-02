@@ -16,6 +16,12 @@ using triqs_xca::atom_diag::triqs_atom_diag;
 using triqs_xca::block_sparse::BlockDiagOpFun;
 
 /**
+ * @brief Utility function to get full Hamiltonian matrix from an AtomDiag object.
+ * @param[in] ad AtomDiag object
+ */
+nda::matrix<dcomplex> get_full_h_atomic(const triqs_atom_diag &ad);
+
+/**
  * @brief Evaluate a function on the DLR imaginary time grid at n_quad + 1 equidistant points
  * @param[in] itops imaginary time DLR operations
  * @param[in] f function values on the DLR imaginary time nodes

@@ -381,15 +381,6 @@ namespace triqs_xca::block_sparse {
                                 nda::vector_const_view<double> dlr_it_abs);
 
   /**
- * @brief Convert a BlockDiagOpFun to a triqs::gfs::block_gf<triqs::mesh::dlr_imtime>
- * @param[in] BDOF BlockDiagOpFun
- * @param[in] beta inverse temperature
- * @param[in] Lambda DLR cutoff parameter
- * @param[in] eps DLR epsilon parameter
- */
-  triqs::gfs::block_gf<triqs::mesh::dlr_imtime> BDOF_to_block_gf(BlockDiagOpFun const &BDOF, double beta, double Lambda, double eps);
-
-  /**
    * @brief Compute the expectation value of the 2nd quantized operator op, <O> = -Tr[O G(\beta)]
    * using the AtomDiag instance ad to generate a block representation
    * and tracing with the many-body density matrix of the pseudo particle Green's function G_ppsc

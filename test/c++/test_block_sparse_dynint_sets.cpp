@@ -22,8 +22,6 @@ using triqs::operators::many_body_operator_complex;
 using triqs::operators::many_body_operator_real;
 using triqs::operators::n;
 
-using triqs_xca::block_sparse::atom_diag::get_operators;
-using triqs_xca::dense::atom_diag::get_operators_dense;
 using triqs_xca::block_sparse::BlockOpSymQuartet;
 namespace dense        = triqs_xca::dense;
 namespace block_sparse = triqs_xca::block_sparse;
@@ -149,7 +147,7 @@ TEST(BlockSparseDynintSets, fixtures_have_the_expected_connection_structure) {
   // (a) unequal_sym_set_model: two fermionic sets of unequal size {2, 1}; N_A is block diagonal.
   {
     auto ad     = unequal_sym_set_model();
-    auto labels = std::get<1>(get_operators(ad, nda::zeros<dcomplex>(2, 3, 3)));
+    auto labels = std::get<1>(block_sparse::atom_diag::get_operators(ad, nda::zeros<dcomplex>(2, 3, 3)));
     ASSERT_EQ(labels.size(), 3);
     EXPECT_EQ(nda::max_element(labels) + 1, 2);
 
@@ -164,7 +162,7 @@ TEST(BlockSparseDynintSets, fixtures_have_the_expected_connection_structure) {
   //     groups of size two, {n_up0, n_do0} and {n_up1, n_do1}
   {
     auto ad     = spin_flip_atom_diag_helper(2, false);
-    auto labels = std::get<1>(get_operators(ad, nda::zeros<dcomplex>(2, 4, 4)));
+    auto labels = std::get<1>(block_sparse::atom_diag::get_operators(ad, nda::zeros<dcomplex>(2, 4, 4)));
     ASSERT_EQ(labels.size(), 4);
     EXPECT_EQ(labels, (nda::vector<int>{0, 1, 0, 1})) << "expected interleaved fermionic sets, got " << labels;
 
@@ -213,7 +211,7 @@ TEST(BlockSparseDynintSets, dynint_ops_get_their_own_contiguous_symmetry_sets) {
   {
     auto ad       = unequal_sym_set_model();
     int n_hyb     = static_cast<int>(ad.get_fops().size());
-    auto labels_f = std::get<1>(get_operators(ad, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));
+    auto labels_f = std::get<1>(block_sparse::atom_diag::get_operators(ad, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));
     int n_sym_hyb = static_cast<int>(nda::max_element(labels_f) + 1);
     auto hyb      = sym_set_diagonal_hyb(labels_f, p);
 
@@ -237,7 +235,7 @@ TEST(BlockSparseDynintSets, dynint_ops_get_their_own_contiguous_symmetry_sets) {
   {
     auto ad       = spin_flip_atom_diag_helper(2, false);
     int n_hyb     = static_cast<int>(ad.get_fops().size());
-    auto labels_f = std::get<1>(get_operators(ad, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));
+    auto labels_f = std::get<1>(block_sparse::atom_diag::get_operators(ad, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));
     int n_sym_hyb = static_cast<int>(nda::max_element(labels_f) + 1);
     auto hyb      = sym_set_diagonal_hyb(labels_f, p);
 
@@ -273,7 +271,7 @@ TEST(BlockSparseDynintSets, bars_match_dense_with_dynamical_interactions) {
     ASSERT_NO_FATAL_FAILURE(assert_parallel_atom_diags(ad_bs, ad_flat));
 
     int n_hyb     = static_cast<int>(ad_bs.get_fops().size());
-    auto labels_f = std::get<1>(get_operators(ad_bs, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));
+    auto labels_f = std::get<1>(block_sparse::atom_diag::get_operators(ad_bs, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));
     auto hyb      = sym_set_diagonal_hyb(labels_f, p);
 
     std::vector<many_body_operator_real> ops = {many_body_operator_real(n("A", 0) + n("A", 1))};
@@ -301,7 +299,7 @@ TEST(BlockSparseDynintSets, bars_match_dense_with_dynamical_interactions) {
     ASSERT_NO_FATAL_FAILURE(assert_parallel_atom_diags(ad_bs, ad_flat));
 
     int n_hyb     = static_cast<int>(ad_bs.get_fops().size());
-    auto labels_f = std::get<1>(get_operators(ad_bs, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));
+    auto labels_f = std::get<1>(block_sparse::atom_diag::get_operators(ad_bs, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));
     auto hyb      = sym_set_diagonal_hyb(labels_f, p);
 
     std::vector<many_body_operator_real> ops = {many_body_operator_real(n("up", 0)), many_body_operator_real(n("do", 0)),
@@ -334,7 +332,7 @@ TEST(BlockSparseDynintSets, bars_match_dense_with_dynamical_interactions) {
     ASSERT_NO_FATAL_FAILURE(assert_parallel_atom_diags(ad_bs, ad_flat));
 
     int n_hyb     = static_cast<int>(ad_bs.get_fops().size());
-    auto labels_f = std::get<1>(get_operators(ad_bs, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));
+    auto labels_f = std::get<1>(block_sparse::atom_diag::get_operators(ad_bs, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));
     auto hyb      = sym_set_diagonal_hyb(labels_f, p);
 
     many_body_operator_real A0               = c_dag("up", 0) * c("do", 0);
@@ -364,14 +362,14 @@ TEST(BlockSparseDynintSets, bars_match_dense_with_dynamical_interactions) {
     EXPECT_LE(uf, bar_tol);
   }
 
-  // (d) no interaction operators, the extended construction must reduce exactly to get_operators()
+  // (d) no interaction operators, the extended construction must reduce exactly to block_sparse::atom_diag::get_operators()
   {
     auto ad       = unequal_sym_set_model();
     int n_hyb     = static_cast<int>(ad.get_fops().size());
-    auto labels_f = std::get<1>(get_operators(ad, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));
+    auto labels_f = std::get<1>(block_sparse::atom_diag::get_operators(ad, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));
     auto hyb      = sym_set_diagonal_hyb(labels_f, p);
 
-    auto [Fq_plain, labels_plain] = get_operators(ad, hyb);
+    auto [Fq_plain, labels_plain] = block_sparse::atom_diag::get_operators(ad, hyb);
     // note the shape: a default-constructed (0,0,0) array is rejected by the shared-pole-count check
     auto [Fq_ext, labels_ext] = block_sparse::dynint::get_operators_and_interactions(ad, hyb, nda::zeros<dcomplex>(p, 0, 0), {});
 
@@ -387,7 +385,7 @@ TEST(BlockSparseDynintSets, bars_match_dense_with_dynamical_interactions) {
         err = std::max(err, nda::max_element(nda::abs(Fq_ext.F_bars_refl[q_ix].get_block(b) - Fq_plain.F_bars_refl[q_ix].get_block(b))));
       }
     }
-    EXPECT_EQ(err, 0.0) << "with no interaction operators the extended construction must be bit-identical to get_operators()";
+    EXPECT_EQ(err, 0.0) << "with no interaction operators the extended construction must be bit-identical to block_sparse::atom_diag::get_operators()";
   }
 }
 
@@ -399,7 +397,7 @@ TEST(BlockSparseDynintSets, rejects_coefficients_coupling_different_dynint_sets)
   int p         = 2;
   auto ad       = unequal_sym_set_model();
   int n_hyb     = static_cast<int>(ad.get_fops().size());
-  auto labels_f = std::get<1>(get_operators(ad, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));
+  auto labels_f = std::get<1>(block_sparse::atom_diag::get_operators(ad, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));
   auto hyb      = sym_set_diagonal_hyb(labels_f, p);
 
   // n(A,0) is block diagonal; c^dag_A0 c_B0 moves (N_A, N_B) -> (N_A+1, N_B-1). Different rows.
@@ -449,7 +447,7 @@ TEST(BlockSparseDynintSets, non_block_diagonal_ops_form_distinct_symmetry_sets) 
   ASSERT_NO_FATAL_FAILURE(assert_parallel_atom_diags(ad_bs, ad_flat));
 
   int n_hyb     = static_cast<int>(ad_bs.get_fops().size());
-  auto labels_f = std::get<1>(get_operators(ad_bs, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));
+  auto labels_f = std::get<1>(block_sparse::atom_diag::get_operators(ad_bs, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));
   int n_sym_hyb = static_cast<int>(nda::max_element(labels_f) + 1);
   auto hyb      = sym_set_diagonal_hyb(labels_f, p);
 
@@ -535,7 +533,7 @@ TEST(BlockSparseDynintSets, rejects_non_injective_connection_map) {
   ASSERT_ANY_THROW(ad.get_op_mat(many_body_operator_real(dagger(O)))) << "the adjoint was expected to be multi-target";
 
   int n_hyb          = static_cast<int>(ad.get_fops().size());
-  auto labels_f      = std::get<1>(get_operators(ad, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));
+  auto labels_f      = std::get<1>(block_sparse::atom_diag::get_operators(ad, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));
   auto hyb           = sym_set_diagonal_hyb(labels_f, p);
   auto dynint_coeffs = group_diagonal_dynint_coeffs({0}, p);
 

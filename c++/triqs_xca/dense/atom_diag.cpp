@@ -8,7 +8,7 @@ namespace triqs_xca::dense::atom_diag {
   namespace {
 
     template <bool IsComplex>
-    nda::matrix<dcomplex> get_full_operator_matrix_impl(const triqs_atom_diag_t<IsComplex> &ad, int oidx, bool is_creation) {
+    nda::matrix<dcomplex> get_operator_impl(const triqs_atom_diag_t<IsComplex> &ad, int oidx, bool is_creation) {
       int dim                      = ad.get_full_hilbert_space_dim();
       nda::matrix<dcomplex> op_mat = nda::zeros<dcomplex>(dim, dim);
 
@@ -32,7 +32,7 @@ namespace triqs_xca::dense::atom_diag {
     }
 
     template <bool IsComplex>
-    std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> get_operators_dense_impl(const triqs_atom_diag_t<IsComplex> &ad) {
+    std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> get_operators_impl(const triqs_atom_diag_t<IsComplex> &ad) {
 
       int norb = ad.get_fops().size();
       int N    = ad.get_full_hilbert_space_dim();
@@ -42,57 +42,38 @@ namespace triqs_xca::dense::atom_diag {
       nda::array<dcomplex, 3> Fdags{norb, N, N};
 
       for (int oidx = 0; oidx < norb; ++oidx) {
-        Fs(oidx, cppdlr::_, cppdlr::_)    = get_full_operator_matrix(ad, oidx, false);
-        Fdags(oidx, cppdlr::_, cppdlr::_) = get_full_operator_matrix(ad, oidx, true);
+        Fs(oidx, cppdlr::_, cppdlr::_)    = get_operator(ad, oidx, false);
+        Fdags(oidx, cppdlr::_, cppdlr::_) = get_operator(ad, oidx, true);
       }
       return {Fs, Fdags};
     }
 
   } // namespace
 
-  std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> get_operators_dense(const triqs_atom_diag_t<true> &ad) {
-    return get_operators_dense_impl(ad);
+  std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> get_operators(const triqs_atom_diag_t<true> &ad) {
+    return get_operators_impl(ad);
   }
 
-  std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> get_operators_dense(const triqs_atom_diag_t<false> &ad) {
-    return get_operators_dense_impl(ad);
+  std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> get_operators(const triqs_atom_diag_t<false> &ad) {
+    return get_operators_impl(ad);
   }
 
-  FSet get_operators_dense(const triqs_atom_diag_t<true> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
-    auto [Fs, Fdags] = get_operators_dense_impl(ad);
+  FSet get_operators(const triqs_atom_diag_t<true> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
+    auto [Fs, Fdags] = get_operators_impl(ad);
     return {Fs, Fdags, hyb_coeffs};
   }
 
-  FSet get_operators_dense(const triqs_atom_diag_t<false> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
-    auto [Fs, Fdags] = get_operators_dense_impl(ad);
+  FSet get_operators(const triqs_atom_diag_t<false> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
+    auto [Fs, Fdags] = get_operators_impl(ad);
     return {Fs, Fdags, hyb_coeffs};
   }
 
-  nda::matrix<dcomplex> get_full_h_atomic(const triqs_atom_diag &ad) {
-    int dim    = ad.get_full_hilbert_space_dim();
-    auto H_mat = nda::zeros<dcomplex>(dim, dim);
-
-    for (int sidx = 0; sidx < ad.n_subspaces(); ++sidx) {
-      auto H_block = get_hamiltonian_block(ad, sidx);
-
-      // Get Fock states for this subspace
-      auto fock_states = ad.get_fock_states(sidx);
-
-      // Copy block into full matrix
-      for (int i = 0; i < fock_states.size(); ++i) {
-        for (int j = 0; j < fock_states.size(); ++j) { H_mat(fock_states[i], fock_states[j]) = H_block(i, j); }
-      }
-    }
-
-    return H_mat;
+  nda::matrix<dcomplex> get_operator(const triqs_atom_diag_t<true> &ad, int oidx, bool is_creation) {
+    return get_operator_impl(ad, oidx, is_creation);
   }
 
-  nda::matrix<dcomplex> get_full_operator_matrix(const triqs_atom_diag_t<true> &ad, int oidx, bool is_creation) {
-    return get_full_operator_matrix_impl(ad, oidx, is_creation);
-  }
-
-  nda::matrix<dcomplex> get_full_operator_matrix(const triqs_atom_diag_t<false> &ad, int oidx, bool is_creation) {
-    return get_full_operator_matrix_impl(ad, oidx, is_creation);
+  nda::matrix<dcomplex> get_operator(const triqs_atom_diag_t<false> &ad, int oidx, bool is_creation) {
+    return get_operator_impl(ad, oidx, is_creation);
   }
 
 } // namespace triqs_xca::dense::atom_diag

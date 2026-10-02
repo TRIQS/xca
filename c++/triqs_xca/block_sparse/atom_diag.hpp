@@ -10,32 +10,6 @@ namespace triqs_xca::block_sparse::atom_diag {
   using triqs_xca::atom_diag::triqs_atom_diag_t;
 
   /**
- * @brief Get symmetry blocks of Hamiltonian from an AtomDiag object
- * @param[in] ad AtomDiag object
- * @return Tuple of vectors of Hamiltonian blocks and block indices
- */
-  std::tuple<std::vector<nda::array<dcomplex, 2>>, nda::vector<long>> get_hamiltonian_blocks(const triqs_atom_diag &ad);
-
-  /**
- * @brief Get atomic propagator from an AtomDiag object as a BlockDiagOpFun
- * @param[in] ad AtomDiag object
- * @param[in] beta Inverse temperature
- * @param[in] itops Imaginary time object
- * @return BlockDiagOpFun representing the atomic propagator
- */
-  BlockDiagOpFun ad_to_atom_prop(const triqs_atom_diag &ad, double beta, imtime_ops &itops);
-
-  /**
- * @brief Get atomic propagator from an AtomDiag object as a triqs::block_gf<dlr_imtime>
- * @param[in] ad AtomDiag object
- * @param[in] beta Inverse temperature
- * @param[in] Lambda DLR cutoff parameter
- * @param[in] eps DLR epsilon parameter
- * @return triqs::block_gf<dlr_imtime> representing the atomic propagator
- */
-  triqs::gfs::block_gf<triqs::mesh::dlr_imtime> ad_to_atom_prop(const triqs_atom_diag &ad, double beta, double Lambda, double eps);
-
-  /**
  * @brief The field operators of an AtomDiag object, grouped into symmetry sets, without the barred operators
  *
  * @details The operators are grouped by identical c_connection row, i.e. by block-sparsity pattern, labeled in order of

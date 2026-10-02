@@ -31,10 +31,6 @@ using triqs_xca::block_sparse::DiagramEvaluator;
 
 using triqs_xca::topology::topology_parity;
 
-using triqs_xca::block_sparse::atom_diag::ad_to_atom_prop;
-using triqs_xca::dense::atom_diag::get_full_h_atomic;
-using triqs_xca::block_sparse::atom_diag::get_operators;
-using triqs_xca::dense::atom_diag::get_operators_dense;
 
 /**
  * @file test_two_fermions_se_spgf_all_evals.cpp
@@ -136,7 +132,7 @@ namespace {
          D(model.hyb_poles, model.hyb_coeffs, model.G_ppsc[0].mesh(), model.ad),
          Fq(make_field_operators(model.ad, model.hyb_coeffs)),
          block_N(make_block_occupations(model.ad)) {
-      auto [Fs, F_dags] = get_operators_dense(model.ad);
+      auto [Fs, F_dags] = dense::atom_diag::get_operators(model.ad);
       Fs_dense          = std::move(Fs);
       F_dags_dense      = std::move(F_dags);
     }
@@ -164,7 +160,7 @@ namespace {
     // The field operators of the block-sparse evaluator. get_operators also returns the symmetry set labels,
     // which none of these tests use.
     static BlockOpSymQuartet make_field_operators(triqs::atom_diag::atom_diag<true> const &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
-      return std::get<0>(get_operators(ad, hyb_coeffs));
+      return std::get<0>(block_sparse::atom_diag::get_operators(ad, hyb_coeffs));
     }
 
     // The occupation sector N of each block, read off the particle number of any one of its Fock states.

@@ -22,7 +22,6 @@ using triqs::operators::many_body_operator_complex;
 using triqs::operators::many_body_operator_real;
 using triqs::operators::n;
 
-using triqs_xca::block_sparse::atom_diag::ad_to_atom_prop;
 using triqs_xca::dense::DiagramEvaluator;
 
 /**

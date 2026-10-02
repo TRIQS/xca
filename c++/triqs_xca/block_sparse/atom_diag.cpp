@@ -162,56 +162,6 @@ namespace triqs_xca::block_sparse::atom_diag {
 
   using cppdlr::_;
 
-  std::tuple<std::vector<nda::array<dcomplex, 2>>, nda::vector<long>> get_hamiltonian_blocks(const triqs_atom_diag &ad) {
-    std::vector<nda::array<dcomplex, 2>> H_blocks;
-    nda::vector<long> H_block_inds(ad.n_subspaces());
-
-    for (int s = 0; s < ad.n_subspaces(); ++s) {
-      // Hamiltonian block of the subspace in the Fock basis
-      nda::array<dcomplex, 2> H_block = get_hamiltonian_block(ad, s);
-      H_blocks.push_back(H_block);
-
-      // Check if block is zero
-      double max_elem = 0.0;
-      for (int i = 0; i < H_block.extent(0); ++i) {
-        for (int j = 0; j < H_block.extent(1); ++j) { max_elem = std::max(max_elem, std::abs(H_block(i, j))); }
-      }
-      H_block_inds(s) = (max_elem < 1e-16) ? -1 : 0;
-    }
-    return std::make_tuple(H_blocks, H_block_inds);
-  }
-
-  BlockDiagOpFun ad_to_atom_prop(const triqs_atom_diag &ad, double beta, imtime_ops &itops) {
-    // atom_diag has already diagonalized every invariant subspace, with the ground state energy
-    // subtracted from the eigenvalues; partition_function sums the matching Boltzmann weights
-    int n_sub                = ad.n_subspaces();
-    auto const &eigensystems = ad.get_eigensystems();
-
-    std::vector<nda::array<double, 1>> evals(n_sub);
-    std::vector<nda::array<dcomplex, 2>> evecs(n_sub);
-    for (int s = 0; s < n_sub; ++s) {
-      evals[s] = eigensystems[s].eigenvalues;
-      evecs[s] = eigensystems[s].unitary_matrix;
-    }
-
-    double Z        = triqs::atom_diag::partition_function(ad, beta);
-    auto dlr_it_abs = cppdlr::rel2abs(itops.get_itnodes());
-
-    return block_sparse::atom_prop_from_eigensystem(evals, evecs, Z, beta, dlr_it_abs);
-  }
-
-  triqs::gfs::block_gf<triqs::mesh::dlr_imtime> ad_to_atom_prop(const triqs_atom_diag &ad, double beta, double Lambda, double eps) {
-    auto dlr_rf = cppdlr::build_dlr_rf(Lambda, eps);
-    auto itops  = imtime_ops(Lambda, dlr_rf);
-    auto ap     = ad_to_atom_prop(ad, beta, itops);
-
-    // Create vector of gf<dlr_imtime>
-    std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> gf_blocks(ap.get_num_block_cols());
-    triqs::mesh::dlr_imtime tau_mesh(beta, triqs::mesh::Fermion, Lambda / beta, eps, false);
-    for (int i = 0; i < ap.get_num_block_cols(); ++i) { gf_blocks[i] = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, ap.get_block(i)); }
-    return {gf_blocks};
-  }
-
   namespace {
     // n indexes ad.c_connection, so an out-of-range value has to be caught here
     void check_sym_set_orbital_count(int n, long n_fops) {

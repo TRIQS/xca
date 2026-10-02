@@ -22,10 +22,8 @@ using triqs_xca::dense::FSet;
 
 using triqs_xca::block_sparse::DiagramEvaluator;
 
-using triqs_xca::block_sparse::atom_diag::ad_to_atom_prop;
-using triqs_xca::dense::atom_diag::get_full_h_atomic;
-using triqs_xca::block_sparse::atom_diag::get_operators;
-using triqs_xca::dense::atom_diag::get_operators_dense;
+namespace block_sparse = triqs_xca::block_sparse;
+
 
 /**
  * @file test_block_sparse_sparsity_invariance.cpp
@@ -176,7 +174,7 @@ static void check_spin_flip_fermion(bool use_particle_number_sym) {
   auto dlr_it_abs           = cppdlr::rel2abs(itops.get_itnodes());
   auto Gt                   = ad_to_atom_prop(ad, beta, itops);
   auto Gt_block_sizes       = Gt.get_block_sizes();
-  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
+  auto [Fq, sym_set_labels] = block_sparse::atom_diag::get_operators(ad, hyb_coeffs);
 
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
@@ -186,7 +184,7 @@ static void check_spin_flip_fermion(bool use_particle_number_sym) {
 
   // get dense Gt, field operators
   auto Gt_dense = Hmat_to_Gtmat(get_full_h_atomic(ad), beta, dlr_it_abs);
-  auto Fset     = get_operators_dense(ad, hyb_coeffs);
+  auto Fset     = dense::atom_diag::get_operators(ad, hyb_coeffs);
 
   dense::DiagramEvaluator DDE(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
   DDE.eval_self_energy_by_pairs(Gt_dense, B);
@@ -232,7 +230,7 @@ static void check_spin_flip_fermion_correlator(bool use_particle_number_sym) {
   auto Gt         = ad_to_atom_prop(ad, beta, itops);
 
   // generate creation/annihilation operators in block-sparse storage
-  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
+  auto [Fq, sym_set_labels] = block_sparse::atom_diag::get_operators(ad, hyb_coeffs);
   auto [mu_ops, kap_ops]    = make_correlator_ops(Fq, nn);
 
   // set up backbone and diagram evaluator
@@ -243,7 +241,7 @@ static void check_spin_flip_fermion_correlator(bool use_particle_number_sym) {
 
   // compare to dense backbone result
   auto Gt_dense = Hmat_to_Gtmat(get_full_h_atomic(ad), beta, dlr_it_abs);
-  auto Fset     = get_operators_dense(ad, hyb_coeffs);
+  auto Fset     = dense::atom_diag::get_operators(ad, hyb_coeffs);
   dense::DiagramEvaluator D_dense(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
   auto result_dense = D_dense.eval_correlator(Gt_dense, B, Fset.Fs, Fset.F_dags);
 
@@ -290,7 +288,7 @@ TEST(SparsityInvariance, spgf_is_indexed_by_orbital) {
   auto dlr_it_abs = cppdlr::rel2abs(itops.get_itnodes());
   auto Gt         = ad_to_atom_prop(ad, beta, itops);
 
-  auto [Fq, sym_set_labels] = get_operators(ad, hyb_coeffs);
+  auto [Fq, sym_set_labels] = block_sparse::atom_diag::get_operators(ad, hyb_coeffs);
 
   // check that the set-major enumeration differs from the orbital order
   std::vector<int> set_major_order;
@@ -307,7 +305,7 @@ TEST(SparsityInvariance, spgf_is_indexed_by_orbital) {
 
   // dense reference, ordered per orbital by construction
   auto Gt_dense = Hmat_to_Gtmat(get_full_h_atomic(ad), beta, dlr_it_abs);
-  auto Fset     = get_operators_dense(ad, hyb_coeffs);
+  auto Fset     = dense::atom_diag::get_operators(ad, hyb_coeffs);
   dense::DiagramEvaluator D_dense(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
   auto ref_dense = D_dense.eval_correlator(Gt_dense, B, Fset.Fs, Fset.F_dags);
 
@@ -382,7 +380,7 @@ TEST(SparsityInvariance, correlator_keeps_the_beta_tau_side_when_vertex_zero_pai
   auto ad                       = unequal_sym_set_model(true);
   auto ad_flat                  = unequal_sym_set_model(false);
   int nflav                     = static_cast<int>(ad.get_fops().size());
-  auto labels                   = std::get<1>(get_operators(ad, nda::zeros<dcomplex>(p_poles, nflav, nflav)));
+  auto labels                   = std::get<1>(block_sparse::atom_diag::get_operators(ad, nda::zeros<dcomplex>(p_poles, nflav, nflav)));
   auto hyb_coeffs               = sym_set_diagonal_hyb(labels, p_poles);
   nda::vector<double> hyb_poles = {1.3, -0.8};
 
@@ -391,14 +389,14 @@ TEST(SparsityInvariance, correlator_keeps_the_beta_tau_side_when_vertex_zero_pai
 
   auto Gt     = ad_to_atom_prop(ad, beta, itops);
   auto G_flat = ad_to_atom_prop(ad_flat, beta, Lambda, eps);
-  auto Fq     = std::get<0>(get_operators(ad, hyb_coeffs));
+  auto Fq     = std::get<0>(block_sparse::atom_diag::get_operators(ad, hyb_coeffs));
   DiagramEvaluator D(hyb_poles, hyb_coeffs, G_flat[0].mesh(), ad);
   auto [mu_ops, kap_ops] = make_correlator_ops(Fq, nflav);
 
   // The dense reference, and the one-block block-sparse twin of the same model.
   dense::DiagramEvaluator D_dense(hyb_poles, hyb_coeffs, G_flat[0].mesh(), ad_flat);
   auto Gt_dense                 = Hmat_to_Gtmat(get_full_h_atomic(ad_flat), beta, cppdlr::rel2abs(itops.get_itnodes()));
-  auto [Fs_dense, F_dags_dense] = get_operators_dense(ad_flat);
+  auto [Fs_dense, F_dags_dense] = dense::atom_diag::get_operators(ad_flat);
   auto [Gt_triv, Fq_triv]       = trivial_sparsity_helper(Gt_dense, Fs_dense, F_dags_dense, hyb_coeffs, nflav);
   DiagramEvaluator D_triv(beta, Lambda, eps, hyb_poles, hyb_coeffs, Fq_triv);
   auto [mu_triv, kap_triv] = make_correlator_ops(Fq_triv, nflav);

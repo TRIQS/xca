@@ -1,6 +1,8 @@
 #include <triqs/operators/many_body_operator.hpp>
 
 #include "block_sparse_utils.hpp"
+#include "dense_utils.hpp"
+#include <triqs_xca/dense/atom_diag.hpp>
 
 using nda::dcomplex;
 using nda::linalg::matmul;
@@ -12,7 +14,6 @@ using cppdlr::k_it;
 using cppdlr::rel2abs;
 
 using triqs_xca::block_sparse::BlockOpSymSet;
-using triqs_xca::block_sparse::nonint_gf_BDOF;
 
 FermionModelData one_fermion_model_helper(double beta, double Lambda, double eps, double hyb_pole) {
   // Helper function for setting up one-fermion tests with H = 0 and a one-pole hybridization decomposition.
@@ -36,7 +37,7 @@ FermionModelData one_fermion_model_helper(double beta, double Lambda, double eps
   fop_set.insert("0", 0);
   auto ad = triqs::atom_diag::atom_diag<true>(H, fop_set);
 
-  auto G_ppsc = triqs_xca::block_sparse::atom_diag::ad_to_atom_prop(ad, beta, Lambda, eps);
+  auto G_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
   auto G_bdof = BlockDiagOpFun(G_ppsc);
 
   return {.hyb_coeffs = hyb_coeffs, .hyb_poles = hyb_poles, .ad = ad, .G_ppsc = G_ppsc, .G_bdof = G_bdof};
@@ -68,7 +69,7 @@ FermionModelData two_fermion_model_helper(double beta, double Lambda, double eps
   nda::vector<double> hyb_poles(p);
   hyb_poles = hyb_pole;
 
-  auto G_ppsc = triqs_xca::block_sparse::atom_diag::ad_to_atom_prop(ad, beta, Lambda, eps);
+  auto G_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
 
   auto G_bdof = BlockDiagOpFun(G_ppsc);
 
@@ -119,13 +120,13 @@ DenseFermionModelData one_fermion_model_dense_helper(double beta, double Lambda,
   fop_set.insert("0", 0);
 
   auto ad                       = triqs::atom_diag::atom_diag<true>(H, fop_set);
-  auto H_dense                  = triqs_xca::dense::atom_diag::get_full_h_atomic(ad);
+  auto H_dense                  = get_full_h_atomic(ad);
   auto dlr_rf                   = build_dlr_rf(Lambda, eps);
   auto itops                    = imtime_ops(Lambda, dlr_rf);
   auto const &dlr_it            = itops.get_itnodes();
   auto dlr_it_abs               = rel2abs(dlr_it);
   auto Gt_dense                 = Hmat_to_Gtmat(H_dense, beta, dlr_it_abs);
-  auto [Fs_dense, F_dags_dense] = triqs_xca::dense::atom_diag::get_operators_dense(ad);
+  auto [Fs_dense, F_dags_dense] = triqs_xca::dense::atom_diag::get_operators(ad);
   auto Fset_dense               = triqs_xca::dense::FSet(Fs_dense, F_dags_dense, hyb_coeffs);
 
   std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> gf_block(1);
@@ -393,9 +394,9 @@ std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>, nda::array<dcomplex
   auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
 
   auto ad                       = two_band_atom_diag_helper();
-  auto H_dense                  = triqs_xca::dense::atom_diag::get_full_h_atomic(ad);
+  auto H_dense                  = get_full_h_atomic(ad);
   auto Gt_dense                 = Hmat_to_Gtmat(H_dense, beta, dlr_it_abs);
-  auto [Fs_dense, F_dags_dense] = triqs_xca::dense::atom_diag::get_operators_dense(ad);
+  auto [Fs_dense, F_dags_dense] = triqs_xca::dense::atom_diag::get_operators(ad);
 
   return std::make_tuple(Gt_dense, Fs_dense, F_dags_dense);
 }
@@ -408,7 +409,7 @@ std::tuple<BlockDiagOpFun, BlockOpSymQuartet, nda::vector<int>> two_band_helper(
   auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
 
   auto ad                       = two_band_atom_diag_helper();
-  auto [H_blocks, H_block_inds] = triqs_xca::block_sparse::atom_diag::get_hamiltonian_blocks(ad);
+  auto [H_blocks, H_block_inds] = get_hamiltonian_blocks(ad);
   auto Gt                       = nonint_gf_BDOF(H_blocks, H_block_inds, beta, dlr_it_abs); // pseudo-particle Green's function
   auto [Fq, sym_set_labels]     = triqs_xca::block_sparse::atom_diag::get_operators(ad, hyb_coeffs);
 
@@ -461,4 +462,79 @@ std::pair<std::vector<BlockOp>, std::vector<BlockOp>> make_correlator_ops(BlockO
     kap_ops.emplace_back(kap_block_indices, kap_blocks);
   }
   return {mu_ops, kap_ops};
+}
+
+// -- Atomic propagator and Hamiltonian-block helpers, used only by the tests
+
+triqs::gfs::block_gf<triqs::mesh::dlr_imtime> BDOF_to_block_gf(BlockDiagOpFun const &BDOF, double beta, double Lambda, double eps) {
+  auto dlr_rf = cppdlr::build_dlr_rf(Lambda, eps);
+  auto itops  = cppdlr::imtime_ops(Lambda, dlr_rf);
+
+  // triqs gf mesh. dlr_imtime takes the energy cutoff w_max = Lambda / beta and rebuilds the DLR grid
+  // from w_max * beta, so passing Lambda directly would attach a mesh built on Lambda * beta to data
+  // sampled on the Lambda grid above.
+  auto t_mesh = triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda / beta, eps, false);
+  // create vector of gf
+  std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> gf_vec(BDOF.get_num_block_cols());
+
+  for (int i = 0; i < BDOF.get_num_block_cols(); ++i) {
+    if (BDOF.get_zero_block_index(i) == 0) {
+      gf_vec[i]        = triqs::gfs::gf<triqs::mesh::dlr_imtime>{t_mesh, {BDOF.get_block(i).extent(1), BDOF.get_block(i).extent(2)}};
+      gf_vec[i].data() = BDOF.get_block(i);
+    } else {
+      // empty block
+      gf_vec[i] = triqs::gfs::gf<triqs::mesh::dlr_imtime>{t_mesh, {0, 0}};
+    }
+  }
+  return {gf_vec};
+}
+
+std::tuple<std::vector<nda::array<dcomplex, 2>>, nda::vector<long>> get_hamiltonian_blocks(const triqs_atom_diag &ad) {
+  std::vector<nda::array<dcomplex, 2>> H_blocks;
+  nda::vector<long> H_block_inds(ad.n_subspaces());
+
+  for (int s = 0; s < ad.n_subspaces(); ++s) {
+    // Hamiltonian block of the subspace in the Fock basis
+    nda::array<dcomplex, 2> H_block = triqs_xca::atom_diag::get_hamiltonian_block(ad, s);
+    H_blocks.push_back(H_block);
+
+    // Check if block is zero
+    double max_elem = 0.0;
+    for (int i = 0; i < H_block.extent(0); ++i) {
+      for (int j = 0; j < H_block.extent(1); ++j) { max_elem = std::max(max_elem, std::abs(H_block(i, j))); }
+    }
+    H_block_inds(s) = (max_elem < 1e-16) ? -1 : 0;
+  }
+  return std::make_tuple(H_blocks, H_block_inds);
+}
+
+BlockDiagOpFun ad_to_atom_prop(const triqs_atom_diag &ad, double beta, imtime_ops &itops) {
+  // atom_diag has already diagonalized every invariant subspace, with the ground state energy
+  // subtracted from the eigenvalues; partition_function sums the matching Boltzmann weights
+  int n_sub                = ad.n_subspaces();
+  auto const &eigensystems = ad.get_eigensystems();
+
+  std::vector<nda::array<double, 1>> evals(n_sub);
+  std::vector<nda::array<dcomplex, 2>> evecs(n_sub);
+  for (int s = 0; s < n_sub; ++s) {
+    evals[s] = eigensystems[s].eigenvalues;
+    evecs[s] = eigensystems[s].unitary_matrix;
+  }
+
+  double Z        = triqs::atom_diag::partition_function(ad, beta);
+  auto dlr_it_abs = cppdlr::rel2abs(itops.get_itnodes());
+
+  return atom_prop_from_eigensystem(evals, evecs, Z, beta, dlr_it_abs);
+}
+
+triqs::gfs::block_gf<triqs::mesh::dlr_imtime> ad_to_atom_prop(const triqs_atom_diag &ad, double beta, double Lambda, double eps) {
+  auto dlr_rf = cppdlr::build_dlr_rf(Lambda, eps);
+  auto itops  = imtime_ops(Lambda, dlr_rf);
+  auto ap     = ad_to_atom_prop(ad, beta, itops);
+
+  // Create vector of gf<dlr_imtime>
+  std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> gf_blocks(ap.get_num_block_cols());
+  triqs::mesh::dlr_imtime tau_mesh(beta, triqs::mesh::Fermion, Lambda / beta, eps, false);
+  for (int i = 0; i < ap.get_num_block_cols(); ++i) { gf_blocks[i] = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, ap.get_block(i)); }
+  return {gf_blocks};
 }

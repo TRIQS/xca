@@ -11,7 +11,6 @@ using cppdlr::_;
 using cppdlr::build_dlr_rf;
 using cppdlr::imtime_ops;
 
-using triqs_xca::block_sparse::nonint_gf_BDOF;
 
 /**
  * @file test_block_diag_op_fun.cpp

@@ -19,10 +19,7 @@ using cppdlr::build_dlr_rf;
 using cppdlr::imtime_ops;
 using cppdlr::rel2abs;
 
-using triqs_xca::block_sparse::atom_diag::ad_to_atom_prop;
-using triqs_xca::dense::atom_diag::get_full_h_atomic;
 
-using triqs_xca::block_sparse::atom_prop_from_eigensystem;
 using triqs_xca::block_sparse::trace;
 
 /**

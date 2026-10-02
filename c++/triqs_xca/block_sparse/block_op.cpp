@@ -781,29 +781,6 @@ namespace triqs_xca::block_sparse {
     return atom_prop_from_eigensystem(H_evals, H_evecs, Z, beta, dlr_it_abs);
   }
 
-  triqs::gfs::block_gf<triqs::mesh::dlr_imtime> BDOF_to_block_gf(BlockDiagOpFun const &BDOF, double beta, double Lambda, double eps) {
-    auto dlr_rf = cppdlr::build_dlr_rf(Lambda, eps);
-    auto itops  = cppdlr::imtime_ops(Lambda, dlr_rf);
-
-    // triqs gf mesh. dlr_imtime takes the energy cutoff w_max = Lambda / beta and rebuilds the DLR grid
-    // from w_max * beta, so passing Lambda directly would attach a mesh built on Lambda * beta to data
-    // sampled on the Lambda grid above.
-    auto t_mesh = triqs::mesh::dlr_imtime(beta, triqs::mesh::Fermion, Lambda / beta, eps, false);
-    // create vector of gf
-    std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> gf_vec(BDOF.get_num_block_cols());
-
-    for (int i = 0; i < BDOF.get_num_block_cols(); ++i) {
-      if (BDOF.get_zero_block_index(i) == 0) {
-        gf_vec[i]        = triqs::gfs::gf<triqs::mesh::dlr_imtime>{t_mesh, {BDOF.get_block(i).extent(1), BDOF.get_block(i).extent(2)}};
-        gf_vec[i].data() = BDOF.get_block(i);
-      } else {
-        // empty block
-        gf_vec[i] = triqs::gfs::gf<triqs::mesh::dlr_imtime>{t_mesh, {0, 0}};
-      }
-    }
-    return {gf_vec};
-  }
-
   template <bool isComplex>
   dcomplex expectation_value(triqs::operators::many_body_operator_real const &op, triqs::atom_diag::atom_diag<isComplex> const &ad,
                              triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc) {

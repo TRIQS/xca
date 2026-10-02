@@ -4,11 +4,18 @@
 
 #include <nda/algorithms.hpp>
 #include <triqs_xca/atom_diag.hpp>
-#include <triqs_xca/dense/atom_diag.hpp>
 #include <triqs_xca/block_sparse/atom_diag.hpp>
+#include <triqs_xca/dense/fset.hpp>
 #include <triqs_xca/block_sparse/block_op.hpp>
 
 using nda::dcomplex;
+
+using cppdlr::imtime_ops;
+
+using triqs_xca::atom_diag::triqs_atom_diag;
+
+using triqs_xca::block_sparse::atom_prop_from_eigensystem;
+using triqs_xca::block_sparse::nonint_gf_BDOF;
 
 using triqs_xca::block_sparse::BlockDiagOpFun;
 using triqs_xca::block_sparse::BlockOp;
@@ -236,3 +243,40 @@ inline double max_offdiag(nda::array_const_view<dcomplex, 3> A) {
   }
   return max_abs;
 }
+
+// -- Atomic propagator and Hamiltonian-block helpers, used only by the tests
+
+/**
+ * @brief Convert a BlockDiagOpFun to a triqs::gfs::block_gf<triqs::mesh::dlr_imtime>
+ * @param[in] BDOF BlockDiagOpFun
+ * @param[in] beta inverse temperature
+ * @param[in] Lambda DLR cutoff parameter
+ * @param[in] eps DLR epsilon parameter
+ */
+triqs::gfs::block_gf<triqs::mesh::dlr_imtime> BDOF_to_block_gf(BlockDiagOpFun const &BDOF, double beta, double Lambda, double eps);
+
+/**
+ * @brief Get symmetry blocks of Hamiltonian from an AtomDiag object
+ * @param[in] ad AtomDiag object
+ * @return Tuple of vectors of Hamiltonian blocks and block indices
+ */
+std::tuple<std::vector<nda::array<dcomplex, 2>>, nda::vector<long>> get_hamiltonian_blocks(const triqs_atom_diag &ad);
+
+/**
+ * @brief Get atomic propagator from an AtomDiag object as a BlockDiagOpFun
+ * @param[in] ad AtomDiag object
+ * @param[in] beta Inverse temperature
+ * @param[in] itops Imaginary time object
+ * @return BlockDiagOpFun representing the atomic propagator
+ */
+BlockDiagOpFun ad_to_atom_prop(const triqs_atom_diag &ad, double beta, imtime_ops &itops);
+
+/**
+ * @brief Get atomic propagator from an AtomDiag object as a triqs::block_gf<dlr_imtime>
+ * @param[in] ad AtomDiag object
+ * @param[in] beta Inverse temperature
+ * @param[in] Lambda DLR cutoff parameter
+ * @param[in] eps DLR epsilon parameter
+ * @return triqs::block_gf<dlr_imtime> representing the atomic propagator
+ */
+triqs::gfs::block_gf<triqs::mesh::dlr_imtime> ad_to_atom_prop(const triqs_atom_diag &ad, double beta, double Lambda, double eps);

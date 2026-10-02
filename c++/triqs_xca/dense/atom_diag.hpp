@@ -9,19 +9,13 @@ namespace triqs_xca::dense::atom_diag {
   using triqs_xca::atom_diag::triqs_atom_diag_t;
 
   /**
- * @brief Utility function to get full Hamiltonian matrix from an AtomDiag object.
- * @param[in] ad AtomDiag object
- */
-  nda::matrix<dcomplex> get_full_h_atomic(const triqs_atom_diag &ad);
-
-  /**
  * @brief Utility function to get full operator matrix from an AtomDiag object.
  * @param[in] ad AtomDiag object
  * @param[in] oidx operator index
  * @param[in] is_creation true for creation operator, false for annihilation operator
  */
-  nda::matrix<dcomplex> get_full_operator_matrix(const triqs_atom_diag_t<true> &ad, int oidx, bool is_creation);
-  nda::matrix<dcomplex> get_full_operator_matrix(const triqs_atom_diag_t<false> &ad, int oidx, bool is_creation);
+  nda::matrix<dcomplex> get_operator(const triqs_atom_diag_t<true> &ad, int oidx, bool is_creation);
+  nda::matrix<dcomplex> get_operator(const triqs_atom_diag_t<false> &ad, int oidx, bool is_creation);
 
   /**
  * @brief Get creation and annihilation operators from an AtomDiag object in dense storage
@@ -29,8 +23,8 @@ namespace triqs_xca::dense::atom_diag {
  * @param[in] hyb_coeffs Hybridization SOE coefficients
  * @return FSet object
  */
-  FSet get_operators_dense(const triqs_atom_diag_t<true> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs);
-  FSet get_operators_dense(const triqs_atom_diag_t<false> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs);
+  FSet get_operators(const triqs_atom_diag_t<true> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs);
+  FSet get_operators(const triqs_atom_diag_t<false> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs);
 
   /**
  * @brief Get creation and annihilation operators from an AtomDiag object in dense storage
@@ -38,7 +32,7 @@ namespace triqs_xca::dense::atom_diag {
  * @param[in] hyb_coeffs Hybridization SOE coefficients
  * @return tuple with Fs and Fdags in dense storage
  */
-  std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> get_operators_dense(const triqs_atom_diag_t<true> &ad);
-  std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> get_operators_dense(const triqs_atom_diag_t<false> &ad);
+  std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> get_operators(const triqs_atom_diag_t<true> &ad);
+  std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> get_operators(const triqs_atom_diag_t<false> &ad);
 
 } // namespace triqs_xca::dense::atom_diag

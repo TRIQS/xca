@@ -8,6 +8,7 @@
 #include <triqs_xca/block_sparse/atom_diag.hpp>
 #include <triqs_xca/dense/diagram_evaluator.hpp>
 #include <triqs_xca/topology.hpp>
+#include "block_sparse_utils.hpp"
 
 using nda::dcomplex;
 
@@ -18,7 +19,6 @@ using triqs::operators::many_body_operator_complex;
 using triqs::operators::many_body_operator_real;
 using triqs::operators::n;
 
-using triqs_xca::block_sparse::atom_diag::ad_to_atom_prop;
 using triqs_xca::dense::DiagramEvaluator;
 
 /**

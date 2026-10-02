@@ -3,6 +3,8 @@
 #include <triqs_xca/atom_diag.hpp>
 #include <triqs_xca/dense/atom_diag.hpp>
 #include <triqs_xca/block_sparse/atom_diag.hpp>
+#include "block_sparse_utils.hpp"
+#include "dense_utils.hpp"
 
 using nda::range;
 
@@ -15,10 +17,8 @@ using triqs::operators::c;
 using triqs::operators::c_dag;
 using triqs::operators::n;
 
-using triqs_xca::dense::atom_diag::get_full_h_atomic;
-using triqs_xca::dense::atom_diag::get_full_operator_matrix;
+using triqs_xca::dense::atom_diag::get_operator;
 using triqs_xca::atom_diag::get_hamiltonian_block;
-using triqs_xca::block_sparse::atom_diag::get_hamiltonian_blocks;
 using triqs_xca::atom_diag::get_operator_block;
 using triqs_xca::block_sparse::atom_diag::get_operators;
 
@@ -130,7 +130,7 @@ std::pair<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> make_expected_fock_o
  * @brief Tests the computation of the full Hamiltonian and operator matrices from the atom_diag object.
  * 
  * This test creates a simple two-orbital Hamiltonian with known parameters, constructs the corresponding atom_diag object, and then uses the 
- * get_full_h_atomic and get_full_operator_matrix functions to compute the full Hamiltonian and operator matrices. The results are compared against 
+ * get_full_h_atomic and get_operator functions to compute the full Hamiltonian and operator matrices. The results are compared against 
  * expected matrices that were generated from a reference atom_diag python run. The test checks that the computed matrices match the expected ones 
  * within numerical precision limits.
  */
@@ -146,8 +146,8 @@ TEST(AtomDiagUtils, get_matrices) {
   // The Hamiltonian has spin, so there are 2 * norb particle flavors
   nda::array<dcomplex, 3> c_mats(2 * norb, N, N), cdag_mats(2 * norb, N, N);
   for (int oidx = 0; oidx < 2 * norb; ++oidx) {
-    auto c_mat            = get_full_operator_matrix(ad, oidx, false);
-    auto cdag_mat         = get_full_operator_matrix(ad, oidx, true);
+    auto c_mat            = get_operator(ad, oidx, false);
+    auto cdag_mat         = get_operator(ad, oidx, true);
     c_mats(oidx, _, _)    = c_mat;
     cdag_mats(oidx, _, _) = cdag_mat;
   }
@@ -427,8 +427,8 @@ TEST(AtomDiagUtils, complex_unitary_hamiltonian) {
   auto N = ad.get_full_hilbert_space_dim();
   std::vector<nda::matrix<dcomplex>> c_mats, cdag_mats;
   for (int i = 0; i < norb; ++i) {
-    c_mats.push_back(get_full_operator_matrix(ad, i, false));
-    cdag_mats.push_back(get_full_operator_matrix(ad, i, true));
+    c_mats.push_back(get_operator(ad, i, false));
+    cdag_mats.push_back(get_operator(ad, i, true));
   }
   nda::matrix<dcomplex> H_expected = nda::zeros<dcomplex>(N, N);
   for (int i = 0; i < norb; ++i) {
@@ -482,7 +482,7 @@ TEST(AtomDiagUtils, operator_blocks_are_the_blocks_of_the_full_matrices) {
     int n_fops = ad.get_fops().size();
     for (int oidx = 0; oidx < n_fops; ++oidx) {
       for (bool is_creation : {false, true}) {
-        auto full         = get_full_operator_matrix(ad, oidx, is_creation);
+        auto full         = get_operator(ad, oidx, is_creation);
         double sum_blocks = 0.0;
 
         for (int s = 0; s < ad.n_subspaces(); ++s) {

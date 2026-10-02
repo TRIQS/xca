@@ -9,6 +9,7 @@
 #include <triqs_xca/hyb.hpp>
 
 #include "block_sparse_utils.hpp"
+#include "dense_utils.hpp"
 
 using cppdlr::build_dlr_rf;
 using cppdlr::imtime_ops;
@@ -17,8 +18,6 @@ namespace dense = triqs_xca::dense;
 
 using triqs_xca::block_sparse::DiagramEvaluator;
 
-using triqs_xca::block_sparse::atom_diag::ad_to_atom_prop;
-using triqs_xca::dense::atom_diag::get_full_h_atomic;
 
 /**
  * @file test_block_sparse_evaluator_api.cpp

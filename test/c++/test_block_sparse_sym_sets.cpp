@@ -17,8 +17,10 @@ using triqs::operators::c_dag;
 using triqs::operators::many_body_operator_complex;
 using triqs::operators::n;
 
-using triqs_xca::block_sparse::atom_diag::get_operators;
-using triqs_xca::dense::atom_diag::get_operators_dense;
+namespace block_sparse = triqs_xca::block_sparse;
+
+namespace dense = triqs_xca::dense;
+
 
 /**
  * @file test_block_sparse_sym_sets.cpp
@@ -42,7 +44,7 @@ TEST(BlockSparseSymSets, model_has_unequal_symmetry_sets) {
   int p   = 2;
 
   auto zero_coeffs  = nda::zeros<dcomplex>(p, 3, 3);
-  auto [Fq, labels] = get_operators(ad, zero_coeffs);
+  auto [Fq, labels] = block_sparse::atom_diag::get_operators(ad, zero_coeffs);
 
   ASSERT_EQ(labels.size(), 3);
   ASSERT_EQ(nda::max_element(Fq.sym_set_labels) + 1, 2) << "expected exactly two symmetry sets, got labels " << labels;
@@ -58,7 +60,7 @@ TEST(BlockSparseSymSets, bars_reject_symmetry_set_coupling) {
   auto ad = unequal_sym_set_model();
   int p   = 2;
 
-  auto labels = std::get<1>(get_operators(ad, nda::zeros<dcomplex>(p, 3, 3)));
+  auto labels = std::get<1>(block_sparse::atom_diag::get_operators(ad, nda::zeros<dcomplex>(p, 3, 3)));
 
   // Find a pair of orbitals living in different symmetry sets.
   int i_cross = -1, j_cross = -1;
@@ -81,7 +83,7 @@ TEST(BlockSparseSymSets, bars_reject_symmetry_set_coupling) {
 
   // match the message, other std::invalid_argument checks sit earlier in the same constructor
   try {
-    get_operators(ad, hyb_coeffs);
+    block_sparse::atom_diag::get_operators(ad, hyb_coeffs);
     FAIL() << "hyb_coeffs couples orbitals " << i_cross << " and " << j_cross
            << ", which are in different symmetry sets; the BlockOpSymQuartet constructor must reject that";
   } catch (std::invalid_argument const &e) {
@@ -106,7 +108,7 @@ TEST(BlockSparseSymSets, bars_bracket_symmetry_set_coupling_tolerance) {
   auto ad = unequal_sym_set_model();
   int p   = 2;
 
-  auto labels = std::get<1>(get_operators(ad, nda::zeros<dcomplex>(p, 3, 3)));
+  auto labels = std::get<1>(block_sparse::atom_diag::get_operators(ad, nda::zeros<dcomplex>(p, 3, 3)));
   // scaled away from 1 to distinguish a relative threshold from an absolute one
   auto hyb_coeffs = nda::make_regular(1.0e6 * sym_set_diagonal_hyb(labels, p));
   int norb        = static_cast<int>(labels.size());
@@ -147,14 +149,14 @@ TEST(BlockSparseSymSets, bars_bracket_symmetry_set_coupling_tolerance) {
     return coeffs;
   };
 
-  EXPECT_NO_THROW(get_operators(ad, perturbed(0.5 * sym_set_coupling_tol * max_abs)))
+  EXPECT_NO_THROW(block_sparse::atom_diag::get_operators(ad, perturbed(0.5 * sym_set_coupling_tol * max_abs)))
      << "cross-set entries at 0.5 * tol * max|hyb_coeffs| must be accepted as round-off";
 
-  EXPECT_THROW(get_operators(ad, perturbed(2.0 * sym_set_coupling_tol * max_abs)), std::invalid_argument)
+  EXPECT_THROW(block_sparse::atom_diag::get_operators(ad, perturbed(2.0 * sym_set_coupling_tol * max_abs)), std::invalid_argument)
      << "cross-set entries at 2 * tol * max|hyb_coeffs| must be rejected as a structural violation";
 
   // the unperturbed fixture must pass
-  EXPECT_NO_THROW(get_operators(ad, hyb_coeffs));
+  EXPECT_NO_THROW(block_sparse::atom_diag::get_operators(ad, hyb_coeffs));
 }
 
 /**
@@ -165,11 +167,11 @@ TEST(BlockSparseSymSets, bars_match_dense_for_unequal_sym_sets) {
   auto ad = unequal_sym_set_model();
   int p   = 2;
 
-  auto labels     = std::get<1>(get_operators(ad, nda::zeros<dcomplex>(p, 3, 3)));
+  auto labels     = std::get<1>(block_sparse::atom_diag::get_operators(ad, nda::zeros<dcomplex>(p, 3, 3)));
   auto hyb_coeffs = sym_set_diagonal_hyb(labels, p);
 
-  auto [Fq, labels2] = get_operators(ad, hyb_coeffs);
-  auto Fset          = get_operators_dense(ad, hyb_coeffs); // dense reference, no symmetry sets involved
+  auto [Fq, labels2] = block_sparse::atom_diag::get_operators(ad, hyb_coeffs);
+  auto Fset          = dense::atom_diag::get_operators(ad, hyb_coeffs); // dense reference, no symmetry sets involved
 
   int n_sets    = static_cast<int>(nda::max_element(Fq.sym_set_labels) + 1);
   double da_err = 0.0, fb_err = 0.0;

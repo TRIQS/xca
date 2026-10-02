@@ -5,6 +5,25 @@
 
 using cppdlr::_;
 
+nda::matrix<dcomplex> get_full_h_atomic(const triqs_atom_diag &ad) {
+  int dim    = ad.get_full_hilbert_space_dim();
+  auto H_mat = nda::zeros<dcomplex>(dim, dim);
+
+  for (int sidx = 0; sidx < ad.n_subspaces(); ++sidx) {
+    auto H_block = triqs_xca::atom_diag::get_hamiltonian_block(ad, sidx);
+
+    // Get Fock states for this subspace
+    auto fock_states = ad.get_fock_states(sidx);
+
+    // Copy block into full matrix
+    for (int i = 0; i < fock_states.size(); ++i) {
+      for (int j = 0; j < fock_states.size(); ++j) { H_mat(fock_states[i], fock_states[j]) = H_block(i, j); }
+    }
+  }
+
+  return H_mat;
+}
+
 nda::array<dcomplex, 3> eval_eq(imtime_ops &itops, nda::array_const_view<dcomplex, 3> f, int n_quad) {
   auto fc    = itops.vals2coefs(f);
   auto it_eq = cppdlr::eqptsrel(n_quad + 1);
