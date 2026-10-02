@@ -12,10 +12,14 @@
 #include <triqs_xca/hyb.hpp>
 #include <triqs_xca/topology.hpp>
 
-#include <triqs_soehyb/strong_cpl.hpp>
+#include <cppdlr/cppdlr.hpp>
 
 #include "block_sparse_utils.hpp"
 
+using cppdlr::_;
+using cppdlr::build_dlr_rf;
+using cppdlr::imtime_ops;
+using cppdlr::rel2abs;
 using triqs::operators::c;
 using triqs::operators::c_dag;
 using triqs::operators::many_body_operator_complex;

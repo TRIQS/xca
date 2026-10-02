@@ -9,29 +9,29 @@ endforeach()
 # List of all tests
 set(all_tests
   pycppdlr
-  load_module
-  spinless_dimer
-  spinless_dimer_solver
-  offdiagonal_nca
+  triqs_soehyb/load_module
+  triqs_soehyb/spinless_dimer
+  triqs_soehyb/spinless_dimer_solver
+  triqs_soehyb/offdiagonal_nca
   test_diag
-  unitary_invariance
+  triqs_soehyb/unitary_invariance
   unitary_invariance_bs
-  h5_io
+  triqs_soehyb/h5_io
   h5_io_bs
-  dense
+  both_solvers/dense
   dynint
   dynint_spin_flip
   dynint_transverse
   topology
-  triqs_solver
-  one_spinful_fermion
-  analytic_diagrams
+  triqs_soehyb/triqs_solver
+  triqs_soehyb/one_spinful_fermion
+  triqs_soehyb/analytic_diagrams
   block_sparse_copy
-  block_sparse_api
-  block_sparse_api_one_fermion
-  block_sparse_api_two_fermions
-  block_sparse_self_cons
-  block_sparse_bethe
+  both_solvers/block_sparse_api
+  both_solvers/block_sparse_api_one_fermion
+  both_solvers/block_sparse_api_two_fermions
+  both_solvers/block_sparse_self_cons
+  both_solvers/block_sparse_bethe
   block_sparse_normalization
   block_sparse_spgf_ordering
   bug_bs_one_fermion
@@ -44,6 +44,7 @@ set(all_tests
 foreach(test ${all_tests})
   get_filename_component(test_name ${test} NAME_WE)
   get_filename_component(test_dir ${test} DIRECTORY)
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${test_dir})
   add_test(NAME Py_${test} COMMAND ${TRIQS_PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${test_dir}/${test_name}.py WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${test_dir})
   set_property(TEST Py_${test} APPEND PROPERTY ENVIRONMENT_MODIFICATION
     "PYTHONPATH=path_list_prepend:${pyed_SOURCE_DIR}"
