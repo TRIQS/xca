@@ -22,7 +22,7 @@
 #include "utils.hpp"
 #include "strong_cpl.hpp"
 #include "impurity.hpp"
-#include <cppdlr/dlr_dyson_ppsc.hpp>
+#include <cppdlr/dyson_it_ppsc.hpp>
 #include <cppdlr/dlr_kernels.hpp>
 #include <nda/blas/tools.hpp>
 #include <nda/declarations.hpp>

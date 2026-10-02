@@ -30,11 +30,11 @@ from pyed.TriqsExactDiagonalization import TriqsExactDiagonalization
 
 from .adapol_depr.fit_utils_xca import polefitting
 
-from cppdlr.pycppdlr import build_dlr_rf
-from cppdlr.pycppdlr import ImTimeOps
+from cppdlr import build_dlr_rf
+from cppdlr import ImTimeOps
 
 from .impurity import Fastdiagram
-from cppdlr.dlr_dyson_ppsc import DysonItPPSC
+from cppdlr import DysonItPPSC
 from .diag import all_connected_pairings
 
 from .ase.utils.timing import Timer, timer

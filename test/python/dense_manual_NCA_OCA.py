@@ -4,7 +4,7 @@ import numpy as np
 
 from triqs.operators import c, c_dag
 
-from cppdlr.pycppdlr import ImTimeOps, build_dlr_rf
+from cppdlr import ImTimeOps, build_dlr_rf
 
 from triqs_xca.dense import NCA_dense, OCA_dense
 from triqs_xca.block_sparse_solver import BlockSparseSolver

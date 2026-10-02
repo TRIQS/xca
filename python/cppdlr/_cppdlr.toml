@@ -17,7 +17,7 @@ namespaces = ""
 #    if reject_names and reject_names matches Qname : skip X
 #    else keep X.
 #
-match_names = "DysonItPPSC"
+match_names = "ImTimeOps|DysonItPPSC|cppdlr::build_dlr_rf"
 reject_names = ""
 
 # Only keep elements declared in files matching the pattern
@@ -28,4 +28,4 @@ wrap_no_arg_methods_as_properties = false
 
 # [Advanced] If yes (default), all elements (class/enum/functions)
 # declared in headers included with -isystem are ignored for better performance.
-# exclude_system_headers = true
+exclude_system_headers = false

@@ -26,7 +26,7 @@ using c2py::operator""_a;
 // --------- class _c2py_cls_0 -----------
 using _c2py_cls_0                                            = cppdlr::imtime_ops;
 template <> constexpr bool c2py::is_wrapped<_c2py_cls_0>     = true;
-template <> inline constexpr auto c2py::tp_name<_c2py_cls_0> = "cppdlr.pycppdlr.ImTimeOps";
+template <> inline constexpr auto c2py::tp_name<_c2py_cls_0> = "cppdlr._cppdlr.ImTimeOps";
 static auto _c2py_init_0                                     = c2py::dispatcher_c_kw_t{
    c2py::c_constructor<
                                           _c2py_cls_0, double,
@@ -204,20 +204,161 @@ PyMethodDef c2py::tp_methods<_c2py_cls_0>[] = {
 };
 
 template <> const std::string c2py::tp_doc<_c2py_cls_0> = R"DOC()DOC" + c2py::tp_ctor_doc<_c2py_cls_0>;
+// --------- class _c2py_cls_1 -----------
+using _c2py_cls_1 = cppdlr::dyson_it_ppsc<
+   nda::basic_array<std::complex<double>, 2, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>>,
+   std::complex<double>>;
+template <> constexpr bool c2py::is_wrapped<_c2py_cls_1>     = true;
+template <> inline constexpr auto c2py::tp_name<_c2py_cls_1> = "cppdlr._cppdlr.DysonItPPSC";
+static auto _c2py_init_1                                     = c2py::dispatcher_c_kw_t{
+   c2py::c_constructor<
+                                          _c2py_cls_1, double, cppdlr::imtime_ops,
+                                          const nda::basic_array<std::complex<double>, 2, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>> &>(
+      "beta", "itops", "h"),
+   c2py::c_constructor<_c2py_cls_1, double, cppdlr::imtime_ops,
+                                                           const nda::basic_array_view<std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                                                                       nda::borrowed<nda::mem::AddressSpace::Host>> &>("beta", "itops", "g0")};
+template <> constexpr initproc c2py::tp_init<_c2py_cls_1> = c2py::pyfkw_constructor<_c2py_init_1>;
+template <>
+const std::string c2py::tp_ctor_doc<_c2py_cls_1> = _c2py_init_1.doc(
+   R"DOC(
+[1] Constructor for dyson_it
+
+.. note::
+
+   Hamiltonian must either be a symmetric matrix, a Hermitian matrix,
+   or a real scalar.
+
+------
+
+[2] Constructor for dyson_it
+
+------
+
+Parameters
+----------
+beta : {par_0}
+   Inverse temperature
+itops : {par_1}
+   DLR imaginary time object
+h : {par_2}
+   Hamiltonian
+g0 : {par_3}
+   Free imaginary time DLR pseudo-particle Green's function
+)DOC",
+   {{c2py::python_typename<double>()},
+    {c2py::python_typename<cppdlr::imtime_ops>()},
+    {c2py::python_typename<
+       const nda::basic_array<std::complex<double>, 2, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>> &>()},
+    {c2py::python_typename<const nda::basic_array_view<std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                                       nda::borrowed<nda::mem::AddressSpace::Host>> &>()}});
+// solve
+static auto const _c2py_fun_19 = c2py::dispatcher_f_kw_t{c2py::cmethod(
+   [](_c2py_cls_1 &self,
+      const nda::basic_array_view<std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                  nda::borrowed<nda::mem::AddressSpace::Host>> &sig,
+      double eta) -> decltype(auto) {
+     return self.template solve<nda::basic_array_view<std::complex<double>, 3, nda::C_stride_layout>,
+                                nda::basic_array<std::complex<double>, 3, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<>>>>(sig, eta);
+   },
+   "self", "sig", "eta")};
+
+// solve_with_op
+static auto const _c2py_fun_20 = c2py::dispatcher_f_kw_t{c2py::cmethod(
+   [](_c2py_cls_1 &self,
+      const nda::basic_array_view<std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                  nda::borrowed<nda::mem::AddressSpace::Host>> &sig,
+      double eta,
+      nda::basic_array_view<std::complex<double>, 2, nda::C_stride_layout, 'M', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>
+         op) -> decltype(auto) {
+     return self.template solve_with_op<nda::basic_array_view<std::complex<double>, 3, nda::C_stride_layout>,
+                                        nda::basic_array<std::complex<double>, 3, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<>>>>(
+        sig, eta, op);
+   },
+   "self", "sig", "eta", "op")};
+
+static const auto _c2py_doc_19 = _c2py_fun_19.doc(
+   R"DOC(
+Solve pseudo-particle Dyson equation for given self-energy
+
+.. note::
+
+   Free Green's function (right hand side of Dyson equation) specified
+   at construction of dyson_it object
+
+Parameters
+----------
+sig : {par_0}
+   Self-energy at DLR imaginary time nodes
+eta : {par_1}
+   Chemical potential
+
+Returns
+-------
+{ret_0}
+   Green's function at DLR imaginary time nodes
+)DOC",
+   {{c2py::python_typename<const nda::basic_array_view<std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                                       nda::borrowed<nda::mem::AddressSpace::Host>> &>()},
+    {c2py::python_typename<double>()}},
+   {c2py::python_typename<
+      nda::basic_array<std::complex<double>, 3, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>>>()});
+static const auto _c2py_doc_20 = _c2py_fun_20.doc(
+   R"DOC(
+Solve pseudo-particle Dyson equation for given self-energy, chemical potential, and operator.
+
+.. note::
+
+   Free Green's function (right hand side of Dyson equation) specified
+   at construction of dyson_it object
+
+Parameters
+----------
+sig : {par_0}
+   Self-energy at DLR imaginary time nodes
+eta : {par_1}
+   Chemical potential
+op : {par_2}
+   Static operator (used to vary the chemical potential)
+
+Returns
+-------
+{ret_0}
+   Green's function at DLR imaginary time nodes
+)DOC",
+   {{c2py::python_typename<const nda::basic_array_view<std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
+                                                       nda::borrowed<nda::mem::AddressSpace::Host>> &>()},
+    {c2py::python_typename<double>()},
+    {c2py::python_typename<nda::basic_array_view<std::complex<double>, 2, nda::C_stride_layout, 'M', nda::default_accessor,
+                                                 nda::borrowed<nda::mem::AddressSpace::Host>>>()}},
+   {c2py::python_typename<
+      nda::basic_array<std::complex<double>, 3, nda::C_layout, 'A', nda::heap_basic<nda::mem::mallocator<nda::mem::AddressSpace::Host>>>>()});
+
+// ----- Method table ----
+template <>
+PyMethodDef c2py::tp_methods<_c2py_cls_1>[] = {
+   {"solve", (PyCFunction)c2py::pyfkw<_c2py_fun_19>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_19.c_str()},
+   {"solve_with_op", (PyCFunction)c2py::pyfkw<_c2py_fun_20>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_20.c_str()},
+   {nullptr, nullptr, 0, nullptr} // Sentinel
+};
+
+template <>
+const std::string c2py::tp_doc<_c2py_cls_1> = R"DOC(Class for solving the pseudo-particle Dyson equation in imaginary time)DOC"
+   + std::string{"\n\n----------\n\n"} + c2py::tp_ctor_doc<_c2py_cls_1>;
 
 // ==================== module functions ====================
 
 // build_dlr_rf
-static auto const _c2py_fun_19 =
+static auto const _c2py_fun_21 =
    c2py::dispatcher_f_kw_t{c2py::cfun([](double lambda, double eps, bool symmetrize) { return cppdlr::build_dlr_rf(lambda, eps, symmetrize); },
                                       "lambda", "eps", "symmetrize"),
                            c2py::cfun([](double lambda, double eps) { return cppdlr::build_dlr_rf(lambda, eps); }, "lambda", "eps")};
 
-static const auto _c2py_doc_19 = _c2py_fun_19.doc(R"DOC()DOC");
+static const auto _c2py_doc_21 = _c2py_fun_21.doc(R"DOC()DOC");
 //--------------------- module function table  -----------------------------
 
 static PyMethodDef module_methods[] = {
-   {"build_dlr_rf", (PyCFunction)c2py::pyfkw<_c2py_fun_19>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_19.c_str()},
+   {"build_dlr_rf", (PyCFunction)c2py::pyfkw<_c2py_fun_21>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_21.c_str()},
    {nullptr, nullptr, 0, nullptr} // Sentinel
 };
 
@@ -226,7 +367,7 @@ static PyMethodDef module_methods[] = {
 //// module doc directly in the code or "" if not present...
 /// Or mandatory ?
 static struct PyModuleDef module_def = {PyModuleDef_HEAD_INIT,
-                                        "pycppdlr",        /* name of module */
+                                        "_cppdlr",         /* name of module */
                                         R"RAWDOC()RAWDOC", /* module documentation, may be NULL */
                                         -1, /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
                                         module_methods,
@@ -237,9 +378,9 @@ static struct PyModuleDef module_def = {PyModuleDef_HEAD_INIT,
 
 //--------------------- module init function -----------------------------
 
-extern "C" __attribute__((visibility("default"))) PyObject *PyInit_pycppdlr() {
+extern "C" __attribute__((visibility("default"))) PyObject *PyInit__cppdlr() {
 
-  if (not c2py::check_python_version("pycppdlr")) return NULL;
+  if (not c2py::check_python_version("_cppdlr")) return NULL;
 
   // import numpy iff 'numpy/arrayobject.h' included
 #ifdef Py_ARRAYOBJECT_H
@@ -250,6 +391,7 @@ extern "C" __attribute__((visibility("default"))) PyObject *PyInit_pycppdlr() {
 
   if (PyType_Ready(&c2py::wrap_pytype<c2py::py_range>) < 0) return NULL;
   if (PyType_Ready(&c2py::wrap_pytype<_c2py_cls_0>) < 0) return NULL;
+  if (PyType_Ready(&c2py::wrap_pytype<_c2py_cls_1>) < 0) return NULL;
 
   m = PyModule_Create(&module_def);
   if (m == NULL) return NULL;
@@ -259,6 +401,7 @@ extern "C" __attribute__((visibility("default"))) PyObject *PyInit_pycppdlr() {
   conv_table[std::type_index(typeid(c2py::py_range)).name()] = &c2py::wrap_pytype<c2py::py_range>;
 #define _add_type(T, N) c2py::add_type_object_to_main<T>(N, m, conv_table)
   _add_type(_c2py_cls_0, "ImTimeOps");
+  _add_type(_c2py_cls_1, "DysonItPPSC");
 #undef _add_type
 
   c2py::pyref module = c2py::pyref::module("h5.formats");

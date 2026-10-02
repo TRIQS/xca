@@ -8,7 +8,7 @@ endforeach()
 
 # List of all tests
 set(all_tests
-  pycppdlr
+  test_cppdlr
   triqs_soehyb/load_module
   triqs_soehyb/spinless_dimer
   triqs_soehyb/spinless_dimer_solver

@@ -8,7 +8,9 @@
 
 #include "triqs_xca/block_sparse_manual.hpp"
 
-#include "cppdlr/pycppdlr.wrap.hxx"
+#include <cppdlr/dyson_it_ppsc.hpp>
+
+#include "cppdlr/_cppdlr.wrap.hxx"
 
 extern template
 triqs_xca::dense::DenseDiagramEvaluator::DenseDiagramEvaluator(

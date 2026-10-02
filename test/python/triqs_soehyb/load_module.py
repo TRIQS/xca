@@ -21,8 +21,8 @@
 
 import numpy as np
 
-from cppdlr.pycppdlr import build_dlr_rf
-from cppdlr.pycppdlr import ImTimeOps
+from cppdlr import build_dlr_rf
+from cppdlr import ImTimeOps
 from triqs_soehyb.impurity import Fastdiagram
 
 beta = 1.0

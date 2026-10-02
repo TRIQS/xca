@@ -26,8 +26,8 @@ from triqs.operators import c, c_dag
 from pyed.TriqsExactDiagonalization import TriqsExactDiagonalization
 
 
-from cppdlr.pycppdlr import build_dlr_rf
-from cppdlr.pycppdlr import ImTimeOps
+from cppdlr import build_dlr_rf
+from cppdlr import ImTimeOps
 
 from triqs_soehyb.impurity import Fastdiagram
 

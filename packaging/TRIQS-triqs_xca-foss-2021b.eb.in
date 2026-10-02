@@ -47,7 +47,7 @@ sanity_check_paths = {
              'lib/python%(pyshortver)s/site-packages/cppdlr'],
 }
 
-sanity_check_commands = ["python -c 'import triqs_xca, triqs_soehyb, cppdlr.pycppdlr'"]
+sanity_check_commands = ["python -c 'import triqs_xca, triqs_soehyb, cppdlr'"]
 
 modextrapaths = {
     'CPLUS_INCLUDE_PATH': 'include',

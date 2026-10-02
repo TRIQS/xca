@@ -40,8 +40,8 @@ from triqs.operators import c, c_dag
 
 from pyed.OperatorUtils import operator_single_particle_transform
 
-from cppdlr.pycppdlr import build_dlr_rf
-from cppdlr.pycppdlr import ImTimeOps
+from cppdlr import build_dlr_rf
+from cppdlr import ImTimeOps
 from triqs_soehyb.impurity import Fastdiagram
 from triqs_soehyb.solver import Solver
 

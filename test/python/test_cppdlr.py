@@ -25,7 +25,7 @@
 import numpy as np
 
 
-import cppdlr.pycppdlr as d
+import cppdlr as d
 
 
 def kernel(tau, omega):
@@ -53,7 +53,7 @@ def free_greens_function_tau(H_aa, beta, tau_l):
     return g_laa
     
 
-def test_pycppdlr(verbose=True):
+def test_cppdlr(verbose=True):
 
     if verbose: print(dir(d))
 
@@ -143,4 +143,4 @@ def test_pycppdlr(verbose=True):
 
 if __name__ == "__main__":
 
-    test_pycppdlr(verbose=False)
+    test_cppdlr(verbose=False)
