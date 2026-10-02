@@ -274,8 +274,8 @@ namespace triqs_xca::atom_diag {
       nda::matrix<dcomplex> H_block_diag = nda::zeros<dcomplex>(energies.size(), energies.size());
       for (int i = 0; i < energies.size(); ++i) { H_block_diag(i, i) = energies[i] + ad.get_gs_energy(); }
 
-      // Transform to Fock basis: H_block = U @ H_block_diag @ U^T
-      nda::matrix<dcomplex> H_block = U * H_block_diag * nda::transpose(U);
+      // Transform to Fock basis: H_block = U @ H_block_diag @ U^dagger
+      nda::matrix<dcomplex> H_block = U * H_block_diag * nda::conj(nda::transpose(U));
 
       // Get Fock states for this subspace
       auto fock_states = ad.get_fock_states(sidx);

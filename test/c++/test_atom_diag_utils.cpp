@@ -367,3 +367,68 @@ TEST(AtomDiagUtils, operators) {
   check_sym_set_bars(Fq.F_dag_bars, exp_F_dag_bars, p);
   check_sym_set_bars(Fq.F_bars_refl, exp_F_bars_refl, p);
 }
+
+/**
+ * @brief The full Hamiltonian and its blocks for a model whose diagonalizing unitaries are complex
+ *
+ * @details Three sites with complex hoppings around a closed loop, so that no gauge makes the eigenvectors of the one- and two-particle
+ * sectors real. The expected matrix is assembled from the Fock-space operator matrices, H = sum_ij h_ij c^dag_i c_j + U n_0 n_1. The
+ * transformation of the diagonal energies back to the Fock basis must use the adjoint U^dagger, not the transpose U^T.
+ */
+TEST(AtomDiagUtils, complex_unitary_hamiltonian) {
+  using dc = std::complex<double>;
+
+  int norb = 3;
+  double U = 0.7;
+
+  nda::matrix<dc> h = {{0.10, dc(0.0, 0.30), dc(0.15, 0.0)}, {dc(0.0, -0.30), -0.20, dc(0.20, -0.10)}, {dc(0.15, 0.0), dc(0.20, 0.10), 0.35}};
+
+  triqs::operators::many_body_operator_complex H;
+  triqs::atom_diag::fundamental_operator_set fop_set;
+  for (int i = 0; i < norb; ++i) { fop_set.insert("up", i); }
+  for (int i = 0; i < norb; ++i) {
+    for (int j = 0; j < norb; ++j) { H += h(i, j) * c_dag("up", i) * c("up", j); }
+  }
+  H += U * n("up", 0) * n("up", 1);
+
+  triqs::atom_diag::atom_diag<true> ad(H, fop_set);
+
+  // The unitaries are complex, otherwise this test cannot tell U^T from U^dagger
+  double max_imag_U = 0.0;
+  for (int s = 0; s < ad.n_subspaces(); ++s) {
+    auto Us = ad.get_unitary_matrix(s);
+    for (int i = 0; i < Us.extent(0); ++i) {
+      for (int j = 0; j < Us.extent(1); ++j) { max_imag_U = std::max(max_imag_U, std::abs(Us(i, j).imag())); }
+    }
+  }
+  ASSERT_GT(max_imag_U, 1e-3);
+
+  // Expected Hamiltonian from the operator matrices
+  auto N = ad.get_full_hilbert_space_dim();
+  std::vector<nda::matrix<dcomplex>> c_mats, cdag_mats;
+  for (int i = 0; i < norb; ++i) {
+    c_mats.push_back(get_full_operator_matrix(ad, i, false));
+    cdag_mats.push_back(get_full_operator_matrix(ad, i, true));
+  }
+  nda::matrix<dcomplex> H_expected = nda::zeros<dcomplex>(N, N);
+  for (int i = 0; i < norb; ++i) {
+    for (int j = 0; j < norb; ++j) { H_expected += h(i, j) * nda::matrix<dcomplex>(cdag_mats[i] * c_mats[j]); }
+  }
+  H_expected += U * nda::matrix<dcomplex>(cdag_mats[0] * c_mats[0] * cdag_mats[1] * c_mats[1]);
+
+  auto H_mat = get_full_h_atomic(ad);
+  EXPECT_LE(nda::max_element(nda::abs(H_mat - nda::dagger(H_mat))), 1e-13) << "the full Hamiltonian must be hermitian";
+  EXPECT_LE(nda::max_element(nda::abs(H_mat - H_expected)), 1e-13);
+
+  // The same Hamiltonian block by block
+  auto [H_blocks, H_block_inds] = get_hamiltonian_blocks(ad);
+  ASSERT_EQ(H_blocks.size(), ad.n_subspaces());
+  for (int s = 0; s < ad.n_subspaces(); ++s) {
+    auto fock_states = ad.get_fock_states(s);
+    for (int i = 0; i < fock_states.size(); ++i) {
+      for (int j = 0; j < fock_states.size(); ++j) {
+        EXPECT_LE(std::abs(H_blocks[s](i, j) - H_expected(fock_states[i], fock_states[j])), 1e-13) << "block " << s << ", entry (" << i << "," << j << ")";
+      }
+    }
+  }
+}
