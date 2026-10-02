@@ -18,7 +18,6 @@ set(all_tests
   unitary_invariance_bs
   triqs_soehyb/h5_io
   h5_io_bs
-  both_solvers/dense
   dynint
   dynint_spin_flip
   dynint_transverse
@@ -27,11 +26,11 @@ set(all_tests
   triqs_soehyb/one_spinful_fermion
   triqs_soehyb/analytic_diagrams
   block_sparse_copy
-  both_solvers/block_sparse_api
-  both_solvers/block_sparse_api_one_fermion
-  both_solvers/block_sparse_api_two_fermions
-  both_solvers/block_sparse_self_cons
-  both_solvers/block_sparse_bethe
+  block_sparse_api
+  block_sparse_api_one_fermion
+  block_sparse_api_two_fermions
+  block_sparse_bethe_self_cons
+  dense_manual_NCA_OCA
   block_sparse_normalization
   block_sparse_spgf_ordering
   bug_bs_one_fermion
