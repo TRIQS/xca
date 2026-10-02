@@ -3,6 +3,7 @@
 #include <c2py/c2py.hpp>
 
 #include <triqs/atom_diag.hpp>
+#include <triqs/operators.hpp>
 
 #include "triqs_xca/dense/diagram_evaluator.hpp"
 

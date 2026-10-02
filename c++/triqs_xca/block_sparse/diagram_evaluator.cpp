@@ -5,10 +5,10 @@
 
 #include <itertools/itertools.hpp>
 
-#include "triqs_xca/atom_diag_utils.hpp"
+#include "triqs_xca/block_sparse/atom_diag_utils.hpp"
 
 #include "triqs_xca/block_sparse/diagram_evaluator.hpp"
-#include "triqs_xca/dynint.hpp"
+#include "triqs_xca/block_sparse/dynint.hpp"
 
 #include "triqs_xca/hyb.hpp"
 #include "triqs_xca/operator_statistics.hpp"
@@ -158,7 +158,7 @@ DiagramEvaluator::DiagramEvaluator(
      q(nda::max_element(Fq.sym_set_labels) + 1),
      Nmax(max_subspace_dim(ad)),
      // no refl_sign argument: block-sparse keeps +1.0 and applies the backward-line sign explicitly
-     hyb(tau_mesh, hyb_poles, dynint::get_extended_coefficients(hyb_coeffs, dynint_coeffs)),
+     hyb(tau_mesh, hyb_poles, hyb::get_extended_coefficients(hyb_coeffs, dynint_coeffs)),
      // allocate arrays
      T(nda::zeros<dcomplex>(r, Nmax, Nmax)),
      U(nda::zeros<dcomplex>(r, Nmax, Nmax)),

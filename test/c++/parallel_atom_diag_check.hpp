@@ -7,6 +7,7 @@
 #include <triqs/atom_diag/atom_diag.hpp>
 
 #include <triqs_xca/atom_diag_utils.hpp>
+#include <triqs_xca/dense/atom_diag_utils.hpp>
 
 /**
  * @file parallel_atom_diag_check.hpp

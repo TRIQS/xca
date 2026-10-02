@@ -1,0 +1,337 @@
+#include <optional>
+#include <stdexcept>
+
+#include "triqs_xca/block_sparse/atom_diag_utils.hpp"
+
+namespace triqs_xca::atom_diag {
+
+  namespace {
+
+    template <bool IsComplex> BlockOpSymSets get_operator_sym_sets_impl(const triqs_atom_diag_t<IsComplex> &ad, int n) {
+
+      // Find like rows of c_connection (resp. cdag_connection), which correspond with annihilation (resp. creation) operators that have the same
+      // sparsity pattern
+      nda::vector<long> sym_set_labels(n);
+      sym_set_labels = 0;
+      int counter    = 0;
+      for (int oidx = 0; oidx < n; ++oidx) { // fill each entry of sym_set_labels
+        bool found_match = false;
+        for (int oidx2 = 0; oidx2 < oidx; ++oidx2) { // compare full c_connection row against all previous operators
+          bool same = true;
+          for (int s = 0; s < ad.n_subspaces(); ++s) {
+            if (ad.c_connection(oidx, s) != ad.c_connection(oidx2, s)) {
+              same = false;
+              break;
+            }
+          }
+          if (same) {
+            sym_set_labels(oidx) = sym_set_labels(oidx2);
+            found_match          = true;
+            break;
+          }
+        }
+        if (not found_match) { // no matching operator found, so create new group
+          sym_set_labels(oidx) = counter;
+          counter              = counter + 1;
+        }
+      }
+      std::set<int> unique_groups(sym_set_labels.begin(), sym_set_labels.end());
+      std::size_t num_sym_sets = unique_groups.size();
+
+      // First pass: count how many operators belong to each symmetry group
+      std::vector<int> ops_per_group(num_sym_sets, 0);
+      for (int oidx = 0; oidx < n; ++oidx) { ops_per_group[sym_set_labels[oidx]]++; }
+
+      // Initialize operator blocks grouped by symmetry with proper dimensions
+      std::vector<std::vector<nda::array<dcomplex, 3>>> c_blocks(num_sym_sets);
+      std::vector<std::vector<nda::array<dcomplex, 3>>> cdag_blocks(num_sym_sets);
+
+      // Initialize arrays for each symmetry group and subspace
+      for (int gidx = 0; gidx < num_sym_sets; ++gidx) {
+        c_blocks[gidx].resize(ad.n_subspaces());
+        cdag_blocks[gidx].resize(ad.n_subspaces());
+
+        for (int sidx = 0; sidx < ad.n_subspaces(); ++sidx) {
+          // Determine dimensions for this subspace
+          long cidx = -1, didx = -1;
+          int dim_c_final = 0, dim_c_initial = 0;
+          int dim_cdag_final = 0, dim_cdag_initial = 0;
+
+          // Find a representative operator from this symmetry group to get dimensions
+          for (int oidx = 0; oidx < n; ++oidx) {
+            if (sym_set_labels[oidx] == gidx) {
+              if (cidx == -1) {
+                cidx = ad.c_connection(oidx, sidx);
+                if (cidx >= 0) {
+                  dim_c_final   = ad.get_fock_states(cidx).size();
+                  dim_c_initial = ad.get_fock_states(sidx).size();
+                }
+              }
+              if (didx == -1) {
+                didx = ad.cdag_connection(oidx, sidx);
+                if (didx >= 0) {
+                  dim_cdag_final   = ad.get_fock_states(didx).size();
+                  dim_cdag_initial = ad.get_fock_states(sidx).size();
+                }
+              }
+              if (cidx >= 0 && didx >= 0) break;
+            }
+          }
+
+          // Initialize arrays with proper dimensions
+          if (cidx >= 0) { c_blocks[gidx][sidx] = nda::zeros<dcomplex>(ops_per_group[gidx], dim_c_final, dim_c_initial); }
+          if (didx >= 0) { cdag_blocks[gidx][sidx] = nda::zeros<dcomplex>(ops_per_group[gidx], dim_cdag_final, dim_cdag_initial); }
+        }
+      }
+
+      // Second pass: fill the arrays
+      std::vector<int> op_count_per_group(num_sym_sets, 0);
+
+      for (int oidx = 0; oidx < n; ++oidx) {
+        int gidx            = sym_set_labels[oidx];
+        int op_idx_in_group = op_count_per_group[gidx];
+
+        for (int sidx = 0; sidx < ad.n_subspaces(); ++sidx) {
+          // Handle annihilation operator
+          long cidx = ad.c_connection(oidx, sidx);
+          if (cidx >= 0) {
+            auto fock_final   = ad.get_fock_states(cidx);
+            auto fock_initial = ad.get_fock_states(sidx);
+
+            // Get full operator matrix and extract block
+            auto c_full = get_full_operator_matrix(ad, oidx, false);
+            for (int i = 0; i < fock_final.size(); ++i) {
+              for (int j = 0; j < fock_initial.size(); ++j) { c_blocks[gidx][sidx](op_idx_in_group, i, j) = c_full(fock_final[i], fock_initial[j]); }
+            }
+          }
+
+          // Handle creation operator
+          long didx = ad.cdag_connection(oidx, sidx);
+          if (didx >= 0) {
+            auto fock_final   = ad.get_fock_states(didx);
+            auto fock_initial = ad.get_fock_states(sidx);
+
+            // Get full operator matrix and extract block
+            auto cdag_full = get_full_operator_matrix(ad, oidx, true);
+            for (int i = 0; i < fock_final.size(); ++i) {
+              for (int j = 0; j < fock_initial.size(); ++j) {
+                cdag_blocks[gidx][sidx](op_idx_in_group, i, j) = cdag_full(fock_final[i], fock_initial[j]);
+              }
+            }
+          }
+        }
+
+        op_count_per_group[gidx]++;
+      }
+
+      // Fill in BlockOpSymSet objects
+      nda::array<int, 2> F_block_inds     = nda::zeros<int>(num_sym_sets, ad.n_subspaces()),
+                         F_dag_block_inds = nda::zeros<int>(num_sym_sets, ad.n_subspaces());
+      auto filled_F_block_inds            = nda::zeros<int>(n);
+      for (int i = 0; i < n; i++) {
+        long label = sym_set_labels(i);
+        if (filled_F_block_inds(label) == 0) {
+          for (int j = 0; j < ad.n_subspaces(); ++j) { F_block_inds(label, j) = ad.c_connection(i, j); }
+          filled_F_block_inds(label) = 1;
+        }
+      }
+      auto filled_F_dag_block_inds = nda::zeros<int>(n);
+      for (int i = 0; i < n; i++) {
+        long label = sym_set_labels(i);
+        if (filled_F_dag_block_inds(label) == 0) {
+          for (int j = 0; j < ad.n_subspaces(); ++j) { F_dag_block_inds(label, j) = ad.cdag_connection(i, j); }
+          filled_F_dag_block_inds(label) = 1;
+        }
+      }
+
+      std::vector<BlockOpSymSet> F_sym_vec, F_dag_sym_vec;
+      for (int i = 0; i < num_sym_sets; i++) {
+        F_sym_vec.emplace_back(F_block_inds(i, cppdlr::_), c_blocks[i]);
+        F_dag_sym_vec.emplace_back(F_dag_block_inds(i, cppdlr::_), cdag_blocks[i]);
+      }
+      return BlockOpSymSets{std::move(F_sym_vec), std::move(F_dag_sym_vec), std::move(sym_set_labels)};
+    }
+
+    template <bool IsComplex>
+    std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators_impl(const triqs_atom_diag_t<IsComplex> &ad,
+                                                                       nda::array_const_view<dcomplex, 3> hyb_coeffs) {
+      // the orbital count is taken from the coefficients, which may cover only the first n fundamental operators
+      auto sets = get_operator_sym_sets_impl(ad, static_cast<int>(hyb_coeffs.extent(1)));
+      BlockOpSymQuartet Fq(sets.Fs, sets.F_dags, hyb_coeffs, sets.sym_set_labels);
+      return std::make_tuple(Fq, sets.sym_set_labels);
+    }
+
+    /**
+     * @brief Shared scatter behind both get_tensor_in_full_hilbert_space overloads
+     *
+     * @param[in] n_block_cols Number of blocks, which must agree with ad.n_subspaces()
+     * @param[in] r Number of imaginary time nodes
+     * @param[in] ad AtomDiag object supplying the block dimensions and their positions
+     * @param[in] block_of Returns the data of block b, or nullopt if that block is zero
+     */
+    template <typename BlockFn>
+    nda::array<dcomplex, 3> get_tensor_in_full_hilbert_space_impl(int n_block_cols, int r, triqs_atom_diag const &ad, BlockFn block_of) {
+      if (n_block_cols != ad.n_subspaces()) {
+        throw std::invalid_argument("get_tensor_in_full_hilbert_space: got " + std::to_string(n_block_cols) + " blocks, but ad has "
+                                    + std::to_string(ad.n_subspaces()) + " subspaces");
+      }
+
+      int dim                             = ad.get_full_hilbert_space_dim();
+      nda::array<dcomplex, 3> tensor_full = nda::zeros<dcomplex>(r, dim, dim);
+
+      for (int b = 0; b < n_block_cols; ++b) {
+        auto block = block_of(b);
+        // A zero block leaves its rows and columns at zero. Its position is known from ad, so nothing
+        // is read from the block-sparse object, whose storage for a zero block may be empty.
+        if (!block.has_value()) continue;
+
+        auto fock_states = ad.get_fock_states(b);
+        int N_sub        = fock_states.size();
+
+        if (block->extent(1) != N_sub || block->extent(2) != N_sub) {
+          throw std::invalid_argument("get_tensor_in_full_hilbert_space: block " + std::to_string(b) + " is " + std::to_string(block->extent(1)) + "x"
+                                      + std::to_string(block->extent(2)) + ", but subspace " + std::to_string(b) + " of ad has dimension "
+                                      + std::to_string(N_sub));
+        }
+        if (block->extent(0) != r) {
+          throw std::invalid_argument("get_tensor_in_full_hilbert_space: block " + std::to_string(b) + " has " + std::to_string(block->extent(0))
+                                      + " time nodes, expected " + std::to_string(r));
+        }
+
+        for (int t = 0; t < r; ++t) {
+          for (int i = 0; i < N_sub; ++i) {
+            for (int j = 0; j < N_sub; ++j) { tensor_full(t, fock_states[i], fock_states[j]) = (*block)(t, i, j); }
+          }
+        }
+      }
+
+      return tensor_full;
+    }
+
+  } // namespace
+
+  using nda::linalg::matmul;
+
+  using cppdlr::_;
+
+  std::tuple<std::vector<nda::array<dcomplex, 2>>, nda::vector<long>> get_hamiltonian_blocks(const triqs_atom_diag &ad) {
+    // Get full Hamiltonian matrix
+    auto H_mat = get_full_h_atomic(ad);
+
+    // Create permutation based on Fock state ordering
+    std::vector<unsigned long> H_perm;
+    std::vector<nda::array<dcomplex, 2>> H_blocks;
+    nda::vector<long> H_block_inds(ad.n_subspaces());
+
+    for (int s = 0; s < ad.n_subspaces(); ++s) {
+      auto fock_states = ad.get_fock_states(s);
+      for (auto state : fock_states) { H_perm.push_back(state); }
+
+      // Extract block from full matrix
+      nda::array<dcomplex, 2> H_block = nda::zeros<dcomplex>(fock_states.size(), fock_states.size());
+      for (int i = 0; i < fock_states.size(); ++i) {
+        for (int j = 0; j < fock_states.size(); ++j) { H_block(i, j) = H_mat(fock_states[i], fock_states[j]); }
+      }
+      H_blocks.push_back(H_block);
+
+      // Check if block is zero
+      double max_elem = 0.0;
+      for (int i = 0; i < H_block.extent(0); ++i) {
+        for (int j = 0; j < H_block.extent(1); ++j) { max_elem = std::max(max_elem, std::abs(H_block(i, j))); }
+      }
+      H_block_inds(s) = (max_elem < 1e-16) ? -1 : 0;
+    }
+    return std::make_tuple(H_blocks, H_block_inds);
+  }
+
+  BlockDiagOpFun ad_to_atom_prop(const triqs_atom_diag &ad, double beta, imtime_ops &itops) {
+    // atom_diag has already diagonalized every invariant subspace, with the ground state energy
+    // subtracted from the eigenvalues; partition_function sums the matching Boltzmann weights
+    int n_sub                = ad.n_subspaces();
+    auto const &eigensystems = ad.get_eigensystems();
+
+    std::vector<nda::array<double, 1>> evals(n_sub);
+    std::vector<nda::array<dcomplex, 2>> evecs(n_sub);
+    for (int s = 0; s < n_sub; ++s) {
+      evals[s] = eigensystems[s].eigenvalues;
+      evecs[s] = eigensystems[s].unitary_matrix;
+    }
+
+    double Z        = triqs::atom_diag::partition_function(ad, beta);
+    auto dlr_it_abs = cppdlr::rel2abs(itops.get_itnodes());
+
+    return block_sparse::atom_prop_from_eigensystem(evals, evecs, Z, beta, dlr_it_abs);
+  }
+
+  triqs::gfs::block_gf<triqs::mesh::dlr_imtime> ad_to_atom_prop(const triqs_atom_diag &ad, double beta, double Lambda, double eps) {
+    auto dlr_rf = cppdlr::build_dlr_rf(Lambda, eps);
+    auto itops  = imtime_ops(Lambda, dlr_rf);
+    auto ap     = ad_to_atom_prop(ad, beta, itops);
+
+    // Create vector of gf<dlr_imtime>
+    std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> gf_blocks(ap.get_num_block_cols());
+    triqs::mesh::dlr_imtime tau_mesh(beta, triqs::mesh::Fermion, Lambda / beta, eps, false);
+    for (int i = 0; i < ap.get_num_block_cols(); ++i) { gf_blocks[i] = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, ap.get_block(i)); }
+    return {gf_blocks};
+  }
+
+  namespace {
+    // n indexes ad.c_connection, so an out-of-range value has to be caught here
+    void check_sym_set_orbital_count(int n, long n_fops) {
+      if (n < 0 || n > n_fops)
+        throw std::invalid_argument("get_operator_sym_sets: asked for " + std::to_string(n) + " orbitals, but the atom_diag has "
+                                    + std::to_string(n_fops) + " fundamental operators");
+    }
+  } // namespace
+
+  BlockOpSymSets get_operator_sym_sets(const triqs_atom_diag_t<true> &ad, int n) {
+    check_sym_set_orbital_count(n, ad.get_fops().size());
+    return get_operator_sym_sets_impl(ad, n);
+  }
+
+  BlockOpSymSets get_operator_sym_sets(const triqs_atom_diag_t<false> &ad, int n) {
+    check_sym_set_orbital_count(n, ad.get_fops().size());
+    return get_operator_sym_sets_impl(ad, n);
+  }
+
+  std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const triqs_atom_diag_t<true> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
+    return get_operators_impl(ad, hyb_coeffs);
+  }
+
+  std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const triqs_atom_diag_t<false> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
+    return get_operators_impl(ad, hyb_coeffs);
+  }
+
+  nda::array<dcomplex, 3> get_tensor_in_full_hilbert_space(BlockDiagOpFun const &G, triqs_atom_diag const &ad, int r) {
+    if (r < 0) {
+      r = G.get_num_time_nodes();
+      if (r == 0) {
+        throw std::invalid_argument(
+           "get_tensor_in_full_hilbert_space: every block of G is zero, so the number of time nodes cannot be inferred; "
+           "pass it as the r argument");
+      }
+    }
+
+    return get_tensor_in_full_hilbert_space_impl(G.get_num_block_cols(), r, ad, [&G](int b) -> std::optional<nda::array_const_view<dcomplex, 3>> {
+      if (G.get_zero_block_index(b) == -1) return std::nullopt;
+      return G.get_block(b);
+    });
+  }
+
+  nda::array<dcomplex, 3> get_tensor_in_full_hilbert_space(triqs::gfs::block_gf_const_view<triqs::mesh::dlr_imtime> G, triqs_atom_diag const &ad) {
+    if (G.size() == 0) throw std::invalid_argument("get_tensor_in_full_hilbert_space: G has no blocks");
+
+    int r = G[0].data().extent(0);
+    return get_tensor_in_full_hilbert_space_impl(G.size(), r, ad,
+                                                 [&G](int b) -> std::optional<nda::array_const_view<dcomplex, 3>> { return G[b].data(); });
+  }
+
+  nda::array<dcomplex, 3> get_tensor_in_full_hilbert_space(triqs::gfs::block_gf<triqs::mesh::dlr_imtime> const &G, triqs_atom_diag const &ad) {
+    return get_tensor_in_full_hilbert_space(triqs::gfs::block_gf_const_view<triqs::mesh::dlr_imtime>{G}, ad);
+  }
+
+  nda::array<dcomplex, 3> get_tensor_in_full_hilbert_space(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G, triqs_atom_diag const &ad) {
+    return get_tensor_in_full_hilbert_space(triqs::gfs::block_gf_const_view<triqs::mesh::dlr_imtime>{G}, ad);
+  }
+
+} // namespace triqs_xca::atom_diag

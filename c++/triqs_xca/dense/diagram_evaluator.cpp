@@ -7,8 +7,9 @@
 #include <cppdlr/dlr_kernels.hpp>
 
 #include "triqs_xca/hyb.hpp"
-#include "triqs_xca/dynint.hpp"
+#include "triqs_xca/dense/dynint.hpp"
 #include "triqs_xca/dense/diagram_evaluator.hpp"
+#include "triqs_xca/dense/atom_diag_utils.hpp"
 #include "triqs_xca/operator_statistics.hpp"
 
 namespace triqs_xca::dense {
@@ -79,7 +80,7 @@ namespace triqs_xca::dense {
        beta(tau_mesh.beta()),
        itops(tau_mesh.dlr_it()),
        dlr_it(itops.get_itnodes()),
-       hyb(tau_mesh, hyb_poles, dynint::get_extended_coefficients(hyb_coeffs, dynint_coeffs), -1.0),
+       hyb(tau_mesh, hyb_poles, hyb::get_extended_coefficients(hyb_coeffs, dynint_coeffs), -1.0),
        Fset(dynint::get_operators_and_interactions_dense(ad, hyb_coeffs, dynint_coeffs, dynint_ops)),
        r(itops.rank()),
        n(ad.get_fops().size() + dynint_ops.size()), // number of fermion flavours (spin-orbitals)

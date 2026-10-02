@@ -7,7 +7,7 @@
 
 #include <triqs/atom_diag/atom_diag.hpp>
 
-#include <triqs_xca/atom_diag_utils.hpp>
+#include <triqs_xca/block_sparse/atom_diag_utils.hpp>
 #include <triqs_xca/block_sparse/block_op.hpp>
 #include <triqs_xca/block_sparse/diagram_evaluator.hpp>
 #include <triqs_xca/topology.hpp>

@@ -6,10 +6,12 @@
 #include <triqs/operators/many_body_operator.hpp>
 
 #include <triqs_xca/atom_diag_utils.hpp>
+#include <triqs_xca/block_sparse/atom_diag_utils.hpp>
 #include <triqs_xca/block_sparse/block_op.hpp>
 #include <triqs_xca/block_sparse/diagram_evaluator.hpp>
 #include <triqs_xca/dense/diagram_evaluator.hpp>
-#include <triqs_xca/dynint.hpp>
+#include <triqs_xca/hyb.hpp>
+#include <triqs_xca/block_sparse/dynint.hpp>
 #include <triqs_xca/topology.hpp>
 
 #include "block_sparse_utils.hpp"
@@ -31,7 +33,7 @@ using triqs_xca::block_sparse::BlockDiagOpFun;
 using triqs_xca::block_sparse::BlockOpSymQuartet;
 using triqs_xca::block_sparse::DiagramEvaluator;
 namespace dense = triqs_xca::dense;
-using triqs_xca::dynint::get_extended_coefficients;
+using triqs_xca::hyb::get_extended_coefficients;
 using triqs_xca::dynint::get_operators_and_interactions;
 
 /**
