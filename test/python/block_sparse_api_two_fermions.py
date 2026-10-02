@@ -53,8 +53,8 @@ from triqs.gfs import Gf, MeshDLRImFreq, inverse, iOmega_n, make_gf_dlr_imtime
 from triqs.operators import n
 
 from triqs_xca.diag import all_connected_pairings
-from triqs_xca.block_sparse_solver import BlockSparseSolver
-from triqs_xca.block_sparse_solver import hamiltonian_matrix, pseudo_particle_block_gf_to_dense
+from triqs_xca import Solver
+from triqs_xca.solver import hamiltonian_matrix, pseudo_particle_block_gf_to_dense
 
 
 # -- Analytic reference
@@ -313,7 +313,7 @@ def test_diagrams_block_sparse_vs_analytic(e1=(+1.5, -0.7), beta=2.0, conserved_
 
     # -- Block sparse solver
 
-    BSS = BlockSparseSolver(
+    BSS = Solver(
         H, beta, w_max, eps, gf_struct=gf_struct,
         conserved_operators=conserved_operators,
         )

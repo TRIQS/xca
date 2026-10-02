@@ -10,7 +10,7 @@ from triqs.operators.util.U_matrix import U_matrix_kanamori
 from triqs.operators.util.hamiltonians import h_int_kanamori
 
 
-from triqs_xca.block_sparse_solver import is_root
+from triqs_xca.solver import is_root
 
 
 def solve_slater_condon_bethe_half_filling(
@@ -64,9 +64,9 @@ def solve_slater_condon_bethe_half_filling(
     Delta_w << SemiCircular(half_bandwidth=1.0)
     Delta_tau = make_gf_dlr_imtime(Delta_w)
 
-    from triqs_xca.block_sparse_solver import BlockSparseSolver
+    from triqs_xca import Solver
 
-    S = BlockSparseSolver(
+    S = Solver(
         H, beta, w_max, eps, gf_struct, 
         #conserved_operators=[N_tot],
         )

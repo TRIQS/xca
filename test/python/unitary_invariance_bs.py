@@ -19,7 +19,7 @@ from triqs.operators import c, c_dag
 
 from pyed.OperatorUtils import operator_single_particle_transform
 
-from triqs_xca.block_sparse_solver import BlockSparseSolver
+from triqs_xca import Solver
 
 
 beta, w_max, eps = 10.0, 10.0, 1e-12
@@ -38,7 +38,7 @@ def hamiltonian(eps1=-0.1, t=0.5 + 0.5j, U=1.0):
 
 def greens_function(H, delta_tau_data, conserved_operators, order):
     """ G_tau of one basis, at fixed order, with the hybridization given directly. """
-    S = BlockSparseSolver(H_loc=H, beta=beta, w_max=w_max, eps=eps,
+    S = Solver(H_loc=H, beta=beta, w_max=w_max, eps=eps,
                           gf_struct=[['0', 2]], conserved_operators=conserved_operators,
                           verbose=False)
     S.Delta_tau['0'].data[:] = delta_tau_data
@@ -60,7 +60,7 @@ def free_hybridization(S_like_mesh, h, V=0.2):
 
 
 def _mesh():
-    S = BlockSparseSolver(H_loc=hamiltonian(), beta=beta, w_max=w_max, eps=eps,
+    S = Solver(H_loc=hamiltonian(), beta=beta, w_max=w_max, eps=eps,
                           gf_struct=[['0', 2]], conserved_operators=[], verbose=False)
     return S.Delta_tau['0'].mesh
 

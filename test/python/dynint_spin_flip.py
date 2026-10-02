@@ -8,7 +8,7 @@ import numpy as np
 
 from triqs.operators import n, c, c_dag
 
-from triqs_xca.block_sparse_solver import BlockSparseSolver
+from triqs_xca import Solver
 from triqs_xca.diag import all_connected_pairings
 
 beta, w_max, eps = 2.0, 5.0, 1e-10
@@ -29,7 +29,7 @@ def make_evaluator(dynint_ops, dynint_coeffs, poles, hyb_coeffs=None, e_up=-0.3,
     """ Single spinful level on the dense path, with the pole set and the interaction coefficients given
     directly rather than fitted, so that a +-symmetric pole pair can be used. e_up != e_do makes the four
     Fock states non-degenerate. """
-    S = BlockSparseSolver(H_loc=e_up * n('up', 0) + e_do * n('do', 0),
+    S = Solver(H_loc=e_up * n('up', 0) + e_do * n('do', 0),
                           beta=beta, w_max=w_max, eps=eps,
                           gf_struct=[['up', 1], ['do', 1]],
                           conserved_operators=[], verbose=False)

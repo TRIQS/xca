@@ -12,7 +12,7 @@ from triqs.operators import n, c, c_dag
 from triqs.gfs import make_gf_dlr_imfreq, make_gf_dlr_imtime, SemiCircular, make_gf_imtime
 
 
-from triqs_xca.block_sparse_solver import BlockSparseSolver
+from triqs_xca import Solver
 
 
 def test_one_time_correlator(verbose, conserved_operators):
@@ -37,7 +37,7 @@ def test_one_time_correlator(verbose, conserved_operators):
     H_loc = -mu * N_tot + U * n('0', 0) * n('0', 1) + B * (n('0', 0) - n('0', 1)) \
         + soc * c_dag('0', 0) * c('0', 1) + np.conj(soc) *c_dag('0', 1) * c('0', 0)
 
-    S = BlockSparseSolver(H_loc, beta, w_max, eps, gf_struct=gf_struct,
+    S = Solver(H_loc, beta, w_max, eps, gf_struct=gf_struct,
         conserved_operators=conserved_operators, # Triggers no symmetries using DenseDiagramEvaluator
         )
 

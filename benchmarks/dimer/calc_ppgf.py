@@ -7,7 +7,7 @@ from triqs.operators import c, c_dag, Operator
 
 from triqs.utility import mpi
 
-from triqs_xca.block_sparse_solver import BlockSparseSolver
+from triqs_xca import Solver
 from triqs_xca import convolve_ppsc as conv
 
 
@@ -75,7 +75,7 @@ class DimerED:
         
         H = V * ( c_dag('0', 0) * c('0', 1) + c_dag('0', 1) * c('0', 0) )
 
-        Sd = BlockSparseSolver(
+        Sd = Solver(
             H_loc=H, beta=m.beta, w_max=m.w_max, eps=m.eps, 
             gf_struct=[['0', 2]], conserved_operators=[])
 
@@ -108,7 +108,7 @@ class DimerXCA:
 
         m = tau_mesh
         
-        S = BlockSparseSolver(
+        S = Solver(
             H_loc=0.*c_dag('0', 0)*c('0', 0),
             beta=m.beta, w_max=m.w_max, eps=m.eps, 
             gf_struct=[['0', 1]],
@@ -184,7 +184,7 @@ H = t * ( c_dag('0', 0) * c('0', 1) + c_dag('0', 1) * c('0', 0) )
 
 fundamental_operators = [c('0', 0), c('0', 1)]
 
-Sd = BlockSparseSolver(
+Sd = Solver(
     H_loc=H, beta=beta, w_max=w_max, eps=eps, 
     gf_struct=[['0', 2]], conserved_operators=[])
 
@@ -331,7 +331,7 @@ def eval_pseudo_particle_self_energy_order(S, G, order, connected=True):
         topology_int32 = np.array(topology, dtype=np.int32)
         t1 = time.time()
         Sigma_diag = pow(-1, order) * sign * \
-            S._BlockSparseSolver__eval_pseudo_particle_self_energy_topology_loop(G, topology_int32, verbose=True)
+            S._Solver__eval_pseudo_particle_self_energy_topology_loop(G, topology_int32, verbose=True)
         abs_max = np.max(np.abs(Sigma_diag['0'].data))
         print(f'SIGMA: O{order} topo {topology} sign {sign:+d} absmax {abs_max:2.2E} time {time.time() - t1} s')
 
@@ -356,7 +356,7 @@ Ss = []
 
 for order in orders:
     H0 = 0. * c_dag('0', 0) * c('0', 0)
-    S = BlockSparseSolver(
+    S = Solver(
         H_loc=H0, beta=beta, w_max=w_max, eps=eps, 
         gf_struct=[['0', 1]],
         conserved_operators=[],
@@ -375,7 +375,7 @@ Ss_sigma = []
     
 for order in orders_sigma:
     H0 = 0. * c_dag('0', 0) * c('0', 0)
-    S = BlockSparseSolver(
+    S = Solver(
         H_loc=H0, beta=beta, w_max=w_max, eps=eps, 
         gf_struct=[['0', 1]],
         conserved_operators=[],
@@ -469,7 +469,7 @@ Ss = []
 
 orders = [1]
 for order in orders:
-    S = BlockSparseSolver(H_loc=H0, beta=beta, w_max=4.0, eps=1e-10, gf_struct=[['0', 1]])
+    S = Solver(H_loc=H0, beta=beta, w_max=4.0, eps=1e-10, gf_struct=[['0', 1]])
     S.Delta_tau['0'].data[:] = -0.5 * t**2
     
     S.solve_bare(max_order=order, use_dyson=False, verbose=True)

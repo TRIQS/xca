@@ -9,7 +9,7 @@ from triqs.gfs import MeshDLRImTime
 from pyed.TriqsExactDiagonalization import TriqsExactDiagonalization
 
 from triqs.utility import mpi
-from triqs_xca.block_sparse_solver import BlockSparseSolver
+from triqs_xca import Solver
 
 
 from common import plot_comparison, test_convergence_rate, Dummy
@@ -51,7 +51,7 @@ def xca_two_level_solution(
 
     from triqs.operators import n, c, c_dag
 
-    S = BlockSparseSolver(
+    S = Solver(
         H_loc=e0 * (n('0', 0) + n('0', 1)), 
         gf_struct=[['0', 2]],
         beta=m.beta, w_max=m.w_max, eps=m.eps,

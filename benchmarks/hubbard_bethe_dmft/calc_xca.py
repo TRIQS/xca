@@ -29,8 +29,8 @@ def solve_one_spinful_fermion_block_sparse_solver(
     from triqs.operators import n
     H_loc = U * n('up', 0) * n('do', 0) - (mu + U/2) * (n('up', 0) + n('do', 0))
     
-    from triqs_xca.block_sparse_solver import BlockSparseSolver
-    S = BlockSparseSolver(H_loc, beta, w_max, eps, gf_struct=gf_struct, dlr_symmetrize=dlr_symmetrize)
+    from triqs_xca import Solver
+    S = Solver(H_loc, beta, w_max, eps, gf_struct=gf_struct, dlr_symmetrize=dlr_symmetrize)
 
     S.order = order
     S.H_loc = H_loc

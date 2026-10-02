@@ -51,8 +51,8 @@ def adapol_fit_test(do_xca_calc=True):
         Delta_tau = make_gf_dlr_imtime(Delta_w)
 
         # -- Block sparse solver
-        from triqs_xca.block_sparse_solver import BlockSparseSolver
-        BSS = BlockSparseSolver(H, beta, w_max, eps, gf_struct)
+        from triqs_xca import Solver
+        BSS = Solver(H, beta, w_max, eps, gf_struct)
         BSS.Delta_tau['0'] << Delta_tau
         BSS.solve(max_order=order, tol=ppsc_tol, maxiter=maxiter)
     
@@ -70,7 +70,7 @@ def adapol_fit_test(do_xca_calc=True):
 
         Delta_dlr = make_gf_dlr(BSS.Delta_tau)
 
-        from triqs_xca.block_sparse_solver import pseudo_particle_block_gf_to_dense
+        from triqs_xca.solver import pseudo_particle_block_gf_to_dense
         Delta_dlr_dense = from_blockgf_to_dense(Delta_dlr)
 
         w_dlr = np.array([ float(x) for x in Delta_dlr.mesh ])

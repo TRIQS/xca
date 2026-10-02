@@ -6,7 +6,7 @@ from h5 import HDFArchive
 
 from triqs.plot.mpl_interface import oplot, plt, oplotr, oploti
 
-from triqs_xca.block_sparse_solver import BlockSparseSolver
+from triqs_xca import Solver
 
 
 class ListDummy():

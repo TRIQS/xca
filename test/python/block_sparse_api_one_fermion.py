@@ -27,8 +27,8 @@ from triqs.gfs import make_gf_dlr_imtime
 from triqs.gfs import Gf, MeshDLRImFreq, iOmega_n, inverse
 from triqs.operators import n
 
-from triqs_xca.block_sparse_solver import BlockSparseSolver
-from triqs_xca.block_sparse_solver import hamiltonian_matrix, pseudo_particle_block_gf_to_dense
+from triqs_xca import Solver
+from triqs_xca.solver import hamiltonian_matrix, pseudo_particle_block_gf_to_dense
 from triqs_xca.diag import all_connected_pairings
 
 
@@ -133,7 +133,7 @@ def test_diagrams_vs_analytic_one_fermion(
 
     # -- Block sparse solver
 
-    BSS = BlockSparseSolver(
+    BSS = Solver(
         H, beta, w_max, eps, gf_struct=gf_struct,
         conserved_operators=conserved_operators,
         )

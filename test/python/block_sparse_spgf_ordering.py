@@ -5,7 +5,7 @@ import numpy as np
 
 from triqs.operators import n, c, c_dag
 
-from triqs_xca.block_sparse_solver import BlockSparseSolver
+from triqs_xca import Solver
 
 
 def make_solver(conserved_operators, beta=2.0, norb=2, U=1.0, mu=0.25, V=0.1, hyb=-0.3):
@@ -17,7 +17,7 @@ def make_solver(conserved_operators, beta=2.0, norb=2, U=1.0, mu=0.25, V=0.1, hy
 
     gf_struct = [('up', norb), ('do', norb)]
 
-    S = BlockSparseSolver(H_loc=H, beta=beta, w_max=20.0, eps=1e-8, gf_struct=gf_struct,
+    S = Solver(H_loc=H, beta=beta, w_max=20.0, eps=1e-8, gf_struct=gf_struct,
                           conserved_operators=conserved_operators, verbose=False)
 
     # orbital-diagonal hybridization

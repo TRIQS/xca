@@ -7,8 +7,8 @@ from triqs.operators import c, c_dag
 from cppdlr import ImTimeOps, build_dlr_rf
 
 from triqs_xca import sigma_nca, sigma_oca
-from triqs_xca.block_sparse_solver import BlockSparseSolver
-from triqs_xca.block_sparse_solver import hamiltonian_matrix_block, pseudo_particle_block_gf_to_dense
+from triqs_xca import Solver
+from triqs_xca.solver import hamiltonian_matrix_block, pseudo_particle_block_gf_to_dense
 
 
 def full_operator_matrices(ad):
@@ -57,7 +57,7 @@ def test_block_sparsity_sigma_nca(verbose=False):
 
     for conserved_operators in ['automatic', []]:
 
-        S = BlockSparseSolver(H, beta, w_max, eps, gf_struct=gf_struct,
+        S = Solver(H, beta, w_max, eps, gf_struct=gf_struct,
                               conserved_operators=conserved_operators, verbose=False)
 
         # Delta(tau) = t^2 G_free(tau; ek), with G_free(tau) = -exp(-tau ek)/(1 + exp(-beta ek)) on the solver mesh
@@ -145,7 +145,7 @@ def test_block_sparsity_sigma_nca(verbose=False):
             plt.ylabel(r'$\Sigma_{ii}^{(NCA)}(\tau)$')
             plt.xlabel(r'$\tau$')
 
-            plt.plot([], [], '+-', color='gray', label='BlockSparseSolver')
+            plt.plot([], [], '+-', color='gray', label='Solver')
             plt.plot([], [], 'x-', color='gray', label='sigma_nca')
             plt.legend(loc='best')
 
@@ -158,7 +158,7 @@ def test_block_sparsity_sigma_nca(verbose=False):
             plt.ylabel(r'$\Sigma_{ii}^{(OCA)}(\tau)$')
             plt.xlabel(r'$\tau$')
 
-            plt.plot([], [], '+-', color='gray', label='BlockSparseSolver')
+            plt.plot([], [], '+-', color='gray', label='Solver')
             plt.plot([], [], 'x-', color='gray', label='sigma_oca')
             plt.legend(loc='best')
 

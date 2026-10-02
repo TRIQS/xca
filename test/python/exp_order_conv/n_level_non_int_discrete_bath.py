@@ -14,7 +14,7 @@ import numpy as np
 from triqs.gfs import MeshDLRImTime
 
 
-from triqs_xca.block_sparse_solver import BlockSparseSolver
+from triqs_xca import Solver
 
 
 from common import plot_comparison, test_convergence_rate, Dummy
@@ -58,7 +58,7 @@ def xca_n_level_solution(
 
     H_loc = e0 * sum(n('0', i) for i in range(N))
 
-    S = BlockSparseSolver(
+    S = Solver(
         H_loc=H_loc, gf_struct=[['0', N]],
         beta=m.beta, w_max=m.w_max, eps=m.eps,
         conserved_operators=conserved_operators,

@@ -200,7 +200,7 @@ TEST(DenseDynint, self_energy_by_pairs_agrees) {
  * @brief Check that the three compute_self_energy_by_pairs() overloads agree
  *
  * @details The flat-index overloads do not filter the flat indices, so the caller has to pass only the indices with fb(0) = 0, i.e.
- * (f_ix / n_p) % 2 == 0 with n_p = o_ix_max * p_ix_max, as BlockSparseSolver.eval_pseudo_particle_self_energy_order_by_pairs does.
+ * (f_ix / n_p) % 2 == 0 with n_p = o_ix_max * p_ix_max, as Solver.eval_pseudo_particle_self_energy_order_by_pairs does.
  */
 TEST(DenseDynint, self_energy_by_pairs_flat_index_overloads_agree) {
 

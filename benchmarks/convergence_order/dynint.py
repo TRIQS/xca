@@ -7,7 +7,7 @@ import triqs.utility.mpi as mpi
 from triqs.gfs import Gf, MeshDLRImTime, MeshDLRImFreq, make_gf_dlr_imfreq, make_gf_dlr_imtime, make_gf_dlr, inverse, iOmega_n, make_gf_imtime
 
 
-from triqs_xca.block_sparse_solver import BlockSparseSolver
+from triqs_xca import Solver
 
 from pyed.SparseExactDiagonalization import SparseExactDiagonalization
 from pyed.SparseMatrixFockStates import SparseMatrixFermiBoseCreationOperators
@@ -166,7 +166,7 @@ def xca_dimer_dynint(
 
     from triqs.operators import n
 
-    S = BlockSparseSolver(
+    S = Solver(
         H_loc=(eps0 - mu) * n('0', 0), gf_struct=[['0', 1]],
         beta=m.beta, w_max=m.w_max, eps=m.eps,
         conserved_operators=[])

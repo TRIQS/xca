@@ -13,7 +13,7 @@ from triqs.operators import n, c, c_dag, dagger
 from triqs.gfs import make_gf_dlr_imfreq, make_gf_dlr_imtime, SemiCircular, make_gf_imtime
 
 
-from triqs_xca.block_sparse_solver import BlockSparseSolver
+from triqs_xca import Solver
 
 
 def get_dens_mat(S, fops):
@@ -59,7 +59,7 @@ def test_expectation_value(conserved_operators, cf_pyed=False):
 
     H_loc = sum([ dagger(op_i) * h_ij[i, j] * op_j for i, op_i in enumerate(fops) for j, op_j in enumerate(fops) ])
 
-    S = BlockSparseSolver(H_loc, beta, w_max, eps, gf_struct=gf_struct,
+    S = Solver(H_loc, beta, w_max, eps, gf_struct=gf_struct,
         conserved_operators=conserved_operators)
     dens_mat = get_dens_mat(S, fops)
 
@@ -87,7 +87,7 @@ def test_expectation_value(conserved_operators, cf_pyed=False):
     print(f'eigenvalues_t = \n', np.linalg.eigvalsh(h_ij_t))
 
     H_loc_t = sum([ dagger(op_i) * h_ij_t[i, j] * op_j for i, op_i in enumerate(fops) for j, op_j in enumerate(fops) ])
-    S_t = BlockSparseSolver(H_loc_t, beta, w_max, eps, gf_struct=gf_struct,
+    S_t = Solver(H_loc_t, beta, w_max, eps, gf_struct=gf_struct,
         conserved_operators=conserved_operators)
     dens_mat_t = get_dens_mat(S_t, fops)
 

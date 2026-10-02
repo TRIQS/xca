@@ -14,6 +14,6 @@ The main ``triqs_xca`` module provides access to all submodules and the high-lev
 High-Level Solver Interface
 ----------------------------
 
-.. autoclass:: triqs_xca.block_sparse_solver.BlockSparseSolver
+.. autoclass:: triqs_xca.Solver
    :members: solve, set_dynamic_interactions, expectation_value, partition_function, pseudo_particle_chemical_potential
 

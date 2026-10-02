@@ -41,7 +41,7 @@ fops = [ ('0', 0) ]
 ad = AtomDiag(H, fops, [N_op])
 print(ad)
 
-from triqs_xca.block_sparse_solver import atomic_pseudo_particle_greens_function
+from triqs_xca.solver import atomic_pseudo_particle_greens_function
 
 G_ppsc = atomic_pseudo_particle_greens_function(ad, beta, mesh_tau)
 print(G_ppsc)

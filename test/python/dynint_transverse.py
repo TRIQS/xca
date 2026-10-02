@@ -37,7 +37,7 @@ from triqs.operators import n, c, c_dag
 from pyed.SparseExactDiagonalization import SparseExactDiagonalization
 from pyed.SparseMatrixFockStates import SparseMatrixFermiBoseCreationOperators
 
-from triqs_xca.block_sparse_solver import BlockSparseSolver
+from triqs_xca import Solver
 
 
 # ---------------------------------------------------------------------------- model helpers
@@ -54,7 +54,7 @@ def get_ed_ref_transverse(eps, g, omega0, mesh_tau, Nb_max=10, h=0.0):
     """ ED reference for the transverse model.  Flavour order matches the triqs fundamental
     operators of gf_struct = [['up', n_orb], ['do', n_orb]]: up 0..n_orb-1 then do 0..n_orb-1.
     Returns G_up, G_do, chi_zz, chi_pm on mesh_tau, all in the pyed sign convention
-    -<A(tau) B(0)>, which is what BlockSparseSolver returns for both G_tau and
+    -<A(tau) B(0)>, which is what Solver returns for both G_tau and
     eval_one_time_correlator. """
 
     n_orb = len(eps)
@@ -90,7 +90,7 @@ def make_transverse_solver(eps, g, omega0, beta=2.1, w_max=2.0, dlr_eps=1e-12,
     """ Zero-hybridization spinful impurity with the transverse retarded interaction. """
 
     n_orb = len(eps)
-    S = BlockSparseSolver(
+    S = Solver(
         H_loc=H_local(eps, h), beta=beta, w_max=w_max, eps=dlr_eps,
         gf_struct=[['up', n_orb], ['do', n_orb]],
         conserved_operators=conserved_operators)

@@ -3,8 +3,8 @@ import numpy as np
 from triqs.gfs import inverse, iOmega_n, make_gf_dlr_imtime, make_gf_dlr_imfreq
 
 from triqs_soehyb.triqs_solver import TriqsSolver
-from triqs_xca.block_sparse_solver import BlockSparseSolver
-from triqs_xca.block_sparse_solver import pseudo_particle_block_gf_to_dense
+from triqs_xca import Solver
+from triqs_xca.solver import pseudo_particle_block_gf_to_dense
 
 
 def test_block_sparse_self_cons(verbose=False):
@@ -22,7 +22,7 @@ def test_block_sparse_self_cons(verbose=False):
     from triqs.operators import n
     H = -mu * n('0', 0)
     
-    S = BlockSparseSolver(H, beta, w_max, eps, gf_struct)
+    S = Solver(H, beta, w_max, eps, gf_struct)
 
     Delta_w = make_gf_dlr_imfreq(S.Delta_tau['0'])
     Delta_w << inverse(iOmega_n - e1)
@@ -33,7 +33,7 @@ def test_block_sparse_self_cons(verbose=False):
  
     S.Sigma = S.eval_pseudo_particle_self_energy(S.G, max_order=1)
 
-    from triqs_xca.module import trace, convolve_ppsc
+    from triqs_xca import trace, convolve_ppsc
 
     #sol = S.solve_ppsc_chempot_adiabatic_ode(tol=10*eps)
 

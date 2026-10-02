@@ -22,7 +22,7 @@ from triqs.gfs import MeshDLRImFreq, Gf, SemiCircular, inverse, iOmega_n
 from triqs.gfs import make_gf_dlr, make_gf_dlr_imtime
 from triqs.operators import n
 
-from triqs_xca.block_sparse_solver import BlockSparseSolver
+from triqs_xca import Solver
 
 
 w_max, eps = 10.0, 1e-10
@@ -65,7 +65,7 @@ def solve_bethe_loop(U, order, beta, t, init='semicircle'):
     n_up, n_do = n('up', 0), n('do', 0)
     H = U * n_up * n_do - 0.5 * U * (n_up + n_do)
 
-    S = BlockSparseSolver(H, beta, w_max, eps, gf_struct, verbose=False)
+    S = Solver(H, beta, w_max, eps, gf_struct, verbose=False)
 
     mesh_w = MeshDLRImFreq(beta=beta, statistic='Fermion', w_max=w_max, eps=eps, symmetrize=False)
     Delta_tau = initial_hybridization(init, mesh_w, t)

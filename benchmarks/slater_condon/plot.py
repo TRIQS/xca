@@ -5,7 +5,7 @@ import numpy as np
 from h5 import HDFArchive
 
 from triqs.gfs import make_gf_imtime
-from triqs_xca.block_sparse_solver import BlockSparseSolver
+from triqs_xca import Solver
 
 filenames = np.sort(glob.glob('data_*.h5'))
 

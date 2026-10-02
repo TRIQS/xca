@@ -4,13 +4,13 @@ import copy
 from triqs.operators import n
 from triqs.gfs import make_gf_dlr_imfreq, make_gf_dlr_imtime, inverse, iOmega_n
 
-from triqs_xca.block_sparse_solver import BlockSparseSolver
+from triqs_xca import Solver
 
 def test_block_sparse_copy():
 
     # Minial solver setup
     
-    S = BlockSparseSolver(
+    S = Solver(
          H_loc=1.0*n('0', 0), beta=2.3, w_max=1.0, eps=1e-6, gf_struct=[['0', 1]])
     Delta_w = make_gf_dlr_imfreq(S.Delta_tau['0'])
     Delta_w << inverse(iOmega_n)

@@ -8,7 +8,7 @@ from triqs.operators import c, c_dag, Operator
 from pyed.TriqsExactDiagonalization import TriqsExactDiagonalization
 
 from triqs.utility import mpi
-from triqs_xca.block_sparse_solver import BlockSparseSolver
+from triqs_xca import Solver
 
 t = -np.sqrt(2.0)
 H = t * ( c_dag('0', 0) * c('0', 1) + c_dag('0', 1) * c('0', 0) )
@@ -33,7 +33,7 @@ Ss = []
 
 orders = [1]
 for order in orders:
-    S = BlockSparseSolver(H_loc=H0, beta=beta, w_max=4.0, eps=1e-10, gf_struct=[['0', 1]])
+    S = Solver(H_loc=H0, beta=beta, w_max=4.0, eps=1e-10, gf_struct=[['0', 1]])
     S.Delta_tau['0'].data[:] = -0.5 * t**2
     
     S.solve_bare(max_order=order, use_dyson=False, verbose=True)

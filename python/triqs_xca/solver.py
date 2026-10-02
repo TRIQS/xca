@@ -32,7 +32,7 @@ def scatter_array_over_ranks(arr):
     return arr_rank
 
 
-class BlockSparseSolver(object):
+class Solver(object):
 
     """ Solver class for triqs_xca using the block sparse algorithm. 
     
@@ -1282,29 +1282,29 @@ class BlockSparseSolver(object):
                 b = getattr(obj, key)                
                 if type(a) == np.ndarray:
                     if not np.array_equal(a, b):
-                        print(f'BlockSparseSolver: __eq__: attribute {key} differ')
+                        print(f'Solver: __eq__: attribute {key} differ')
                         return False
                 elif type(a) is Gf:
                     if not np.array_equal(a.data, b.data):
-                        print(f'BlockSparseSolver: __eq__: attribute {key} differ')
+                        print(f'Solver: __eq__: attribute {key} differ')
                         return False
                 elif type(a) is BlockGf:
                     for bidx, g in a:
                         g_b = b[bidx]
                         if not np.array_equal(g.data, g_b.data):
-                            print(f'BlockSparseSolver: __eq__: attribute {key} differ in block {bidx}')
+                            print(f'Solver: __eq__: attribute {key} differ in block {bidx}')
                             return False
                 elif type(a) in (AtomDiagReal, AtomDiagComplex):
                     if not np.array_equal(a.energies, b.energies):
-                        print(f'BlockSparseSolver: __eq__: attribute {key}.energies differ')
+                        print(f'Solver: __eq__: attribute {key}.energies differ')
                         return False
                     for sidx in range(a.n_subspaces):
                         if not np.array_equal(a.unitary_matrices[sidx], b.unitary_matrices[sidx]):
-                            print(f'BlockSparseSolver: __eq__: attribute {key}.unitary_matrices differ in subspace {sidx}')
+                            print(f'Solver: __eq__: attribute {key}.unitary_matrices differ in subspace {sidx}')
                             return False
                 else:
                     if not a == b:
-                        print(f'BlockSparseSolver: __eq__: attribute {key} differ')
+                        print(f'Solver: __eq__: attribute {key} differ')
                         return False
 
         return True
@@ -1578,5 +1578,5 @@ def fundamental_operators_from_gf_struct(gf_struct):
 # -- Register Solver in Triqs formats
 
 from h5.formats import register_class
-register_class(BlockSparseSolver)
+register_class(Solver)
 register_class(PoleRepresentation)

@@ -31,9 +31,9 @@ from triqs.operators.util.hamiltonians import h_int_kanamori
 
 from pyed.TriqsExactDiagonalization import TriqsExactDiagonalization
 
-from triqs_xca.block_sparse_solver import BlockSparseSolver
-from triqs_xca.block_sparse_solver import hamiltonian_matrix_block
-from triqs_xca.block_sparse_solver import pseudo_particle_block_gf_to_dense as to_fock
+from triqs_xca import Solver
+from triqs_xca.solver import hamiltonian_matrix_block
+from triqs_xca.solver import pseudo_particle_block_gf_to_dense as to_fock
 from triqs_xca.diag import all_connected_pairings
 
 
@@ -105,7 +105,7 @@ def make_model(kind):
 def make_solver(model, use_blocks):
     """ Block-sparse solver, or the dense one when use_blocks is False, with the bath set by poles. """
 
-    S = BlockSparseSolver(
+    S = Solver(
         H_loc=model['H'], beta=beta, w_max=w_max, eps=eps, gf_struct=model['gf_struct'],
         conserved_operators=model['conserved_operators'] if use_blocks else [], verbose=False)
 

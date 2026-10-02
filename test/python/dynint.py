@@ -13,7 +13,7 @@ from pyed.SparseExactDiagonalization import SparseExactDiagonalization
 from pyed.SparseMatrixFockStates import SparseMatrixFermiBoseCreationOperators
 
 
-from triqs_xca.block_sparse_solver import BlockSparseSolver
+from triqs_xca import Solver
 
 
 def get_ed_ref(eps0, g, omega0, mesh_f_tau, mesh_b_tau, Nb_max=10):
@@ -32,7 +32,7 @@ def get_ed_ref(eps0, g, omega0, mesh_f_tau, mesh_b_tau, Nb_max=10):
     g_tau.data[:, 0, 0] = ed.get_tau_greens_function_component(tau_f, c, c.getH())
 
     # Sign convention of chi_nn(tau) = <T n(tau) n(0)> as returned by
-    # BlockSparseSolver.eval_one_time_correlator, cf. benchmarks/convergence_order/dynint.py
+    # Solver.eval_one_time_correlator, cf. benchmarks/convergence_order/dynint.py
     tau_b = np.array([float(t) for t in mesh_b_tau])
     chi_tau = Gf(mesh=mesh_b_tau, target_shape=[1, 1])
     chi_tau.data[:, 0, 0] = ed.get_tau_greens_function_component(tau_b, nf, nf)
@@ -41,7 +41,7 @@ def get_ed_ref(eps0, g, omega0, mesh_f_tau, mesh_b_tau, Nb_max=10):
 
 
 def make_solver(beta=2.1, eps0=-0.1, g=0.1, omega0=1., w_max=2.0, eps=1e-12,
-                conserved_operators=[], solver_class=BlockSparseSolver):
+                conserved_operators=[], solver_class=Solver):
 
     """ AIM with a single fermionic level coupled to a bosonic mode with linear coupling,
     i.e. a retarded interaction given by the bosonic propagator. Returns the solver and the
@@ -74,7 +74,7 @@ def make_solver(beta=2.1, eps0=-0.1, g=0.1, omega0=1., w_max=2.0, eps=1e-12,
 
 def solve_dynint_one_fermion(
         beta=2.1, eps0=-0.1, g=0.1, omega0=1., w_max=2.0, eps=1e-12,
-        order=1, conserved_operators=[], hyb_comp=True, solver_class=BlockSparseSolver):
+        order=1, conserved_operators=[], hyb_comp=True, solver_class=Solver):
 
     """ Solve the one-fermion dynint model and return the fields rather than the error norms, for
     tests that need a pointwise comparison. Contains no plotting, the verbose branch stays in
@@ -414,7 +414,7 @@ def test_dynint_block_sparse(verbose=False):
         f'block-sparse and dense chi errors differ: {chi_bs:2.6E} vs {chi_dense:2.6E}'
 
 
-class _ReversedPoleSolver(BlockSparseSolver):
+class _ReversedPoleSolver(Solver):
 
     """ Reverses the fitted pole order, an exact-arithmetic invariant that probes the conditioning of
     the pole set without a reference or a second evaluator. """

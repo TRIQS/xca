@@ -19,7 +19,7 @@
 #
 ################################################################################
 
-from triqs_xca.block_sparse_solver import BlockSparseSolver
+from triqs_xca import Solver
 
 from triqs.operators import n
 from triqs.gfs import inverse, iOmega_n, make_gf_dlr_imfreq, make_gf_dlr_imtime
@@ -36,7 +36,7 @@ def test_h5():
     H = n('0',0)
     gf_struct = [['0', 1]]
 
-    S = BlockSparseSolver(H, beta, w_max, eps, gf_struct)
+    S = Solver(H, beta, w_max, eps, gf_struct)
     
     Delta_w = make_gf_dlr_imfreq(S.Delta_tau['0'])
     Delta_w << inverse(iOmega_n)

@@ -6,7 +6,7 @@ import triqs.utility.mpi as mpi
 from triqs.gfs import Gf, MeshDLRImTime, make_gf_dlr_imfreq, make_gf_dlr_imtime, make_gf_dlr, inverse, iOmega_n, make_gf_imtime
 
 
-from triqs_xca.block_sparse_solver import BlockSparseSolver
+from triqs_xca import Solver
 
 
 def test_topology_parity_one_fermion(mu=0.1, beta=0.2, w_max=4.0, eps=1e-8, max_order=1):
@@ -15,14 +15,14 @@ def test_topology_parity_one_fermion(mu=0.1, beta=0.2, w_max=4.0, eps=1e-8, max_
 
     from triqs.operators import n
 
-    Sd = BlockSparseSolver(
+    Sd = Solver(
         H_loc=-mu * n('0', 0), beta=beta, w_max=w_max, eps=eps, gf_struct=[['0', 1]], 
         conserved_operators=[])
 
     Sd.Delta_tau['0'].data[:] = -0.5
     Sd.solve(max_order=max_order, spgf_max_order=1, maxiter=1, tol=1e-8, verbose=True, hyb_comp=False)
 
-    Sbs = BlockSparseSolver(
+    Sbs = Solver(
         H_loc=-mu * n('0', 0), beta=beta, w_max=w_max, eps=eps, gf_struct=[['0', 1]])
 
     Sbs.Delta_tau['0'].data[:] = -0.5
@@ -43,7 +43,7 @@ def test_topology_parity_two_fermions(mu=0.1 + 0.5, U=1.0, B=0.3, beta=2.0, w_ma
         B * (n('0', 0) - n('0', 1)) + \
         U * n('0', 0) * n('0', 1)
     
-    Sd = BlockSparseSolver(
+    Sd = Solver(
         H_loc=H_loc, beta=beta, w_max=w_max, eps=eps, gf_struct=[['0', 2]], 
         conserved_operators=[])
 
@@ -55,7 +55,7 @@ def test_topology_parity_two_fermions(mu=0.1 + 0.5, U=1.0, B=0.3, beta=2.0, w_ma
     rho0_d = Sd.many_body_density_matrix(Sd.G0)
     print(f'rho0_d =\n{rho0_d}')
 
-    Sbs = BlockSparseSolver(
+    Sbs = Solver(
         H_loc=H_loc, beta=beta, w_max=w_max, eps=eps, gf_struct=[['0', 2]])
 
     Sbs.Delta_tau['0'].data[:, 0, 0] = -0.5
