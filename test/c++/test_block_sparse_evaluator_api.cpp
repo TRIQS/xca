@@ -2,8 +2,8 @@
 
 #include <triqs_xca/atom_diag_utils.hpp>
 
-#include <triqs_xca/dense_backbone.hpp>
-#include <triqs_xca/block_sparse_backbone.hpp>
+#include <triqs_xca/dense/diagram_evaluator.hpp>
+#include <triqs_xca/block_sparse/diagram_evaluator.hpp>
 #include <triqs_xca/hyb.hpp>
 
 #include "block_sparse_utils.hpp"
@@ -11,7 +11,7 @@
 using cppdlr::build_dlr_rf;
 using cppdlr::imtime_ops;
 
-using triqs_xca::dense::DenseDiagramEvaluator;
+namespace dense = triqs_xca::dense;
 
 using triqs_xca::block_sparse::DiagramEvaluator;
 
@@ -163,7 +163,7 @@ TEST(EvaluatorAPI, gf_constructor_equivalence) {
   auto G0t_dense = Hmat_to_Gtmat(get_full_h_atomic(ad), beta, cppdlr::rel2abs(itops.get_itnodes()));
   std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> G0_dense_blocks{triqs::gfs::gf<triqs::mesh::dlr_imtime>(G0_ppsc[0].mesh(), G0t_dense)};
   auto G0_ppsc_dense = triqs::gfs::block_gf<triqs::mesh::dlr_imtime>(G0_dense_blocks);
-  DenseDiagramEvaluator D_dense(nda::make_regular(dlr_rf / beta), hyb_coeffs, G0_ppsc[0].mesh(), ad);
+  dense::DiagramEvaluator D_dense(nda::make_regular(dlr_rf / beta), hyb_coeffs, G0_ppsc[0].mesh(), ad);
   auto OCA_gf_dense = D_dense.compute_single_ptcle_gf(G0_ppsc_dense, topology);
   EXPECT_LE(nda::max_element(nda::abs(OCA_gf - OCA_gf_dense)), 1.0e-15);
 }

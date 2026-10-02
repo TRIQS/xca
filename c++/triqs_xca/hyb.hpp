@@ -28,7 +28,7 @@ namespace triqs_xca::hyb {
     nda::array<double, 2> k_it_m; // fermionic kernel evaluated at imaginary time nodes and (-1 * poles)
 
     /**
-     * @brief Constructor for DenseFSet
+     * @brief Constructor for FSet
      * @param[in] tau_mesh TRIQS imaginary time DLR mesh
      * @param[in] hyb_poles poles of the hybridization
      * @param[in] hyb_coeffs pole coefficients of the hybridization

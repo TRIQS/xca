@@ -8,7 +8,7 @@
 
 #include <cppdlr/dlr_imtime.hpp>
 
-#include "triqs_xca/block_sparse.hpp"
+#include "triqs_xca/block_sparse/block_op.hpp"
 
 namespace triqs_xca::block_sparse {
 

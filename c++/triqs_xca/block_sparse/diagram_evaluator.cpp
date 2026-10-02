@@ -7,11 +7,11 @@
 
 #include "triqs_xca/atom_diag_utils.hpp"
 
-#include "triqs_xca/block_sparse_backbone.hpp"
+#include "triqs_xca/block_sparse/diagram_evaluator.hpp"
 #include "triqs_xca/dynint.hpp"
 
 #include "triqs_xca/hyb.hpp"
-#include "operator_statistics.hpp"
+#include "triqs_xca/operator_statistics.hpp"
 
 namespace triqs_xca::block_sparse {
 
@@ -274,7 +274,7 @@ void DiagramEvaluator::multiply_left_vertex_and_right_zero_vertex(nda::array_vie
     Tmu_v = 0;
     // Multiply with hybridization function
     for (int kap = 0; kap < Fq.sym_set_sizes(p_kap); kap++) {
-      // The backward branch transposes the coefficient index, as the barred operators do for the interior lines, see dense_backbone.cpp.
+      // The backward branch transposes the coefficient index, as the barred operators do for the interior lines, see dense/diagram_evaluator.cpp.
       // Reading the same order on both branches breaks unitary invariance under a complex basis rotation
       nda::array_const_view<dcomplex, 1> hyb_oo = is_forward ?
         hyb.values(_, Fq.sym_set_to_orb(p_mu, mu), Fq.sym_set_to_orb(p_kap, kap)) :

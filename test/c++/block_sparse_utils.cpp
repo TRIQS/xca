@@ -126,7 +126,7 @@ DenseFermionModelData one_fermion_model_dense_helper(double beta, double Lambda,
   auto dlr_it_abs               = rel2abs(dlr_it);
   auto Gt_dense                 = Hmat_to_Gtmat(H_dense, beta, dlr_it_abs);
   auto [Fs_dense, F_dags_dense] = triqs_xca::atom_diag::get_operators_dense(ad);
-  auto Fset_dense               = triqs_xca::atom_diag::DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs);
+  auto Fset_dense               = triqs_xca::atom_diag::FSet(Fs_dense, F_dags_dense, hyb_coeffs);
 
   std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> gf_block(1);
   triqs::mesh::dlr_imtime tau_mesh(beta, triqs::mesh::Fermion, Lambda / beta, eps, false);

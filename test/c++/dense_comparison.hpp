@@ -12,7 +12,7 @@
 #include <triqs/gfs.hpp>
 
 #include <triqs_xca/atom_diag_utils.hpp>
-#include <triqs_xca/block_sparse.hpp>
+#include <triqs_xca/block_sparse/block_op.hpp>
 
 /**
  * @file dense_comparison.hpp

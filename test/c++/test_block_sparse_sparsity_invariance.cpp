@@ -5,8 +5,8 @@
 
 #include <triqs_xca/atom_diag_utils.hpp>
 
-#include <triqs_xca/dense_backbone.hpp>
-#include <triqs_xca/block_sparse_backbone.hpp>
+#include <triqs_xca/dense/diagram_evaluator.hpp>
+#include <triqs_xca/block_sparse/diagram_evaluator.hpp>
 #include <triqs_xca/hyb.hpp>
 
 #include "block_sparse_utils.hpp"
@@ -14,8 +14,8 @@
 using cppdlr::build_dlr_rf;
 using cppdlr::imtime_ops;
 
-using triqs_xca::dense::DenseDiagramEvaluator;
-using triqs_xca::dense::DenseFSet;
+namespace dense = triqs_xca::dense;
+using triqs_xca::dense::FSet;
 
 using triqs_xca::block_sparse::DiagramEvaluator;
 
@@ -73,8 +73,8 @@ TEST(SparsityInvariance, OCA_trivial_sparsity) {
   // --- dense evaluation ---
   // The old dense constructor divides the poles it is given by beta internally, so it takes dlr_rf where the block-sparse one takes dlr_rf / beta.
   auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
-  auto Fset                               = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs);
-  DenseDiagramEvaluator DDE(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
+  auto Fset                               = FSet(Fs_dense, F_dags_dense, hyb_coeffs);
+  dense::DiagramEvaluator DDE(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
   DDE.eval_self_energy(Gt_dense, B);
   auto OCA_dense_result = DDE.Sigma;
 
@@ -132,8 +132,8 @@ TEST(SparsityInvariance, OCA_correlator_trivial_sparsity) {
   // --- dense evaluation ---
   // The old dense constructor divides the poles it is given by beta internally, so it takes dlr_rf where the block-sparse one takes dlr_rf / beta.
   auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
-  auto Fset                               = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs);
-  DenseDiagramEvaluator D_dense(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
+  auto Fset                               = FSet(Fs_dense, F_dags_dense, hyb_coeffs);
+  dense::DiagramEvaluator D_dense(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
   auto OCA_dense_result = D_dense.eval_correlator(Gt_dense, B, Fs_dense, F_dags_dense);
 
   // --- block-sparse evaluation with trivial sparsity: one block, one symmetry set ---
@@ -186,7 +186,7 @@ static void check_spin_flip_fermion(bool use_particle_number_sym) {
   auto Gt_dense = Hmat_to_Gtmat(get_full_h_atomic(ad), beta, dlr_it_abs);
   auto Fset     = get_operators_dense(ad, hyb_coeffs);
 
-  DenseDiagramEvaluator DDE(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
+  dense::DiagramEvaluator DDE(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
   DDE.eval_self_energy_by_pairs(Gt_dense, B);
   auto result_dense = DDE.Sigma;
 
@@ -242,7 +242,7 @@ static void check_spin_flip_fermion_correlator(bool use_particle_number_sym) {
   // compare to dense backbone result
   auto Gt_dense = Hmat_to_Gtmat(get_full_h_atomic(ad), beta, dlr_it_abs);
   auto Fset     = get_operators_dense(ad, hyb_coeffs);
-  DenseDiagramEvaluator D_dense(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
+  dense::DiagramEvaluator D_dense(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
   auto result_dense = D_dense.eval_correlator(Gt_dense, B, Fset.Fs, Fset.F_dags);
 
   ASSERT_LE(nda::max_element(nda::abs(result - result_dense)), 1.0e-15);
@@ -306,7 +306,7 @@ TEST(SparsityInvariance, spgf_is_indexed_by_orbital) {
   // dense reference, ordered per orbital by construction
   auto Gt_dense = Hmat_to_Gtmat(get_full_h_atomic(ad), beta, dlr_it_abs);
   auto Fset     = get_operators_dense(ad, hyb_coeffs);
-  DenseDiagramEvaluator D_dense(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
+  dense::DiagramEvaluator D_dense(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
   auto ref_dense = D_dense.eval_correlator(Gt_dense, B, Fset.Fs, Fset.F_dags);
 
   DiagramEvaluator D(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), hyb_coeffs, Fq);
@@ -394,7 +394,7 @@ TEST(SparsityInvariance, correlator_keeps_the_beta_tau_side_when_vertex_zero_pai
   auto [mu_ops, kap_ops] = make_correlator_ops(Fq, nflav);
 
   // The dense reference, and the one-block block-sparse twin of the same model.
-  DenseDiagramEvaluator D_dense(hyb_poles, hyb_coeffs, G_flat[0].mesh(), ad_flat);
+  dense::DiagramEvaluator D_dense(hyb_poles, hyb_coeffs, G_flat[0].mesh(), ad_flat);
   auto Gt_dense                 = Hmat_to_Gtmat(get_full_h_atomic(ad_flat), beta, cppdlr::rel2abs(itops.get_itnodes()));
   auto [Fs_dense, F_dags_dense] = get_operators_dense(ad_flat);
   auto [Gt_triv, Fq_triv]       = trivial_sparsity_helper(Gt_dense, Fs_dense, F_dags_dense, hyb_coeffs, nflav);

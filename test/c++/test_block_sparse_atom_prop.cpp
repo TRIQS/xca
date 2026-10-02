@@ -5,7 +5,7 @@
 #include <triqs/atom_diag/functions.hpp>
 
 #include <triqs_xca/atom_diag_utils.hpp>
-#include <triqs_xca/block_sparse.hpp>
+#include <triqs_xca/block_sparse/block_op.hpp>
 
 #include "block_sparse_utils.hpp"
 

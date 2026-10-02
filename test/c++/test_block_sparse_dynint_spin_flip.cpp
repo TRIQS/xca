@@ -7,9 +7,9 @@
 #include <triqs/operators/many_body_operator.hpp>
 
 #include <triqs_xca/atom_diag_utils.hpp>
-#include <triqs_xca/block_sparse.hpp>
-#include <triqs_xca/block_sparse_backbone.hpp>
-#include <triqs_xca/dense_backbone.hpp>
+#include <triqs_xca/block_sparse/block_op.hpp>
+#include <triqs_xca/block_sparse/diagram_evaluator.hpp>
+#include <triqs_xca/dense/diagram_evaluator.hpp>
 #include <triqs_xca/dynint.hpp>
 #include <triqs_xca/topology.hpp>
 
@@ -30,7 +30,7 @@ using triqs_xca::atom_diag::get_operators;
 using triqs_xca::block_sparse::BlockDiagOpFun;
 using triqs_xca::block_sparse::BlockOpSymQuartet;
 using triqs_xca::block_sparse::DiagramEvaluator;
-using triqs_xca::dense::DenseDiagramEvaluator;
+namespace dense = triqs_xca::dense;
 using triqs_xca::dynint::get_extended_coefficients;
 using triqs_xca::dynint::get_operators_and_interactions;
 
@@ -166,7 +166,7 @@ TEST(BlockSparseDynintSpinFlip, self_energy_matches_dense_with_spin_flip_interac
   auto Sigma = BlockDiagOpFun(D.compute_self_energy(Gt, topology));
 
   auto G_flat = ad_to_atom_prop(m.ad_flat, beta, Lambda, eps);
-  DenseDiagramEvaluator D_dense(m.hyb_poles, m.hyb_coeffs, G_flat[0].mesh(), m.ad_flat, m.dynint_ops, m.dynint_coeffs);
+  dense::DiagramEvaluator D_dense(m.hyb_poles, m.hyb_coeffs, G_flat[0].mesh(), m.ad_flat, m.dynint_ops, m.dynint_coeffs);
   ASSERT_EQ(D_dense.n_int, n_int);
   auto Sigma_dense = D_dense.compute_self_energy(G_flat, topology);
 
@@ -200,7 +200,7 @@ TEST(BlockSparseDynintSpinFlip, spgf_matches_dense_with_spin_flip_interactions) 
   auto Fq  = std::get<0>(get_operators_and_interactions(m.ad, m.hyb_coeffs, m.dynint_coeffs, m.dynint_ops));
   auto ext = get_extended_coefficients(m.hyb_coeffs, m.dynint_coeffs);
   DiagramEvaluator D(beta, Lambda, eps, m.hyb_poles, ext, Fq, n_int);
-  DenseDiagramEvaluator D_dense(m.hyb_poles, m.hyb_coeffs, G_fl[0].mesh(), m.ad_flat, m.dynint_ops, m.dynint_coeffs);
+  dense::DiagramEvaluator D_dense(m.hyb_poles, m.hyb_coeffs, G_fl[0].mesh(), m.ad_flat, m.dynint_ops, m.dynint_coeffs);
 
   auto Fq_ferm = std::get<0>(get_operators(m.ad, m.hyb_coeffs));
   DiagramEvaluator D_ferm(beta, Lambda, eps, m.hyb_poles, m.hyb_coeffs, Fq_ferm);

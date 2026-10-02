@@ -107,5 +107,5 @@ def test_expectation_value(conserved_operators, cf_pyed=False):
 
 
 if __name__ == '__main__':
-    test_expectation_value(conserved_operators=[]) # Test DenseDiagramEvaluator
+    test_expectation_value(conserved_operators=[]) # Test dense.DiagramEvaluator
     test_expectation_value(conserved_operators='automatic') # Test BlockSparseDiagramEvaluator

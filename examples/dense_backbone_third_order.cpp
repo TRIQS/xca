@@ -3,9 +3,8 @@
 #include <nda/nda.hpp>
 #include <cppdlr/cppdlr.hpp>
 
-#include <triqs_xca/block_sparse.hpp>
-#include <triqs_xca/block_sparse_manual.hpp>
-#include <triqs_xca/dense_backbone.hpp>
+#include <triqs_xca/block_sparse/block_op.hpp>
+#include <triqs_xca/dense/diagram_evaluator.hpp>
 
 #include <triqs_soehyb/strong_cpl.hpp>
 
@@ -13,8 +12,8 @@ using namespace nda;
 using namespace cppdlr;
 using namespace triqs_soehyb;
 
-using triqs_xca::dense::DenseFSet;
-using triqs_xca::dense::DenseDiagramEvaluator;
+using triqs_xca::dense::FSet;
+using triqs_xca::dense::DiagramEvaluator;
 
 nda::array<dcomplex, 3> Hmat_to_Gtmat(nda::array<dcomplex, 2> Hmat, double beta, nda::array<double, 1> dlr_it_abs) {
   // Helper function for computing the non-interacting Green's function from the Hamiltonian, both in dense storage
@@ -212,9 +211,9 @@ int main() {
   auto hyb_coeffs      = itops.vals2coefs(Deltat);       // hybridization DLR coeffs
   auto hyb_refl        = Deltat;
   auto hyb_refl_coeffs = hyb_coeffs;
-  auto Fset            = DenseFSet(Fs_dense, F_dags_dense, hyb_coeffs);
+  auto Fset            = FSet(Fs_dense, F_dags_dense, hyb_coeffs);
 
-  auto D = DenseDiagramEvaluator(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
+  auto D = DiagramEvaluator(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
 
   auto Deltadlr                            = itops.vals2coefs(Deltat); //obtain dlr coefficient of Delta(t)
   nda::vector<double> dlr_rf_reflect       = -dlr_rf;
@@ -234,11 +233,11 @@ int main() {
   for (int i = 0; i < 4; ++i) {
     std::cout << "Evaluating topology " << i << std::endl;
 
-    // Compute third-order contribution using DenseDiagramEvaluator
+    // Compute third-order contribution using DiagramEvaluator
     auto B = Backbone(topologies(i, _, _), n);
     D.eval_self_energy(Gt_dense, B);
     third_order_result = D.Sigma;
-    D.reset(); // reset the DenseDiagramEvaluator for the next topology
+    D.reset(); // reset the DiagramEvaluator for the next topology
     // Compute third-order contribution using old code
     nda::array<dcomplex, 3> TCA_old(r, N, N);
     TCA_old = 0;

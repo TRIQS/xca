@@ -7,7 +7,7 @@ using cppdlr::_;
 namespace triqs_xca::hyb {
 
   /**
-     * @brief Constructor for DenseFSet
+     * @brief Constructor for FSet
      * @param[in] tau_mesh TRIQS imaginary time DLR mesh
      * @param[in] hyb_poles poles of the hybridization
      * @param[in] hyb_coeffs pole coefficients of the hybridization
@@ -18,7 +18,7 @@ namespace triqs_xca::hyb {
        poles(hyb_poles * tau_mesh.beta()),
        coeffs(hyb_coeffs),
        values(coefs2vals(tau_mesh.beta(), tau_mesh.dlr_it(), hyb_coeffs, hyb_poles)),
-       // Follow sign convention of block_sparse_backbone for reflected hybridization function.
+       // Follow sign convention of block_sparse/diagram_evaluator for reflected hybridization function.
        values_reflect(refl_sign * tau_mesh.dlr_it().reflect(values)),
        k_0_p(poles.size()),
        k_0_m(poles.size()),

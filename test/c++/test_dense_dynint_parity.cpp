@@ -6,7 +6,7 @@
 #include <triqs/atom_diag/atom_diag.hpp>
 
 #include <triqs_xca/atom_diag_utils.hpp>
-#include <triqs_xca/dense_backbone.hpp>
+#include <triqs_xca/dense/diagram_evaluator.hpp>
 #include <triqs_xca/topology.hpp>
 
 using nda::dcomplex;
@@ -19,7 +19,7 @@ using triqs::operators::many_body_operator_real;
 using triqs::operators::n;
 
 using triqs_xca::atom_diag::ad_to_atom_prop;
-using triqs_xca::dense::DenseDiagramEvaluator;
+using triqs_xca::dense::DiagramEvaluator;
 
 /**
  * @file test_dense_dynint_parity.cpp
@@ -105,7 +105,7 @@ TEST(DenseDynint, spgf_flat_index_overloads_agree) {
 
   nda::array<int, 2> topology = {{0, 2}, {1, 3}}; // second order: one internal line
 
-  DenseDiagramEvaluator D(m.hyb_poles, m.hyb_coeffs, m.G_ppsc[0].mesh(), m.ad, m.dynint_ops, m.dynint_coeffs);
+  DiagramEvaluator D(m.hyb_poles, m.hyb_coeffs, m.G_ppsc[0].mesh(), m.ad, m.dynint_ops, m.dynint_coeffs);
 
   ASSERT_EQ(D.n_hyb, 1);
   ASSERT_EQ(D.n_int, 1);
@@ -118,7 +118,7 @@ TEST(DenseDynint, spgf_flat_index_overloads_agree) {
   // operator on the internal line, i.e. bosonic vertices whose parity is at stake. (Note
   // that the total contribution of those backbones may well cancel - what this test
   // probes is the parity assigned to each of them individually.)
-  DenseDiagramEvaluator D_no_dynint(m.hyb_poles, m.hyb_coeffs, m.G_ppsc[0].mesh(), m.ad);
+  DiagramEvaluator D_no_dynint(m.hyb_poles, m.hyb_coeffs, m.G_ppsc[0].mesh(), m.ad);
 
   int n_backbones          = D.get_num_single_ptcle_gf_backbones(topology);
   int n_backbones_fermonic = D_no_dynint.get_num_single_ptcle_gf_backbones(topology);
@@ -170,14 +170,14 @@ TEST(DenseDynint, self_energy_by_pairs_agrees) {
   // only a crossing topology exposes the parity error
   ASSERT_EQ(triqs_xca::topology::topology_parity(topology), -1) << "vacuous test: topology is not crossing";
 
-  DenseDiagramEvaluator D(m.hyb_poles, m.hyb_coeffs, m.G_ppsc[0].mesh(), m.ad, m.dynint_ops, m.dynint_coeffs);
+  DiagramEvaluator D(m.hyb_poles, m.hyb_coeffs, m.G_ppsc[0].mesh(), m.ad, m.dynint_ops, m.dynint_coeffs);
 
   ASSERT_EQ(D.n_hyb, 1);
   ASSERT_EQ(D.n_int, 1);
   ASSERT_EQ(D.n, 2);
 
   // check that some backbones carry the interaction operator on the internal line
-  DenseDiagramEvaluator D_no_dynint(m.hyb_poles, m.hyb_coeffs, m.G_ppsc[0].mesh(), m.ad);
+  DiagramEvaluator D_no_dynint(m.hyb_poles, m.hyb_coeffs, m.G_ppsc[0].mesh(), m.ad);
 
   int n_backbones           = D.get_num_self_energy_backbones(topology);
   int n_backbones_fermionic = D_no_dynint.get_num_self_energy_backbones(topology);
@@ -214,7 +214,7 @@ TEST(DenseDynint, self_energy_by_pairs_flat_index_overloads_agree) {
 
   ASSERT_EQ(triqs_xca::topology::topology_parity(topology), -1) << "vacuous test: topology is not crossing";
 
-  DenseDiagramEvaluator D(m.hyb_poles, m.hyb_coeffs, m.G_ppsc[0].mesh(), m.ad, m.dynint_ops, m.dynint_coeffs);
+  DiagramEvaluator D(m.hyb_poles, m.hyb_coeffs, m.G_ppsc[0].mesh(), m.ad, m.dynint_ops, m.dynint_coeffs);
 
   // stride n_p of fb_ix in the flat index, from f_ix_max = n_p * fb_ix_max with fb_ix_max = 2^m for the Backbone
   int order    = topology.extent(0);
@@ -263,7 +263,7 @@ TEST(DenseDynint, dynint_constructor_rejects_multi_subspace_atom_diag) {
 
   // match the message, std::invalid_argument is also thrown upstream of the check under test
   try {
-    DenseDiagramEvaluator D(m.hyb_poles, m.hyb_coeffs, m.G_ppsc[0].mesh(), m.ad, m.dynint_ops, m.dynint_coeffs);
+    DiagramEvaluator D(m.hyb_poles, m.hyb_coeffs, m.G_ppsc[0].mesh(), m.ad, m.dynint_ops, m.dynint_coeffs);
     (void)D;
     FAIL() << "expected std::invalid_argument for a multi-subspace atom_diag";
   } catch (std::invalid_argument const &e) { EXPECT_NE(std::string(e.what()).find("single subspace"), std::string::npos) << e.what(); }
@@ -283,7 +283,7 @@ TEST(DenseDynint, one_time_correlator_rejects_multi_subspace_atom_diag) {
   ASSERT_EQ(m.ad.n_subspaces(), 2);
 
   // the constructor without dynamical interactions handles several subspaces, the correlator routine does not
-  DenseDiagramEvaluator D(m.hyb_poles, m.hyb_coeffs, m.G_ppsc[0].mesh(), m.ad);
+  DiagramEvaluator D(m.hyb_poles, m.hyb_coeffs, m.G_ppsc[0].mesh(), m.ad);
 
   nda::array<int, 2> topology              = {{0, 1}};
   std::vector<many_body_operator_real> ops = {n<double>("0", 0)};

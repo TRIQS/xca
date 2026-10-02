@@ -4,8 +4,8 @@
 #include <triqs/atom_diag/atom_diag.hpp>
 
 #include <triqs_xca/atom_diag_utils.hpp>
-#include <triqs_xca/block_sparse.hpp>
-#include <triqs_xca/dense.hpp>
+#include <triqs_xca/block_sparse/block_op.hpp>
+#include <triqs_xca/dense/fset.hpp>
 
 #include "block_sparse_utils.hpp"
 
@@ -25,7 +25,7 @@ using triqs_xca::atom_diag::get_operators_dense;
  * @brief Tests of the barred-operator construction in the BlockOpSymQuartet constructor
  *
  * @details The contraction of the hybridization coefficients with the operators of a symmetry set is only defined within one set, as in the dense
- * reference DenseFSet::update_hybridization(). A hybridization coupling two different symmetry sets can not be represented by the block-sparse
+ * reference FSet::update_hybridization(). A hybridization coupling two different symmetry sets can not be represented by the block-sparse
  * storage and must be rejected by the constructor, with the rejection threshold sym_set_coupling_tol relative to max|hyb_coeffs| pinned from both
  * sides. With symmetry sets of unequal size, an index mix-up between the sets is an out-of-bounds read that only shows up in a bounds-checked or
  * sanitized build (-DASAN=ON or -DNDA_ENFORCE_BOUNDCHECK), so the barred operators are also compared to the dense reference, which is defined

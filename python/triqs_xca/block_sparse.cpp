@@ -4,7 +4,7 @@
 #include <triqs/atom_diag.hpp>
 #include <triqs/operators.hpp>
 
-#include "triqs_xca/block_sparse_backbone.hpp"
+#include "triqs_xca/block_sparse/diagram_evaluator.hpp"
 
 extern template triqs_xca::block_sparse::DiagramEvaluator::DiagramEvaluator(
   nda::vector_const_view<double>, nda::array_const_view<dcomplex, 3>,

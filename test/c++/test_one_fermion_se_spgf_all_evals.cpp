@@ -5,10 +5,12 @@
 
 #include <triqs_xca/atom_diag_utils.hpp>
 
-#include <triqs_xca/dense_backbone.hpp>
-#include <triqs_xca/block_sparse_backbone.hpp>
-#include <triqs_xca/block_sparse_manual.hpp>
-#include <triqs_xca/block_sparse_manual_gf.hpp>
+#include <triqs_xca/dense/diagram_evaluator.hpp>
+#include <triqs_xca/block_sparse/diagram_evaluator.hpp>
+#include <triqs_xca/dense/manual.hpp>
+#include <triqs_xca/block_sparse/manual.hpp>
+#include <triqs_xca/dense/manual_gf.hpp>
+#include <triqs_xca/block_sparse/manual_gf.hpp>
 #include <triqs_xca/hyb.hpp>
 #include <triqs_xca/topology.hpp>
 
@@ -25,20 +27,20 @@ using triqs::operators::c_dag;
 using triqs::operators::many_body_operator_complex;
 using triqs::operators::n;
 
-using triqs_xca::dense::DenseDiagramEvaluator;
-using triqs_xca::dense::DenseFSet;
+namespace dense = triqs_xca::dense;
+using triqs_xca::dense::FSet;
 
 using triqs_xca::block_sparse::DiagramEvaluator;
-using triqs_xca::block_sparse::NCA_dense;
-using triqs_xca::block_sparse::NCA_gf_dense;
-using triqs_xca::block_sparse::OCA_dense;
-using triqs_xca::block_sparse::OCA_gf_dense;
+using triqs_xca::dense::NCA_dense;
+using triqs_xca::dense::NCA_gf_dense;
+using triqs_xca::dense::OCA_dense;
+using triqs_xca::dense::OCA_gf_dense;
 
-using triqs_xca::block_sparse::eval_eq;
-using triqs_xca::block_sparse::OCA_gf_tpz;
-using triqs_xca::block_sparse::OCA_tpz;
-using triqs_xca::block_sparse::third_order_gf_tpz;
-using triqs_xca::block_sparse::third_order_tpz;
+using triqs_xca::dense::eval_eq;
+using triqs_xca::dense::OCA_gf_tpz;
+using triqs_xca::dense::OCA_tpz;
+using triqs_xca::dense::third_order_gf_tpz;
+using triqs_xca::dense::third_order_tpz;
 
 using triqs_xca::topology::topology_parity;
 
@@ -57,8 +59,8 @@ using triqs_xca::atom_diag::get_tensor_in_full_hilbert_space;
  * poles \omega. All the tests compare the self-energy/single-particle Green's function computed analytically at first- (NCA), second- (OCA), and
  * third order to the results of several evaluation routines. For NCA and OCA, there are comparisons to the following evaluators:
  *
- * - the `compute_self_energy/single_particle_gf` routine of DenseDiagramEvaluator
- * - the `compute_self_energy_by_pairs` routine of DenseDiagramEvaluator, which has no single-particle Green's function analogue
+ * - the `compute_self_energy/single_particle_gf` routine of dense::DiagramEvaluator
+ * - the `compute_self_energy_by_pairs` routine of dense::DiagramEvaluator, which has no single-particle Green's function analogue
  *   - This routine is a time optimization of the first compute_self_energy routine above and is the one actually used in Python wrappers
  * - the `compute_self_energy/single_particle_gf` routine of the DiagramEvaluator, which takes advantage of block-sparsity
  * - `N/OCA_(gf_)dense`, a routine that can only evaluate N/OCA with dense matmuls
@@ -153,7 +155,7 @@ namespace {
     nda::array<dcomplex, 3> F_dags_dense;
     triqs::gfs::block_gf<triqs::mesh::dlr_imtime> G0_ppsc_dense;
 
-    DenseDiagramEvaluator D_dense;
+    dense::DiagramEvaluator D_dense;
     DiagramEvaluator D;
     BlockOpSymQuartet Fq; // field operators of the block-sparse evaluator
 
@@ -254,10 +256,10 @@ TEST(one_fermion, const_hyb_se) {
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto nca_bs = nda::make_regular(topology_parity(nca_topology)
                                   * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, nca_topology), s.model.ad));
-  // compute using DenseDiagramEvaluator, and ensure sign is correct
+  // compute using dense::DiagramEvaluator, and ensure sign is correct
   auto nca_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, nca_topology);
   auto nca_dense    = nda::make_regular(topology_parity(nca_topology) * nca_dense_gf[0].data());
-  // DenseDiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
+  // dense::DiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
   auto nca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, nca_topology);
   auto nca_pairs    = nda::make_regular(topology_parity(nca_topology) * nca_pairs_gf[0].data());
   // manual dense routine
@@ -283,10 +285,10 @@ TEST(one_fermion, const_hyb_se) {
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto oca_bs = nda::make_regular(topology_parity(oca_topology)
                                   * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, oca_topology), s.model.ad));
-  // compute using DenseDiagramEvaluator, and ensure sign is correct
+  // compute using dense::DiagramEvaluator, and ensure sign is correct
   auto oca_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, oca_topology);
   auto oca_dense    = nda::make_regular(topology_parity(oca_topology) * oca_dense_gf[0].data());
-  // DenseDiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
+  // dense::DiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
   auto oca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, oca_topology);
   auto oca_pairs    = nda::make_regular(topology_parity(oca_topology) * oca_pairs_gf[0].data());
   // manual dense routine
@@ -316,10 +318,10 @@ TEST(one_fermion, const_hyb_se) {
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto third_bs = nda::make_regular(topology_parity(third_topology)
                                     * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, third_topology), s.model.ad));
-  // compute using DenseDiagramEvaluator, and ensure sign is correct
+  // compute using dense::DiagramEvaluator, and ensure sign is correct
   auto third_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, third_topology);
   auto third_dense    = nda::make_regular(topology_parity(third_topology) * third_dense_gf[0].data());
-  // DenseDiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
+  // dense::DiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
   auto third_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, third_topology);
   auto third_pairs    = nda::make_regular(topology_parity(third_topology) * third_pairs_gf[0].data());
   // no manual third-order routine
@@ -372,10 +374,10 @@ TEST(one_fermion, one_hyb_pole_se) {
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto nca_bs = nda::make_regular(topology_parity(nca_topology)
                                   * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, nca_topology), s.model.ad));
-  // compute using DenseDiagramEvaluator, and ensure sign is correct
+  // compute using dense::DiagramEvaluator, and ensure sign is correct
   auto nca_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, nca_topology);
   auto nca_dense    = nda::make_regular(topology_parity(nca_topology) * nca_dense_gf[0].data());
-  // DenseDiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
+  // dense::DiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
   auto nca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, nca_topology);
   auto nca_pairs    = nda::make_regular(topology_parity(nca_topology) * nca_pairs_gf[0].data());
   // manual dense routine
@@ -401,10 +403,10 @@ TEST(one_fermion, one_hyb_pole_se) {
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto oca_bs = nda::make_regular(topology_parity(oca_topology)
                                   * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, oca_topology), s.model.ad));
-  // compute using DenseDiagramEvaluator, and ensure sign is correct
+  // compute using dense::DiagramEvaluator, and ensure sign is correct
   auto oca_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, oca_topology);
   auto oca_dense    = nda::make_regular(topology_parity(oca_topology) * oca_dense_gf[0].data());
-  // DenseDiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
+  // dense::DiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
   auto oca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, oca_topology);
   auto oca_pairs    = nda::make_regular(topology_parity(oca_topology) * oca_pairs_gf[0].data());
   // manual dense routine
@@ -433,10 +435,10 @@ TEST(one_fermion, one_hyb_pole_se) {
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto third_bs = nda::make_regular(topology_parity(third_topology)
                                     * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, third_topology), s.model.ad));
-  // compute using DenseDiagramEvaluator, and ensure sign is correct
+  // compute using dense::DiagramEvaluator, and ensure sign is correct
   auto third_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, third_topology);
   auto third_dense    = nda::make_regular(topology_parity(third_topology) * third_dense_gf[0].data());
-  // DenseDiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
+  // dense::DiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
   auto third_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, third_topology);
   auto third_pairs    = nda::make_regular(topology_parity(third_topology) * third_pairs_gf[0].data());
   // no manual third-order routine
@@ -496,10 +498,10 @@ TEST(one_fermion, two_hyb_poles_se) {
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto nca_bs = nda::make_regular(topology_parity(nca_topology)
                                   * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, nca_topology), s.model.ad));
-  // compute using DenseDiagramEvaluator, and ensure sign is correct
+  // compute using dense::DiagramEvaluator, and ensure sign is correct
   auto nca_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, nca_topology);
   auto nca_dense    = nda::make_regular(topology_parity(nca_topology) * nca_dense_gf[0].data());
-  // DenseDiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
+  // dense::DiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
   auto nca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, nca_topology);
   auto nca_pairs    = nda::make_regular(topology_parity(nca_topology) * nca_pairs_gf[0].data());
   // manual dense routine
@@ -531,10 +533,10 @@ TEST(one_fermion, two_hyb_poles_se) {
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto oca_bs = nda::make_regular(topology_parity(oca_topology)
                                   * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, oca_topology), s.model.ad));
-  // compute using DenseDiagramEvaluator, and ensure sign is correct
+  // compute using dense::DiagramEvaluator, and ensure sign is correct
   auto oca_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, oca_topology);
   auto oca_dense    = nda::make_regular(topology_parity(oca_topology) * oca_dense_gf[0].data());
-  // DenseDiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
+  // dense::DiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
   auto oca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, oca_topology);
   auto oca_pairs    = nda::make_regular(topology_parity(oca_topology) * oca_pairs_gf[0].data());
   // manual dense routine
@@ -563,10 +565,10 @@ TEST(one_fermion, two_hyb_poles_se) {
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto third_bs = nda::make_regular(topology_parity(third_topology)
                                     * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, third_topology), s.model.ad));
-  // compute using DenseDiagramEvaluator, and ensure sign is correct
+  // compute using dense::DiagramEvaluator, and ensure sign is correct
   auto third_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, third_topology);
   auto third_dense    = nda::make_regular(topology_parity(third_topology) * third_dense_gf[0].data());
-  // DenseDiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
+  // dense::DiagramEvaluator with pairs optimization, which is what the Python wrappers actually use, and ensure sign is correct
   auto third_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, third_topology);
   auto third_pairs    = nda::make_regular(topology_parity(third_topology) * third_pairs_gf[0].data());
   // no manual third-order routine
@@ -625,7 +627,7 @@ TEST(one_fermion, const_hyb_spgf) {
   nda::array<int, 2> nca_topology = {{0, 1}};
   // compute using DiagramEvaluator, and ensure sign is correct
   auto nca_bs = nda::make_regular(topology_parity(nca_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, nca_topology));
-  // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
+  // compute using dense::DiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
   auto nca_dense = nda::make_regular(topology_parity(nca_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, nca_topology));
   // manual dense routine
   auto nca_manual_dense = NCA_gf_dense(s.Gt_dense, s.Gt_dense_refl, s.Fs_dense, s.F_dags_dense);
@@ -646,7 +648,7 @@ TEST(one_fermion, const_hyb_spgf) {
   nda::array<int, 2> oca_topology = {{0, 2}, {1, 3}};
   // compute using DiagramEvaluator, and ensure sign is correct
   auto oca_bs = nda::make_regular(topology_parity(oca_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, oca_topology));
-  // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
+  // compute using dense::DiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
   auto oca_dense = nda::make_regular(topology_parity(oca_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, oca_topology));
   // manual dense routine
   auto oca_manual_dense = OCA_gf_dense(s.D.hyb.coeffs, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
@@ -670,7 +672,7 @@ TEST(one_fermion, const_hyb_spgf) {
   nda::array<int, 2> third_topology = {{0, 3}, {1, 4}, {2, 5}};
   // compute using DiagramEvaluator, and ensure sign is correct
   auto third_bs = nda::make_regular(topology_parity(third_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, third_topology));
-  // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
+  // compute using dense::DiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
   auto third_dense = nda::make_regular(topology_parity(third_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, third_topology));
   // no manual third-order routine
   // compute using trapezoidal quadrature
@@ -722,7 +724,7 @@ TEST(one_fermion, one_hyb_pole_spgf) {
   nda::array<int, 2> nca_topology = {{0, 1}};
   // compute using DiagramEvaluator, and ensure sign is correct
   auto nca_bs = nda::make_regular(topology_parity(nca_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, nca_topology));
-  // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
+  // compute using dense::DiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
   auto nca_dense = nda::make_regular(topology_parity(nca_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, nca_topology));
   // manual dense routine
   auto nca_manual_dense = NCA_gf_dense(s.Gt_dense, s.Gt_dense_refl, s.Fs_dense, s.F_dags_dense);
@@ -743,7 +745,7 @@ TEST(one_fermion, one_hyb_pole_spgf) {
   nda::array<int, 2> oca_topology = {{0, 2}, {1, 3}};
   // compute using DiagramEvaluator, and ensure sign is correct
   auto oca_bs = nda::make_regular(topology_parity(oca_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, oca_topology));
-  // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
+  // compute using dense::DiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
   auto oca_dense = nda::make_regular(topology_parity(oca_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, oca_topology));
   // manual dense routine
   auto oca_manual_dense = OCA_gf_dense(s.D.hyb.coeffs, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
@@ -766,7 +768,7 @@ TEST(one_fermion, one_hyb_pole_spgf) {
   nda::array<int, 2> third_topology = {{0, 3}, {1, 4}, {2, 5}};
   // compute using DiagramEvaluator, and ensure sign is correct
   auto third_bs = nda::make_regular(topology_parity(third_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, third_topology));
-  // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
+  // compute using dense::DiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
   auto third_dense = nda::make_regular(topology_parity(third_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, third_topology));
   // no manual third-order routine
   // compute using trapezoidal quadrature
@@ -820,7 +822,7 @@ TEST(one_fermion, two_hyb_poles_spgf) {
   nda::array<int, 2> nca_topology = {{0, 1}};
   // compute using DiagramEvaluator, and ensure sign is correct
   auto nca_bs = nda::make_regular(topology_parity(nca_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, nca_topology));
-  // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
+  // compute using dense::DiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
   auto nca_dense = nda::make_regular(topology_parity(nca_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, nca_topology));
   // manual dense routine
   auto nca_manual_dense = NCA_gf_dense(s.Gt_dense, s.Gt_dense_refl, s.Fs_dense, s.F_dags_dense);
@@ -842,7 +844,7 @@ TEST(one_fermion, two_hyb_poles_spgf) {
   nda::array<int, 2> oca_topology = {{0, 2}, {1, 3}};
   // compute using DiagramEvaluator, and ensure sign is correct
   auto oca_bs = nda::make_regular(topology_parity(oca_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, oca_topology));
-  // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
+  // compute using dense::DiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
   auto oca_dense = nda::make_regular(topology_parity(oca_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, oca_topology));
   // manual dense routine
   auto oca_manual_dense = OCA_gf_dense(s.D.hyb.coeffs, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
@@ -865,7 +867,7 @@ TEST(one_fermion, two_hyb_poles_spgf) {
   nda::array<int, 2> third_topology = {{0, 3}, {1, 4}, {2, 5}};
   // compute using DiagramEvaluator, and ensure sign is correct
   auto third_bs = nda::make_regular(topology_parity(third_topology) * s.D.compute_single_ptcle_gf(s.model.G_ppsc, third_topology));
-  // compute using DenseDiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
+  // compute using dense::DiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
   auto third_dense = nda::make_regular(topology_parity(third_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, third_topology));
   // no manual third-order routine
   // compute using trapezoidal quadrature

@@ -393,12 +393,12 @@ namespace triqs_xca::atom_diag {
     return get_operators_dense_impl(ad);
   }
 
-  DenseFSet get_operators_dense(const triqs_atom_diag_t<true> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
+  FSet get_operators_dense(const triqs_atom_diag_t<true> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
     auto [Fs, Fdags] = get_operators_dense_impl(ad);
     return {Fs, Fdags, hyb_coeffs};
   }
 
-  DenseFSet get_operators_dense(const triqs_atom_diag_t<false> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
+  FSet get_operators_dense(const triqs_atom_diag_t<false> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs) {
     auto [Fs, Fdags] = get_operators_dense_impl(ad);
     return {Fs, Fdags, hyb_coeffs};
   }

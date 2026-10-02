@@ -4,8 +4,8 @@
 #include <triqs/operators/many_body_operator.hpp>
 
 #include <triqs_xca/atom_diag_utils.hpp>
-#include <triqs_xca/block_sparse.hpp>
-#include <triqs_xca/dense.hpp>
+#include <triqs_xca/block_sparse/block_op.hpp>
+#include <triqs_xca/dense/fset.hpp>
 #include <triqs_xca/dynint.hpp>
 
 #include "block_sparse_utils.hpp"
@@ -45,7 +45,7 @@ namespace {
 
   /// max |block-sparse bar - dense bar| over every entry the block-sparse object stores.
   std::pair<double, double> compare_bars_with_dense(BlockOpSymQuartet const &Fq, triqs::atom_diag::atom_diag<true> const &ad,
-                                                    triqs_xca::dense::DenseFSet const &Fset, int p) {
+                                                    triqs_xca::dense::FSet const &Fset, int p) {
     int n_sets    = static_cast<int>(nda::max_element(Fq.sym_set_labels) + 1);
     double da_err = 0.0, fb_err = 0.0;
     for (int q_ix = 0; q_ix < n_sets; ++q_ix) {
@@ -81,7 +81,7 @@ namespace {
 
   /// max |dense bar| over every entry the block-sparse object does not store
   std::pair<double, double> uncovered_dense_weight(BlockOpSymQuartet const &Fq, triqs::atom_diag::atom_diag<true> const &ad,
-                                                   triqs_xca::dense::DenseFSet const &Fset, int p) {
+                                                   triqs_xca::dense::FSet const &Fset, int p) {
     int N        = ad.get_full_hilbert_space_dim();
     int n_ext    = static_cast<int>(Fq.sym_set_labels.size());
     int n_sets   = static_cast<int>(nda::max_element(Fq.sym_set_labels) + 1);

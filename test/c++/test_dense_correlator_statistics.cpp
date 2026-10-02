@@ -8,7 +8,7 @@
 
 #include <triqs_xca/atom_diag_utils.hpp>
 #include <triqs_xca/backbone.hpp>
-#include <triqs_xca/dense_backbone.hpp>
+#include <triqs_xca/dense/diagram_evaluator.hpp>
 #include <triqs_xca/topology.hpp>
 
 #include "block_sparse_utils.hpp"
@@ -23,7 +23,7 @@ using triqs::operators::many_body_operator_real;
 using triqs::operators::n;
 
 using triqs_xca::atom_diag::ad_to_atom_prop;
-using triqs_xca::dense::DenseDiagramEvaluator;
+using triqs_xca::dense::DiagramEvaluator;
 
 /**
  * @file test_dense_correlator_statistics.cpp
@@ -61,7 +61,7 @@ namespace {
   many_body_operator_real S_minus() { return c_dag<double>("do", 0) * c<double>("up", 0) + c_dag<double>("do", 1) * c<double>("up", 1); }
 
   /// The body of compute_one_time_correlator with the statistics flag forced rather than inferred
-  nda::array<dcomplex, 3> correlator_with_flag(DenseDiagramEvaluator &D, triqs::gfs::block_gf<triqs::mesh::dlr_imtime> const &G,
+  nda::array<dcomplex, 3> correlator_with_flag(DiagramEvaluator &D, triqs::gfs::block_gf<triqs::mesh::dlr_imtime> const &G,
                                                std::vector<many_body_operator_real> const &ops_tau, std::vector<many_body_operator_real> const &ops_0,
                                                triqs::atom_diag::atom_diag<true> const &ad, nda::array_const_view<int, 2> topology,
                                                bool is_fermionic) {
@@ -84,7 +84,7 @@ namespace {
   struct Harness {
     triqs::atom_diag::atom_diag<true> ad;
     triqs::gfs::block_gf<triqs::mesh::dlr_imtime> G;
-    DenseDiagramEvaluator D;
+    DiagramEvaluator D;
   };
 
   Harness make_harness(triqs::atom_diag::atom_diag<true> ad) {
@@ -96,7 +96,7 @@ namespace {
       hc(1, i, i) = 0.5 - 0.04 * i;
     }
     nda::vector<double> poles = {1.3, -0.8};
-    return {ad, G, DenseDiagramEvaluator(poles, hc, G[0].mesh(), ad)};
+    return {ad, G, DiagramEvaluator(poles, hc, G[0].mesh(), ad)};
   }
 
   double maxabs(nda::array_const_view<dcomplex, 3> a) { return nda::max_element(nda::abs(a)); }

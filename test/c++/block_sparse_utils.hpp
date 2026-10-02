@@ -4,7 +4,7 @@
 
 #include <nda/algorithms.hpp>
 #include <triqs_xca/atom_diag_utils.hpp>
-#include <triqs_xca/block_sparse.hpp>
+#include <triqs_xca/block_sparse/block_op.hpp>
 
 using nda::dcomplex;
 
@@ -25,7 +25,7 @@ struct DenseFermionModelData {
   nda::vector<double> hyb_poles;
   triqs::atom_diag::atom_diag<true> ad;
   triqs::gfs::block_gf<triqs::mesh::dlr_imtime> G_ppsc_dense;
-  triqs_xca::dense::DenseFSet Fset_dense;
+  triqs_xca::dense::FSet Fset_dense;
 };
 
 /**

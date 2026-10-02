@@ -9,8 +9,8 @@
 #include <triqs/atom_diag/functions.hpp>
 #include <triqs/utility/first_include.hpp>
 
-#include "triqs_xca/dense.hpp"
-#include "triqs_xca/block_sparse.hpp"
+#include "triqs_xca/dense/fset.hpp"
+#include "triqs_xca/block_sparse/block_op.hpp"
 
 namespace triqs_xca::atom_diag {
 
@@ -20,7 +20,7 @@ namespace triqs_xca::atom_diag {
 
   using triqs_atom_diag = triqs_atom_diag_t<true>; // Default: complex valued Hamiltonians
 
-  using triqs_xca::dense::DenseFSet;
+  using triqs_xca::dense::FSet;
 
   using triqs_xca::block_sparse::BlockDiagOpFun;
   using triqs_xca::block_sparse::BlockOpSymQuartet;
@@ -103,10 +103,10 @@ namespace triqs_xca::atom_diag {
  * @brief Get creation and annihilation operators from an AtomDiag object in dense storage
  * @param[in] ad AtomDiag object
  * @param[in] hyb_coeffs Hybridization SOE coefficients
- * @return DenseFSet object
+ * @return FSet object
  */
-  DenseFSet get_operators_dense(const triqs_atom_diag_t<true> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs);
-  DenseFSet get_operators_dense(const triqs_atom_diag_t<false> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs);
+  FSet get_operators_dense(const triqs_atom_diag_t<true> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs);
+  FSet get_operators_dense(const triqs_atom_diag_t<false> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs);
 
   /**
  * @brief Get creation and annihilation operators from an AtomDiag object in dense storage

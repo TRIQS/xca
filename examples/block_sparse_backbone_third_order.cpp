@@ -1,9 +1,8 @@
 #include <triqs_soehyb/strong_cpl.hpp>
 
-#include <triqs_xca/dense_backbone.hpp>
+#include <triqs_xca/dense/diagram_evaluator.hpp>
 
-#include <triqs_xca/block_sparse_manual.hpp>
-#include <triqs_xca/block_sparse_backbone.hpp>
+#include <triqs_xca/block_sparse/diagram_evaluator.hpp>
 
 using nda::range;
 using nda::linalg::matmul;

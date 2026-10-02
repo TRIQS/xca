@@ -6,7 +6,7 @@
 #include <triqs/gfs.hpp>
 
 #include "triqs_xca/hyb.hpp"
-#include "triqs_xca/dense.hpp"
+#include "triqs_xca/dense/fset.hpp"
 #include "triqs_xca/backbone.hpp"
 #include "triqs_xca/atom_diag_utils.hpp"
 
@@ -17,7 +17,7 @@ namespace triqs_xca::dense {
   using imtime_ops = cppdlr::imtime_ops;
 
   /**
-     * @class DenseDiagramEvaluator
+     * @class DiagramEvaluator
      * @brief Class for evaluating a diagram of a given order and topology
      * This class is used to evaluate all the backbone decompositions of a given
      * order and topology. It reads the information from a Backbone object and
@@ -25,7 +25,7 @@ namespace triqs_xca::dense {
      * actually compute the diagram. It also contains temporary arrays required for
      * computation. 
      */
-  class DenseDiagramEvaluator {
+  class DiagramEvaluator {
 
     public:
     using gf_t  = triqs::gfs::block_gf<triqs::mesh::dlr_imtime>;
@@ -37,7 +37,7 @@ namespace triqs_xca::dense {
     nda::vector<double> dlr_it;       // DLR imaginary time nodes in relative ordering
 
     C2PY_IGNORE hyb::Hybridization hyb; // Hybridization object containing hyb and related information
-    C2PY_IGNORE DenseFSet Fset;         // DenseFSet (cre/ann operators with and without bars)
+    C2PY_IGNORE FSet Fset;         // FSet (cre/ann operators with and without bars)
 
     int r;     // DLR rank
     int n;     // number of orbitals
@@ -131,17 +131,17 @@ namespace triqs_xca::dense {
                                                         nda::array_const_view<int, 1> f_ix_vec);
 
     /**
-       * @brief Constructor for DenseDiagramEvaluator
+       * @brief Constructor for DiagramEvaluator
        * 
        * @param[in] beta inverse temperature
        * @param[in] itops DLR imaginary time object
        * @param[in] hyb hybridization function at imaginary time nodes
        * @param[in] hyb_refl hybridization function at (beta - tau) nodes
        * @param[in] hyb_poles hybridization poles
-       * @param[in] Fset DenseFSet (cre/ann operators with and without bars)
+       * @param[in] Fset FSet (cre/ann operators with and without bars)
        */
-    C2PY_IGNORE DenseDiagramEvaluator(double beta, double eps, imtime_ops &itops, nda::vector_const_view<double> hyb_poles,
-                                      nda::array_const_view<dcomplex, 3> hyb_coeffs, DenseFSet &Fset);
+    C2PY_IGNORE DiagramEvaluator(double beta, double eps, imtime_ops &itops, nda::vector_const_view<double> hyb_poles,
+                                      nda::array_const_view<dcomplex, 3> hyb_coeffs, FSet &Fset);
 
     /**
        * @brief Constructor for DiagramEvaluator
@@ -151,7 +151,7 @@ namespace triqs_xca::dense {
        * @param[in] ad TRIQS atom_diag object with Hamiltonian and field operators
        */
     template <bool isComplex>
-    DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs, triqs::mesh::dlr_imtime tau_mesh,
+    DiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs, triqs::mesh::dlr_imtime tau_mesh,
                           triqs::atom_diag::atom_diag<isComplex> const &ad);
 
     /**
@@ -164,11 +164,11 @@ namespace triqs_xca::dense {
        * @param[in] dynint_coeffs array of coefficients for the dynamic interactions (also using hyb_poles)
        */
     template <bool isComplex>
-    DenseDiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs, triqs::mesh::dlr_imtime tau_mesh,
+    DiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs, triqs::mesh::dlr_imtime tau_mesh,
                           triqs::atom_diag::atom_diag<isComplex> const &ad, std::vector<triqs::operators::many_body_operator_real> const &dynint_ops,
                           nda::array_const_view<dcomplex, 3> dynint_coeffs);
 
-    virtual ~DenseDiagramEvaluator() = default;
+    virtual ~DiagramEvaluator() = default;
   };
 
 } // namespace triqs_xca::dense

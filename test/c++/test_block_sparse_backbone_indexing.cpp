@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <triqs_xca/block_sparse_backbone.hpp>
+#include <triqs_xca/block_sparse/diagram_evaluator.hpp>
 
 #include "block_sparse_utils.hpp"
 

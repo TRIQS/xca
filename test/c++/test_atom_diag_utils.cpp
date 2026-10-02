@@ -343,7 +343,7 @@ TEST(AtomDiagUtils, operators) {
   check_sym_sets(Fq.F_dags, expected_cdag_mats);
 
   // --- Expected F_dag_bars and F_bars_refl ---
-  // Contractions of the hybridization coefficients with the field operators, as in DenseFSet::update_hybridization():
+  // Contractions of the hybridization coefficients with the field operators, as in FSet::update_hybridization():
   //
   //   exp_F_dag_bars(m, l, :, :)  = +sum_k hyb(l, k, m) * cdag(k, :, :)
   //   exp_F_bars_refl(m, l, :, :) = -sum_k hyb(l, m, k) * c(k, :, :)

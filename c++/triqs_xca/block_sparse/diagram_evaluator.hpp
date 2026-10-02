@@ -5,7 +5,7 @@
 
 #include "triqs_xca/hyb.hpp"
 #include "triqs_xca/backbone.hpp"
-#include "triqs_xca/block_sparse.hpp"
+#include "triqs_xca/block_sparse/block_op.hpp"
 
 namespace triqs_xca::block_sparse {
 

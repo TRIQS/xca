@@ -6,9 +6,9 @@
 #include <triqs/operators/many_body_operator.hpp>
 
 #include <triqs_xca/atom_diag_utils.hpp>
-#include <triqs_xca/block_sparse.hpp>
-#include <triqs_xca/block_sparse_backbone.hpp>
-#include <triqs_xca/dense_backbone.hpp>
+#include <triqs_xca/block_sparse/block_op.hpp>
+#include <triqs_xca/block_sparse/diagram_evaluator.hpp>
+#include <triqs_xca/dense/diagram_evaluator.hpp>
 #include <triqs_xca/dynint.hpp>
 #include <triqs_xca/topology.hpp>
 
@@ -30,7 +30,7 @@ using triqs_xca::atom_diag::get_tensor_in_atom_diag_subspace;
 using triqs_xca::block_sparse::BlockDiagOpFun;
 using triqs_xca::block_sparse::BlockOpSymQuartet;
 using triqs_xca::block_sparse::DiagramEvaluator;
-using triqs_xca::dense::DenseDiagramEvaluator;
+namespace dense = triqs_xca::dense;
 using triqs_xca::dynint::get_extended_coefficients;
 using triqs_xca::dynint::get_operators_and_interactions;
 
@@ -41,7 +41,7 @@ using triqs_xca::dynint::get_operators_and_interactions;
  *
  * @details The self-energy is compared to the dense evaluator with dynamical interactions, which runs on the single-subspace twin of the
  * partitioned atom_diag, with the two eigenbases bridged by get_tensor_in_atom_diag_subspace(). The comparison on the crossing topology
- * requires n_int to reach every Backbone constructed in block_sparse_backbone.cpp, since the permutation parity otherwise treats the
+ * requires n_int to reach every Backbone constructed in block_sparse/diagram_evaluator.cpp, since the permutation parity otherwise treats the
  * interaction line as fermionic, while the non-crossing topologies are insensitive to this and pin the rest of the construction.
  */
 
@@ -151,7 +151,7 @@ TEST(BlockSparseDynintEvaluator, self_energy_matches_dense_with_dynamical_intera
 
   // dense reference on the single-subspace twin
   auto G_flat = ad_to_atom_prop(m.ad_flat, beta, Lambda, eps);
-  DenseDiagramEvaluator D_dense(m.hyb_poles, m.hyb_coeffs, G_flat[0].mesh(), m.ad_flat, m.dynint_ops, m.dynint_coeffs);
+  dense::DiagramEvaluator D_dense(m.hyb_poles, m.hyb_coeffs, G_flat[0].mesh(), m.ad_flat, m.dynint_ops, m.dynint_coeffs);
   ASSERT_EQ(D_dense.n_hyb, n_hyb);
   ASSERT_EQ(D_dense.n_int, n_int);
   auto Sigma_dense = D_dense.compute_self_energy(G_flat, topology);
@@ -183,7 +183,7 @@ TEST(BlockSparseDynintEvaluator, no_dynamical_interaction_matches_dense) {
   auto Sigma = BlockDiagOpFun(D.compute_self_energy(Gt, topology));
 
   auto G_flat = ad_to_atom_prop(m.ad_flat, beta, Lambda, eps);
-  DenseDiagramEvaluator D_dense(m.hyb_poles, m.hyb_coeffs, G_flat[0].mesh(), m.ad_flat);
+  dense::DiagramEvaluator D_dense(m.hyb_poles, m.hyb_coeffs, G_flat[0].mesh(), m.ad_flat);
   auto Sigma_dense = D_dense.compute_self_energy(G_flat, topology);
 
   auto [err, scale] = compare_sigma_with_dense(Sigma, Sigma_dense, m.ad);
@@ -207,7 +207,7 @@ TEST(BlockSparseDynintEvaluator, self_energy_matches_dense_on_non_crossing_topol
   auto G_flat = ad_to_atom_prop(m.ad_flat, beta, Lambda, eps);
 
   DiagramEvaluator D(beta, Lambda, eps, m.hyb_poles, ext, Fq, n_int);
-  DenseDiagramEvaluator D_dense(m.hyb_poles, m.hyb_coeffs, G_flat[0].mesh(), m.ad_flat, m.dynint_ops, m.dynint_coeffs);
+  dense::DiagramEvaluator D_dense(m.hyb_poles, m.hyb_coeffs, G_flat[0].mesh(), m.ad_flat, m.dynint_ops, m.dynint_coeffs);
 
   for (auto topology : {nda::array<int, 2>{{0, 1}}, nda::array<int, 2>{{0, 3}, {1, 2}}}) {
     SCOPED_TRACE("topology " + [&] {
@@ -465,7 +465,7 @@ TEST(BlockSparseDynintEvaluator, spgf_matches_dense_with_dynamical_interactions)
   auto Fq  = std::get<0>(get_operators_and_interactions(m.ad, m.hyb_coeffs, m.dynint_coeffs, m.dynint_ops));
   auto ext = get_extended_coefficients(m.hyb_coeffs, m.dynint_coeffs);
   DiagramEvaluator D(beta, Lambda, eps, m.hyb_poles, ext, Fq, n_int);
-  DenseDiagramEvaluator D_dense(m.hyb_poles, m.hyb_coeffs, G_fl[0].mesh(), m.ad_flat, m.dynint_ops, m.dynint_coeffs);
+  dense::DiagramEvaluator D_dense(m.hyb_poles, m.hyb_coeffs, G_fl[0].mesh(), m.ad_flat, m.dynint_ops, m.dynint_coeffs);
 
   // check that the interaction flavour is in the backbone enumeration
   auto Fq_ferm = std::get<0>(get_operators(m.ad, m.hyb_coeffs));
@@ -530,7 +530,7 @@ TEST(BlockSparseDynintEvaluator, one_time_correlator_matches_dense_with_dynamica
   auto Fq  = std::get<0>(get_operators_and_interactions(m.ad, m.hyb_coeffs, m.dynint_coeffs, m.dynint_ops));
   auto ext = get_extended_coefficients(m.hyb_coeffs, m.dynint_coeffs);
   DiagramEvaluator D(beta, Lambda, eps, m.hyb_poles, ext, Fq, n_int);
-  DenseDiagramEvaluator D_dense(m.hyb_poles, m.hyb_coeffs, G_fl[0].mesh(), m.ad_flat, m.dynint_ops, m.dynint_coeffs);
+  dense::DiagramEvaluator D_dense(m.hyb_poles, m.hyb_coeffs, G_fl[0].mesh(), m.ad_flat, m.dynint_ops, m.dynint_coeffs);
 
   auto [mu_ops, kap_ops] = make_correlator_ops(Fq, n_ext);
   ASSERT_EQ(static_cast<int>(mu_ops.size()), n_ext);
@@ -763,7 +763,7 @@ TEST(BlockSparseDynintEvaluator, matches_dense_on_the_interleaved_deep_subspace_
   DiagramEvaluator D(beta, Lambda, eps, hyb_poles, ext, Fq, n_int);
 
   auto G_flat = ad_to_atom_prop(ad_flat, beta, Lambda, eps);
-  DenseDiagramEvaluator D_dense(hyb_poles, hyb, G_flat[0].mesh(), ad_flat, ops, d);
+  dense::DiagramEvaluator D_dense(hyb_poles, hyb, G_flat[0].mesh(), ad_flat, ops, d);
 
   int max_dim = 0;
   for (auto dim : ad.get_subspace_dims()) max_dim = std::max(max_dim, static_cast<int>(dim));

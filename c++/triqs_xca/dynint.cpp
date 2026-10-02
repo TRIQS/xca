@@ -36,7 +36,7 @@ namespace triqs_xca::dynint {
     }
 
     template <bool IsComplex>
-    DenseFSet get_operators_and_interactions_dense_impl(
+    FSet get_operators_and_interactions_dense_impl(
         const triqs_atom_diag_t<IsComplex> &ad, 
         nda::array_const_view<dcomplex, 3> hyb_coeffs, 
         nda::array_const_view<dcomplex, 3> dynint_coeffs,  
@@ -47,7 +47,7 @@ namespace triqs_xca::dynint {
 
         auto [Fs, Fdags] = atom_diag::get_operators_dense(ad);
 
-        // Create DenseFSet with interactions included as additional operators
+        // Create FSet with interactions included as additional operators
 
         int N = ad.get_full_hilbert_space_dim();
 
@@ -91,10 +91,10 @@ namespace triqs_xca::dynint {
         }
         */
         
-        return DenseFSet{Fs_ext, Fdags_ext, ext_coeffs};
+        return FSet{Fs_ext, Fdags_ext, ext_coeffs};
     }
 
-    DenseFSet get_operators_and_interactions_dense(
+    FSet get_operators_and_interactions_dense(
         const triqs_atom_diag_t<true> &ad, 
         nda::array_const_view<dcomplex, 3> hyb_coeffs, 
         nda::array_const_view<dcomplex, 3> dynint_coeffs,  
@@ -102,7 +102,7 @@ namespace triqs_xca::dynint {
         return get_operators_and_interactions_dense_impl(ad, hyb_coeffs, dynint_coeffs, dynint_ops);
     }
 
-    DenseFSet get_operators_and_interactions_dense(
+    FSet get_operators_and_interactions_dense(
         const triqs_atom_diag_t<false> &ad, 
         nda::array_const_view<dcomplex, 3> hyb_coeffs, 
         nda::array_const_view<dcomplex, 3> dynint_coeffs,  

@@ -8,8 +8,8 @@
 #include <triqs/atom_diag/atom_diag.hpp>
 
 #include <triqs_xca/atom_diag_utils.hpp>
-#include <triqs_xca/block_sparse.hpp>
-#include <triqs_xca/block_sparse_backbone.hpp>
+#include <triqs_xca/block_sparse/block_op.hpp>
+#include <triqs_xca/block_sparse/diagram_evaluator.hpp>
 #include <triqs_xca/topology.hpp>
 
 #include "block_sparse_utils.hpp"
