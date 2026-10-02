@@ -2,9 +2,9 @@
 
 #include <c2py/c2py.hpp>
 
-#include "triqs_xca/dlr_dyson_ppsc.hpp"
+#include <cppdlr/dlr_dyson_ppsc.hpp>
 
-#include "pycppdlr.wrap.hxx"
+#include "cppdlr/pycppdlr.wrap.hxx"
 
 namespace c2py_module {
   using DysonItPPSC = cppdlr::dyson_it_ppsc<nda::array<nda::dcomplex, 2>, nda::dcomplex>;

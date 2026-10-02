@@ -40,7 +40,7 @@ endif()
 
 # Sphinx has internal caching, always run it
 add_custom_target(${PROJECT_NAME}_docs_sphinx ALL)
-add_dependencies(${PROJECT_NAME}_docs_sphinx ${PROJECT_NAME}_c ${PROJECT_NAME}_python_modules)
+add_dependencies(${PROJECT_NAME}_docs_sphinx ${PROJECT_NAME}_c triqs_soehyb_c ${PROJECT_NAME}_python_modules)
 add_custom_command(
   TARGET ${PROJECT_NAME}_docs_sphinx POST_BUILD
   COMMAND PYTHONPATH=${PROJECT_BINARY_DIR}/python:${adapol_SOURCE_DIR}/src:${pyed_SOURCE_DIR}:$ENV{PYTHONPATH} ${SPHINXBUILD_EXECUTABLE} -j auto -c . -b html ${CMAKE_CURRENT_SOURCE_DIR} html

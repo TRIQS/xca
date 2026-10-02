@@ -10,7 +10,7 @@
 #include <triqs_xca/block_sparse_manual_gf.hpp>
 #include <triqs_xca/topology.hpp>
 
-#include <triqs_xca/strong_cpl.hpp>
+#include <triqs_soehyb/strong_cpl.hpp>
 
 #include "block_sparse_utils.hpp"
 

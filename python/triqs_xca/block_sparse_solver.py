@@ -11,7 +11,7 @@ from triqs.operators import Operator
 
 from .diag import all_pairings, all_connected_pairings
 
-from .dlr_dyson_ppsc import DysonItPPSC
+from cppdlr.dlr_dyson_ppsc import DysonItPPSC
 
 from .block_sparse import DiagramEvaluator
 from .dense import DenseDiagramEvaluator
@@ -131,8 +131,8 @@ class BlockSparseSolver(object):
         self.Sigma = self.get_zero_pseudo_particle_propagator()
 
         # FIXME! Get ito from mesh_tau
-        from .pycppdlr import build_dlr_rf
-        from .pycppdlr import ImTimeOps
+        from cppdlr.pycppdlr import build_dlr_rf
+        from cppdlr.pycppdlr import ImTimeOps
         ito = ImTimeOps(w_max * beta, build_dlr_rf(w_max * beta, eps, self.dlr_symmetrize), symmetrize=self.dlr_symmetrize)
 
         # Compare DLR meshes

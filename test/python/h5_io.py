@@ -19,7 +19,7 @@
 #
 ################################################################################
 
-from triqs_xca.solver import Solver
+from triqs_soehyb.solver import Solver
 
 from triqs.operators import c, c_dag
 

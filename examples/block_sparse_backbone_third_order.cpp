@@ -1,4 +1,4 @@
-#include <triqs_xca/strong_cpl.hpp>
+#include <triqs_soehyb/strong_cpl.hpp>
 
 #include <triqs_xca/dense_backbone.hpp>
 

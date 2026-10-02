@@ -1,28 +1,28 @@
 /*******************************************************************************
  *
- * triqs_xca: Sum-Of-Exponentials bold HYBridization expansion impurity solver
+ * triqs_soehyb: Sum-Of-Exponentials bold HYBridization expansion impurity solver
  *
  * Copyright (C) 2025, Z. Huang, H. U.R. Strand
  *
- * triqs_xca is free software: you can redistribute it and/or modify it under the
+ * triqs_soehyb is free software: you can redistribute it and/or modify it under the
  * terms of the GNU General Public License as published by the Free Software
  * Foundation, either version 3 of the License, or (at your option) any later
  * version.
  *
- * triqs_xca is distributed in the hope that it will be useful, but WITHOUT ANY
+ * triqs_soehyb is distributed in the hope that it will be useful, but WITHOUT ANY
  * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
  * details.
  *
  * You should have received a copy of the GNU General Public License along with
- * triqs_xca. If not, see <http://www.gnu.org/licenses/>.
+ * triqs_soehyb. If not, see <http://www.gnu.org/licenses/>.
  *
  ******************************************************************************/
 
 #include "utils.hpp"
 #include "strong_cpl.hpp"
 #include "impurity.hpp"
-#include "dlr_dyson_ppsc.hpp"
+#include <cppdlr/dlr_dyson_ppsc.hpp>
 #include <cppdlr/dlr_kernels.hpp>
 #include <nda/blas/tools.hpp>
 #include <nda/declarations.hpp>
@@ -128,14 +128,14 @@ void fastdiagram::hyb_decomposition(bool poledlrflag, double eps) {
   P = Delta_F.P;
 }
 
-int64_t fastdiagram::number_of_diagrams(int m) { return triqs_xca::utils::pown(P, m - 1) * triqs_xca::utils::pown(2, m - 1); }
+int64_t fastdiagram::number_of_diagrams(int m) { return triqs_soehyb::utils::pown(P, m - 1) * triqs_soehyb::utils::pown(2, m - 1); }
 
 nda::array<dcomplex, 3> fastdiagram::Sigma_calc_group(nda::array<dcomplex, 3> Gt, nda::array<int, 2> D, nda::array<int, 1> diagramindex) {
 
   auto N                  = Gt.shape(1);
   auto Nd                 = diagramindex.shape(0);
   auto m                  = D.shape(0);
-  auto num_diagram_per_fb = triqs_xca::utils::pown(P, m - 1);
+  auto num_diagram_per_fb = triqs_soehyb::utils::pown(P, m - 1);
   auto Diagram            = nda::array<dcomplex, 3>::zeros({r, N, N});
 
   for (int id = 0; id < Nd; ++id) {
@@ -199,7 +199,7 @@ nda::array<dcomplex, 3> fastdiagram::G_calc_group(nda::array<dcomplex, 3> Gt, nd
   auto Nd                 = diagramindex.shape(0);
   auto m                  = D.shape(0);
   auto Diagram            = nda::array<dcomplex, 3>::zeros({r, n, n});
-  auto num_diagram_per_fb = triqs_xca::utils::pown(P, m - 1);
+  auto num_diagram_per_fb = triqs_soehyb::utils::pown(P, m - 1);
   auto Gt_reflect         = itops.reflect(Gt);
 
   // for (int i=0; i<r; ++i) Gt_reflect(i,_,_) = transpose(Gt_reflect(i,_,_));

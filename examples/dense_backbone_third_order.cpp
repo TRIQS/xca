@@ -7,7 +7,7 @@
 #include <triqs_xca/block_sparse_manual.hpp>
 #include <triqs_xca/dense_backbone.hpp>
 
-#include <triqs_xca/strong_cpl.hpp>
+#include <triqs_soehyb/strong_cpl.hpp>
 
 using namespace nda;
 using namespace cppdlr;

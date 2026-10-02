@@ -25,7 +25,7 @@
 import numpy as np
 
 
-import triqs_xca.pycppdlr as d
+import cppdlr.pycppdlr as d
 
 
 def kernel(tau, omega):

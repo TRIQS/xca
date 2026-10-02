@@ -21,9 +21,9 @@
 
 import numpy as np
 
-from triqs_xca.pycppdlr import build_dlr_rf
-from triqs_xca.pycppdlr import ImTimeOps
-from triqs_xca.impurity import Fastdiagram
+from cppdlr.pycppdlr import build_dlr_rf
+from cppdlr.pycppdlr import ImTimeOps
+from triqs_soehyb.impurity import Fastdiagram
 
 beta = 1.0
 lamb = 100.0

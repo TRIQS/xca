@@ -38,7 +38,7 @@ from triqs.operators.util import N_op
 
 from triqs.gfs import make_gf_dlr_imtime, make_gf_dlr_imfreq, SemiCircular, inverse, iOmega_n
 
-from triqs_xca.triqs_solver import TriqsSolver
+from triqs_soehyb.triqs_solver import TriqsSolver
 
 from itertools import product
 

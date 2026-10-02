@@ -8,7 +8,7 @@ foreach(example ${all_examples})
   get_filename_component(example_name ${example} NAME_WE)
   get_filename_component(example_dir ${example} DIRECTORY)
   add_executable(${example_name} ${example})
-  target_link_libraries(${example_name} ${PROJECT_NAME}::${PROJECT_NAME}_c ${PROJECT_NAME}_warnings)
+  target_link_libraries(${example_name} ${PROJECT_NAME}::${PROJECT_NAME}_c ${PROJECT_NAME}::triqs_soehyb_c ${PROJECT_NAME}_warnings)
   set_property(TARGET ${example_name} PROPERTY RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${example_dir})
   # Run clang-tidy if found
   if(CLANG_TIDY_EXECUTABLE)

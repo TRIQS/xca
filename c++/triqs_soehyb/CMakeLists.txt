@@ -1,0 +1,1 @@
+xca_add_library(triqs_soehyb)

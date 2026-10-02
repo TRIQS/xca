@@ -2,7 +2,7 @@ import numpy as np
 
 from triqs.gfs import inverse, iOmega_n, MeshDLRImFreq, Gf, make_gf_dlr_imtime
 
-from triqs_xca.triqs_solver import TriqsSolver
+from triqs_soehyb.triqs_solver import TriqsSolver
 from triqs_xca.block_sparse_solver import BlockSparseSolver
 from triqs_xca.block_sparse_solver import pseudo_particle_block_gf_to_dense
 

@@ -28,8 +28,8 @@ import triqs.utility.mpi as mpi
 from triqs.gfs import make_gf_dlr_imtime, make_gf_dlr_imfreq, inverse, iOmega_n
 from triqs.operators import c, c_dag
 
-from triqs_xca.solver import Solver
-from triqs_xca.triqs_solver import TriqsSolver
+from triqs_soehyb.solver import Solver
+from triqs_soehyb.triqs_solver import TriqsSolver
 
 
 def test_triqs_solver_one_fermion(verbose):

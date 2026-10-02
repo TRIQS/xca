@@ -19,7 +19,7 @@
  *
  ******************************************************************************/
 
-#include "triqs_xca/strong_cpl.hpp"
+#include "triqs_soehyb/strong_cpl.hpp"
 #include "nda/nda.hpp"
 #include <cppdlr/cppdlr.hpp>
 #include <gtest/gtest.h>

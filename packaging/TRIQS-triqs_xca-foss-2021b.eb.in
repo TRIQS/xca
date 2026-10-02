@@ -40,12 +40,14 @@ separate_build_dir = True
 runtest = 'test'
 
 sanity_check_paths = {
-    'files': ['lib/libtriqs_xca_c.a'],
-    'dirs': ['include/triqs_xca', 'lib', 'share',
-             'lib/python%(pyshortver)s/site-packages/triqs_xca'],
+    'files': ['lib/libtriqs_xca_c.a', 'lib/libtriqs_soehyb_c.a'],
+    'dirs': ['include/triqs_xca', 'include/triqs_soehyb', 'include/cppdlr', 'lib', 'share',
+             'lib/python%(pyshortver)s/site-packages/triqs_xca',
+             'lib/python%(pyshortver)s/site-packages/triqs_soehyb',
+             'lib/python%(pyshortver)s/site-packages/cppdlr'],
 }
 
-sanity_check_commands = ["python -c 'import triqs_xca'"]
+sanity_check_commands = ["python -c 'import triqs_xca, triqs_soehyb, cppdlr.pycppdlr'"]
 
 modextrapaths = {
     'CPLUS_INCLUDE_PATH': 'include',

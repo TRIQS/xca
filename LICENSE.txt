@@ -12,8 +12,8 @@ version.
 The python timer module (./python/triqs_xca/ase/utils/timing.py)
 is distributed under the LGPL 2.1 license by other authors, see ./python/triqs_xca/ase/LICENSE.
 
-The python aaa module (./python/triqs_xca/aaa/)
-is distributed under the BSD-2-Clause license by other authors, see ./python/triqs_xca/aaa/LICENSE.
+The python aaa module (./python/triqs_soehyb/adapol_depr/aaa.py), an extended version of baryrat,
+is distributed under the BSD-2-Clause license by other authors, see ./python/triqs_soehyb/adapol_depr/LICENSE.
 
 triqs_xca is distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A

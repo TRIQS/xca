@@ -137,8 +137,8 @@ include(GNUInstallDirs)
 # Find / Build dependencies
 add_subdirectory(deps)
 
-# Build and install the library
-add_subdirectory(c++/${PROJECT_NAME})
+# Build and install the C++ libraries (cppdlr overlay, triqs_soehyb, triqs_xca)
+add_subdirectory(c++)
 
 # Tests
 if(Build_Tests)
@@ -148,7 +148,7 @@ endif()
 
 # Python
 if(PythonSupport)
-  add_subdirectory(python/${PROJECT_NAME})
+  add_subdirectory(python)
 endif()
 
 # Docs

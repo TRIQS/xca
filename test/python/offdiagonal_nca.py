@@ -26,10 +26,10 @@ from triqs.operators import c, c_dag
 from pyed.TriqsExactDiagonalization import TriqsExactDiagonalization
 
 
-from triqs_xca.pycppdlr import build_dlr_rf
-from triqs_xca.pycppdlr import ImTimeOps
+from cppdlr.pycppdlr import build_dlr_rf
+from cppdlr.pycppdlr import ImTimeOps
 
-from triqs_xca.impurity import Fastdiagram
+from triqs_soehyb.impurity import Fastdiagram
 
 
 def NCA_Sigma_ref_impl(ito, beta, tau_i, G_iaa, delta_iaa, F, F_dag):

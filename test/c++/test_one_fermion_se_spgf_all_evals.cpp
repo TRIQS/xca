@@ -12,7 +12,7 @@
 #include <triqs_xca/hyb.hpp>
 #include <triqs_xca/topology.hpp>
 
-#include <triqs_xca/strong_cpl.hpp>
+#include <triqs_soehyb/strong_cpl.hpp>
 
 #include "block_sparse_utils.hpp"
 

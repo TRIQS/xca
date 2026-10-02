@@ -1,0 +1,1 @@
+xca_add_python_package(triqs_soehyb LIBRARIES triqs_soehyb_c)

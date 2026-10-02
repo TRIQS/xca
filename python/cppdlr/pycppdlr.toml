@@ -1,6 +1,6 @@
 # Name of the package [optional].
 # Name of the module will be package_name.module_filename
-package_name = "triqs_xca"
+package_name = "cppdlr"
 
 # The documentation string of the module. 
 documentation = ""

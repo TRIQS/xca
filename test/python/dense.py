@@ -4,7 +4,7 @@ import numpy as np
 
 from triqs.operators import c, c_dag
 
-from triqs_xca.solver import Solver
+from triqs_soehyb.solver import Solver
 
 from triqs_xca.dense import NCA_dense, OCA_dense
 

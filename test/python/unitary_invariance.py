@@ -40,10 +40,10 @@ from triqs.operators import c, c_dag
 
 from pyed.OperatorUtils import operator_single_particle_transform
 
-from triqs_xca.pycppdlr import build_dlr_rf
-from triqs_xca.pycppdlr import ImTimeOps
-from triqs_xca.impurity import Fastdiagram
-from triqs_xca.solver import Solver
+from cppdlr.pycppdlr import build_dlr_rf
+from cppdlr.pycppdlr import ImTimeOps
+from triqs_soehyb.impurity import Fastdiagram
+from triqs_soehyb.solver import Solver
 
 
 def get_Hamiltonian(eps1=-0.1, t = 0.5 + 0.5j, U = 1.0):

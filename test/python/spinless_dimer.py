@@ -26,11 +26,11 @@ from triqs.gfs import Gf, MeshImTime
 from triqs.operators import c, c_dag
 from pyed.TriqsExactDiagonalization import TriqsExactDiagonalization
 
-from triqs_xca.pycppdlr import build_dlr_rf
-from triqs_xca.pycppdlr import ImTimeOps
+from cppdlr.pycppdlr import build_dlr_rf
+from cppdlr.pycppdlr import ImTimeOps
 
-from triqs_xca.impurity import Fastdiagram
-from triqs_xca.solver import Sigma_calc_loop, G_calc_loop, is_root
+from triqs_soehyb.impurity import Fastdiagram
+from triqs_soehyb.solver import Sigma_calc_loop, G_calc_loop, is_root
 
 
 def spinless_dimer_ed(ntau=500, beta=1.0, t=1.0, ek=0.0, mu=0.01):

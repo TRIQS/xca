@@ -5,7 +5,7 @@ from itertools import product
 from triqs.gfs import Gf, MeshDLRImTime, inverse, iOmega_n
 from triqs.operators.util.hamiltonians import h_int_kanamori, make_operator_real
 
-from triqs_xca.triqs_solver import TriqsSolver
+from triqs_soehyb.triqs_solver import TriqsSolver
 from triqs_xca.block_sparse_solver import BlockSparseSolver
 from triqs_xca.block_sparse_solver import hamiltonian_matrix, pseudo_particle_block_gf_to_dense
 
