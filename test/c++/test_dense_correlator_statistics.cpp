@@ -6,7 +6,7 @@
 #include <triqs/atom_diag/atom_diag.hpp>
 #include <triqs/operators/many_body_operator.hpp>
 
-#include <triqs_xca/block_sparse/atom_diag_utils.hpp>
+#include <triqs_xca/block_sparse/atom_diag.hpp>
 #include <triqs_xca/backbone.hpp>
 #include <triqs_xca/dense/diagram_evaluator.hpp>
 #include <triqs_xca/topology.hpp>
@@ -22,7 +22,7 @@ using triqs::operators::many_body_operator_complex;
 using triqs::operators::many_body_operator_real;
 using triqs::operators::n;
 
-using triqs_xca::atom_diag::ad_to_atom_prop;
+using triqs_xca::block_sparse::atom_diag::ad_to_atom_prop;
 using triqs_xca::dense::DiagramEvaluator;
 
 /**

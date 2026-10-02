@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
-#include <triqs_xca/atom_diag_utils.hpp>
-#include <triqs_xca/dense/atom_diag_utils.hpp>
-#include <triqs_xca/block_sparse/atom_diag_utils.hpp>
+#include <triqs_xca/atom_diag.hpp>
+#include <triqs_xca/dense/atom_diag.hpp>
+#include <triqs_xca/block_sparse/atom_diag.hpp>
 
 using nda::range;
 
@@ -15,12 +15,12 @@ using triqs::operators::c;
 using triqs::operators::c_dag;
 using triqs::operators::n;
 
-using triqs_xca::atom_diag::get_full_h_atomic;
-using triqs_xca::atom_diag::get_full_operator_matrix;
+using triqs_xca::dense::atom_diag::get_full_h_atomic;
+using triqs_xca::dense::atom_diag::get_full_operator_matrix;
 using triqs_xca::atom_diag::get_hamiltonian_block;
-using triqs_xca::atom_diag::get_hamiltonian_blocks;
+using triqs_xca::block_sparse::atom_diag::get_hamiltonian_blocks;
 using triqs_xca::atom_diag::get_operator_block;
-using triqs_xca::atom_diag::get_operators;
+using triqs_xca::block_sparse::atom_diag::get_operators;
 
 /**
  * @brief Creates a two-orbital Hamiltonian with spin and constructs the atom_diag object.

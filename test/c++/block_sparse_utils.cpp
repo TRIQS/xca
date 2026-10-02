@@ -36,7 +36,7 @@ FermionModelData one_fermion_model_helper(double beta, double Lambda, double eps
   fop_set.insert("0", 0);
   auto ad = triqs::atom_diag::atom_diag<true>(H, fop_set);
 
-  auto G_ppsc = triqs_xca::atom_diag::ad_to_atom_prop(ad, beta, Lambda, eps);
+  auto G_ppsc = triqs_xca::block_sparse::atom_diag::ad_to_atom_prop(ad, beta, Lambda, eps);
   auto G_bdof = BlockDiagOpFun(G_ppsc);
 
   return {.hyb_coeffs = hyb_coeffs, .hyb_poles = hyb_poles, .ad = ad, .G_ppsc = G_ppsc, .G_bdof = G_bdof};
@@ -68,7 +68,7 @@ FermionModelData two_fermion_model_helper(double beta, double Lambda, double eps
   nda::vector<double> hyb_poles(p);
   hyb_poles = hyb_pole;
 
-  auto G_ppsc = triqs_xca::atom_diag::ad_to_atom_prop(ad, beta, Lambda, eps);
+  auto G_ppsc = triqs_xca::block_sparse::atom_diag::ad_to_atom_prop(ad, beta, Lambda, eps);
 
   auto G_bdof = BlockDiagOpFun(G_ppsc);
 
@@ -119,14 +119,14 @@ DenseFermionModelData one_fermion_model_dense_helper(double beta, double Lambda,
   fop_set.insert("0", 0);
 
   auto ad                       = triqs::atom_diag::atom_diag<true>(H, fop_set);
-  auto H_dense                  = triqs_xca::atom_diag::get_full_h_atomic(ad);
+  auto H_dense                  = triqs_xca::dense::atom_diag::get_full_h_atomic(ad);
   auto dlr_rf                   = build_dlr_rf(Lambda, eps);
   auto itops                    = imtime_ops(Lambda, dlr_rf);
   auto const &dlr_it            = itops.get_itnodes();
   auto dlr_it_abs               = rel2abs(dlr_it);
   auto Gt_dense                 = Hmat_to_Gtmat(H_dense, beta, dlr_it_abs);
-  auto [Fs_dense, F_dags_dense] = triqs_xca::atom_diag::get_operators_dense(ad);
-  auto Fset_dense               = triqs_xca::atom_diag::FSet(Fs_dense, F_dags_dense, hyb_coeffs);
+  auto [Fs_dense, F_dags_dense] = triqs_xca::dense::atom_diag::get_operators_dense(ad);
+  auto Fset_dense               = triqs_xca::dense::FSet(Fs_dense, F_dags_dense, hyb_coeffs);
 
   std::vector<triqs::gfs::gf<triqs::mesh::dlr_imtime>> gf_block(1);
   triqs::mesh::dlr_imtime tau_mesh(beta, triqs::mesh::Fermion, Lambda / beta, eps, false);
@@ -393,9 +393,9 @@ std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>, nda::array<dcomplex
   auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
 
   auto ad                       = two_band_atom_diag_helper();
-  auto H_dense                  = triqs_xca::atom_diag::get_full_h_atomic(ad);
+  auto H_dense                  = triqs_xca::dense::atom_diag::get_full_h_atomic(ad);
   auto Gt_dense                 = Hmat_to_Gtmat(H_dense, beta, dlr_it_abs);
-  auto [Fs_dense, F_dags_dense] = triqs_xca::atom_diag::get_operators_dense(ad);
+  auto [Fs_dense, F_dags_dense] = triqs_xca::dense::atom_diag::get_operators_dense(ad);
 
   return std::make_tuple(Gt_dense, Fs_dense, F_dags_dense);
 }
@@ -408,9 +408,9 @@ std::tuple<BlockDiagOpFun, BlockOpSymQuartet, nda::vector<int>> two_band_helper(
   auto dlr_it_abs    = cppdlr::rel2abs(dlr_it);
 
   auto ad                       = two_band_atom_diag_helper();
-  auto [H_blocks, H_block_inds] = triqs_xca::atom_diag::get_hamiltonian_blocks(ad);
+  auto [H_blocks, H_block_inds] = triqs_xca::block_sparse::atom_diag::get_hamiltonian_blocks(ad);
   auto Gt                       = nonint_gf_BDOF(H_blocks, H_block_inds, beta, dlr_it_abs); // pseudo-particle Green's function
-  auto [Fq, sym_set_labels]     = triqs_xca::atom_diag::get_operators(ad, hyb_coeffs);
+  auto [Fq, sym_set_labels]     = triqs_xca::block_sparse::atom_diag::get_operators(ad, hyb_coeffs);
 
   return std::make_tuple(Gt, Fq, sym_set_labels);
 }

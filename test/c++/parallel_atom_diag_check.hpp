@@ -6,8 +6,8 @@
 
 #include <triqs/atom_diag/atom_diag.hpp>
 
-#include <triqs_xca/atom_diag_utils.hpp>
-#include <triqs_xca/dense/atom_diag_utils.hpp>
+#include <triqs_xca/atom_diag.hpp>
+#include <triqs_xca/dense/atom_diag.hpp>
 
 /**
  * @file parallel_atom_diag_check.hpp
@@ -31,11 +31,11 @@ inline void assert_parallel_atom_diags(triqs::atom_diag::atom_diag<true> const &
     ASSERT_EQ(fock[i], i) << "the single-subspace Fock ordering is not the identity, so the dense dynamical-interaction path would place the "
                              "interaction operators in a different basis from the field operators";
 
-  EXPECT_LE(nda::max_element(nda::abs(triqs_xca::atom_diag::get_full_h_atomic(ad_bs) - triqs_xca::atom_diag::get_full_h_atomic(ad_flat))), tol)
+  EXPECT_LE(nda::max_element(nda::abs(triqs_xca::dense::atom_diag::get_full_h_atomic(ad_bs) - triqs_xca::dense::atom_diag::get_full_h_atomic(ad_flat))), tol)
      << "the two atom_diags do not represent the same Hamiltonian";
 
-  auto [Fs_bs, Fdags_bs]     = triqs_xca::atom_diag::get_operators_dense(ad_bs);
-  auto [Fs_flat, Fdags_flat] = triqs_xca::atom_diag::get_operators_dense(ad_flat);
+  auto [Fs_bs, Fdags_bs]     = triqs_xca::dense::atom_diag::get_operators_dense(ad_bs);
+  auto [Fs_flat, Fdags_flat] = triqs_xca::dense::atom_diag::get_operators_dense(ad_flat);
   EXPECT_LE(nda::max_element(nda::abs(Fs_bs - Fs_flat)), tol) << "the two atom_diags give different c operators in the Fock basis";
   EXPECT_LE(nda::max_element(nda::abs(Fdags_bs - Fdags_flat)), tol) << "the two atom_diags give different c^dag operators in the Fock basis";
   ASSERT_GT(nda::max_element(nda::abs(Fs_bs)), 0.5) << "non-vacuity: the comparison above must not be between two zero tensors";

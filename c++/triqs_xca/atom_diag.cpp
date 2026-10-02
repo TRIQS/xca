@@ -1,4 +1,4 @@
-#include "triqs_xca/atom_diag_utils.hpp"
+#include "triqs_xca/atom_diag.hpp"
 
 namespace triqs_xca::atom_diag {
 

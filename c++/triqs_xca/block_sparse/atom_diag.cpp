@@ -1,9 +1,12 @@
 #include <optional>
 #include <stdexcept>
 
-#include "triqs_xca/block_sparse/atom_diag_utils.hpp"
+#include "triqs_xca/block_sparse/atom_diag.hpp"
 
-namespace triqs_xca::atom_diag {
+namespace triqs_xca::block_sparse::atom_diag {
+
+  using triqs_xca::atom_diag::get_hamiltonian_block;
+  using triqs_xca::atom_diag::get_operator_block;
 
   namespace {
 
@@ -236,4 +239,4 @@ namespace triqs_xca::atom_diag {
     return get_operators_impl(ad, hyb_coeffs);
   }
 
-} // namespace triqs_xca::atom_diag
+} // namespace triqs_xca::block_sparse::atom_diag

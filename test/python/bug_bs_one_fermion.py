@@ -1,6 +1,6 @@
 """ Trigger segfault bug in DiagramEvaluator
 
-Suspected origin is the get_operators(...) functon in atom_diag_utils.cpp
+Suspected origin is the get_operators(...) functon in block_sparse/atom_diag.cpp
 
 It assumes that the hybridization expansion matrix sizes are __even__
 `  int norb = hyb_coeffs.extent(1) / 2; `

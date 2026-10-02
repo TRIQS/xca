@@ -8,7 +8,7 @@
 #include "triqs_xca/hyb.hpp"
 #include "triqs_xca/dense/fset.hpp"
 #include "triqs_xca/backbone.hpp"
-#include "triqs_xca/atom_diag_utils.hpp"
+#include "triqs_xca/atom_diag.hpp"
 
 namespace triqs_xca::dense {
 

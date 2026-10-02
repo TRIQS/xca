@@ -4,7 +4,7 @@
 #include <cppdlr/cppdlr.hpp>
 #include <triqs/gfs.hpp>
 
-#include <triqs_xca/atom_diag_utils.hpp>
+#include <triqs_xca/atom_diag.hpp>
 #include <triqs_xca/block_sparse/block_op.hpp>
 
 using nda::dcomplex;

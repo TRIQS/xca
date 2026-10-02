@@ -4,14 +4,14 @@
 #include "triqs_xca/hyb.hpp"
 #include "triqs_xca/dense/dynint.hpp"
 
-namespace triqs_xca::dynint {
+namespace triqs_xca::dense::dynint {
 
     using cppdlr::_;
 
     using nda::range;
 
     template <bool IsComplex>
-    FSet get_operators_and_interactions_dense_impl(
+    FSet get_operators_and_interactions_impl(
         const triqs_atom_diag_t<IsComplex> &ad, 
         nda::array_const_view<dcomplex, 3> hyb_coeffs, 
         nda::array_const_view<dcomplex, 3> dynint_coeffs,  
@@ -36,7 +36,7 @@ namespace triqs_xca::dynint {
 
         // Check atom diag subspaces, the interaction operators are read from subspace 0 only
         if (ad.n_subspaces() != 1)
-            throw std::invalid_argument("get_operators_and_interactions_dense: dynamical interactions require an atom_diag "
+            throw std::invalid_argument("dense::dynint::get_operators_and_interactions: dynamical interactions require an atom_diag "
                                         "with a single subspace, got " + std::to_string(ad.n_subspaces())
                                         + ". Build it with an empty list of conserved operators.");
 
@@ -69,20 +69,20 @@ namespace triqs_xca::dynint {
         return FSet{Fs_ext, Fdags_ext, ext_coeffs};
     }
 
-    FSet get_operators_and_interactions_dense(
+    FSet get_operators_and_interactions(
         const triqs_atom_diag_t<true> &ad, 
         nda::array_const_view<dcomplex, 3> hyb_coeffs, 
         nda::array_const_view<dcomplex, 3> dynint_coeffs,  
         std::vector<triqs::operators::many_body_operator_real> const &dynint_ops) {
-        return get_operators_and_interactions_dense_impl(ad, hyb_coeffs, dynint_coeffs, dynint_ops);
+        return get_operators_and_interactions_impl(ad, hyb_coeffs, dynint_coeffs, dynint_ops);
     }
 
-    FSet get_operators_and_interactions_dense(
+    FSet get_operators_and_interactions(
         const triqs_atom_diag_t<false> &ad, 
         nda::array_const_view<dcomplex, 3> hyb_coeffs, 
         nda::array_const_view<dcomplex, 3> dynint_coeffs,  
         std::vector<triqs::operators::many_body_operator_real> const &dynint_ops) {
-        return get_operators_and_interactions_dense_impl(ad, hyb_coeffs, dynint_coeffs, dynint_ops);
+        return get_operators_and_interactions_impl(ad, hyb_coeffs, dynint_coeffs, dynint_ops);
     }
 
 }

@@ -7,7 +7,7 @@
 
 #include <triqs/atom_diag/atom_diag.hpp>
 
-#include <triqs_xca/block_sparse/atom_diag_utils.hpp>
+#include <triqs_xca/block_sparse/atom_diag.hpp>
 #include <triqs_xca/block_sparse/block_op.hpp>
 #include <triqs_xca/block_sparse/diagram_evaluator.hpp>
 #include <triqs_xca/topology.hpp>
@@ -19,8 +19,8 @@ using nda::dcomplex;
 using cppdlr::build_dlr_rf;
 using cppdlr::imtime_ops;
 
-using triqs_xca::atom_diag::ad_to_atom_prop;
-using triqs_xca::atom_diag::get_operators;
+using triqs_xca::block_sparse::atom_diag::ad_to_atom_prop;
+using triqs_xca::block_sparse::atom_diag::get_operators;
 
 using triqs_xca::block_sparse::BlockDiagOpFun;
 using triqs_xca::block_sparse::BlockOpSymQuartet;

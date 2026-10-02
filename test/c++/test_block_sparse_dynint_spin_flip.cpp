@@ -6,7 +6,7 @@
 #include <triqs/atom_diag/atom_diag.hpp>
 #include <triqs/operators/many_body_operator.hpp>
 
-#include <triqs_xca/block_sparse/atom_diag_utils.hpp>
+#include <triqs_xca/block_sparse/atom_diag.hpp>
 #include <triqs_xca/block_sparse/block_op.hpp>
 #include <triqs_xca/block_sparse/diagram_evaluator.hpp>
 #include <triqs_xca/dense/diagram_evaluator.hpp>
@@ -26,14 +26,14 @@ using triqs::operators::c;
 using triqs::operators::c_dag;
 using triqs::operators::many_body_operator_real;
 
-using triqs_xca::atom_diag::ad_to_atom_prop;
-using triqs_xca::atom_diag::get_operators;
+using triqs_xca::block_sparse::atom_diag::ad_to_atom_prop;
+using triqs_xca::block_sparse::atom_diag::get_operators;
 using triqs_xca::block_sparse::BlockDiagOpFun;
 using triqs_xca::block_sparse::BlockOpSymQuartet;
 using triqs_xca::block_sparse::DiagramEvaluator;
 namespace dense = triqs_xca::dense;
 using triqs_xca::hyb::get_extended_coefficients;
-using triqs_xca::dynint::get_operators_and_interactions;
+using triqs_xca::block_sparse::dynint::get_operators_and_interactions;
 
 /**
  * @file test_block_sparse_dynint_spin_flip.cpp

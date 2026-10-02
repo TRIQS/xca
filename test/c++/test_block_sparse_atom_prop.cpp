@@ -4,9 +4,9 @@
 #include <triqs/operators/many_body_operator.hpp>
 #include <triqs/atom_diag/functions.hpp>
 
-#include <triqs_xca/atom_diag_utils.hpp>
-#include <triqs_xca/dense/atom_diag_utils.hpp>
-#include <triqs_xca/block_sparse/atom_diag_utils.hpp>
+#include <triqs_xca/atom_diag.hpp>
+#include <triqs_xca/dense/atom_diag.hpp>
+#include <triqs_xca/block_sparse/atom_diag.hpp>
 #include <triqs_xca/block_sparse/block_op.hpp>
 
 #include "block_sparse_utils.hpp"
@@ -19,8 +19,8 @@ using cppdlr::build_dlr_rf;
 using cppdlr::imtime_ops;
 using cppdlr::rel2abs;
 
-using triqs_xca::atom_diag::ad_to_atom_prop;
-using triqs_xca::atom_diag::get_full_h_atomic;
+using triqs_xca::block_sparse::atom_diag::ad_to_atom_prop;
+using triqs_xca::dense::atom_diag::get_full_h_atomic;
 
 using triqs_xca::block_sparse::atom_prop_from_eigensystem;
 using triqs_xca::block_sparse::trace;

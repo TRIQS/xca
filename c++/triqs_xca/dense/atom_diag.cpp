@@ -1,6 +1,9 @@
-#include "triqs_xca/dense/atom_diag_utils.hpp"
+#include "triqs_xca/dense/atom_diag.hpp"
 
-namespace triqs_xca::atom_diag {
+namespace triqs_xca::dense::atom_diag {
+
+  using triqs_xca::atom_diag::get_hamiltonian_block;
+  using triqs_xca::atom_diag::get_operator_block;
 
   namespace {
 
@@ -92,4 +95,4 @@ namespace triqs_xca::atom_diag {
     return get_full_operator_matrix_impl(ad, oidx, is_creation);
   }
 
-} // namespace triqs_xca::atom_diag
+} // namespace triqs_xca::dense::atom_diag

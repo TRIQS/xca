@@ -3,8 +3,8 @@
 #include <triqs/atom_diag/atom_diag.hpp>
 #include <triqs/operators/many_body_operator.hpp>
 
-#include <triqs_xca/dense/atom_diag_utils.hpp>
-#include <triqs_xca/block_sparse/atom_diag_utils.hpp>
+#include <triqs_xca/dense/atom_diag.hpp>
+#include <triqs_xca/block_sparse/atom_diag.hpp>
 #include <triqs_xca/block_sparse/block_op.hpp>
 #include <triqs_xca/dense/fset.hpp>
 #include <triqs_xca/hyb.hpp>
@@ -22,16 +22,16 @@ using triqs::operators::many_body_operator_complex;
 using triqs::operators::many_body_operator_real;
 using triqs::operators::n;
 
-using triqs_xca::atom_diag::get_operators;
-using triqs_xca::atom_diag::get_operators_dense;
+using triqs_xca::block_sparse::atom_diag::get_operators;
+using triqs_xca::dense::atom_diag::get_operators_dense;
 using triqs_xca::block_sparse::BlockOpSymQuartet;
-using triqs_xca::dynint::get_operators_and_interactions;
-using triqs_xca::dynint::get_operators_and_interactions_dense;
+namespace dense        = triqs_xca::dense;
+namespace block_sparse = triqs_xca::block_sparse;
 
 /**
  * @file test_block_sparse_dynint_sets.cpp
  *
- * @brief Tests of the symmetry-set construction with dynamical interactions, dynint::get_operators_and_interactions()
+ * @brief Tests of the symmetry-set construction with dynamical interactions, block_sparse::dynint::get_operators_and_interactions()
  *
  * @details The interaction operators are grouped into their own symmetry sets by identical connection row, never merged with a fermionic set,
  * and labeled contiguously after the fermionic ones. The extended coefficients and the concatenated labels go to the BlockOpSymQuartet
@@ -220,7 +220,7 @@ TEST(BlockSparseDynintSets, dynint_ops_get_their_own_contiguous_symmetry_sets) {
     std::vector<many_body_operator_real> ops = {many_body_operator_real(n("A", 0) + n("A", 1))};
     auto dynint_coeffs                       = group_diagonal_dynint_coeffs({0}, p);
 
-    auto [Fq, labels] = get_operators_and_interactions(ad, hyb, dynint_coeffs, ops);
+    auto [Fq, labels] = block_sparse::dynint::get_operators_and_interactions(ad, hyb, dynint_coeffs, ops);
 
     ASSERT_EQ(labels.size(), n_hyb + static_cast<int>(ops.size()));
     for (int i = 0; i < n_hyb; ++i) EXPECT_EQ(labels(i), labels_f(i)) << "the fermionic labels must be unchanged by the dynint extension";
@@ -245,7 +245,7 @@ TEST(BlockSparseDynintSets, dynint_ops_get_their_own_contiguous_symmetry_sets) {
                                                 many_body_operator_real(n("up", 1)), many_body_operator_real(n("do", 1))};
     auto dynint_coeffs                       = group_diagonal_dynint_coeffs({0, 0, 1, 1}, p);
 
-    auto [Fq, labels] = get_operators_and_interactions(ad, hyb, dynint_coeffs, ops);
+    auto [Fq, labels] = block_sparse::dynint::get_operators_and_interactions(ad, hyb, dynint_coeffs, ops);
 
     EXPECT_EQ(labels, (nda::vector<long>{0, 1, 0, 1, 2, 2, 3, 3})) << "got " << labels;
     EXPECT_EQ(Fq.sym_set_sizes, (nda::vector<long>{2, 2, 2, 2}));
@@ -279,8 +279,8 @@ TEST(BlockSparseDynintSets, bars_match_dense_with_dynamical_interactions) {
     std::vector<many_body_operator_real> ops = {many_body_operator_real(n("A", 0) + n("A", 1))};
     auto dynint_coeffs                       = group_diagonal_dynint_coeffs({0}, p);
 
-    auto Fq   = std::get<0>(get_operators_and_interactions(ad_bs, hyb, dynint_coeffs, ops));
-    auto Fset = get_operators_and_interactions_dense(ad_flat, hyb, dynint_coeffs, ops);
+    auto Fq   = std::get<0>(block_sparse::dynint::get_operators_and_interactions(ad_bs, hyb, dynint_coeffs, ops));
+    auto Fset = dense::dynint::get_operators_and_interactions(ad_flat, hyb, dynint_coeffs, ops);
 
     ASSERT_EQ(Fset.Fs.extent(0), n_hyb + static_cast<int>(ops.size()));
     ASSERT_GT(nda::max_element(nda::abs(Fset.F_dag_bars)), 0.1) << "non-vacuity: the dense reference bars are all zero";
@@ -313,8 +313,8 @@ TEST(BlockSparseDynintSets, bars_match_dense_with_dynamical_interactions) {
     ASSERT_GT(std::abs(dynint_coeffs(0, 0, 1) - dynint_coeffs(0, 1, 0)), 0.05) << "the within-set block is symmetric, so the operator order inside "
                                                                                   "a dynint set would be unobservable";
 
-    auto Fq   = std::get<0>(get_operators_and_interactions(ad_bs, hyb, dynint_coeffs, ops));
-    auto Fset = get_operators_and_interactions_dense(ad_flat, hyb, dynint_coeffs, ops);
+    auto Fq   = std::get<0>(block_sparse::dynint::get_operators_and_interactions(ad_bs, hyb, dynint_coeffs, ops));
+    auto Fset = dense::dynint::get_operators_and_interactions(ad_flat, hyb, dynint_coeffs, ops);
 
     ASSERT_GT(nda::max_element(nda::abs(Fset.F_dag_bars)), 0.1) << "non-vacuity: the dense reference bars are all zero";
 
@@ -342,8 +342,8 @@ TEST(BlockSparseDynintSets, bars_match_dense_with_dynamical_interactions) {
     std::vector<many_body_operator_real> ops = {A0, A1, many_body_operator_real(dagger(A0)), many_body_operator_real(dagger(A1))};
     auto dynint_coeffs                       = group_diagonal_dynint_coeffs({0, 0, 1, 1}, p);
 
-    auto Fq   = std::get<0>(get_operators_and_interactions(ad_bs, hyb, dynint_coeffs, ops));
-    auto Fset = get_operators_and_interactions_dense(ad_flat, hyb, dynint_coeffs, ops);
+    auto Fq   = std::get<0>(block_sparse::dynint::get_operators_and_interactions(ad_bs, hyb, dynint_coeffs, ops));
+    auto Fset = dense::dynint::get_operators_and_interactions(ad_flat, hyb, dynint_coeffs, ops);
 
     // check that there are two dynint sets of size two with off-diagonal blocks
     ASSERT_EQ(nda::max_element(Fq.sym_set_labels) + 1, 4);
@@ -373,7 +373,7 @@ TEST(BlockSparseDynintSets, bars_match_dense_with_dynamical_interactions) {
 
     auto [Fq_plain, labels_plain] = get_operators(ad, hyb);
     // note the shape: a default-constructed (0,0,0) array is rejected by the shared-pole-count check
-    auto [Fq_ext, labels_ext] = get_operators_and_interactions(ad, hyb, nda::zeros<dcomplex>(p, 0, 0), {});
+    auto [Fq_ext, labels_ext] = block_sparse::dynint::get_operators_and_interactions(ad, hyb, nda::zeros<dcomplex>(p, 0, 0), {});
 
     ASSERT_EQ(labels_ext.size(), labels_plain.size());
     for (long i = 0; i < labels_ext.size(); ++i) ASSERT_EQ(labels_ext(i), labels_plain(i));
@@ -407,7 +407,7 @@ TEST(BlockSparseDynintSets, rejects_coefficients_coupling_different_dynint_sets)
   auto dynint_coeffs                       = group_diagonal_dynint_coeffs({0, 1}, p);
 
   // check that the two operators land in different sets
-  auto labels = std::get<1>(get_operators_and_interactions(ad, hyb, dynint_coeffs, ops));
+  auto labels = std::get<1>(block_sparse::dynint::get_operators_and_interactions(ad, hyb, dynint_coeffs, ops));
   ASSERT_NE(labels(n_hyb), labels(n_hyb + 1)) << "the two dynint operators were merged into one set, got labels " << labels;
 
   dynint_coeffs(0, 0, 1) = 0.25;
@@ -415,7 +415,7 @@ TEST(BlockSparseDynintSets, rejects_coefficients_coupling_different_dynint_sets)
 
   // match the message, other std::invalid_argument checks sit earlier in the constructor
   try {
-    get_operators_and_interactions(ad, hyb, dynint_coeffs, ops);
+    block_sparse::dynint::get_operators_and_interactions(ad, hyb, dynint_coeffs, ops);
     FAIL() << "a dynint coefficient coupling two symmetry sets must be rejected";
   } catch (std::invalid_argument const &e) {
     EXPECT_NE(std::string(e.what()).find("couples different symmetry sets"), std::string::npos) << e.what();
@@ -426,7 +426,7 @@ TEST(BlockSparseDynintSets, rejects_coefficients_coupling_different_dynint_sets)
   auto ext   = triqs_xca::hyb::get_extended_coefficients(hyb, clean);
   ASSERT_EQ(ext(0, 0, n_hyb), 0.0) << "get_extended_coefficients must zero-fill the cross blocks";
   ext(0, 0, n_hyb) = 0.3;
-  auto Fq_ok       = std::get<0>(get_operators_and_interactions(ad, hyb, clean, ops));
+  auto Fq_ok       = std::get<0>(block_sparse::dynint::get_operators_and_interactions(ad, hyb, clean, ops));
   try {
     BlockOpSymQuartet(Fq_ok.Fs, Fq_ok.F_dags, ext, Fq_ok.sym_set_labels);
     FAIL() << "a coefficient coupling a hybridization flavour to an interaction flavour must be rejected";
@@ -463,7 +463,7 @@ TEST(BlockSparseDynintSets, non_block_diagonal_ops_form_distinct_symmetry_sets) 
     dynint_coeffs(l, 1, 1) = 0.53 + 0.09 * l; // D_{-+}
   }
 
-  auto [Fq, labels] = get_operators_and_interactions(ad_bs, hyb, dynint_coeffs, ops);
+  auto [Fq, labels] = block_sparse::dynint::get_operators_and_interactions(ad_bs, hyb, dynint_coeffs, ops);
 
   // two distinct singleton sets, after the fermionic ones
   ASSERT_EQ(labels.size(), n_hyb + 2);
@@ -487,7 +487,7 @@ TEST(BlockSparseDynintSets, non_block_diagonal_ops_form_distinct_symmetry_sets) 
   ASSERT_GT(n_offdiag, 0) << "the S^+ set is block diagonal, so this test is not about non-block-diagonal operators at all";
 
   // the diagonal coefficients are accepted, and the bars match the dense reference
-  auto Fset = get_operators_and_interactions_dense(ad_flat, hyb, dynint_coeffs, ops);
+  auto Fset = dense::dynint::get_operators_and_interactions(ad_flat, hyb, dynint_coeffs, ops);
   ASSERT_GT(nda::max_element(nda::abs(Fset.F_dag_bars)), 0.1);
 
   auto [da_err, fb_err] = compare_bars_with_dense(Fq, ad_bs, Fset, p);
@@ -500,7 +500,7 @@ TEST(BlockSparseDynintSets, non_block_diagonal_ops_form_distinct_symmetry_sets) 
   // the off-diagonal entries, which would encode a non-hermitian S^- D S^- term, are rejected
   dynint_coeffs(0, 0, 1) = 0.2;
   try {
-    get_operators_and_interactions(ad_bs, hyb, dynint_coeffs, ops);
+    block_sparse::dynint::get_operators_and_interactions(ad_bs, hyb, dynint_coeffs, ops);
     FAIL() << "an S^- <-> S^+ off-diagonal coefficient must be rejected";
   } catch (std::invalid_argument const &e) {
     EXPECT_NE(std::string(e.what()).find("couples different symmetry sets"), std::string::npos) << e.what();
@@ -540,7 +540,7 @@ TEST(BlockSparseDynintSets, rejects_non_injective_connection_map) {
   auto dynint_coeffs = group_diagonal_dynint_coeffs({0}, p);
 
   try {
-    get_operators_and_interactions(ad, hyb, dynint_coeffs, {O});
+    block_sparse::dynint::get_operators_and_interactions(ad, hyb, dynint_coeffs, {O});
     FAIL() << "a non-injective connection map must be rejected";
   } catch (std::invalid_argument const &e) { EXPECT_NE(std::string(e.what()).find("non-injective"), std::string::npos) << e.what(); }
 }

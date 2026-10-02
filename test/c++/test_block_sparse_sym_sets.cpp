@@ -3,8 +3,8 @@
 #include <triqs/operators/many_body_operator.hpp>
 #include <triqs/atom_diag/atom_diag.hpp>
 
-#include <triqs_xca/dense/atom_diag_utils.hpp>
-#include <triqs_xca/block_sparse/atom_diag_utils.hpp>
+#include <triqs_xca/dense/atom_diag.hpp>
+#include <triqs_xca/block_sparse/atom_diag.hpp>
 #include <triqs_xca/block_sparse/block_op.hpp>
 #include <triqs_xca/dense/fset.hpp>
 
@@ -17,8 +17,8 @@ using triqs::operators::c_dag;
 using triqs::operators::many_body_operator_complex;
 using triqs::operators::n;
 
-using triqs_xca::atom_diag::get_operators;
-using triqs_xca::atom_diag::get_operators_dense;
+using triqs_xca::block_sparse::atom_diag::get_operators;
+using triqs_xca::dense::atom_diag::get_operators_dense;
 
 /**
  * @file test_block_sparse_sym_sets.cpp

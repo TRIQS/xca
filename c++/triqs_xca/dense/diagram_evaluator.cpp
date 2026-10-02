@@ -9,7 +9,7 @@
 #include "triqs_xca/hyb.hpp"
 #include "triqs_xca/dense/dynint.hpp"
 #include "triqs_xca/dense/diagram_evaluator.hpp"
-#include "triqs_xca/dense/atom_diag_utils.hpp"
+#include "triqs_xca/dense/atom_diag.hpp"
 #include "triqs_xca/operator_statistics.hpp"
 
 namespace triqs_xca::dense {
@@ -19,7 +19,6 @@ namespace triqs_xca::dense {
   using nda::trace;
   using nda::linalg::matmul;
 
-  using triqs_xca::atom_diag::get_operators_dense;
 
   DiagramEvaluator::DiagramEvaluator(double beta, double eps, imtime_ops &itops, nda::vector_const_view<double> hyb_poles,
                                                nda::array_const_view<dcomplex, 3> hyb_coeffs, FSet &Fset)
@@ -51,7 +50,7 @@ namespace triqs_xca::dense {
        itops(tau_mesh.dlr_it()),
        dlr_it(itops.get_itnodes()),
        hyb(tau_mesh, hyb_poles, hyb_coeffs, -1.0),
-       Fset(get_operators_dense(ad, hyb_coeffs)),
+       Fset(atom_diag::get_operators_dense(ad, hyb_coeffs)),
        r(itops.rank()),
        n(ad.get_fops().size()), // number of fermion flavours (spin-orbitals)
        n_hyb(n),
@@ -81,7 +80,7 @@ namespace triqs_xca::dense {
        itops(tau_mesh.dlr_it()),
        dlr_it(itops.get_itnodes()),
        hyb(tau_mesh, hyb_poles, hyb::get_extended_coefficients(hyb_coeffs, dynint_coeffs), -1.0),
-       Fset(dynint::get_operators_and_interactions_dense(ad, hyb_coeffs, dynint_coeffs, dynint_ops)),
+       Fset(dynint::get_operators_and_interactions(ad, hyb_coeffs, dynint_coeffs, dynint_ops)),
        r(itops.rank()),
        n(ad.get_fops().size() + dynint_ops.size()), // number of fermion flavours (spin-orbitals)
        n_hyb(ad.get_fops().size()),

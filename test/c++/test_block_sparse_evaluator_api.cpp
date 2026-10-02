@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
-#include <triqs_xca/atom_diag_utils.hpp>
-#include <triqs_xca/dense/atom_diag_utils.hpp>
-#include <triqs_xca/block_sparse/atom_diag_utils.hpp>
+#include <triqs_xca/atom_diag.hpp>
+#include <triqs_xca/dense/atom_diag.hpp>
+#include <triqs_xca/block_sparse/atom_diag.hpp>
 
 #include <triqs_xca/dense/diagram_evaluator.hpp>
 #include <triqs_xca/block_sparse/diagram_evaluator.hpp>
@@ -17,8 +17,8 @@ namespace dense = triqs_xca::dense;
 
 using triqs_xca::block_sparse::DiagramEvaluator;
 
-using triqs_xca::atom_diag::ad_to_atom_prop;
-using triqs_xca::atom_diag::get_full_h_atomic;
+using triqs_xca::block_sparse::atom_diag::ad_to_atom_prop;
+using triqs_xca::dense::atom_diag::get_full_h_atomic;
 
 /**
  * @file test_block_sparse_evaluator_api.cpp

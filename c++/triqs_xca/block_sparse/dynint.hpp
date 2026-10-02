@@ -4,21 +4,20 @@
 
 #include <triqs/gfs.hpp>
 
-#include "triqs_xca/atom_diag_utils.hpp"
-#include "triqs_xca/block_sparse/atom_diag_utils.hpp"
+#include "triqs_xca/atom_diag.hpp"
+#include "triqs_xca/block_sparse/atom_diag.hpp"
 #include "triqs_xca/block_sparse/block_op.hpp"
 
 
-namespace triqs_xca::dynint {
+namespace triqs_xca::block_sparse::dynint {
 
     using triqs_xca::atom_diag::triqs_atom_diag_t;
-    using triqs_xca::block_sparse::BlockOpSymQuartet;
 
     /**
      * @brief Block-sparse field operators extended by the dynamical-interaction operators
      *
-     * The block-sparse analogue of get_operators_and_interactions_dense(). The fermionic operators are grouped
-     * into symmetry sets as in atom_diag::get_operators(), and the interaction operators are grouped by identical
+     * The block-sparse analogue of dense::get_operators_and_interactions(). The fermionic operators are grouped
+     * into symmetry sets as in get_operators(), and the interaction operators are grouped by identical
      * connection row and appended as further symmetry sets. The coefficients are extended block-diagonally by
      * hyb::get_extended_coefficients(). Unlike the dense path there is no restriction on the number of atom_diag
      * subspaces, an interaction operator only has to map each subspace to at most one target.

@@ -1,11 +1,12 @@
 #pragma once
 
-#include "triqs_xca/atom_diag_utils.hpp"
+#include "triqs_xca/atom_diag.hpp"
 #include "triqs_xca/dense/fset.hpp"
 
-namespace triqs_xca::atom_diag {
+namespace triqs_xca::dense::atom_diag {
 
-  using triqs_xca::dense::FSet;
+  using triqs_xca::atom_diag::triqs_atom_diag;
+  using triqs_xca::atom_diag::triqs_atom_diag_t;
 
   /**
  * @brief Utility function to get full Hamiltonian matrix from an AtomDiag object.
@@ -40,4 +41,4 @@ namespace triqs_xca::atom_diag {
   std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> get_operators_dense(const triqs_atom_diag_t<true> &ad);
   std::tuple<nda::array<dcomplex, 3>, nda::array<dcomplex, 3>> get_operators_dense(const triqs_atom_diag_t<false> &ad);
 
-} // namespace triqs_xca::atom_diag
+} // namespace triqs_xca::dense::atom_diag

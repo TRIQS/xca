@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
 #include <nda/basic_functions.hpp>
-#include <triqs_xca/atom_diag_utils.hpp>
-#include <triqs_xca/dense/atom_diag_utils.hpp>
-#include <triqs_xca/block_sparse/atom_diag_utils.hpp>
+#include <triqs_xca/atom_diag.hpp>
+#include <triqs_xca/dense/atom_diag.hpp>
+#include <triqs_xca/block_sparse/atom_diag.hpp>
 
 #include <triqs_xca/hyb.hpp>
 #include <triqs_xca/dense/diagram_evaluator.hpp>
@@ -31,10 +31,10 @@ using triqs_xca::block_sparse::DiagramEvaluator;
 
 using triqs_xca::topology::topology_parity;
 
-using triqs_xca::atom_diag::ad_to_atom_prop;
-using triqs_xca::atom_diag::get_full_h_atomic;
-using triqs_xca::atom_diag::get_operators;
-using triqs_xca::atom_diag::get_operators_dense;
+using triqs_xca::block_sparse::atom_diag::ad_to_atom_prop;
+using triqs_xca::dense::atom_diag::get_full_h_atomic;
+using triqs_xca::block_sparse::atom_diag::get_operators;
+using triqs_xca::dense::atom_diag::get_operators_dense;
 
 /**
  * @file test_two_fermions_se_spgf_all_evals.cpp

@@ -6,7 +6,7 @@
 #include "triqs_xca/hyb.hpp"
 #include "triqs_xca/block_sparse/dynint.hpp"
 
-namespace triqs_xca::dynint {
+namespace triqs_xca::block_sparse::dynint {
 
     using cppdlr::_;
 

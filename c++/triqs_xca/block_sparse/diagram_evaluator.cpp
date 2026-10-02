@@ -5,7 +5,7 @@
 
 #include <itertools/itertools.hpp>
 
-#include "triqs_xca/block_sparse/atom_diag_utils.hpp"
+#include "triqs_xca/block_sparse/atom_diag.hpp"
 
 #include "triqs_xca/block_sparse/diagram_evaluator.hpp"
 #include "triqs_xca/block_sparse/dynint.hpp"
@@ -21,7 +21,6 @@ using nda::trace;
 using nda::range;
 using nda::linalg::matmul;
 
-using triqs_xca::atom_diag::get_operators;
 
 namespace {
 
@@ -106,7 +105,7 @@ DiagramEvaluator::DiagramEvaluator(
      tau_mesh(tau_mesh),
      itops(tau_mesh.dlr_it()),
      dlr_it(itops.get_itnodes()),
-     Fq(std::get<0>(get_operators(ad, hyb_coeffs))),
+     Fq(std::get<0>(atom_diag::get_operators(ad, hyb_coeffs))),
      Sigma({}, {}),
      beta(tau_mesh.beta()),
      r(itops.rank()),

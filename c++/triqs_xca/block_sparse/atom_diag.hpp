@@ -1,13 +1,13 @@
 #pragma once
 
-#include "triqs_xca/atom_diag_utils.hpp"
+#include "triqs_xca/atom_diag.hpp"
 #include "triqs_xca/block_sparse/block_op.hpp"
 
-namespace triqs_xca::atom_diag {
+namespace triqs_xca::block_sparse::atom_diag {
 
-  using triqs_xca::block_sparse::BlockDiagOpFun;
-  using triqs_xca::block_sparse::BlockOpSymQuartet;
-  using triqs_xca::block_sparse::BlockOpSymSet;
+  using triqs_xca::atom_diag::imtime_ops;
+  using triqs_xca::atom_diag::triqs_atom_diag;
+  using triqs_xca::atom_diag::triqs_atom_diag_t;
 
   /**
  * @brief Get symmetry blocks of Hamiltonian from an AtomDiag object
@@ -40,7 +40,7 @@ namespace triqs_xca::atom_diag {
  *
  * @details The operators are grouped by identical c_connection row, i.e. by block-sparsity pattern, labeled in order of
  * first appearance and stored in increasing orbital order within a set. This is the hybridization independent part of
- * get_operators(), used by dynint::get_operators_and_interactions() to append the interaction symmetry sets before the
+ * get_operators(), used by get_operators_and_interactions() to append the interaction symmetry sets before the
  * quartet is built.
  */
   struct BlockOpSymSets {
@@ -67,4 +67,4 @@ namespace triqs_xca::atom_diag {
   std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const triqs_atom_diag_t<true> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs);
   std::tuple<BlockOpSymQuartet, nda::vector<int>> get_operators(const triqs_atom_diag_t<false> &ad, nda::array_const_view<dcomplex, 3> hyb_coeffs);
 
-} // namespace triqs_xca::atom_diag
+} // namespace triqs_xca::block_sparse::atom_diag
