@@ -17,7 +17,7 @@ namespaces = ""
 #    if reject_names and reject_names matches Qname : skip X
 #    else keep X.
 #
-match_names = "(NCA_dense|OCA_dense|triqs_xca::dense::DiagramEvaluator)"
+match_names = "(triqs_xca::dense::manual::sigma_(nca|oca)$|triqs_xca::dense::DiagramEvaluator)"
 reject_names = ""
 
 # Only keep elements declared in files matching the pattern

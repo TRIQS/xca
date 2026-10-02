@@ -1,6 +1,6 @@
-#include "triqs_xca/block_sparse/manual_gf.hpp"
+#include "triqs_xca/block_sparse/manual/spgf.hpp"
 
-namespace triqs_xca::block_sparse {
+namespace triqs_xca::block_sparse::manual {
 
   using cppdlr::_;
 
@@ -8,7 +8,7 @@ namespace triqs_xca::block_sparse {
   using nda::trace;
   using nda::linalg::matmul;
 
-  nda::array<dcomplex, 3> NCA_gf_bs(const BlockDiagOpFun &Gt, const BlockDiagOpFun &Gt_refl, const BlockOpSymQuartet &Fq) {
+  nda::array<dcomplex, 3> spgf_nca(const BlockDiagOpFun &Gt, const BlockDiagOpFun &Gt_refl, const BlockOpSymQuartet &Fq) {
 
     std::size_t r = Gt.get_num_time_nodes();
     long n        = Fq.sym_set_labels.size();
@@ -60,7 +60,7 @@ namespace triqs_xca::block_sparse {
     return gf;
   }
 
-  void OCA_gf_bs_right(double beta, imtime_ops &itops, nda::vector_const_view<double> dlr_it, double omega_l, bool forward, const BlockDiagOpFun &Gt,
+  void spgf_oca_right(double beta, imtime_ops &itops, nda::vector_const_view<double> dlr_it, double omega_l, bool forward, const BlockDiagOpFun &Gt,
                        const BlockOpSymSet &Flam, long lam, nda::array_view<dcomplex, 3> T, nda::vector_const_view<int> ind_path,
                        nda::vector_const_view<int> block_dims) {
     long r = Gt.get_num_time_nodes();
@@ -112,7 +112,7 @@ namespace triqs_xca::block_sparse {
     }
   }
 
-  void OCA_gf_bs_left(double beta, imtime_ops &itops, nda::vector_const_view<double> dlr_it, double omega_l, bool forward, const BlockDiagOpFun &Gt,
+  void spgf_oca_left(double beta, imtime_ops &itops, nda::vector_const_view<double> dlr_it, double omega_l, bool forward, const BlockDiagOpFun &Gt,
                       const BlockOpSymSetBar &Fbar, long lam, long pole_ind, nda::array_view<dcomplex, 3> T, nda::vector_const_view<int> ind_path,
                       nda::vector_const_view<int> block_dims) {
     long r = Gt.get_num_time_nodes();
@@ -166,7 +166,7 @@ namespace triqs_xca::block_sparse {
     T = itops.reflect(T);
   }
 
-  nda::array<dcomplex, 3> OCA_gf_bs(nda::vector_const_view<double> hyb_poles, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt,
+  nda::array<dcomplex, 3> spgf_oca(nda::vector_const_view<double> hyb_poles, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt,
                                     const BlockOpSymQuartet &Fq) {
 
     nda::vector_const_view<double> dlr_it = itops.get_itnodes();
@@ -231,8 +231,8 @@ namespace triqs_xca::block_sparse {
                     for (int l = 0; l < p; l++) {
                       T = 0;
                       U = 0;
-                      OCA_gf_bs_right(beta, itops, dlr_it, hyb_poles(l), fb, Gt, F1[p_lam], lam, T, ind_path, block_dims);
-                      OCA_gf_bs_left(beta, itops, dlr_it, hyb_poles(l), fb, Gt, Fbar[p_lam], lam, l, U, ind_path, block_dims);
+                      spgf_oca_right(beta, itops, dlr_it, hyb_poles(l), fb, Gt, F1[p_lam], lam, T, ind_path, block_dims);
+                      spgf_oca_left(beta, itops, dlr_it, hyb_poles(l), fb, Gt, Fbar[p_lam], lam, l, U, ind_path, block_dims);
                       if (hyb_poles(l) <= 0) {
                         for (int t = 0; t < r; t++) {
                           Tmu(t, range(0, block_dims(4)), range(0, block_dims(1))) +=
@@ -268,4 +268,4 @@ namespace triqs_xca::block_sparse {
     return gf;
   }
 
-} // namespace triqs_xca::block_sparse
+} // namespace triqs_xca::block_sparse::manual

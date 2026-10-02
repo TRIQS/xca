@@ -247,7 +247,7 @@ computation.)DOC"
 
 // ==================== module functions ====================
 
-// NCA_dense
+// sigma_nca
 static auto const _c2py_fun_7 =
    c2py::dispatcher_f_kw_t{c2py::cfun([](nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
                                                                nda::borrowed<nda::mem::AddressSpace::Host>>
@@ -263,15 +263,15 @@ static auto const _c2py_fun_7 =
                                             Fs,
                                          nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
                                                                nda::borrowed<nda::mem::AddressSpace::Host>>
-                                            F_dags) { return triqs_xca::dense::NCA_dense(hyb, hyb_refl, Gt, Fs, F_dags); },
+                                            F_dags) { return triqs_xca::dense::manual::sigma_nca(hyb, hyb_refl, Gt, Fs, F_dags); },
                                       "hyb", "hyb_refl", "Gt", "Fs", "F_dags")};
 
-// OCA_dense
+// sigma_oca
 static auto const _c2py_fun_8 = c2py::dispatcher_f_kw_t{
    c2py::cfun([](nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
                                        nda::borrowed<nda::mem::AddressSpace::Host>>
                     hyb,
-                 triqs_xca::dense::imtime_ops itops, double beta,
+                 cppdlr::imtime_ops itops, double beta,
                  nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
                                        nda::borrowed<nda::mem::AddressSpace::Host>>
                     Gt,
@@ -280,7 +280,7 @@ static auto const _c2py_fun_8 = c2py::dispatcher_f_kw_t{
                     Fs,
                  nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
                                        nda::borrowed<nda::mem::AddressSpace::Host>>
-                    F_dags) { return triqs_xca::dense::OCA_dense(hyb, itops, beta, Gt, Fs, F_dags); },
+                    F_dags) { return triqs_xca::dense::manual::sigma_oca(hyb, itops, beta, Gt, Fs, F_dags); },
               "hyb", "itops", "beta", "Gt", "Fs", "F_dags"),
    c2py::cfun(
       [](nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
@@ -297,7 +297,7 @@ static auto const _c2py_fun_8 = c2py::dispatcher_f_kw_t{
             hyb_refl_coeffs,
          nda::basic_array_view<const double, 1, nda::C_stride_layout, 'V', nda::default_accessor, nda::borrowed<nda::mem::AddressSpace::Host>>
             hyb_poles,
-         triqs_xca::dense::imtime_ops &itops, double beta,
+         cppdlr::imtime_ops &itops, double beta,
          nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
                                nda::borrowed<nda::mem::AddressSpace::Host>>
             Gt,
@@ -306,7 +306,9 @@ static auto const _c2py_fun_8 = c2py::dispatcher_f_kw_t{
             Fs,
          nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
                                nda::borrowed<nda::mem::AddressSpace::Host>>
-            F_dags) { return triqs_xca::dense::OCA_dense(hyb, hyb_coeffs, hyb_refl, hyb_refl_coeffs, hyb_poles, itops, beta, Gt, Fs, F_dags); },
+            F_dags) {
+        return triqs_xca::dense::manual::sigma_oca(hyb, hyb_coeffs, hyb_refl, hyb_refl_coeffs, hyb_poles, itops, beta, Gt, Fs, F_dags);
+      },
       "hyb", "hyb_coeffs", "hyb_refl", "hyb_refl_coeffs", "hyb_poles", "itops", "beta", "Gt", "Fs", "F_dags")};
 
 static const auto _c2py_doc_7 =
@@ -374,7 +376,7 @@ Returns
 )DOC",
    {{c2py::python_typename<nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
                                                  nda::borrowed<nda::mem::AddressSpace::Host>>>()},
-    {c2py::python_typename<triqs_xca::dense::imtime_ops>(), c2py::python_typename<triqs_xca::dense::imtime_ops &>()},
+    {c2py::python_typename<cppdlr::imtime_ops>(), c2py::python_typename<cppdlr::imtime_ops &>()},
     {c2py::python_typename<double>()},
     {c2py::python_typename<nda::basic_array_view<const std::complex<double>, 3, nda::C_stride_layout, 'A', nda::default_accessor,
                                                  nda::borrowed<nda::mem::AddressSpace::Host>>>()},
@@ -393,8 +395,8 @@ Returns
 //--------------------- module function table  -----------------------------
 
 static PyMethodDef module_methods[] = {
-   {"NCA_dense", (PyCFunction)c2py::pyfkw<_c2py_fun_7>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_7.c_str()},
-   {"OCA_dense", (PyCFunction)c2py::pyfkw<_c2py_fun_8>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_8.c_str()},
+   {"sigma_nca", (PyCFunction)c2py::pyfkw<_c2py_fun_7>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_7.c_str()},
+   {"sigma_oca", (PyCFunction)c2py::pyfkw<_c2py_fun_8>, METH_VARARGS | METH_KEYWORDS, _c2py_doc_8.c_str()},
    {nullptr, nullptr, 0, nullptr} // Sentinel
 };
 

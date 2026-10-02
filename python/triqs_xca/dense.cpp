@@ -6,7 +6,7 @@
 
 #include "triqs_xca/dense/diagram_evaluator.hpp"
 
-#include "triqs_xca/dense/manual.hpp"
+#include "triqs_xca/dense/manual/sigma.hpp"
 
 #include <cppdlr/dyson_it_ppsc.hpp>
 

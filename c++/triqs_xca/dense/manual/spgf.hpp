@@ -2,7 +2,7 @@
 #include <nda/nda.hpp>
 #include <cppdlr/cppdlr.hpp>
 
-namespace triqs_xca::dense {
+namespace triqs_xca::dense::manual {
 
   using nda::dcomplex;
 
@@ -15,33 +15,8 @@ namespace triqs_xca::dense {
  * @param[in] Fs annihilation operators
  * @param[in] F_dags creation operators
  */
-  nda::array<dcomplex, 3> NCA_gf_dense(nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Gt_refl,
+  nda::array<dcomplex, 3> spgf_nca(nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Gt_refl,
                                        nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags);
-
-  nda::array<dcomplex, 3> OCA_gf_tpz(nda::array_const_view<dcomplex, 3> hyb_coeffs, nda::array_const_view<dcomplex, 3> hyb_refl_coeffs,
-                                     imtime_ops &itops, double beta, nda::array_const_view<dcomplex, 3> Gt_coeffs,
-                                     nda::array_const_view<dcomplex, 3> Fs, int n_quad);
-
-  /**
- * @brief Evaluate the third-order single-particle Green's function directly using trapezoidal quadrature
- *
- * @details Topology {{0,3},{1,4},{2,5}}, i.e. the integral of
- * examples/one_fermion_analytical_solutions.ipynb, "Third order single particle Green's function diagram".
- * Stands to OCA_gf_tpz as third_order_tpz (block_sparse_manual.hpp) stands to OCA_tpz. Returns the result
- * on the equispaced grid of n_quad + 1 points; both grid endpoints are left at zero.
- *
- * @param[in] hyb_coeffs DLR coefficients of the hybridization
- * @param[in] hyb_refl_coeffs DLR coefficients of the hybridization at negative imaginary times
- * @param[in] itops cppdlr imaginary time object
- * @param[in] beta inverse temperature
- * @param[in] Gt_coeffs DLR coefficients of the pseudoparticle Green's function
- * @param[in] Fs annihilation operators
- * @param[in] n_quad number of quadrature intervals
- * @return third-order contribution to the single-particle Green's function
- */
-  nda::array<dcomplex, 3> third_order_gf_tpz(nda::array_const_view<dcomplex, 3> hyb_coeffs, nda::array_const_view<dcomplex, 3> hyb_refl_coeffs,
-                                             imtime_ops &itops, double beta, nda::array_const_view<dcomplex, 3> Gt_coeffs,
-                                             nda::array_const_view<dcomplex, 3> Fs, int n_quad);
 
   /**
  * @brief Evaluate OCA Green's function using dense storage
@@ -54,9 +29,34 @@ namespace triqs_xca::dense {
  * @param[in] Fs F operators
  * @param[in] F_dags F^dagger operators
  */
-  nda::array<dcomplex, 3> OCA_gf_dense(nda::array_const_view<dcomplex, 3> hyb_coeffs, nda::array_const_view<dcomplex, 3> hyb_refl_coeffs,
+  nda::array<dcomplex, 3> spgf_oca(nda::array_const_view<dcomplex, 3> hyb_coeffs, nda::array_const_view<dcomplex, 3> hyb_refl_coeffs,
                                        nda::vector_const_view<double> hyb_poles, imtime_ops &itops, double beta,
                                        nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Fs,
                                        nda::array_const_view<dcomplex, 3> F_dags);
 
-} // namespace triqs_xca::dense
+  nda::array<dcomplex, 3> spgf_oca_tpz(nda::array_const_view<dcomplex, 3> hyb_coeffs, nda::array_const_view<dcomplex, 3> hyb_refl_coeffs,
+                                     imtime_ops &itops, double beta, nda::array_const_view<dcomplex, 3> Gt_coeffs,
+                                     nda::array_const_view<dcomplex, 3> Fs, int n_quad);
+
+  /**
+ * @brief Evaluate the third-order single-particle Green's function directly using trapezoidal quadrature
+ *
+ * @details Topology {{0,3},{1,4},{2,5}}, i.e. the integral of
+ * examples/one_fermion_analytical_solutions.ipynb, "Third order single particle Green's function diagram".
+ * Stands to spgf_oca_tpz as sigma_o3_tpz (dense/manual/sigma.hpp) stands to sigma_oca_tpz. Returns the result
+ * on the equispaced grid of n_quad + 1 points; both grid endpoints are left at zero.
+ *
+ * @param[in] hyb_coeffs DLR coefficients of the hybridization
+ * @param[in] hyb_refl_coeffs DLR coefficients of the hybridization at negative imaginary times
+ * @param[in] itops cppdlr imaginary time object
+ * @param[in] beta inverse temperature
+ * @param[in] Gt_coeffs DLR coefficients of the pseudoparticle Green's function
+ * @param[in] Fs annihilation operators
+ * @param[in] n_quad number of quadrature intervals
+ * @return third-order contribution to the single-particle Green's function
+ */
+  nda::array<dcomplex, 3> spgf_o3_tpz(nda::array_const_view<dcomplex, 3> hyb_coeffs, nda::array_const_view<dcomplex, 3> hyb_refl_coeffs,
+                                             imtime_ops &itops, double beta, nda::array_const_view<dcomplex, 3> Gt_coeffs,
+                                             nda::array_const_view<dcomplex, 3> Fs, int n_quad);
+
+} // namespace triqs_xca::dense::manual

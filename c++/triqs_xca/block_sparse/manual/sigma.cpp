@@ -1,6 +1,6 @@
-#include "triqs_xca/block_sparse/manual.hpp"
+#include "triqs_xca/block_sparse/manual/sigma.hpp"
 
-namespace triqs_xca::block_sparse {
+namespace triqs_xca::block_sparse::manual {
 
   using cppdlr::_;
 
@@ -8,7 +8,7 @@ namespace triqs_xca::block_sparse {
   using nda::trace;
   using nda::linalg::matmul;
 
-  BlockDiagOpFun NCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl, BlockDiagOpFun const &Gt,
+  BlockDiagOpFun sigma_nca(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl, BlockDiagOpFun const &Gt,
                         const std::vector<BlockOp> &Fs) {
     // get F^dagger operators
     int num_Fs  = Fs.size();
@@ -65,7 +65,7 @@ namespace triqs_xca::block_sparse {
     return Sigma;
   }
 
-  BlockDiagOpFun NCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl, BlockDiagOpFun const &Gt,
+  BlockDiagOpFun sigma_nca(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl, BlockDiagOpFun const &Gt,
                         const BlockOpSymQuartet &Fq) {
     // get F^dagger operators
     int n = Fq.sym_set_labels.size();
@@ -122,7 +122,7 @@ namespace triqs_xca::block_sparse {
     return Sigma;
   }
 
-  void OCA_bs_right_in_place(double beta, imtime_ops &itops, nda::vector_const_view<double> dlr_it, double omega_l, bool forward,
+  void sigma_oca_right_in_place(double beta, imtime_ops &itops, nda::vector_const_view<double> dlr_it, double omega_l, bool forward,
                              nda::array_const_view<dcomplex, 3> Gt0, nda::array_const_view<dcomplex, 3> Gt1, nda::array_const_view<dcomplex, 2> Flam,
                              nda::array_view<dcomplex, 3> T) {
 
@@ -156,7 +156,7 @@ namespace triqs_xca::block_sparse {
     }
   }
 
-  void OCA_bs_middle_in_place(bool forward, nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl,
+  void sigma_oca_middle_in_place(bool forward, nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl,
                               nda::array_const_view<dcomplex, 3> Fkaps, nda::array_const_view<dcomplex, 3> Fmus, nda::array_view<dcomplex, 3> Tin,
                               nda::array_view<dcomplex, 3> Tout, nda::array_view<dcomplex, 4> Tkaps, nda::array_view<dcomplex, 3> Tmu) {
 
@@ -191,7 +191,7 @@ namespace triqs_xca::block_sparse {
     }
   }
 
-  void OCA_bs_left_in_place(double beta, imtime_ops &itops, nda::vector_const_view<double> dlr_it, double omega_l, bool forward,
+  void sigma_oca_left_in_place(double beta, imtime_ops &itops, nda::vector_const_view<double> dlr_it, double omega_l, bool forward,
                             nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 2> Fbar, nda::array_view<dcomplex, 3> Tin,
                             nda::array_view<dcomplex, 3> Tout, nda::array_view<dcomplex, 3> GKt) {
 
@@ -228,7 +228,7 @@ namespace triqs_xca::block_sparse {
     }
   }
 
-  BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt,
+  BlockDiagOpFun sigma_oca(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt,
                         const std::vector<BlockOp> &Fs) {
 
     nda::vector_const_view<double> dlr_rf = itops.get_rfnodes();
@@ -325,12 +325,12 @@ namespace triqs_xca::block_sparse {
             // preallocate for i-th block
             auto Sigma_l = nda::make_regular(0 * Sigma.get_block(i));
             // sizes of intermediate matrices are known
-            nda::array<dcomplex, 3> Tright(r, block_dims(2), block_dims(1));        // output of OCA_bs_right
-            nda::array<dcomplex, 3> Tmid(r, block_dims(3), block_dims(0));          // output of OCA_bs_middle
-            nda::array<dcomplex, 4> Tkaps(num_Fs, r, block_dims(2), block_dims(0)); // storage in OCA_bs_middle
-            nda::array<dcomplex, 3> Tmu(r, block_dims(2), block_dims(0));           // storage in OCA_bs_middle
-            nda::array<dcomplex, 3> Tleft(r, block_dims(4), block_dims(0));         // output of OCA_bs_left
-            nda::array<dcomplex, 3> GKt(r, block_dims(3), block_dims(3));           // storage in OCA_bs_left
+            nda::array<dcomplex, 3> Tright(r, block_dims(2), block_dims(1));        // output of sigma_oca_right_in_place
+            nda::array<dcomplex, 3> Tmid(r, block_dims(3), block_dims(0));          // output of sigma_oca_middle_in_place
+            nda::array<dcomplex, 4> Tkaps(num_Fs, r, block_dims(2), block_dims(0)); // storage in sigma_oca_middle_in_place
+            nda::array<dcomplex, 3> Tmu(r, block_dims(2), block_dims(0));           // storage in sigma_oca_middle_in_place
+            nda::array<dcomplex, 3> Tleft(r, block_dims(4), block_dims(0));         // output of sigma_oca_left_in_place
+            nda::array<dcomplex, 3> GKt(r, block_dims(3), block_dims(3));           // storage in sigma_oca_left_in_place
 
             // TODO: make Fs have blocks that are 3D nda::array?
             auto Fkaps = nda::zeros<dcomplex>(num_Fs, F1list[0].get_block_size(i, 0), F1list[0].get_block_size(i, 1));
@@ -343,10 +343,10 @@ namespace triqs_xca::block_sparse {
             for (int l = 0; l < r; l++) {
               Sigma_l = 0;
               for (int lam = 0; lam < num_Fs; lam++) {
-                OCA_bs_right_in_place(beta, itops, dlr_it, dlr_rf(l), (fb2 == 1), Gt.get_block(ind_path(0)), Gt.get_block(ind_path(1)),
+                sigma_oca_right_in_place(beta, itops, dlr_it, dlr_rf(l), (fb2 == 1), Gt.get_block(ind_path(0)), Gt.get_block(ind_path(1)),
                                       F2list[lam].get_block(ind_path(0)), Tright);
-                OCA_bs_middle_in_place((fb1 == 1), hyb, hyb_refl, Fkaps, Fmus, Tright, Tmid, Tkaps, Tmu);
-                OCA_bs_left_in_place(beta, itops, dlr_it, dlr_rf(l), (fb2 == 1), Gt.get_block(ind_path(2)), Fbar_array[lam][l].get_block(ind_path(2)),
+                sigma_oca_middle_in_place((fb1 == 1), hyb, hyb_refl, Fkaps, Fmus, Tright, Tmid, Tkaps, Tmu);
+                sigma_oca_left_in_place(beta, itops, dlr_it, dlr_rf(l), (fb2 == 1), Gt.get_block(ind_path(2)), Fbar_array[lam][l].get_block(ind_path(2)),
                                      Tmid, Tleft, GKt);
                 Sigma_l += Tleft;
               } // sum over lambda
@@ -377,7 +377,7 @@ namespace triqs_xca::block_sparse {
     return Sigma;
   }
 
-  BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::vector_const_view<double> hyb_poles, imtime_ops &itops, double beta,
+  BlockDiagOpFun sigma_oca(nda::array_const_view<dcomplex, 3> hyb, nda::vector_const_view<double> hyb_poles, imtime_ops &itops, double beta,
                         const BlockDiagOpFun &Gt, const BlockOpSymQuartet &Fq) {
 
     long n                                = Fq.sym_set_labels.size();
@@ -454,12 +454,12 @@ namespace triqs_xca::block_sparse {
             // preallocate for i-th block
             auto Sigma_l = nda::make_regular(0 * Sigma.get_block(i));
             // sizes of intermediate matrices are known
-            nda::array<dcomplex, 3> Tright(r, block_dims(2), block_dims(1));   // output of OCA_bs_right
-            nda::array<dcomplex, 3> Tmid(r, block_dims(3), block_dims(0));     // output of OCA_bs_middle
-            nda::array<dcomplex, 4> Tkaps(n, r, block_dims(2), block_dims(0)); // storage in OCA_bs_middle
-            nda::array<dcomplex, 3> Tmu(r, block_dims(2), block_dims(0));      // storage in OCA_bs_middle
-            nda::array<dcomplex, 3> Tleft(r, block_dims(4), block_dims(0));    // output of OCA_bs_left
-            nda::array<dcomplex, 3> GKt(r, block_dims(3), block_dims(3));      // storage in OCA_bs_left
+            nda::array<dcomplex, 3> Tright(r, block_dims(2), block_dims(1));   // output of sigma_oca_right_in_place
+            nda::array<dcomplex, 3> Tmid(r, block_dims(3), block_dims(0));     // output of sigma_oca_middle_in_place
+            nda::array<dcomplex, 4> Tkaps(n, r, block_dims(2), block_dims(0)); // storage in sigma_oca_middle_in_place
+            nda::array<dcomplex, 3> Tmu(r, block_dims(2), block_dims(0));      // storage in sigma_oca_middle_in_place
+            nda::array<dcomplex, 3> Tleft(r, block_dims(4), block_dims(0));    // output of sigma_oca_left_in_place
+            nda::array<dcomplex, 3> GKt(r, block_dims(3), block_dims(3));      // storage in sigma_oca_left_in_place
 
             auto Fkaps = F1[0].get_block(i);
             auto Fmus  = F3[0].get_block(ind_path(1));
@@ -467,10 +467,10 @@ namespace triqs_xca::block_sparse {
             for (int l = 0; l < p; l++) {
               Sigma_l = 0;
               for (int lam = 0; lam < n; lam++) {
-                OCA_bs_right_in_place(beta, itops, dlr_it, hyb_poles(l), (fb2 == 1), Gt.get_block(ind_path(0)), Gt.get_block(ind_path(1)),
+                sigma_oca_right_in_place(beta, itops, dlr_it, hyb_poles(l), (fb2 == 1), Gt.get_block(ind_path(0)), Gt.get_block(ind_path(1)),
                                       F2[0].get_block(ind_path(0))(lam, _, _), Tright);
-                OCA_bs_middle_in_place((fb1 == 1), hyb, hyb_refl, Fkaps, Fmus, Tright, Tmid, Tkaps, Tmu);
-                OCA_bs_left_in_place(beta, itops, dlr_it, hyb_poles(l), (fb2 == 1), Gt.get_block(ind_path(2)),
+                sigma_oca_middle_in_place((fb1 == 1), hyb, hyb_refl, Fkaps, Fmus, Tright, Tmid, Tkaps, Tmu);
+                sigma_oca_left_in_place(beta, itops, dlr_it, hyb_poles(l), (fb2 == 1), Gt.get_block(ind_path(2)),
                                      Fbar[0].get_block(ind_path(2))(lam, l, _, _), Tmid, Tleft, GKt);
                 Sigma_l += Tleft;
               } // sum over lambda
@@ -501,7 +501,7 @@ namespace triqs_xca::block_sparse {
     return Sigma;
   }
 
-  BlockDiagOpFun OCA_bs(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_coeffs,
+  BlockDiagOpFun sigma_oca(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_coeffs,
                         nda::array_const_view<dcomplex, 3> hyb_refl, nda::array_const_view<dcomplex, 3> hyb_refl_coeffs,
                         nda::vector_const_view<double> hyb_poles, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt,
                         const std::vector<BlockOp> &Fs) {
@@ -594,12 +594,12 @@ namespace triqs_xca::block_sparse {
             // preallocate for i-th block
             auto Sigma_l = nda::make_regular(0 * Sigma.get_block(i));
             // sizes of intermediate matrices are known
-            nda::array<dcomplex, 3> Tright(r, block_dims(2), block_dims(1));   // output of OCA_bs_right
-            nda::array<dcomplex, 3> Tmid(r, block_dims(3), block_dims(0));     // output of OCA_bs_middle
-            nda::array<dcomplex, 4> Tkaps(n, r, block_dims(2), block_dims(0)); // storage in OCA_bs_middle
-            nda::array<dcomplex, 3> Tmu(r, block_dims(2), block_dims(0));      // storage in OCA_bs_middle
-            nda::array<dcomplex, 3> Tleft(r, block_dims(4), block_dims(0));    // output of OCA_bs_left
-            nda::array<dcomplex, 3> GKt(r, block_dims(3), block_dims(3));      // storage in OCA_bs_left
+            nda::array<dcomplex, 3> Tright(r, block_dims(2), block_dims(1));   // output of sigma_oca_right_in_place
+            nda::array<dcomplex, 3> Tmid(r, block_dims(3), block_dims(0));     // output of sigma_oca_middle_in_place
+            nda::array<dcomplex, 4> Tkaps(n, r, block_dims(2), block_dims(0)); // storage in sigma_oca_middle_in_place
+            nda::array<dcomplex, 3> Tmu(r, block_dims(2), block_dims(0));      // storage in sigma_oca_middle_in_place
+            nda::array<dcomplex, 3> Tleft(r, block_dims(4), block_dims(0));    // output of sigma_oca_left_in_place
+            nda::array<dcomplex, 3> GKt(r, block_dims(3), block_dims(3));      // storage in sigma_oca_left_in_place
 
             // TODO: make Fs have blocks that are 3D nda::array?
             auto Fkaps = nda::zeros<dcomplex>(n, F1list[0].get_block_size(i, 0), F1list[0].get_block_size(i, 1));
@@ -612,10 +612,10 @@ namespace triqs_xca::block_sparse {
             for (int l = 0; l < p; l++) {
               Sigma_l = 0;
               for (int lam = 0; lam < n; lam++) {
-                OCA_bs_right_in_place(beta, itops, dlr_it, hyb_poles(l), (fb2 == 1), Gt.get_block(ind_path(0)), Gt.get_block(ind_path(1)),
+                sigma_oca_right_in_place(beta, itops, dlr_it, hyb_poles(l), (fb2 == 1), Gt.get_block(ind_path(0)), Gt.get_block(ind_path(1)),
                                       F2list[lam].get_block(ind_path(0)), Tright);
-                OCA_bs_middle_in_place((fb1 == 1), hyb, hyb_refl, Fkaps, Fmus, Tright, Tmid, Tkaps, Tmu);
-                OCA_bs_left_in_place(beta, itops, dlr_it, hyb_poles(l), (fb2 == 1), Gt.get_block(ind_path(2)),
+                sigma_oca_middle_in_place((fb1 == 1), hyb, hyb_refl, Fkaps, Fmus, Tright, Tmid, Tkaps, Tmu);
+                sigma_oca_left_in_place(beta, itops, dlr_it, hyb_poles(l), (fb2 == 1), Gt.get_block(ind_path(2)),
                                      Fbar_array[lam][l].get_block(ind_path(2)), Tmid, Tleft, GKt);
                 Sigma_l += Tleft;
               } // sum over lambda
@@ -646,4 +646,4 @@ namespace triqs_xca::block_sparse {
     return Sigma;
   }
 
-} // namespace triqs_xca::block_sparse
+} // namespace triqs_xca::block_sparse::manual

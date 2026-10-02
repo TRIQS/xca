@@ -6,10 +6,10 @@
 #include <triqs_xca/hyb.hpp>
 #include <triqs_xca/dense/diagram_evaluator.hpp>
 #include <triqs_xca/block_sparse/diagram_evaluator.hpp>
-#include <triqs_xca/dense/manual.hpp>
-#include <triqs_xca/block_sparse/manual.hpp>
-#include <triqs_xca/dense/manual_gf.hpp>
-#include <triqs_xca/block_sparse/manual_gf.hpp>
+#include <triqs_xca/dense/manual/sigma.hpp>
+#include <triqs_xca/block_sparse/manual/sigma.hpp>
+#include <triqs_xca/dense/manual/spgf.hpp>
+#include <triqs_xca/block_sparse/manual/spgf.hpp>
 #include <triqs_xca/topology.hpp>
 
 #include <cppdlr/cppdlr.hpp>
@@ -22,12 +22,9 @@ using cppdlr::imtime_ops;
 using cppdlr::rel2abs;
 
 namespace dense = triqs_xca::dense;
+namespace block_sparse = triqs_xca::block_sparse;
 
 using triqs_xca::block_sparse::DiagramEvaluator;
-using triqs_xca::dense::NCA_dense;
-using triqs_xca::dense::NCA_gf_dense;
-using triqs_xca::dense::OCA_dense;
-using triqs_xca::dense::OCA_gf_dense;
 
 using triqs_xca::topology::topology_parity;
 
@@ -244,9 +241,9 @@ TEST(two_fermions, const_hyb_se) {
   auto nca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G_ppsc_dense, nca_topology);
   auto nca_pairs    = nda::make_regular(topology_parity(nca_topology) * nca_pairs_gf[0].data());
   // manual dense routine
-  auto nca_manual_dense = NCA_dense(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
+  auto nca_manual_dense = dense::manual::sigma_nca(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine, convert to dense format
-  auto nca_manual_bdof = NCA_bs(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
+  auto nca_manual_bdof = block_sparse::manual::sigma_nca(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
   auto nca_manual_bs   = get_tensor_in_full_hilbert_space(nca_manual_bdof, s.model.ad, s.r);
 
   // compute analytical reference, = -G0_ana
@@ -273,10 +270,10 @@ TEST(two_fermions, const_hyb_se) {
   auto oca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G_ppsc_dense, oca_topology);
   auto oca_pairs    = nda::make_regular(topology_parity(oca_topology) * oca_pairs_gf[0].data());
   // manual dense routine
-  auto oca_manual_dense = OCA_dense(s.D.hyb.values, s.D.hyb.coeffs, s.D.hyb.values_reflect, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta,
+  auto oca_manual_dense = dense::manual::sigma_oca(s.D.hyb.values, s.D.hyb.coeffs, s.D.hyb.values_reflect, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta,
                                     s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine, and convert to dense format
-  auto oca_manual_bdof = OCA_bs(s.D.hyb.values, s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
+  auto oca_manual_bdof = block_sparse::manual::sigma_oca(s.D.hyb.values, s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
   auto oca_manual_bs   = get_tensor_in_full_hilbert_space(oca_manual_bdof, s.model.ad, s.r);
 
   // compute analytical reference
@@ -337,9 +334,9 @@ TEST(two_fermions, const_hyb_spgf) {
   // compute using dense::DiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
   auto nca_dense = nda::make_regular(topology_parity(nca_topology) * s.D_dense.compute_single_ptcle_gf(s.G_ppsc_dense, nca_topology));
   // manual dense routine
-  auto nca_manual_dense = NCA_gf_dense(s.Gt_dense, s.Gt_dense_refl, s.Fs_dense, s.F_dags_dense);
+  auto nca_manual_dense = dense::manual::spgf_nca(s.Gt_dense, s.Gt_dense_refl, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine
-  auto nca_manual_bs = NCA_gf_bs(s.model.G_bdof, s.model.G_bdof.reflect(s.itops), s.Fq);
+  auto nca_manual_bs = block_sparse::manual::spgf_nca(s.model.G_bdof, s.model.G_bdof.reflect(s.itops), s.Fq);
 
   // compute analytical reference: first order has no hybridization line, so it does not see Delta at all
   auto nca_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
@@ -360,9 +357,9 @@ TEST(two_fermions, const_hyb_spgf) {
   // compute using dense::DiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
   auto oca_dense = nda::make_regular(topology_parity(oca_topology) * s.D_dense.compute_single_ptcle_gf(s.G_ppsc_dense, oca_topology));
   // manual dense routine
-  auto oca_manual_dense = OCA_gf_dense(s.D.hyb.coeffs, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
+  auto oca_manual_dense = dense::manual::spgf_oca(s.D.hyb.coeffs, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine
-  auto oca_manual_bs = OCA_gf_bs(s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
+  auto oca_manual_bs = block_sparse::manual::spgf_oca(s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
 
   // compute analytical reference: g_aa = tau (beta - tau) / 4, with no spin-flip terms in H or Delta so the
   // orbital off-diagonal entries vanish identically
@@ -432,9 +429,9 @@ TEST(two_fermions, hermitian_hyb_se) {
   auto nca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G_ppsc_dense, nca_topology);
   auto nca_pairs    = nda::make_regular(topology_parity(nca_topology) * nca_pairs_gf[0].data());
   // manual dense routine
-  auto nca_manual_dense = NCA_dense(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
+  auto nca_manual_dense = dense::manual::sigma_nca(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine, convert to dense format
-  auto nca_manual_bdof = NCA_bs(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
+  auto nca_manual_bdof = block_sparse::manual::sigma_nca(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
   auto nca_manual_bs   = get_tensor_in_full_hilbert_space(nca_manual_bdof, s.model.ad, s.r);
 
   // compute analytical reference, = -G0_ana and independent of alpha
@@ -461,10 +458,10 @@ TEST(two_fermions, hermitian_hyb_se) {
   auto oca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G_ppsc_dense, oca_topology);
   auto oca_pairs    = nda::make_regular(topology_parity(oca_topology) * oca_pairs_gf[0].data());
   // manual dense routine
-  auto oca_manual_dense = OCA_dense(s.D.hyb.values, s.D.hyb.coeffs, s.D.hyb.values_reflect, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta,
+  auto oca_manual_dense = dense::manual::sigma_oca(s.D.hyb.values, s.D.hyb.coeffs, s.D.hyb.values_reflect, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta,
                                     s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine, and convert to dense format
-  auto oca_manual_bdof = OCA_bs(s.D.hyb.values, s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
+  auto oca_manual_bdof = block_sparse::manual::sigma_oca(s.D.hyb.values, s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
   auto oca_manual_bs   = get_tensor_in_full_hilbert_space(oca_manual_bdof, s.model.ad, s.r);
 
   // compute analytical reference; the alpha = 0 value carries a factor -1, and the Hermitian M replaces it by alpha^2 - 1
@@ -536,9 +533,9 @@ TEST(two_fermions, hermitian_hyb_spgf) {
   // compute using dense::DiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
   auto nca_dense = nda::make_regular(topology_parity(nca_topology) * s.D_dense.compute_single_ptcle_gf(s.G_ppsc_dense, nca_topology));
   // manual dense routine
-  auto nca_manual_dense = NCA_gf_dense(s.Gt_dense, s.Gt_dense_refl, s.Fs_dense, s.F_dags_dense);
+  auto nca_manual_dense = dense::manual::spgf_nca(s.Gt_dense, s.Gt_dense_refl, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine
-  auto nca_manual_bs = NCA_gf_bs(s.model.G_bdof, s.model.G_bdof.reflect(s.itops), s.Fq);
+  auto nca_manual_bs = block_sparse::manual::spgf_nca(s.model.G_bdof, s.model.G_bdof.reflect(s.itops), s.Fq);
 
   // compute analytical reference: first order has no hybridization line, so it does not see M at all
   auto nca_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
@@ -559,9 +556,9 @@ TEST(two_fermions, hermitian_hyb_spgf) {
   // compute using dense::DiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
   auto oca_dense = nda::make_regular(topology_parity(oca_topology) * s.D_dense.compute_single_ptcle_gf(s.G_ppsc_dense, oca_topology));
   // manual dense routine
-  auto oca_manual_dense = OCA_gf_dense(s.D.hyb.coeffs, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
+  auto oca_manual_dense = dense::manual::spgf_oca(s.D.hyb.coeffs, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine
-  auto oca_manual_bs = OCA_gf_bs(s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
+  auto oca_manual_bs = block_sparse::manual::spgf_oca(s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
 
   // compute analytical reference: g_aa = tau (beta - tau) / 4, g_ab = -alpha tau (beta - tau) / 4
   auto oca_ana  = nda::zeros<dcomplex>(s.r, 2, 2);
@@ -634,9 +631,9 @@ TEST(two_fermions, one_hyb_pole_se) {
   auto nca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G_ppsc_dense, nca_topology);
   auto nca_pairs    = nda::make_regular(topology_parity(nca_topology) * nca_pairs_gf[0].data());
   // manual dense routine
-  auto nca_manual_dense = NCA_dense(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
+  auto nca_manual_dense = dense::manual::sigma_nca(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine, convert to dense format
-  auto nca_manual_bdof = NCA_bs(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
+  auto nca_manual_bdof = block_sparse::manual::sigma_nca(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
   auto nca_manual_bs   = get_tensor_in_full_hilbert_space(nca_manual_bdof, s.model.ad, s.r);
 
   // compute analytical reference; Fock states 0, {1, 2} and 3 hold the occupation sectors N = 0, 1 and 2
@@ -670,10 +667,10 @@ TEST(two_fermions, one_hyb_pole_se) {
   auto oca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G_ppsc_dense, oca_topology);
   auto oca_pairs    = nda::make_regular(topology_parity(oca_topology) * oca_pairs_gf[0].data());
   // manual dense routine
-  auto oca_manual_dense = OCA_dense(s.D.hyb.values, s.D.hyb.coeffs, s.D.hyb.values_reflect, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta,
+  auto oca_manual_dense = dense::manual::sigma_oca(s.D.hyb.values, s.D.hyb.coeffs, s.D.hyb.values_reflect, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta,
                                     s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine, and convert to dense format
-  auto oca_manual_bdof = OCA_bs(s.D.hyb.values, s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
+  auto oca_manual_bdof = block_sparse::manual::sigma_oca(s.D.hyb.values, s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
   auto oca_manual_bs   = get_tensor_in_full_hilbert_space(oca_manual_bdof, s.model.ad, s.r);
 
   // compute analytical reference
@@ -757,9 +754,9 @@ TEST(two_fermions, one_hyb_pole_spgf) {
   // compute using dense::DiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
   auto nca_dense = nda::make_regular(topology_parity(nca_topology) * s.D_dense.compute_single_ptcle_gf(s.G_ppsc_dense, nca_topology));
   // manual dense routine
-  auto nca_manual_dense = NCA_gf_dense(s.Gt_dense, s.Gt_dense_refl, s.Fs_dense, s.F_dags_dense);
+  auto nca_manual_dense = dense::manual::spgf_nca(s.Gt_dense, s.Gt_dense_refl, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine
-  auto nca_manual_bs = NCA_gf_bs(s.model.G_bdof, s.model.G_bdof.reflect(s.itops), s.Fq);
+  auto nca_manual_bs = block_sparse::manual::spgf_nca(s.model.G_bdof, s.model.G_bdof.reflect(s.itops), s.Fq);
 
   // compute analytical reference: first order has no hybridization line, so it does not see Delta at all
   auto nca_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
@@ -780,9 +777,9 @@ TEST(two_fermions, one_hyb_pole_spgf) {
   // compute using dense::DiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
   auto oca_dense = nda::make_regular(topology_parity(oca_topology) * s.D_dense.compute_single_ptcle_gf(s.G_ppsc_dense, oca_topology));
   // manual dense routine
-  auto oca_manual_dense = OCA_gf_dense(s.D.hyb.coeffs, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
+  auto oca_manual_dense = dense::manual::spgf_oca(s.D.hyb.coeffs, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine
-  auto oca_manual_bs = OCA_gf_bs(s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
+  auto oca_manual_bs = block_sparse::manual::spgf_oca(s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
 
   // analytical reference: the closed form is unwieldy, so it is frozen here as values of g_{up,up}(tau) at a
   // few tau points, tabulated from examples/two_fermion_analytical_solutions.ipynb

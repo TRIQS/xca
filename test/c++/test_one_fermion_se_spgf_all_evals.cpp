@@ -7,16 +7,17 @@
 
 #include <triqs_xca/dense/diagram_evaluator.hpp>
 #include <triqs_xca/block_sparse/diagram_evaluator.hpp>
-#include <triqs_xca/dense/manual.hpp>
-#include <triqs_xca/block_sparse/manual.hpp>
-#include <triqs_xca/dense/manual_gf.hpp>
-#include <triqs_xca/block_sparse/manual_gf.hpp>
+#include <triqs_xca/dense/manual/sigma.hpp>
+#include <triqs_xca/block_sparse/manual/sigma.hpp>
+#include <triqs_xca/dense/manual/spgf.hpp>
+#include <triqs_xca/block_sparse/manual/spgf.hpp>
 #include <triqs_xca/hyb.hpp>
 #include <triqs_xca/topology.hpp>
 
 #include <cppdlr/cppdlr.hpp>
 
 #include "block_sparse_utils.hpp"
+#include "dense_utils.hpp"
 
 using cppdlr::_;
 using cppdlr::build_dlr_rf;
@@ -28,19 +29,10 @@ using triqs::operators::many_body_operator_complex;
 using triqs::operators::n;
 
 namespace dense = triqs_xca::dense;
+namespace block_sparse = triqs_xca::block_sparse;
 using triqs_xca::dense::FSet;
 
 using triqs_xca::block_sparse::DiagramEvaluator;
-using triqs_xca::dense::NCA_dense;
-using triqs_xca::dense::NCA_gf_dense;
-using triqs_xca::dense::OCA_dense;
-using triqs_xca::dense::OCA_gf_dense;
-
-using triqs_xca::dense::eval_eq;
-using triqs_xca::dense::OCA_gf_tpz;
-using triqs_xca::dense::OCA_tpz;
-using triqs_xca::dense::third_order_gf_tpz;
-using triqs_xca::dense::third_order_tpz;
 
 using triqs_xca::topology::topology_parity;
 
@@ -263,9 +255,9 @@ TEST(one_fermion, const_hyb_se) {
   auto nca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, nca_topology);
   auto nca_pairs    = nda::make_regular(topology_parity(nca_topology) * nca_pairs_gf[0].data());
   // manual dense routine
-  auto nca_manual_dense = NCA_dense(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
+  auto nca_manual_dense = dense::manual::sigma_nca(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine, convert to dense format
-  auto nca_manual_bdof = NCA_bs(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
+  auto nca_manual_bdof = block_sparse::manual::sigma_nca(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
   auto nca_manual_bs   = get_tensor_in_full_hilbert_space(nca_manual_bdof, s.model.ad, s.r);
 
   // compute analytical reference
@@ -292,13 +284,13 @@ TEST(one_fermion, const_hyb_se) {
   auto oca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, oca_topology);
   auto oca_pairs    = nda::make_regular(topology_parity(oca_topology) * oca_pairs_gf[0].data());
   // manual dense routine
-  auto oca_manual_dense = OCA_dense(s.D.hyb.values, s.D.hyb.coeffs, s.D.hyb.values_reflect, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta,
+  auto oca_manual_dense = dense::manual::sigma_oca(s.D.hyb.values, s.D.hyb.coeffs, s.D.hyb.values_reflect, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta,
                                     s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine, and convert to dense format
-  auto oca_manual_bdof = OCA_bs(s.D.hyb.values, s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
+  auto oca_manual_bdof = block_sparse::manual::sigma_oca(s.D.hyb.values, s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
   auto oca_manual_bs   = get_tensor_in_full_hilbert_space(oca_manual_bdof, s.model.ad, s.r);
   // compute using trapezoidal quadrature
-  auto oca_tpz   = OCA_tpz(hyb, s.itops, s.beta, s.Gt_dense, s.Fs_dense, n_quad);
+  auto oca_tpz   = dense::manual::sigma_oca_tpz(hyb, s.itops, s.beta, s.Gt_dense, s.Fs_dense, n_quad);
   auto oca_bs_eq = eval_eq(s.itops, oca_bs, n_quad);
 
   // no analytical reference here because the expected result is zero
@@ -381,9 +373,9 @@ TEST(one_fermion, one_hyb_pole_se) {
   auto nca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, nca_topology);
   auto nca_pairs    = nda::make_regular(topology_parity(nca_topology) * nca_pairs_gf[0].data());
   // manual dense routine
-  auto nca_manual_dense = NCA_dense(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
+  auto nca_manual_dense = dense::manual::sigma_nca(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine, convert to dense format
-  auto nca_manual_bdof = NCA_bs(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
+  auto nca_manual_bdof = block_sparse::manual::sigma_nca(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
   auto nca_manual_bs   = get_tensor_in_full_hilbert_space(nca_manual_bdof, s.model.ad, s.r);
 
   // compute analytical reference
@@ -410,13 +402,13 @@ TEST(one_fermion, one_hyb_pole_se) {
   auto oca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, oca_topology);
   auto oca_pairs    = nda::make_regular(topology_parity(oca_topology) * oca_pairs_gf[0].data());
   // manual dense routine
-  auto oca_manual_dense = OCA_dense(s.D.hyb.values, s.D.hyb.coeffs, s.D.hyb.values_reflect, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta,
+  auto oca_manual_dense = dense::manual::sigma_oca(s.D.hyb.values, s.D.hyb.coeffs, s.D.hyb.values_reflect, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta,
                                     s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine, and convert to dense format
-  auto oca_manual_bdof = OCA_bs(s.D.hyb.values, s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
+  auto oca_manual_bdof = block_sparse::manual::sigma_oca(s.D.hyb.values, s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
   auto oca_manual_bs   = get_tensor_in_full_hilbert_space(oca_manual_bdof, s.model.ad, s.r);
   // compute using trapezoidal quadrature
-  auto oca_tpz   = OCA_tpz(hyb, s.itops, s.beta, s.Gt_dense, s.Fs_dense, n_quad);
+  auto oca_tpz   = dense::manual::sigma_oca_tpz(hyb, s.itops, s.beta, s.Gt_dense, s.Fs_dense, n_quad);
   auto oca_bs_eq = eval_eq(s.itops, oca_bs, n_quad);
 
   // no analytical reference here because the expected result is zero
@@ -505,9 +497,9 @@ TEST(one_fermion, two_hyb_poles_se) {
   auto nca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, nca_topology);
   auto nca_pairs    = nda::make_regular(topology_parity(nca_topology) * nca_pairs_gf[0].data());
   // manual dense routine
-  auto nca_manual_dense = NCA_dense(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
+  auto nca_manual_dense = dense::manual::sigma_nca(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine, convert to dense format
-  auto nca_manual_bdof = NCA_bs(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
+  auto nca_manual_bdof = block_sparse::manual::sigma_nca(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
   auto nca_manual_bs   = get_tensor_in_full_hilbert_space(nca_manual_bdof, s.model.ad, s.r);
 
   // compute analytical reference
@@ -540,13 +532,13 @@ TEST(one_fermion, two_hyb_poles_se) {
   auto oca_pairs_gf = s.D_dense.compute_self_energy_by_pairs(s.G0_ppsc_dense, oca_topology);
   auto oca_pairs    = nda::make_regular(topology_parity(oca_topology) * oca_pairs_gf[0].data());
   // manual dense routine
-  auto oca_manual_dense = OCA_dense(s.D.hyb.values, s.D.hyb.coeffs, s.D.hyb.values_reflect, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta,
+  auto oca_manual_dense = dense::manual::sigma_oca(s.D.hyb.values, s.D.hyb.coeffs, s.D.hyb.values_reflect, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta,
                                     s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine, and convert to dense format
-  auto oca_manual_bdof = OCA_bs(s.D.hyb.values, s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
+  auto oca_manual_bdof = block_sparse::manual::sigma_oca(s.D.hyb.values, s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
   auto oca_manual_bs   = get_tensor_in_full_hilbert_space(oca_manual_bdof, s.model.ad, s.r);
   // compute using trapezoidal quadrature
-  auto oca_tpz   = OCA_tpz(hyb, s.itops, s.beta, s.Gt_dense, s.Fs_dense, n_quad);
+  auto oca_tpz   = dense::manual::sigma_oca_tpz(hyb, s.itops, s.beta, s.Gt_dense, s.Fs_dense, n_quad);
   auto oca_bs_eq = eval_eq(s.itops, oca_bs, n_quad);
 
   // no analytical reference here because the expected result is zero
@@ -573,7 +565,7 @@ TEST(one_fermion, two_hyb_poles_se) {
   auto third_pairs    = nda::make_regular(topology_parity(third_topology) * third_pairs_gf[0].data());
   // no manual third-order routine
   // compute using trapezoidal rule
-  auto third_tpz = third_order_tpz(hyb, s.itops, s.beta, s.Gt_dense, s.Fs_dense, n_quad);
+  auto third_tpz = dense::manual::sigma_o3_tpz(hyb, s.itops, s.beta, s.Gt_dense, s.Fs_dense, n_quad);
   // evaluate block-sparse results on equispaced grid to compare against the output of the trapezoidal routine above
   auto third_bs_eq = eval_eq(s.itops, third_bs, n_quad);
 
@@ -617,7 +609,7 @@ TEST(one_fermion, const_hyb_spgf) {
   double tpz_tol = 2.0e-3; // ~2x the empirically observed n_quad=20 error
   // the itops overload of coefs2vals; the beta/Lambda/eps one hardcodes a symmetrized grid internally
   auto hyb = triqs_xca::hyb::coefs2vals(s.beta, s.itops, s.model.hyb_coeffs, s.model.hyb_poles);
-  // unlike OCA_tpz and third_order_tpz, the *_gf_tpz routines want DLR coefficients rather than values, and
+  // unlike sigma_oca_tpz and sigma_o3_tpz, the *_gf_tpz routines want DLR coefficients rather than values, and
   // they do not build the reflected hybridization themselves, so the -reflect(hyb) convention is applied here
   auto hyb_coeffs      = s.itops.vals2coefs(hyb);
   auto hyb_refl_coeffs = s.itops.vals2coefs(s.itops.reflect(hyb));
@@ -630,9 +622,9 @@ TEST(one_fermion, const_hyb_spgf) {
   // compute using dense::DiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
   auto nca_dense = nda::make_regular(topology_parity(nca_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, nca_topology));
   // manual dense routine
-  auto nca_manual_dense = NCA_gf_dense(s.Gt_dense, s.Gt_dense_refl, s.Fs_dense, s.F_dags_dense);
+  auto nca_manual_dense = dense::manual::spgf_nca(s.Gt_dense, s.Gt_dense_refl, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine
-  auto nca_manual_bs = NCA_gf_bs(s.model.G_bdof, s.model.G_bdof.reflect(s.itops), s.Fq);
+  auto nca_manual_bs = block_sparse::manual::spgf_nca(s.model.G_bdof, s.model.G_bdof.reflect(s.itops), s.Fq);
 
   // compute analytical reference: first order has no hybridization line, so it is the constant 1/2
   auto nca_ana     = nda::zeros<dcomplex>(s.r, 1, 1);
@@ -651,11 +643,11 @@ TEST(one_fermion, const_hyb_spgf) {
   // compute using dense::DiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
   auto oca_dense = nda::make_regular(topology_parity(oca_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, oca_topology));
   // manual dense routine
-  auto oca_manual_dense = OCA_gf_dense(s.D.hyb.coeffs, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
+  auto oca_manual_dense = dense::manual::spgf_oca(s.D.hyb.coeffs, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine
-  auto oca_manual_bs = OCA_gf_bs(s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
+  auto oca_manual_bs = block_sparse::manual::spgf_oca(s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
   // compute using trapezoidal quadrature
-  auto oca_tpz   = OCA_gf_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
+  auto oca_tpz   = dense::manual::spgf_oca_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
   auto oca_bs_eq = eval_eq(s.itops, oca_bs, n_quad);
 
   // no analytical reference here because the expected result is zero
@@ -676,7 +668,7 @@ TEST(one_fermion, const_hyb_spgf) {
   auto third_dense = nda::make_regular(topology_parity(third_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, third_topology));
   // no manual third-order routine
   // compute using trapezoidal quadrature
-  auto third_tpz   = third_order_gf_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
+  auto third_tpz   = dense::manual::spgf_o3_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
   auto third_bs_eq = eval_eq(s.itops, third_bs, n_quad);
 
   // compute analytical reference
@@ -714,7 +706,7 @@ TEST(one_fermion, one_hyb_pole_spgf) {
   double tpz_tol = 2.0e-3; // ~2x the empirically observed n_quad=20 error
   // the itops overload of coefs2vals; the beta/Lambda/eps one hardcodes a symmetrized grid internally
   auto hyb = triqs_xca::hyb::coefs2vals(s.beta, s.itops, s.model.hyb_coeffs, s.model.hyb_poles);
-  // unlike OCA_tpz and third_order_tpz, the *_gf_tpz routines want DLR coefficients rather than values, and
+  // unlike sigma_oca_tpz and sigma_o3_tpz, the *_gf_tpz routines want DLR coefficients rather than values, and
   // they do not build the reflected hybridization themselves, so the -reflect(hyb) convention is applied here
   auto hyb_coeffs      = s.itops.vals2coefs(hyb);
   auto hyb_refl_coeffs = s.itops.vals2coefs(s.itops.reflect(hyb));
@@ -727,9 +719,9 @@ TEST(one_fermion, one_hyb_pole_spgf) {
   // compute using dense::DiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
   auto nca_dense = nda::make_regular(topology_parity(nca_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, nca_topology));
   // manual dense routine
-  auto nca_manual_dense = NCA_gf_dense(s.Gt_dense, s.Gt_dense_refl, s.Fs_dense, s.F_dags_dense);
+  auto nca_manual_dense = dense::manual::spgf_nca(s.Gt_dense, s.Gt_dense_refl, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine
-  auto nca_manual_bs = NCA_gf_bs(s.model.G_bdof, s.model.G_bdof.reflect(s.itops), s.Fq);
+  auto nca_manual_bs = block_sparse::manual::spgf_nca(s.model.G_bdof, s.model.G_bdof.reflect(s.itops), s.Fq);
 
   // compute analytical reference: first order has no hybridization line, so it is the constant 1/2
   auto nca_ana     = nda::zeros<dcomplex>(s.r, 1, 1);
@@ -748,11 +740,11 @@ TEST(one_fermion, one_hyb_pole_spgf) {
   // compute using dense::DiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
   auto oca_dense = nda::make_regular(topology_parity(oca_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, oca_topology));
   // manual dense routine
-  auto oca_manual_dense = OCA_gf_dense(s.D.hyb.coeffs, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
+  auto oca_manual_dense = dense::manual::spgf_oca(s.D.hyb.coeffs, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine
-  auto oca_manual_bs = OCA_gf_bs(s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
+  auto oca_manual_bs = block_sparse::manual::spgf_oca(s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
   // compute using trapezoidal quadrature
-  auto oca_tpz   = OCA_gf_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
+  auto oca_tpz   = dense::manual::spgf_oca_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
   auto oca_bs_eq = eval_eq(s.itops, oca_bs, n_quad);
 
   // no analytical reference here because the expected result is zero
@@ -772,7 +764,7 @@ TEST(one_fermion, one_hyb_pole_spgf) {
   auto third_dense = nda::make_regular(topology_parity(third_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, third_topology));
   // no manual third-order routine
   // compute using trapezoidal quadrature
-  auto third_tpz   = third_order_gf_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
+  auto third_tpz   = dense::manual::spgf_o3_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
   auto third_bs_eq = eval_eq(s.itops, third_bs, n_quad);
 
   // compute analytical reference
@@ -812,7 +804,7 @@ TEST(one_fermion, two_hyb_poles_spgf) {
   double tpz_tol = 2.0e-3; // ~2x the empirically observed n_quad=20 error
   // the itops overload of coefs2vals; the beta/Lambda/eps one hardcodes a symmetrized grid internally
   auto hyb = triqs_xca::hyb::coefs2vals(s.beta, s.itops, s.model.hyb_coeffs, s.model.hyb_poles);
-  // unlike OCA_tpz and third_order_tpz, the *_gf_tpz routines want DLR coefficients rather than values, and
+  // unlike sigma_oca_tpz and sigma_o3_tpz, the *_gf_tpz routines want DLR coefficients rather than values, and
   // they do not build the reflected hybridization themselves, so the -reflect(hyb) convention is applied here
   auto hyb_coeffs      = s.itops.vals2coefs(hyb);
   auto hyb_refl_coeffs = s.itops.vals2coefs(s.itops.reflect(hyb));
@@ -825,9 +817,9 @@ TEST(one_fermion, two_hyb_poles_spgf) {
   // compute using dense::DiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
   auto nca_dense = nda::make_regular(topology_parity(nca_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, nca_topology));
   // manual dense routine
-  auto nca_manual_dense = NCA_gf_dense(s.Gt_dense, s.Gt_dense_refl, s.Fs_dense, s.F_dags_dense);
+  auto nca_manual_dense = dense::manual::spgf_nca(s.Gt_dense, s.Gt_dense_refl, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine
-  auto nca_manual_bs = NCA_gf_bs(s.model.G_bdof, s.model.G_bdof.reflect(s.itops), s.Fq);
+  auto nca_manual_bs = block_sparse::manual::spgf_nca(s.model.G_bdof, s.model.G_bdof.reflect(s.itops), s.Fq);
 
   // compute analytical reference: first order has no hybridization line, so it does not see Delta at all and
   // is the same constant 1/2 as in the const-hybridization and one-pole tests above
@@ -847,11 +839,11 @@ TEST(one_fermion, two_hyb_poles_spgf) {
   // compute using dense::DiagramEvaluator, and ensure sign is correct; there is no by-pairs analogue for the single-particle Green's function
   auto oca_dense = nda::make_regular(topology_parity(oca_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, oca_topology));
   // manual dense routine
-  auto oca_manual_dense = OCA_gf_dense(s.D.hyb.coeffs, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
+  auto oca_manual_dense = dense::manual::spgf_oca(s.D.hyb.coeffs, s.D.hyb.coeffs, s.D.hyb.poles, s.itops, s.beta, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine
-  auto oca_manual_bs = OCA_gf_bs(s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
+  auto oca_manual_bs = block_sparse::manual::spgf_oca(s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
   // compute using trapezoidal quadrature
-  auto oca_tpz   = OCA_gf_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
+  auto oca_tpz   = dense::manual::spgf_oca_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
   auto oca_bs_eq = eval_eq(s.itops, oca_bs, n_quad);
 
   // no analytical reference here because the expected result is zero
@@ -871,7 +863,7 @@ TEST(one_fermion, two_hyb_poles_spgf) {
   auto third_dense = nda::make_regular(topology_parity(third_topology) * s.D_dense.compute_single_ptcle_gf(s.G0_ppsc_dense, third_topology));
   // no manual third-order routine
   // compute using trapezoidal quadrature
-  auto third_tpz   = third_order_gf_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
+  auto third_tpz   = dense::manual::spgf_o3_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
   auto third_bs_eq = eval_eq(s.itops, third_bs, n_quad);
 
   // analytical reference: computed from the closed form in one_fermion_two_poles_analytical_solutions.ipynb and

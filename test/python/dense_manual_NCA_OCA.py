@@ -6,7 +6,7 @@ from triqs.operators import c, c_dag
 
 from cppdlr import ImTimeOps, build_dlr_rf
 
-from triqs_xca.dense import NCA_dense, OCA_dense
+from triqs_xca.dense import sigma_nca, sigma_oca
 from triqs_xca.block_sparse_solver import BlockSparseSolver
 from triqs_xca.block_sparse_solver import hamiltonian_matrix_block, pseudo_particle_block_gf_to_dense
 
@@ -33,7 +33,7 @@ def full_operator_matrices(ad):
     return F, F_dag
 
 
-def test_block_sparsity_NCA_dense(verbose=False):
+def test_block_sparsity_sigma_nca(verbose=False):
 
     beta = 10.0
     t = 0.5
@@ -107,9 +107,9 @@ def test_block_sparsity_NCA_dense(verbose=False):
         delta_iaa = np.ascontiguousarray(delta_iaa, dtype=complex)
         delta_iaa_refl = ito.reflect(delta_iaa)
 
-        print(f'conserved_operators = {conserved_operators}: evaluating NCA_dense and OCA_dense')
-        Sigma_NCA = pow(-1, 1) * NCA_dense(delta_iaa, delta_iaa_refl, G0_iaa, F, F_dag)
-        Sigma_OCA = pow(-1, 2) * OCA_dense(delta_iaa, ito, beta, G0_iaa, F, F_dag)
+        print(f'conserved_operators = {conserved_operators}: evaluating sigma_nca and sigma_oca')
+        Sigma_NCA = pow(-1, 1) * sigma_nca(delta_iaa, delta_iaa_refl, G0_iaa, F, F_dag)
+        Sigma_OCA = pow(-1, 2) * sigma_oca(delta_iaa, ito, beta, G0_iaa, F, F_dag)
 
         diff_NCA = np.max(np.abs(Sigma_NCA - Sigma_NCA_ref))
         print(f'conserved_operators = {conserved_operators}, diff_NCA = {diff_NCA:2.2E}')
@@ -146,7 +146,7 @@ def test_block_sparsity_NCA_dense(verbose=False):
             plt.xlabel(r'$\tau$')
 
             plt.plot([], [], '+-', color='gray', label='BlockSparseSolver')
-            plt.plot([], [], 'x-', color='gray', label='NCA_dense')
+            plt.plot([], [], 'x-', color='gray', label='sigma_nca')
             plt.legend(loc='best')
 
             plt.subplot(*subp); subp[-1] += 1
@@ -159,7 +159,7 @@ def test_block_sparsity_NCA_dense(verbose=False):
             plt.xlabel(r'$\tau$')
 
             plt.plot([], [], '+-', color='gray', label='BlockSparseSolver')
-            plt.plot([], [], 'x-', color='gray', label='OCA_dense')
+            plt.plot([], [], 'x-', color='gray', label='sigma_oca')
             plt.legend(loc='best')
 
             plt.tight_layout()
@@ -168,4 +168,4 @@ def test_block_sparsity_NCA_dense(verbose=False):
 
 if __name__ == "__main__":
 
-    test_block_sparsity_NCA_dense(verbose=False)
+    test_block_sparsity_sigma_nca(verbose=False)

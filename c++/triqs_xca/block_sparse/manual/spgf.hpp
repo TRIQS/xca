@@ -1,7 +1,7 @@
 #pragma once
 #include "triqs_xca/block_sparse/block_op.hpp"
 
-namespace triqs_xca::block_sparse {
+namespace triqs_xca::block_sparse::manual {
 
   using nda::dcomplex;
 
@@ -14,7 +14,7 @@ namespace triqs_xca::block_sparse {
  * @param[in] Fs vector of annihilation operators
  * @return NCA term of self-energy
  */
-  nda::array<dcomplex, 3> NCA_gf_bs(const BlockDiagOpFun &Gt, const BlockDiagOpFun &Gt_refl, const BlockOpSymQuartet &Fq);
+  nda::array<dcomplex, 3> spgf_nca(const BlockDiagOpFun &Gt, const BlockDiagOpFun &Gt_refl, const BlockOpSymQuartet &Fq);
 
   /**
  * @brief Evaluate OCA Green's function using block-sparse storage
@@ -24,7 +24,7 @@ namespace triqs_xca::block_sparse {
  * @param[in] Gt pseudoparticle Green's function as a BDOF
  * @param[in] Fq quartet of F operators
  */
-  nda::array<dcomplex, 3> OCA_gf_bs(nda::vector_const_view<double> hyb_poles, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt,
+  nda::array<dcomplex, 3> spgf_oca(nda::vector_const_view<double> hyb_poles, imtime_ops &itops, double beta, const BlockDiagOpFun &Gt,
                                     const BlockOpSymQuartet &Fq);
 
-} // namespace triqs_xca::block_sparse
+} // namespace triqs_xca::block_sparse::manual

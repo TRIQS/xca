@@ -1,6 +1,6 @@
-#include "triqs_xca/dense/manual.hpp"
+#include "triqs_xca/dense/manual/sigma.hpp"
 
-namespace triqs_xca::dense {
+namespace triqs_xca::dense::manual {
 
   using cppdlr::_;
 
@@ -8,7 +8,7 @@ namespace triqs_xca::dense {
   using nda::trace;
   using nda::linalg::matmul;
 
-  nda::array<dcomplex, 3> NCA_dense(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl,
+  nda::array<dcomplex, 3> sigma_nca(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl,
                                     nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Fs,
                                     nda::array_const_view<dcomplex, 3> F_dags) {
 
@@ -43,7 +43,7 @@ namespace triqs_xca::dense {
     return Sigma;
   }
 
-  void OCA_dense_right_in_place(double beta, imtime_ops &itops, nda::vector_const_view<double> dlr_it, double omega_l, bool forward,
+  void sigma_oca_right_in_place(double beta, imtime_ops &itops, nda::vector_const_view<double> dlr_it, double omega_l, bool forward,
                                 nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 2> Flam, nda::array_view<dcomplex, 3> T) {
 
     int r = Gt.extent(0);
@@ -75,7 +75,7 @@ namespace triqs_xca::dense {
     }
   }
 
-  void OCA_dense_middle_in_place(bool forward, nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl,
+  void sigma_oca_middle_in_place(bool forward, nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_refl,
                                  nda::array_const_view<dcomplex, 3> Fkaps, nda::array_const_view<dcomplex, 3> Fmus, nda::array_view<dcomplex, 3> T,
                                  nda::array_view<dcomplex, 4> Tkaps, nda::array_view<dcomplex, 3> Tmu) {
     int num_Fs = Fkaps.extent(0);
@@ -106,7 +106,7 @@ namespace triqs_xca::dense {
     }
   }
 
-  void OCA_dense_left_in_place(double beta, imtime_ops &itops, nda::vector_const_view<double> dlr_it, double omega_l, bool forward,
+  void sigma_oca_left_in_place(double beta, imtime_ops &itops, nda::vector_const_view<double> dlr_it, double omega_l, bool forward,
                                nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 2> Fbar, nda::array_view<dcomplex, 3> T,
                                nda::array_view<dcomplex, 3> GKt) {
 
@@ -141,15 +141,7 @@ namespace triqs_xca::dense {
     }
   }
 
-  nda::array<dcomplex, 3> eval_eq(imtime_ops &itops, nda::array_const_view<dcomplex, 3> f, int n_quad) {
-    auto fc    = itops.vals2coefs(f);
-    auto it_eq = cppdlr::eqptsrel(n_quad + 1);
-    auto f_eq  = nda::array<dcomplex, 3>(n_quad + 1, f.extent(1), f.extent(2));
-    for (int i = 0; i <= n_quad; i++) { f_eq(i, _, _) = itops.coefs2eval(fc, it_eq(i)); }
-    return f_eq;
-  }
-
-  nda::array<dcomplex, 3> OCA_dense(nda::array_const_view<dcomplex, 3> hyb, imtime_ops itops, double beta, nda::array_const_view<dcomplex, 3> Gt,
+  nda::array<dcomplex, 3> sigma_oca(nda::array_const_view<dcomplex, 3> hyb, imtime_ops itops, double beta, nda::array_const_view<dcomplex, 3> Gt,
                                     nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags) {
 
     // index orders:
@@ -202,9 +194,9 @@ namespace triqs_xca::dense {
           Sigma_l = 0;
           // initialize summand assoc'd with index l
           for (int lam = 0; lam < num_Fs; lam++) {
-            OCA_dense_right_in_place(beta, itops, dlr_it, dlr_rf(l), (fb2 == 1), Gt, F2list(lam, _, _), T);
-            OCA_dense_middle_in_place((fb1 == 1), hyb, hyb_refl, F1list, F3list, T, Tkaps, Tmu);
-            OCA_dense_left_in_place(beta, itops, dlr_it, dlr_rf(l), (fb2 == 1), Gt, Fbar_array(lam, l, _, _), T, GKt);
+            sigma_oca_right_in_place(beta, itops, dlr_it, dlr_rf(l), (fb2 == 1), Gt, F2list(lam, _, _), T);
+            sigma_oca_middle_in_place((fb1 == 1), hyb, hyb_refl, F1list, F3list, T, Tkaps, Tmu);
+            sigma_oca_left_in_place(beta, itops, dlr_it, dlr_rf(l), (fb2 == 1), Gt, Fbar_array(lam, l, _, _), T, GKt);
             Sigma_l += T;
           } // sum over lambda
 
@@ -231,7 +223,7 @@ namespace triqs_xca::dense {
     return Sigma;
   }
 
-  nda::array<dcomplex, 3> OCA_dense(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_coeffs,
+  nda::array<dcomplex, 3> sigma_oca(nda::array_const_view<dcomplex, 3> hyb, nda::array_const_view<dcomplex, 3> hyb_coeffs,
                                     nda::array_const_view<dcomplex, 3> hyb_refl, nda::array_const_view<dcomplex, 3> hyb_refl_coeffs,
                                     nda::vector_const_view<double> hyb_poles, imtime_ops &itops, double beta, nda::array_const_view<dcomplex, 3> Gt,
                                     nda::array_const_view<dcomplex, 3> Fs, nda::array_const_view<dcomplex, 3> F_dags) {
@@ -276,9 +268,9 @@ namespace triqs_xca::dense {
           Sigma_l = 0;
           // initialize summand assoc'd with index l
           for (int lam = 0; lam < n; lam++) {
-            OCA_dense_right_in_place(beta, itops, dlr_it, hyb_poles(l), (fb2 == 1), Gt, F2list(lam, _, _), T);
-            OCA_dense_middle_in_place((fb1 == 1), hyb, hyb_refl, F1list, F3list, T, Tkaps, Tmu);
-            OCA_dense_left_in_place(beta, itops, dlr_it, hyb_poles(l), (fb2 == 1), Gt, Fbar_array(lam, l, _, _), T, GKt);
+            sigma_oca_right_in_place(beta, itops, dlr_it, hyb_poles(l), (fb2 == 1), Gt, F2list(lam, _, _), T);
+            sigma_oca_middle_in_place((fb1 == 1), hyb, hyb_refl, F1list, F3list, T, Tkaps, Tmu);
+            sigma_oca_left_in_place(beta, itops, dlr_it, hyb_poles(l), (fb2 == 1), Gt, Fbar_array(lam, l, _, _), T, GKt);
             Sigma_l += T;
           } // sum over lambda
 
@@ -305,7 +297,7 @@ namespace triqs_xca::dense {
     return Sigma;
   }
 
-  nda::array<dcomplex, 3> OCA_tpz(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta, nda::array_const_view<dcomplex, 3> Gt,
+  nda::array<dcomplex, 3> sigma_oca_tpz(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta, nda::array_const_view<dcomplex, 3> Gt,
                                   nda::array_const_view<dcomplex, 3> Fs, int n_quad) {
     // number of imaginary time nodes
     int N = Gt.extent(1);
@@ -384,10 +376,10 @@ namespace triqs_xca::dense {
     return Sigma_eq;
   }
 
-  nda::array<dcomplex, 3> third_order_tpz(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta,
+  nda::array<dcomplex, 3> sigma_o3_tpz(nda::array_const_view<dcomplex, 3> hyb, imtime_ops &itops, double beta,
                                           nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Fs, int n_quad) {
     // Third-order self-energy diagram for topology {{0,3},{1,4},{2,5}} (the fully-crossing topology),
-    // evaluated by direct trapezoidal quadrature. Generalizes OCA_tpz's pattern from 2 hybridization
+    // evaluated by direct trapezoidal quadrature. Generalizes sigma_oca_tpz's pattern from 2 hybridization
     // lines / 2 internal vertex times (4 vertices) to 3 lines / 4 internal vertex times (6 vertices):
     // vertex 0 is fixed at tau=0, vertex 5 is the external self-energy time, and vertices 1-4 are
     // integrated over 0 <= j1 <= j2 <= j3 <= j4 <= i. Line 0 connects vertices 0 and 3, line 1 connects
@@ -444,7 +436,7 @@ namespace triqs_xca::dense {
                 for (int o3 = 0; o3 < num_Fs; o3++) {
                   for (int o4 = 0; o4 < num_Fs; o4++) {
                     for (int o5 = 0; o5 < num_Fs; o5++) {
-                      // as in OCA_tpz, i = 0 is included so that the whole output grid is covered: the j4 loop
+                      // as in sigma_oca_tpz, i = 0 is included so that the whole output grid is covered: the j4 loop
                       // below is then empty, leaving Sigma(0) at its exact value of zero
                       for (int i = 0; i <= n_quad; i++) {
                         for (int j4 = 1; j4 <= i; j4++) {
@@ -490,4 +482,4 @@ namespace triqs_xca::dense {
     return Sigma_eq;
   }
 
-} // namespace triqs_xca::dense
+} // namespace triqs_xca::dense::manual
