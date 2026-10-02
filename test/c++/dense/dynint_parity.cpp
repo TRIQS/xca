@@ -8,7 +8,7 @@
 #include <triqs_xca/block_sparse/atom_diag.hpp>
 #include <triqs_xca/dense/diagram_evaluator.hpp>
 #include <triqs_xca/topology.hpp>
-#include "block_sparse_utils.hpp"
+#include "test_utils/block_sparse.hpp"
 
 using nda::dcomplex;
 
@@ -20,9 +20,10 @@ using triqs::operators::many_body_operator_real;
 using triqs::operators::n;
 
 using triqs_xca::dense::DiagramEvaluator;
+namespace test_utils = triqs_xca::test_utils;
 
 /**
- * @file test_dense_dynint_parity.cpp
+ * @file dense/dynint_parity.cpp
  *
  * @brief Regression tests of the dense diagram evaluator with dynamical interactions
  *
@@ -66,7 +67,7 @@ namespace {
 
     auto ad = triqs::atom_diag::atom_diag<true>(H, fop_set, sym_ops);
 
-    auto G_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
+    auto G_ppsc = test_utils::ad_to_atom_prop(ad, beta, Lambda, eps);
 
     // Two-pole representation shared by the hybridization and the retarded interaction,
     // as produced by the joint adapol/DLR fit in the solver.

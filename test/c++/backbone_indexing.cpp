@@ -1,13 +1,19 @@
+#include <string>
+#include <vector>
+
 #include <gtest/gtest.h>
 
-#include <triqs_xca/block_sparse/diagram_evaluator.hpp>
+#include <cppdlr/cppdlr.hpp>
+#include <nda/nda.hpp>
 
-#include "block_sparse_utils.hpp"
+#include <triqs_xca/backbone.hpp>
 
 using cppdlr::build_dlr_rf;
 
+using triqs_xca::backbone::Backbone;
+
 /**
- * @file test_block_sparse_backbone_indexing.cpp
+ * @file backbone_indexing.cpp
  */
 
 /**

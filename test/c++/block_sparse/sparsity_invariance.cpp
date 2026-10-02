@@ -11,8 +11,8 @@
 #include <triqs_xca/block_sparse/diagram_evaluator.hpp>
 #include <triqs_xca/hyb.hpp>
 
-#include "block_sparse_utils.hpp"
-#include "dense_utils.hpp"
+#include "test_utils/block_sparse.hpp"
+#include "test_utils/dense.hpp"
 
 using cppdlr::build_dlr_rf;
 using cppdlr::imtime_ops;
@@ -21,12 +21,15 @@ namespace dense = triqs_xca::dense;
 using triqs_xca::dense::FSet;
 
 using triqs_xca::block_sparse::DiagramEvaluator;
+using nda::dcomplex;
+using triqs_xca::block_sparse::BlockDiagOpFun;
+namespace test_utils = triqs_xca::test_utils;
 
 namespace block_sparse = triqs_xca::block_sparse;
 
 
 /**
- * @file test_block_sparse_sparsity_invariance.cpp
+ * @file block_sparse/sparsity_invariance.cpp
  *
  * @brief Tests that diagram evaluation does not depend on how the Hilbert space is partitioned
  *
@@ -58,7 +61,7 @@ TEST(SparsityInvariance, OCA_trivial_sparsity) {
   auto itops    = imtime_ops(Lambda, dlr_rf);
 
   // hybridization
-  auto [Deltat, Deltat_refl] = discrete_bath_helper(beta, Lambda, eps);
+  auto [Deltat, Deltat_refl] = test_utils::discrete_bath_helper(beta, Lambda, eps);
   auto hyb_coeffs            = itops.vals2coefs(Deltat); // hybridization DLR coeffs
 
   int n                       = 4; // number of flavors
@@ -66,31 +69,31 @@ TEST(SparsityInvariance, OCA_trivial_sparsity) {
   auto B                      = Backbone(topology, n);
 
   // --- block-sparse evaluation, using the block structure of the atom_diag subspaces ---
-  auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs);
+  auto [Gt, Fq, sym_set_labels] = test_utils::two_band_helper(beta, Lambda, eps, hyb_coeffs);
   DiagramEvaluator D(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), hyb_coeffs, Fq);
   auto OCA_result = BlockDiagOpFun(D.compute_self_energy(Gt, topology));
 
   // --- dense evaluation ---
   // The old dense constructor divides the poles it is given by beta internally, so it takes dlr_rf where the block-sparse one takes dlr_rf / beta.
-  auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
+  auto [Gt_dense, Fs_dense, F_dags_dense] = test_utils::two_band_dense_helper(beta, Lambda, eps);
   auto Fset                               = FSet(Fs_dense, F_dags_dense, hyb_coeffs);
   dense::DiagramEvaluator DDE(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
   DDE.eval_self_energy(Gt_dense, B);
   auto OCA_dense_result = DDE.Sigma;
 
   // --- block-sparse evaluation with trivial sparsity: one block, one symmetry set ---
-  auto [Gt_triv, Fq_triv] = trivial_sparsity_helper(Gt_dense, Fs_dense, F_dags_dense, hyb_coeffs, n);
+  auto [Gt_triv, Fq_triv] = test_utils::trivial_sparsity_helper(Gt_dense, Fs_dense, F_dags_dense, hyb_coeffs, n);
   DiagramEvaluator D_triv(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), hyb_coeffs, Fq_triv);
   auto OCA_trivial_bs = BlockDiagOpFun(D_triv.compute_self_energy(Gt_triv, topology));
 
   // Both references live on the full Hilbert space, so they are projected onto each atom_diag subspace before being compared block by block.
-  auto ad = two_band_atom_diag_helper();
+  auto ad = test_utils::two_band_atom_diag_helper();
   for (int i = 0; i < OCA_result.get_num_block_cols(); i++) {
     SCOPED_TRACE("block " + std::to_string(i));
-    auto result_dense_block = get_tensor_in_atom_diag_subspace(OCA_dense_result, i, ad);
+    auto result_dense_block = test_utils::get_tensor_in_atom_diag_subspace(OCA_dense_result, i, ad);
     EXPECT_LE(nda::max_element(nda::abs(OCA_result.get_block(i) - result_dense_block)), 10 * eps);
 
-    auto result_trivial_bs_block = get_tensor_in_atom_diag_subspace(OCA_trivial_bs.get_block(0), i, ad);
+    auto result_trivial_bs_block = test_utils::get_tensor_in_atom_diag_subspace(OCA_trivial_bs.get_block(0), i, ad);
     EXPECT_LE(nda::max_element(nda::abs(OCA_result.get_block(i) - result_trivial_bs_block)), 10 * eps);
   }
 }
@@ -116,7 +119,7 @@ TEST(SparsityInvariance, OCA_correlator_trivial_sparsity) {
   auto itops  = imtime_ops(Lambda, dlr_rf);
 
   // hybridization
-  auto [Deltat, Deltat_refl] = discrete_bath_helper(beta, Lambda, eps);
+  auto [Deltat, Deltat_refl] = test_utils::discrete_bath_helper(beta, Lambda, eps);
   auto hyb_coeffs            = itops.vals2coefs(Deltat); // hybridization DLR coeffs
 
   // backbone
@@ -124,22 +127,22 @@ TEST(SparsityInvariance, OCA_correlator_trivial_sparsity) {
   auto B                      = CorrelatorBackbone(topology, n);
 
   // --- block-sparse evaluation, using the block structure of the atom_diag subspaces ---
-  auto [Gt, Fq, sym_set_labels] = two_band_helper(beta, Lambda, eps, hyb_coeffs);
+  auto [Gt, Fq, sym_set_labels] = test_utils::two_band_helper(beta, Lambda, eps, hyb_coeffs);
   DiagramEvaluator D(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), hyb_coeffs, Fq);
-  auto [mu_ops, kap_ops] = make_correlator_ops(Fq, n);
+  auto [mu_ops, kap_ops] = test_utils::make_correlator_ops(Fq, n);
   auto OCA_result        = D.eval_correlator(Gt, B, mu_ops, kap_ops);
 
   // --- dense evaluation ---
   // The old dense constructor divides the poles it is given by beta internally, so it takes dlr_rf where the block-sparse one takes dlr_rf / beta.
-  auto [Gt_dense, Fs_dense, F_dags_dense] = two_band_dense_helper(beta, Lambda, eps);
+  auto [Gt_dense, Fs_dense, F_dags_dense] = test_utils::two_band_dense_helper(beta, Lambda, eps);
   auto Fset                               = FSet(Fs_dense, F_dags_dense, hyb_coeffs);
   dense::DiagramEvaluator D_dense(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
   auto OCA_dense_result = D_dense.eval_correlator(Gt_dense, B, Fs_dense, F_dags_dense);
 
   // --- block-sparse evaluation with trivial sparsity: one block, one symmetry set ---
-  auto [Gt_triv, Fq_triv] = trivial_sparsity_helper(Gt_dense, Fs_dense, F_dags_dense, hyb_coeffs, n);
+  auto [Gt_triv, Fq_triv] = test_utils::trivial_sparsity_helper(Gt_dense, Fs_dense, F_dags_dense, hyb_coeffs, n);
   DiagramEvaluator D_triv(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), hyb_coeffs, Fq_triv);
-  auto [mu_ops_triv, kap_ops_triv] = make_correlator_ops(Fq_triv, n);
+  auto [mu_ops_triv, kap_ops_triv] = test_utils::make_correlator_ops(Fq_triv, n);
   auto OCA_trivial_bs              = D_triv.eval_correlator(Gt_triv, B, mu_ops_triv, kap_ops_triv);
 
   EXPECT_LE(nda::max_element(nda::abs(OCA_result - OCA_dense_result)), 1.0e-15);
@@ -164,15 +167,15 @@ static void check_spin_flip_fermion(bool use_particle_number_sym) {
 
   int norb             = 2;
   int nn               = 2 * norb; // 2 * number of orbitals
-  auto [hyb, hyb_refl] = discrete_bath_spin_flip_helper(beta, Lambda, eps, nn);
+  auto [hyb, hyb_refl] = test_utils::discrete_bath_spin_flip_helper(beta, Lambda, eps, nn);
   auto hyb_coeffs      = itops.vals2coefs(hyb); // hybridization DLR coeffs
 
   // set up the spin-flip model, either from the particle number as a quantum number or by autopartitioning
-  auto ad = spin_flip_atom_diag_helper(norb, use_particle_number_sym);
+  auto ad = test_utils::spin_flip_atom_diag_helper(norb, use_particle_number_sym);
 
   // compute the atomic propagator and generate creation/annihilation operators in block-sparse storage
   auto dlr_it_abs           = cppdlr::rel2abs(itops.get_itnodes());
-  auto Gt                   = ad_to_atom_prop(ad, beta, itops);
+  auto Gt                   = test_utils::ad_to_atom_prop(ad, beta, itops);
   auto Gt_block_sizes       = Gt.get_block_sizes();
   auto [Fq, sym_set_labels] = block_sparse::atom_diag::get_operators(ad, hyb_coeffs);
 
@@ -183,7 +186,7 @@ static void check_spin_flip_fermion(bool use_particle_number_sym) {
   auto result = BlockDiagOpFun(D.compute_self_energy(Gt, topology));
 
   // get dense Gt, field operators
-  auto Gt_dense = Hmat_to_Gtmat(get_full_h_atomic(ad), beta, dlr_it_abs);
+  auto Gt_dense = test_utils::Hmat_to_Gtmat(test_utils::get_full_h_atomic(ad), beta, dlr_it_abs);
   auto Fset     = dense::atom_diag::get_operators(ad, hyb_coeffs);
 
   dense::DiagramEvaluator DDE(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
@@ -192,7 +195,7 @@ static void check_spin_flip_fermion(bool use_particle_number_sym) {
 
   for (int i = 0; i < Gt_block_sizes.size(); i++) {
     SCOPED_TRACE("block " + std::to_string(i));
-    auto result_dense_block = get_tensor_in_atom_diag_subspace(result_dense, i, ad);
+    auto result_dense_block = test_utils::get_tensor_in_atom_diag_subspace(result_dense, i, ad);
     ASSERT_LE(nda::max_element(nda::abs(result.get_block(i) - result_dense_block)), eps);
   }
 }
@@ -219,19 +222,19 @@ static void check_spin_flip_fermion_correlator(bool use_particle_number_sym) {
 
   int norb             = 2;
   int nn               = 2 * norb; // 2 * number of orbitals
-  auto [hyb, hyb_refl] = discrete_bath_spin_flip_helper(beta, Lambda, eps, nn);
+  auto [hyb, hyb_refl] = test_utils::discrete_bath_spin_flip_helper(beta, Lambda, eps, nn);
   auto hyb_coeffs      = itops.vals2coefs(hyb); // hybridization DLR coeffs
 
   // set up the spin-flip model, either from the particle number as a quantum number or by autopartitioning
-  auto ad = spin_flip_atom_diag_helper(norb, use_particle_number_sym);
+  auto ad = test_utils::spin_flip_atom_diag_helper(norb, use_particle_number_sym);
 
   // compute atomic propagator
   auto dlr_it_abs = cppdlr::rel2abs(itops.get_itnodes());
-  auto Gt         = ad_to_atom_prop(ad, beta, itops);
+  auto Gt         = test_utils::ad_to_atom_prop(ad, beta, itops);
 
   // generate creation/annihilation operators in block-sparse storage
   auto [Fq, sym_set_labels] = block_sparse::atom_diag::get_operators(ad, hyb_coeffs);
-  auto [mu_ops, kap_ops]    = make_correlator_ops(Fq, nn);
+  auto [mu_ops, kap_ops]    = test_utils::make_correlator_ops(Fq, nn);
 
   // set up backbone and diagram evaluator
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
@@ -240,7 +243,7 @@ static void check_spin_flip_fermion_correlator(bool use_particle_number_sym) {
   auto result = D.eval_correlator(Gt, B, mu_ops, kap_ops);
 
   // compare to dense backbone result
-  auto Gt_dense = Hmat_to_Gtmat(get_full_h_atomic(ad), beta, dlr_it_abs);
+  auto Gt_dense = test_utils::Hmat_to_Gtmat(test_utils::get_full_h_atomic(ad), beta, dlr_it_abs);
   auto Fset     = dense::atom_diag::get_operators(ad, hyb_coeffs);
   dense::DiagramEvaluator D_dense(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
   auto result_dense = D_dense.eval_correlator(Gt_dense, B, Fset.Fs, Fset.F_dags);
@@ -273,7 +276,7 @@ TEST(SparsityInvariance, spgf_is_indexed_by_orbital) {
 
   int norb             = 2;
   int nn               = 2 * norb;
-  auto [hyb, hyb_refl] = discrete_bath_spin_flip_helper(beta, Lambda, eps, nn);
+  auto [hyb, hyb_refl] = test_utils::discrete_bath_spin_flip_helper(beta, Lambda, eps, nn);
   auto hyb_coeffs      = itops.vals2coefs(hyb);
 
   // Break the flavour permutation symmetry of the spin-flip fixture by the congruence hyb -> diag(s) hyb diag(s), which leaves the
@@ -283,10 +286,10 @@ TEST(SparsityInvariance, spgf_is_indexed_by_orbital) {
     for (int j = 0; j < nn; ++j) { hyb_coeffs(nda::range::all, i, j) *= flavour_scale(i) * flavour_scale(j); }
   }
 
-  auto ad = spin_flip_atom_diag_helper(norb, false); // autopartitioning -> several symmetry sets
+  auto ad = test_utils::spin_flip_atom_diag_helper(norb, false); // autopartitioning -> several symmetry sets
 
   auto dlr_it_abs = cppdlr::rel2abs(itops.get_itnodes());
-  auto Gt         = ad_to_atom_prop(ad, beta, itops);
+  auto Gt         = test_utils::ad_to_atom_prop(ad, beta, itops);
 
   auto [Fq, sym_set_labels] = block_sparse::atom_diag::get_operators(ad, hyb_coeffs);
 
@@ -304,7 +307,7 @@ TEST(SparsityInvariance, spgf_is_indexed_by_orbital) {
   auto B                      = CorrelatorBackbone(topology, nn);
 
   // dense reference, ordered per orbital by construction
-  auto Gt_dense = Hmat_to_Gtmat(get_full_h_atomic(ad), beta, dlr_it_abs);
+  auto Gt_dense = test_utils::Hmat_to_Gtmat(test_utils::get_full_h_atomic(ad), beta, dlr_it_abs);
   auto Fset     = dense::atom_diag::get_operators(ad, hyb_coeffs);
   dense::DiagramEvaluator D_dense(beta, eps, itops, dlr_rf, hyb_coeffs, Fset);
   auto ref_dense = D_dense.eval_correlator(Gt_dense, B, Fset.Fs, Fset.F_dags);
@@ -312,7 +315,7 @@ TEST(SparsityInvariance, spgf_is_indexed_by_orbital) {
   DiagramEvaluator D(beta, Lambda, eps, nda::make_regular(dlr_rf / beta), hyb_coeffs, Fq);
 
   // second reference, the block-sparse evaluator with the operator list built per orbital by make_correlator_ops()
-  auto [mu_ops, kap_ops] = make_correlator_ops(Fq, nn);
+  auto [mu_ops, kap_ops] = test_utils::make_correlator_ops(Fq, nn);
   auto ref_bs            = D.eval_correlator(Gt, B, mu_ops, kap_ops);
 
   double scale = nda::max_element(nda::abs(ref_dense));
@@ -353,7 +356,7 @@ TEST(SparsityInvariance, spgf_is_indexed_by_orbital) {
      << "compute_single_ptcle_gf(Gt, topology, f_ix) disagrees with the dense evaluator";
 
   // the f_ix_vec overload is the one driven by the solver and takes a block_gf, so the propagator is rebuilt in that form
-  auto G_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
+  auto G_ppsc = test_utils::ad_to_atom_prop(ad, beta, Lambda, eps);
   nda::vector<int> f_ix_vec(n_backbones);
   for (int f_ix = 0; f_ix < n_backbones; ++f_ix) f_ix_vec(f_ix) = f_ix;
   auto spgf_vec = D.compute_single_ptcle_gf(G_ppsc, topology, f_ix_vec);
@@ -377,29 +380,29 @@ TEST(SparsityInvariance, correlator_keeps_the_beta_tau_side_when_vertex_zero_pai
   int p_poles   = 2;
 
   // the partitioned model and its single-subspace twin, the correlator is indexed by orbital and needs no basis bridge
-  auto ad                       = unequal_sym_set_model(true);
-  auto ad_flat                  = unequal_sym_set_model(false);
+  auto ad                       = test_utils::unequal_sym_set_model(true);
+  auto ad_flat                  = test_utils::unequal_sym_set_model(false);
   int nflav                     = static_cast<int>(ad.get_fops().size());
   auto labels                   = std::get<1>(block_sparse::atom_diag::get_operators(ad, nda::zeros<dcomplex>(p_poles, nflav, nflav)));
-  auto hyb_coeffs               = sym_set_diagonal_hyb(labels, p_poles);
+  auto hyb_coeffs               = test_utils::sym_set_diagonal_hyb(labels, p_poles);
   nda::vector<double> hyb_poles = {1.3, -0.8};
 
   auto dlr_rf = build_dlr_rf(Lambda, eps);
   auto itops  = imtime_ops(Lambda, dlr_rf);
 
-  auto Gt     = ad_to_atom_prop(ad, beta, itops);
-  auto G_flat = ad_to_atom_prop(ad_flat, beta, Lambda, eps);
+  auto Gt     = test_utils::ad_to_atom_prop(ad, beta, itops);
+  auto G_flat = test_utils::ad_to_atom_prop(ad_flat, beta, Lambda, eps);
   auto Fq     = std::get<0>(block_sparse::atom_diag::get_operators(ad, hyb_coeffs));
   DiagramEvaluator D(hyb_poles, hyb_coeffs, G_flat[0].mesh(), ad);
-  auto [mu_ops, kap_ops] = make_correlator_ops(Fq, nflav);
+  auto [mu_ops, kap_ops] = test_utils::make_correlator_ops(Fq, nflav);
 
   // The dense reference, and the one-block block-sparse twin of the same model.
   dense::DiagramEvaluator D_dense(hyb_poles, hyb_coeffs, G_flat[0].mesh(), ad_flat);
-  auto Gt_dense                 = Hmat_to_Gtmat(get_full_h_atomic(ad_flat), beta, cppdlr::rel2abs(itops.get_itnodes()));
+  auto Gt_dense                 = test_utils::Hmat_to_Gtmat(test_utils::get_full_h_atomic(ad_flat), beta, cppdlr::rel2abs(itops.get_itnodes()));
   auto [Fs_dense, F_dags_dense] = dense::atom_diag::get_operators(ad_flat);
-  auto [Gt_triv, Fq_triv]       = trivial_sparsity_helper(Gt_dense, Fs_dense, F_dags_dense, hyb_coeffs, nflav);
+  auto [Gt_triv, Fq_triv]       = test_utils::trivial_sparsity_helper(Gt_dense, Fs_dense, F_dags_dense, hyb_coeffs, nflav);
   DiagramEvaluator D_triv(beta, Lambda, eps, hyb_poles, hyb_coeffs, Fq_triv);
-  auto [mu_triv, kap_triv] = make_correlator_ops(Fq_triv, nflav);
+  auto [mu_triv, kap_triv] = test_utils::make_correlator_ops(Fq_triv, nflav);
 
   // check that the partitioned side has several blocks and an absent block path, without which the bug is invisible
   ASSERT_GT(Gt.get_num_block_cols(), 1) << "vacuous test: the partitioned side has a single block";

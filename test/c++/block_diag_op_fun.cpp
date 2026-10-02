@@ -2,7 +2,7 @@
 
 #include <triqs_xca/hyb.hpp>
 
-#include "block_sparse_utils.hpp"
+#include "test_utils/block_sparse.hpp"
 
 using nda::range;
 using nda::linalg::matmul;
@@ -10,10 +10,14 @@ using nda::linalg::matmul;
 using cppdlr::_;
 using cppdlr::build_dlr_rf;
 using cppdlr::imtime_ops;
+using nda::dcomplex;
+using triqs_xca::block_sparse::BlockDiagOpFun;
+using triqs_xca::block_sparse::nonint_gf_BDOF;
+namespace test_utils = triqs_xca::test_utils;
 
 
 /**
- * @file test_block_diag_op_fun.cpp
+ * @file block_diag_op_fun.cpp
  *
  * @brief Tests of the BlockDiagOpFun container itself, independently of any diagram
  *
@@ -64,7 +68,7 @@ TEST(BlockDiagOpFun, compute_nonint_gf) {
   auto Gt_evals_t = nda::zeros<dcomplex>(16, 16);
   auto Gt_mat     = nda::zeros<dcomplex>(r, 16, 16);
   auto Gbeta      = nda::zeros<dcomplex>(16, 16);
-  Gt_mat          = Hmat_to_Gtmat(H_dense, beta, dlr_it_abs);
+  Gt_mat          = test_utils::Hmat_to_Gtmat(H_dense, beta, dlr_it_abs);
   for (int i = 0; i < 16; i++) { Gbeta(i, i) = -exp(-beta * H_loc_eval(i)); }
   Gbeta = matmul(Gbeta, nda::transpose(H_loc_evec));
   Gbeta = matmul(H_loc_evec, Gbeta);

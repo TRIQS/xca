@@ -3,8 +3,8 @@
 #include <triqs_xca/atom_diag.hpp>
 #include <triqs_xca/dense/atom_diag.hpp>
 #include <triqs_xca/block_sparse/atom_diag.hpp>
-#include "block_sparse_utils.hpp"
-#include "dense_utils.hpp"
+#include "test_utils/block_sparse.hpp"
+#include "test_utils/dense.hpp"
 
 using nda::range;
 
@@ -21,6 +21,8 @@ using triqs_xca::dense::atom_diag::get_operator;
 using triqs_xca::atom_diag::get_hamiltonian_block;
 using triqs_xca::atom_diag::get_operator_block;
 using triqs_xca::block_sparse::atom_diag::get_operators;
+using nda::dcomplex;
+namespace test_utils = triqs_xca::test_utils;
 
 /**
  * @brief Creates a two-orbital Hamiltonian with spin and constructs the atom_diag object.
@@ -141,7 +143,7 @@ TEST(AtomDiagUtils, get_matrices) {
 
   // --- Get full Hamiltonian and operator matrices ---
   // Get full Hamiltonian matrix
-  auto H_mat    = get_full_h_atomic(ad);
+  auto H_mat    = test_utils::get_full_h_atomic(ad);
   std::size_t N = H_mat.extent(0);
   // The Hamiltonian has spin, so there are 2 * norb particle flavors
   nda::array<dcomplex, 3> c_mats(2 * norb, N, N), cdag_mats(2 * norb, N, N);
@@ -208,7 +210,7 @@ TEST(AtomDiagUtils, hamiltonian_blocks) {
   // --- atom_diag setup ---
   auto ad = make_two_orbital_ad();
 
-  auto h_tuple    = get_hamiltonian_blocks(ad);
+  auto h_tuple    = test_utils::get_hamiltonian_blocks(ad);
   auto blocks     = std::get<0>(h_tuple);
   auto block_inds = std::get<1>(h_tuple);
 
@@ -436,12 +438,12 @@ TEST(AtomDiagUtils, complex_unitary_hamiltonian) {
   }
   H_expected += model.U * nda::matrix<dcomplex>(cdag_mats[0] * c_mats[0] * cdag_mats[1] * c_mats[1]);
 
-  auto H_mat = get_full_h_atomic(ad);
+  auto H_mat = test_utils::get_full_h_atomic(ad);
   EXPECT_LE(nda::max_element(nda::abs(H_mat - nda::dagger(H_mat))), 1e-13) << "the full Hamiltonian must be hermitian";
   EXPECT_LE(nda::max_element(nda::abs(H_mat - H_expected)), 1e-13);
 
   // The same Hamiltonian block by block
-  auto [H_blocks, H_block_inds] = get_hamiltonian_blocks(ad);
+  auto [H_blocks, H_block_inds] = test_utils::get_hamiltonian_blocks(ad);
   ASSERT_EQ(H_blocks.size(), ad.n_subspaces());
   for (int s = 0; s < ad.n_subspaces(); ++s) {
     auto fock_states = ad.get_fock_states(s);
@@ -519,7 +521,7 @@ TEST(AtomDiagUtils, operator_blocks_are_the_blocks_of_the_full_matrices) {
  */
 TEST(AtomDiagUtils, hamiltonian_blocks_are_the_blocks_of_the_full_matrix) {
   for (auto const &ad : kernel_test_models()) {
-    auto full         = get_full_h_atomic(ad);
+    auto full         = test_utils::get_full_h_atomic(ad);
     double sum_blocks = 0.0;
 
     for (int s = 0; s < ad.n_subspaces(); ++s) {

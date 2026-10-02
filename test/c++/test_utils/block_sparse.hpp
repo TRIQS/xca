@@ -8,6 +8,8 @@
 #include <triqs_xca/dense/fset.hpp>
 #include <triqs_xca/block_sparse/block_op.hpp>
 
+namespace triqs_xca::test_utils {
+
 using nda::dcomplex;
 
 using cppdlr::imtime_ops;
@@ -280,3 +282,5 @@ BlockDiagOpFun ad_to_atom_prop(const triqs_atom_diag &ad, double beta, imtime_op
  * @return triqs::block_gf<dlr_imtime> representing the atomic propagator
  */
 triqs::gfs::block_gf<triqs::mesh::dlr_imtime> ad_to_atom_prop(const triqs_atom_diag &ad, double beta, double Lambda, double eps);
+
+} // namespace triqs_xca::test_utils

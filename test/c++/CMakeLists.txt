@@ -4,47 +4,45 @@ foreach(file ${all_h5_ref_files})
   configure_file(${file} ${file} COPYONLY)
 endforeach()
 
+# Helper library of the tests, in namespace triqs_xca::test_utils
+file(GLOB test_utils_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test_utils/*.cpp)
+add_library(${PROJECT_NAME}_test_utils STATIC ${test_utils_sources})
+target_include_directories(${PROJECT_NAME}_test_utils PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(${PROJECT_NAME}_test_utils PUBLIC ${PROJECT_NAME}::${PROJECT_NAME}_c PRIVATE ${PROJECT_NAME}_warnings)
+
 # List of all tests
 file(GLOB_RECURSE all_tests RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
+list(FILTER all_tests EXCLUDE REGEX "^test_utils/")
 
 foreach(test ${all_tests})
   get_filename_component(test_name ${test} NAME_WE)
   get_filename_component(test_dir ${test} DIRECTORY)
-  # Manually list the extra sources needed for this test
-  # Helper sources, not tests
-  if(test_name STREQUAL "dense_utils")
-    continue()
+  # Tests in a subdirectory are listed as <dir>/<name> in ctest, with the target <dir>_<name>
+  if(test_dir)
+    set(test_label ${test_dir}/${test_name})
+    string(REPLACE "/" "_" test_target ${test_dir}_${test_name})
+  else()
+    set(test_label ${test_name})
+    set(test_target ${test_name})
   endif()
-  set(extra_sources "")
-  string(REGEX MATCH "^test_block_sparse_" is_block_sparse ${test_name})
-  string(REGEX MATCH "^test_block_diag_op_fun" is_block_diag_op_fun ${test_name})
-  string(REGEX MATCH "^test_dense_" is_dense ${test_name})
-  string(REGEX MATCH "^test_one_fermion_" is_one_fermion ${test_name})
-  string(REGEX MATCH "^test_two_fermions_" is_two_fermions ${test_name})
-  if(is_block_sparse OR is_block_diag_op_fun OR is_dense OR is_one_fermion OR is_two_fermions)
-    list(APPEND extra_sources block_sparse_utils.cpp dense_utils.cpp)
-  endif()
-  if(test_name STREQUAL "test_atom_diag_utils")
-    list(APPEND extra_sources block_sparse_utils.cpp dense_utils.cpp)
-  endif()
-  if(test_name STREQUAL "block_sparse_utils")
-    list(APPEND extra_sources dense_utils.cpp)
-  endif()
-  add_executable(${test_name} ${test} ${extra_sources})
-  target_link_libraries(${test_name} ${PROJECT_NAME}::${PROJECT_NAME}_c ${PROJECT_NAME}_warnings gtest_main)
+  add_executable(${test_target} ${test})
+  set_target_properties(${test_target} PROPERTIES OUTPUT_NAME ${test_name})
+  target_link_libraries(${test_target} ${PROJECT_NAME}::${PROJECT_NAME}_c ${PROJECT_NAME}_warnings gtest_main)
   if(test_dir STREQUAL "triqs_soehyb")
-    target_link_libraries(${test_name} ${PROJECT_NAME}::triqs_soehyb_c)
+    target_link_libraries(${test_target} ${PROJECT_NAME}::triqs_soehyb_c)
+  else()
+    target_link_libraries(${test_target} ${PROJECT_NAME}_test_utils)
   endif()
-  set_property(TARGET ${test_name} PROPERTY RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${test_dir})
-  add_test(NAME ${test_name} COMMAND ${test_name} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${test_dir})
+  set_property(TARGET ${test_target} PROPERTY RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${test_dir})
+  add_test(NAME ${test_label} COMMAND ${test_target} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${test_dir})
   # Run clang-tidy if found
   if(CLANG_TIDY_EXECUTABLE)
-    set_target_properties(${test_name} PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_EXECUTABLE}")
+    set_target_properties(${test_target} PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_EXECUTABLE}")
   endif()
   # Run cppcheck if found
   if(CPPCHECK_EXECUTABLE)
     add_custom_command(
-      TARGET ${test_name}
+      TARGET ${test_target}
       COMMAND ${CPPCHECK_EXECUTABLE}
       --enable=warning,style,performance,portability
       --std=c++20

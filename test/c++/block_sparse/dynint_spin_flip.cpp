@@ -14,9 +14,9 @@
 #include <triqs_xca/block_sparse/dynint.hpp>
 #include <triqs_xca/topology.hpp>
 
-#include "block_sparse_utils.hpp"
-#include "dense_comparison.hpp"
-#include "parallel_atom_diag_check.hpp"
+#include "test_utils/block_sparse.hpp"
+#include "test_utils/dense_comparison.hpp"
+#include "test_utils/parallel_atom_diag_check.hpp"
 
 using cppdlr::build_dlr_rf;
 using cppdlr::imtime_ops;
@@ -33,9 +33,10 @@ using triqs_xca::block_sparse::DiagramEvaluator;
 namespace dense = triqs_xca::dense;
 using triqs_xca::hyb::get_extended_coefficients;
 using triqs_xca::block_sparse::dynint::get_operators_and_interactions;
+namespace test_utils = triqs_xca::test_utils;
 
 /**
- * @file test_block_sparse_dynint_spin_flip.cpp
+ * @file block_sparse/dynint_spin_flip.cpp
  *
  * @brief Dense against block-sparse with the non-block-diagonal interaction operators S+ and S-
  *
@@ -83,12 +84,12 @@ namespace {
    * the off-diagonal is zero since S- and S+ land in different symmetry sets.
    */
   SpinFlipModel spin_flip_model(int norb) {
-    auto ad      = sz_resolved_atom_diag_helper(norb, true);
-    auto ad_flat = sz_resolved_atom_diag_helper(norb, false);
+    auto ad      = test_utils::sz_resolved_atom_diag_helper(norb, true);
+    auto ad_flat = test_utils::sz_resolved_atom_diag_helper(norb, false);
 
     int n_hyb     = static_cast<int>(ad.get_fops().size());
     auto labels_f = std::get<1>(get_operators(ad, nda::zeros<dcomplex>(p_poles, n_hyb, n_hyb)));
-    auto hyb      = sym_set_diagonal_hyb(labels_f, p_poles);
+    auto hyb      = test_utils::sym_set_diagonal_hyb(labels_f, p_poles);
 
     std::vector<many_body_operator_real> ops{S_minus(norb), S_plus(norb)};
 
@@ -140,7 +141,7 @@ TEST(BlockSparseDynintSpinFlip, spin_flip_ops_construct_a_valid_evaluator) {
 TEST(BlockSparseDynintSpinFlip, self_energy_matches_dense_with_spin_flip_interactions) {
 
   auto m = spin_flip_model(/*norb=*/2);
-  ASSERT_NO_FATAL_FAILURE(assert_parallel_atom_diags(m.ad, m.ad_flat));
+  ASSERT_NO_FATAL_FAILURE(test_utils::assert_parallel_atom_diags(m.ad, m.ad_flat));
 
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   ASSERT_EQ(triqs_xca::topology::topology_parity(topology), -1) << "vacuous test: topology is not crossing";
@@ -152,7 +153,7 @@ TEST(BlockSparseDynintSpinFlip, self_energy_matches_dense_with_spin_flip_interac
   ASSERT_GT(*std::max_element(dims.begin(), dims.end()), 1);
 
   auto itops = imtime_ops(Lambda, build_dlr_rf(Lambda, eps));
-  auto Gt    = ad_to_atom_prop(m.ad, beta, itops);
+  auto Gt    = test_utils::ad_to_atom_prop(m.ad, beta, itops);
 
   auto Fq  = std::get<0>(get_operators_and_interactions(m.ad, m.hyb_coeffs, m.dynint_coeffs, m.dynint_ops));
   auto ext = get_extended_coefficients(m.hyb_coeffs, m.dynint_coeffs);
@@ -165,12 +166,12 @@ TEST(BlockSparseDynintSpinFlip, self_energy_matches_dense_with_spin_flip_interac
 
   auto Sigma = BlockDiagOpFun(D.compute_self_energy(Gt, topology));
 
-  auto G_flat = ad_to_atom_prop(m.ad_flat, beta, Lambda, eps);
+  auto G_flat = test_utils::ad_to_atom_prop(m.ad_flat, beta, Lambda, eps);
   dense::DiagramEvaluator D_dense(m.hyb_poles, m.hyb_coeffs, G_flat[0].mesh(), m.ad_flat, m.dynint_ops, m.dynint_coeffs);
   ASSERT_EQ(D_dense.n_int, n_int);
   auto Sigma_dense = D_dense.compute_self_energy(G_flat, topology);
 
-  auto [err, scale] = compare_sigma_with_dense(Sigma, Sigma_dense, m.ad);
+  auto [err, scale] = test_utils::compare_sigma_with_dense(Sigma, Sigma_dense, m.ad);
   ASSERT_GT(scale, 0.01) << "vacuous test: the self-energy is too small for an absolute tolerance";
   EXPECT_LE(err, sigma_tol) << "max|Sigma_dense| = " << scale << ", max|bs - dense| = " << err;
 
@@ -188,14 +189,14 @@ TEST(BlockSparseDynintSpinFlip, self_energy_matches_dense_with_spin_flip_interac
 TEST(BlockSparseDynintSpinFlip, spgf_matches_dense_with_spin_flip_interactions) {
 
   auto m = spin_flip_model(/*norb=*/2);
-  ASSERT_NO_FATAL_FAILURE(assert_parallel_atom_diags(m.ad, m.ad_flat));
+  ASSERT_NO_FATAL_FAILURE(test_utils::assert_parallel_atom_diags(m.ad, m.ad_flat));
 
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   int n_hyb                   = static_cast<int>(m.ad.get_fops().size());
   int n_int                   = static_cast<int>(m.dynint_ops.size());
 
-  auto G_bs = ad_to_atom_prop(m.ad, beta, Lambda, eps);
-  auto G_fl = ad_to_atom_prop(m.ad_flat, beta, Lambda, eps);
+  auto G_bs = test_utils::ad_to_atom_prop(m.ad, beta, Lambda, eps);
+  auto G_fl = test_utils::ad_to_atom_prop(m.ad_flat, beta, Lambda, eps);
 
   auto Fq  = std::get<0>(get_operators_and_interactions(m.ad, m.hyb_coeffs, m.dynint_coeffs, m.dynint_ops));
   auto ext = get_extended_coefficients(m.hyb_coeffs, m.dynint_coeffs);
@@ -209,13 +210,13 @@ TEST(BlockSparseDynintSpinFlip, spgf_matches_dense_with_spin_flip_interactions) 
   auto spgf_dense = D_dense.compute_single_ptcle_gf(G_fl, topology);
   ASSERT_GE(spgf_dense.extent(1), n_hyb);
 
-  auto [err, scale] = compare_leading_block(D.compute_single_ptcle_gf(G_bs, topology), spgf_dense, n_hyb);
+  auto [err, scale] = test_utils::compare_leading_block(D.compute_single_ptcle_gf(G_bs, topology), spgf_dense, n_hyb);
   ASSERT_GT(scale, 1.0e-3) << "vacuous test: the single-particle Green's function is too small";
   EXPECT_LE(err, corr_tol) << "max|dense| = " << scale << ", max|bs - dense| = " << err;
 
   // check that the interaction changes the spgf
   auto spgf_ferm        = D_ferm.compute_single_ptcle_gf(G_bs, topology);
-  auto [d_err, d_scale] = compare_leading_block(D.compute_single_ptcle_gf(G_bs, topology), spgf_ferm, n_hyb);
+  auto [d_err, d_scale] = test_utils::compare_leading_block(D.compute_single_ptcle_gf(G_bs, topology), spgf_ferm, n_hyb);
   ASSERT_GT(d_err, 1.0e-8) << "vacuous test: the S+/S- interaction does not change the spgf at all";
 }
 

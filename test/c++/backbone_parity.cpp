@@ -6,7 +6,7 @@
 #include <triqs_xca/topology.hpp>
 
 /**
- * @file test_backbone_parity.cpp
+ * @file backbone_parity.cpp
  *
  * @brief Tests of Backbone::get_parity(), the only place where the statistics of a line enters the diagram
  *

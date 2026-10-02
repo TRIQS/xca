@@ -9,8 +9,8 @@
 #include <triqs_xca/block_sparse/atom_diag.hpp>
 #include <triqs_xca/block_sparse/block_op.hpp>
 
-#include "block_sparse_utils.hpp"
-#include "dense_utils.hpp"
+#include "test_utils/block_sparse.hpp"
+#include "test_utils/dense.hpp"
 
 using nda::linalg::matmul;
 
@@ -21,9 +21,13 @@ using cppdlr::rel2abs;
 
 
 using triqs_xca::block_sparse::trace;
+using nda::dcomplex;
+using triqs_xca::block_sparse::BlockDiagOpFun;
+using triqs_xca::block_sparse::atom_prop_from_eigensystem;
+namespace test_utils = triqs_xca::test_utils;
 
 /**
- * @file test_block_sparse_atom_prop.cpp
+ * @file block_sparse/atom_prop.cpp
  *
  * @brief Tests of the atomic (pseudo-particle) propagator generators, independently of any diagram
  *
@@ -129,21 +133,21 @@ TEST(AtomProp, normalization) {
 
   {
     SCOPED_TRACE("two-fermion model");
-    auto model = two_fermion_model_helper(beta, Lambda, eps);
+    auto model = test_utils::two_fermion_model_helper(beta, Lambda, eps);
     EXPECT_LE(std::abs(trace(model.G_ppsc) + 1.0), 1e-10);
   }
 
   {
     SCOPED_TRACE("spin-flip model, particle-number symmetry");
-    auto ad     = spin_flip_atom_diag_helper(2, true);
-    auto G_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
+    auto ad     = test_utils::spin_flip_atom_diag_helper(2, true);
+    auto G_ppsc = test_utils::ad_to_atom_prop(ad, beta, Lambda, eps);
     EXPECT_LE(std::abs(trace(G_ppsc) + 1.0), 1e-10);
   }
 
   {
     SCOPED_TRACE("spin-flip model, autopartitioned");
-    auto ad     = spin_flip_atom_diag_helper(2, false);
-    auto G_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
+    auto ad     = test_utils::spin_flip_atom_diag_helper(2, false);
+    auto G_ppsc = test_utils::ad_to_atom_prop(ad, beta, Lambda, eps);
     EXPECT_LE(std::abs(trace(G_ppsc) + 1.0), 1e-10);
   }
 }
@@ -169,15 +173,15 @@ TEST(AtomProp, blocks_match_dense) {
   for (bool use_particle_number_sym : {true, false}) {
     SCOPED_TRACE(use_particle_number_sym ? "particle-number symmetry" : "autopartitioned");
 
-    auto ad = spin_flip_atom_diag_helper(2, use_particle_number_sym);
-    auto ap = ad_to_atom_prop(ad, beta, itops);
+    auto ad = test_utils::spin_flip_atom_diag_helper(2, use_particle_number_sym);
+    auto ap = test_utils::ad_to_atom_prop(ad, beta, itops);
 
-    auto Gt_dense = Hmat_to_Gtmat(get_full_h_atomic(ad), beta, dlr_it_abs);
+    auto Gt_dense = test_utils::Hmat_to_Gtmat(test_utils::get_full_h_atomic(ad), beta, dlr_it_abs);
 
     ASSERT_EQ(ap.get_num_block_cols(), ad.n_subspaces());
     for (int b = 0; b < ad.n_subspaces(); ++b) {
       SCOPED_TRACE("block " + std::to_string(b));
-      auto dense_block = get_tensor_in_atom_diag_subspace(Gt_dense, b, ad);
+      auto dense_block = test_utils::get_tensor_in_atom_diag_subspace(Gt_dense, b, ad);
       ASSERT_EQ(ap.get_block_size(b), dense_block.extent(1));
       EXPECT_LE(nda::max_element(nda::abs(nda::make_regular(ap.get_block(b) - dense_block))), 1e-12);
     }
@@ -205,9 +209,9 @@ TEST(AtomProp, tensor_in_full_hilbert_space) {
   for (bool use_particle_number_sym : {true, false}) {
     SCOPED_TRACE(use_particle_number_sym ? "particle-number symmetry" : "autopartitioned");
 
-    auto ad   = spin_flip_atom_diag_helper(2, use_particle_number_sym);
-    auto ap   = ad_to_atom_prop(ad, beta, itops);
-    auto full = get_tensor_in_full_hilbert_space(ap, ad);
+    auto ad   = test_utils::spin_flip_atom_diag_helper(2, use_particle_number_sym);
+    auto ap   = test_utils::ad_to_atom_prop(ad, beta, itops);
+    auto full = test_utils::get_tensor_in_full_hilbert_space(ap, ad);
 
     int dim = ad.get_full_hilbert_space_dim();
     ASSERT_EQ(full.extent(0), itops.rank());
@@ -217,17 +221,17 @@ TEST(AtomProp, tensor_in_full_hilbert_space) {
     // round trip: projecting each subspace back out recovers the block it came from
     for (int b = 0; b < ad.n_subspaces(); ++b) {
       SCOPED_TRACE("block " + std::to_string(b));
-      auto block_back = get_tensor_in_atom_diag_subspace(full, b, ad);
+      auto block_back = test_utils::get_tensor_in_atom_diag_subspace(full, b, ad);
       EXPECT_LE(nda::max_element(nda::abs(nda::make_regular(block_back - ap.get_block(b)))), 1e-14);
     }
 
     // the scattered propagator agrees with the independent dense construction everywhere, not just inside blocks
-    auto Gt_dense = Hmat_to_Gtmat(get_full_h_atomic(ad), beta, dlr_it_abs);
+    auto Gt_dense = test_utils::Hmat_to_Gtmat(test_utils::get_full_h_atomic(ad), beta, dlr_it_abs);
     EXPECT_LE(nda::max_element(nda::abs(nda::make_regular(full - Gt_dense))), 1e-12);
 
     // the block_gf overload sees the same data
-    auto bgf = ad_to_atom_prop(ad, beta, Lambda, eps);
-    EXPECT_LE(nda::max_element(nda::abs(nda::make_regular(get_tensor_in_full_hilbert_space(bgf, ad) - full))), 1e-14);
+    auto bgf = test_utils::ad_to_atom_prop(ad, beta, Lambda, eps);
+    EXPECT_LE(nda::max_element(nda::abs(nda::make_regular(test_utils::get_tensor_in_full_hilbert_space(bgf, ad) - full))), 1e-14);
   }
 }
 
@@ -243,7 +247,7 @@ TEST(AtomProp, tensor_in_full_hilbert_space_zero_blocks) {
   double eps    = 1e-10;
 
   auto itops = imtime_ops(Lambda, build_dlr_rf(Lambda, eps));
-  auto ad    = spin_flip_atom_diag_helper(2, true);
+  auto ad    = test_utils::spin_flip_atom_diag_helper(2, true);
   int dim    = ad.get_full_hilbert_space_dim();
   int r      = itops.rank();
 
@@ -252,16 +256,16 @@ TEST(AtomProp, tensor_in_full_hilbert_space_zero_blocks) {
   for (int b = 0; b < ad.n_subspaces(); ++b) { block_sizes(b) = ad.get_fock_states(b).size(); }
   auto G_zero = BlockDiagOpFun(r, block_sizes);
 
-  EXPECT_THROW(get_tensor_in_full_hilbert_space(G_zero, ad), std::invalid_argument);
-  auto full_zero = get_tensor_in_full_hilbert_space(G_zero, ad, r);
+  EXPECT_THROW(test_utils::get_tensor_in_full_hilbert_space(G_zero, ad), std::invalid_argument);
+  auto full_zero = test_utils::get_tensor_in_full_hilbert_space(G_zero, ad, r);
   EXPECT_EQ(full_zero.extent(0), r);
   EXPECT_EQ(full_zero.extent(1), dim);
   EXPECT_EQ(full_zero.extent(2), dim);
   EXPECT_EQ(nda::max_element(nda::abs(full_zero)), 0.0);
 
   // zeroing one subspace of a real propagator zeroes exactly that subspace's rows and columns
-  auto ap   = ad_to_atom_prop(ad, beta, itops);
-  auto full = get_tensor_in_full_hilbert_space(ap, ad);
+  auto ap   = test_utils::ad_to_atom_prop(ad, beta, itops);
+  auto full = test_utils::get_tensor_in_full_hilbert_space(ap, ad);
 
   auto ap_zeroed = ap;
   ap_zeroed.set_block(0, nda::zeros<dcomplex>(r, block_sizes(0), block_sizes(0)));
@@ -273,7 +277,7 @@ TEST(AtomProp, tensor_in_full_hilbert_space_zero_blocks) {
     expected(_, state, _) = 0;
     expected(_, _, state) = 0;
   }
-  EXPECT_LE(nda::max_element(nda::abs(nda::make_regular(get_tensor_in_full_hilbert_space(ap_zeroed, ad) - expected))), 1e-14);
+  EXPECT_LE(nda::max_element(nda::abs(nda::make_regular(test_utils::get_tensor_in_full_hilbert_space(ap_zeroed, ad) - expected))), 1e-14);
 }
 
 /**
@@ -293,9 +297,9 @@ TEST(AtomProp, overloads_agree) {
   auto dlr_rf = build_dlr_rf(Lambda, eps);
   auto itops  = imtime_ops(Lambda, dlr_rf);
 
-  auto ad  = spin_flip_atom_diag_helper(2, true);
-  auto ap  = ad_to_atom_prop(ad, beta, itops);
-  auto bgf = ad_to_atom_prop(ad, beta, Lambda, eps);
+  auto ad  = test_utils::spin_flip_atom_diag_helper(2, true);
+  auto ap  = test_utils::ad_to_atom_prop(ad, beta, itops);
+  auto bgf = test_utils::ad_to_atom_prop(ad, beta, Lambda, eps);
 
   // the mesh cutoff is w_max = Lambda / beta, matching the grid the data was sampled on
   EXPECT_EQ(bgf.size(), ap.get_num_block_cols());

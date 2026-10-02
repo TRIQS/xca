@@ -11,7 +11,7 @@
 #include <triqs_xca/dense/diagram_evaluator.hpp>
 #include <triqs_xca/topology.hpp>
 
-#include "block_sparse_utils.hpp"
+#include "test_utils/block_sparse.hpp"
 
 using nda::dcomplex;
 using nda::range;
@@ -23,9 +23,10 @@ using triqs::operators::many_body_operator_real;
 using triqs::operators::n;
 
 using triqs_xca::dense::DiagramEvaluator;
+namespace test_utils = triqs_xca::test_utils;
 
 /**
- * @file test_dense_correlator_statistics.cpp
+ * @file dense/correlator_statistics.cpp
  *
  * @brief Tests of how compute_one_time_correlator() classifies its operators as fermionic or bosonic
  *
@@ -87,7 +88,7 @@ namespace {
   };
 
   Harness make_harness(triqs::atom_diag::atom_diag<true> ad) {
-    auto G  = ad_to_atom_prop(ad, beta, Lambda, eps);
+    auto G  = test_utils::ad_to_atom_prop(ad, beta, Lambda, eps);
     int nf  = static_cast<int>(ad.get_fops().size());
     auto hc = nda::zeros<dcomplex>(p_poles, nf, nf);
     for (int i = 0; i < nf; ++i) {

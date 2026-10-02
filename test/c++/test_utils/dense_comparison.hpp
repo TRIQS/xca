@@ -15,7 +15,9 @@
 #include <triqs_xca/dense/atom_diag.hpp>
 #include <triqs_xca/block_sparse/block_op.hpp>
 
-#include "dense_utils.hpp"
+#include "test_utils/dense.hpp"
+
+namespace triqs_xca::test_utils {
 
 /**
  * @file dense_comparison.hpp
@@ -71,3 +73,5 @@ inline std::pair<double, double> compare_leading_block(nda::array_const_view<nda
     }
   return {err, scale};
 }
+
+} // namespace triqs_xca::test_utils

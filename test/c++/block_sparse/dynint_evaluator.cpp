@@ -15,9 +15,9 @@
 #include <triqs_xca/block_sparse/dynint.hpp>
 #include <triqs_xca/topology.hpp>
 
-#include "block_sparse_utils.hpp"
-#include "dense_comparison.hpp"
-#include "parallel_atom_diag_check.hpp"
+#include "test_utils/block_sparse.hpp"
+#include "test_utils/dense_comparison.hpp"
+#include "test_utils/parallel_atom_diag_check.hpp"
 
 using cppdlr::_;
 using cppdlr::build_dlr_rf;
@@ -34,9 +34,10 @@ using triqs_xca::block_sparse::DiagramEvaluator;
 namespace dense = triqs_xca::dense;
 using triqs_xca::hyb::get_extended_coefficients;
 using triqs_xca::block_sparse::dynint::get_operators_and_interactions;
+namespace test_utils = triqs_xca::test_utils;
 
 /**
- * @file test_block_sparse_dynint_evaluator.cpp
+ * @file block_sparse/dynint_evaluator.cpp
  *
  * @brief Tests of the block-sparse DiagramEvaluator with dynamical interactions: the constructors, n / n_hyb / n_int and Nmax
  *
@@ -69,11 +70,11 @@ namespace {
    * @details The symmetry sets have unequal sizes {2, 1} and the largest subspace has dimension 2, so the Nmax tests are not vacuous.
    */
   DynintModel dynint_model(int n_int) {
-    auto ad       = unequal_sym_set_model(true);
-    auto ad_flat  = unequal_sym_set_model(false);
+    auto ad       = test_utils::unequal_sym_set_model(true);
+    auto ad_flat  = test_utils::unequal_sym_set_model(false);
     int n_hyb     = static_cast<int>(ad.get_fops().size());
     auto labels_f = std::get<1>(get_operators(ad, nda::zeros<dcomplex>(p_poles, n_hyb, n_hyb)));
-    auto hyb      = sym_set_diagonal_hyb(labels_f, p_poles);
+    auto hyb      = test_utils::sym_set_diagonal_hyb(labels_f, p_poles);
 
     std::vector<many_body_operator_real> ops;
     if (n_int > 0) ops.emplace_back(n("A", 0));
@@ -122,7 +123,7 @@ namespace {
 TEST(BlockSparseDynintEvaluator, self_energy_matches_dense_with_dynamical_interactions) {
 
   auto m = dynint_model(/*n_int=*/1);
-  ASSERT_NO_FATAL_FAILURE(assert_parallel_atom_diags(m.ad, m.ad_flat));
+  ASSERT_NO_FATAL_FAILURE(test_utils::assert_parallel_atom_diags(m.ad, m.ad_flat));
 
   // only a crossing topology exposes the parity error
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
@@ -132,7 +133,7 @@ TEST(BlockSparseDynintEvaluator, self_energy_matches_dense_with_dynamical_intera
   int n_int = static_cast<int>(m.dynint_ops.size());
 
   auto itops = imtime_ops(Lambda, build_dlr_rf(Lambda, eps));
-  auto Gt    = ad_to_atom_prop(m.ad, beta, itops);
+  auto Gt    = test_utils::ad_to_atom_prop(m.ad, beta, itops);
 
   auto Fq  = std::get<0>(get_operators_and_interactions(m.ad, m.hyb_coeffs, m.dynint_coeffs, m.dynint_ops));
   auto ext = get_extended_coefficients(m.hyb_coeffs, m.dynint_coeffs);
@@ -151,13 +152,13 @@ TEST(BlockSparseDynintEvaluator, self_energy_matches_dense_with_dynamical_intera
   auto Sigma = BlockDiagOpFun(D.compute_self_energy(Gt, topology));
 
   // dense reference on the single-subspace twin
-  auto G_flat = ad_to_atom_prop(m.ad_flat, beta, Lambda, eps);
+  auto G_flat = test_utils::ad_to_atom_prop(m.ad_flat, beta, Lambda, eps);
   dense::DiagramEvaluator D_dense(m.hyb_poles, m.hyb_coeffs, G_flat[0].mesh(), m.ad_flat, m.dynint_ops, m.dynint_coeffs);
   ASSERT_EQ(D_dense.n_hyb, n_hyb);
   ASSERT_EQ(D_dense.n_int, n_int);
   auto Sigma_dense = D_dense.compute_self_energy(G_flat, topology);
 
-  auto [err, scale] = compare_sigma_with_dense(Sigma, Sigma_dense, m.ad);
+  auto [err, scale] = test_utils::compare_sigma_with_dense(Sigma, Sigma_dense, m.ad);
 
   // the comparison is absolute, so require a non-negligible self-energy
   ASSERT_GT(scale, 0.1) << "vacuous test: the self-energy is too small for an absolute tolerance";
@@ -172,22 +173,22 @@ TEST(BlockSparseDynintEvaluator, self_energy_matches_dense_with_dynamical_intera
 TEST(BlockSparseDynintEvaluator, no_dynamical_interaction_matches_dense) {
 
   auto m = dynint_model(/*n_int=*/0);
-  ASSERT_NO_FATAL_FAILURE(assert_parallel_atom_diags(m.ad, m.ad_flat));
+  ASSERT_NO_FATAL_FAILURE(test_utils::assert_parallel_atom_diags(m.ad, m.ad_flat));
 
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   auto itops                  = imtime_ops(Lambda, build_dlr_rf(Lambda, eps));
-  auto Gt                     = ad_to_atom_prop(m.ad, beta, itops);
+  auto Gt                     = test_utils::ad_to_atom_prop(m.ad, beta, itops);
 
   auto Fq  = std::get<0>(get_operators_and_interactions(m.ad, m.hyb_coeffs, nda::zeros<dcomplex>(p_poles, 0, 0), {}));
   auto ext = get_extended_coefficients(m.hyb_coeffs, nda::zeros<dcomplex>(p_poles, 0, 0));
   DiagramEvaluator D(beta, Lambda, eps, m.hyb_poles, ext, Fq, /*n_int=*/0);
   auto Sigma = BlockDiagOpFun(D.compute_self_energy(Gt, topology));
 
-  auto G_flat = ad_to_atom_prop(m.ad_flat, beta, Lambda, eps);
+  auto G_flat = test_utils::ad_to_atom_prop(m.ad_flat, beta, Lambda, eps);
   dense::DiagramEvaluator D_dense(m.hyb_poles, m.hyb_coeffs, G_flat[0].mesh(), m.ad_flat);
   auto Sigma_dense = D_dense.compute_self_energy(G_flat, topology);
 
-  auto [err, scale] = compare_sigma_with_dense(Sigma, Sigma_dense, m.ad);
+  auto [err, scale] = test_utils::compare_sigma_with_dense(Sigma, Sigma_dense, m.ad);
   ASSERT_GT(scale, 0.01) << "vacuous test: the self-energy is zero"; // measured 0.134
   EXPECT_LE(err, sigma_tol) << "max|bs - dense| = " << err;
 }
@@ -198,14 +199,14 @@ TEST(BlockSparseDynintEvaluator, no_dynamical_interaction_matches_dense) {
 TEST(BlockSparseDynintEvaluator, self_energy_matches_dense_on_non_crossing_topologies) {
 
   auto m = dynint_model(/*n_int=*/1);
-  ASSERT_NO_FATAL_FAILURE(assert_parallel_atom_diags(m.ad, m.ad_flat));
+  ASSERT_NO_FATAL_FAILURE(test_utils::assert_parallel_atom_diags(m.ad, m.ad_flat));
   int n_int = static_cast<int>(m.dynint_ops.size());
 
   auto itops  = imtime_ops(Lambda, build_dlr_rf(Lambda, eps));
-  auto Gt     = ad_to_atom_prop(m.ad, beta, itops);
+  auto Gt     = test_utils::ad_to_atom_prop(m.ad, beta, itops);
   auto Fq     = std::get<0>(get_operators_and_interactions(m.ad, m.hyb_coeffs, m.dynint_coeffs, m.dynint_ops));
   auto ext    = get_extended_coefficients(m.hyb_coeffs, m.dynint_coeffs);
-  auto G_flat = ad_to_atom_prop(m.ad_flat, beta, Lambda, eps);
+  auto G_flat = test_utils::ad_to_atom_prop(m.ad_flat, beta, Lambda, eps);
 
   DiagramEvaluator D(beta, Lambda, eps, m.hyb_poles, ext, Fq, n_int);
   dense::DiagramEvaluator D_dense(m.hyb_poles, m.hyb_coeffs, G_flat[0].mesh(), m.ad_flat, m.dynint_ops, m.dynint_coeffs);
@@ -220,7 +221,7 @@ TEST(BlockSparseDynintEvaluator, self_energy_matches_dense_on_non_crossing_topol
 
     auto Sigma        = BlockDiagOpFun(D.compute_self_energy(Gt, topology));
     auto Sigma_dense  = D_dense.compute_self_energy(G_flat, topology);
-    auto [err, scale] = compare_sigma_with_dense(Sigma, Sigma_dense, m.ad);
+    auto [err, scale] = test_utils::compare_sigma_with_dense(Sigma, Sigma_dense, m.ad);
     ASSERT_GT(scale, 0.01) << "vacuous test: the self-energy is zero"; // measured 2.68 and 0.68
     EXPECT_LE(err, sigma_tol) << "max|bs - dense| = " << err;
   }
@@ -237,7 +238,7 @@ TEST(BlockSparseDynintEvaluator, dynint_constructor_contract) {
   int n_hyb = static_cast<int>(m.ad.get_fops().size());
   int n_int = static_cast<int>(m.dynint_ops.size());
 
-  auto G = ad_to_atom_prop(m.ad, beta, Lambda, eps);
+  auto G = test_utils::ad_to_atom_prop(m.ad, beta, Lambda, eps);
   DiagramEvaluator D(m.hyb_poles, m.hyb_coeffs, G[0].mesh(), m.ad, m.dynint_ops, m.dynint_coeffs);
 
   EXPECT_EQ(D.n_hyb, n_hyb);
@@ -253,7 +254,7 @@ TEST(BlockSparseDynintEvaluator, dynint_constructor_contract) {
 
   DiagramEvaluator D_fq(beta, Lambda, eps, m.hyb_poles, ext, Fq, n_int);
   auto itops = imtime_ops(Lambda, build_dlr_rf(Lambda, eps));
-  auto Gt    = ad_to_atom_prop(m.ad, beta, itops);
+  auto Gt    = test_utils::ad_to_atom_prop(m.ad, beta, itops);
 
   auto Sa = BlockDiagOpFun(D.compute_self_energy(Gt, topology));
   auto Sb = BlockDiagOpFun(D_fq.compute_self_energy(Gt, topology));
@@ -278,7 +279,7 @@ TEST(BlockSparseDynintEvaluator, empty_dynint_ops_reproduce_the_plain_constructo
 
   auto m                      = dynint_model(/*n_int=*/0);
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
-  auto G                      = ad_to_atom_prop(m.ad, beta, Lambda, eps);
+  auto G                      = test_utils::ad_to_atom_prop(m.ad, beta, Lambda, eps);
 
   DiagramEvaluator D0(m.hyb_poles, m.hyb_coeffs, G[0].mesh(), m.ad);
   DiagramEvaluator D1(m.hyb_poles, m.hyb_coeffs, G[0].mesh(), m.ad, {}, nda::zeros<dcomplex>(p_poles, 0, 0));
@@ -290,7 +291,7 @@ TEST(BlockSparseDynintEvaluator, empty_dynint_ops_reproduce_the_plain_constructo
   EXPECT_EQ(D1.Nmax, D0.Nmax);
 
   auto itops = imtime_ops(Lambda, build_dlr_rf(Lambda, eps));
-  auto Gt    = ad_to_atom_prop(m.ad, beta, itops);
+  auto Gt    = test_utils::ad_to_atom_prop(m.ad, beta, itops);
   auto S0    = BlockDiagOpFun(D0.compute_self_energy(Gt, topology));
   auto S1    = BlockDiagOpFun(D1.compute_self_energy(Gt, topology));
 
@@ -313,9 +314,9 @@ TEST(BlockSparseDynintEvaluator, spgf_excludes_the_interaction_flavours) {
   int n_int = static_cast<int>(m.dynint_ops.size());
   ASSERT_GT(n_int, 0) << "vacuous test: without interaction flavours n_hyb == n";
 
-  auto G     = ad_to_atom_prop(m.ad, beta, Lambda, eps);
+  auto G     = test_utils::ad_to_atom_prop(m.ad, beta, Lambda, eps);
   auto itops = imtime_ops(Lambda, build_dlr_rf(Lambda, eps));
-  auto Gt    = ad_to_atom_prop(m.ad, beta, itops);
+  auto Gt    = test_utils::ad_to_atom_prop(m.ad, beta, itops);
 
   DiagramEvaluator D(m.hyb_poles, m.hyb_coeffs, G[0].mesh(), m.ad, m.dynint_ops, m.dynint_coeffs);
   ASSERT_EQ(D.n, n_hyb + n_int);
@@ -339,7 +340,7 @@ TEST(BlockSparseDynintEvaluator, Nmax_covers_the_largest_subspace) {
   int msd   = max_subspace_dim(m.ad);
   ASSERT_GT(msd, 1) << "vacuous test: every subspace of this fixture is one-dimensional"; // measured 2
 
-  auto G = ad_to_atom_prop(m.ad, beta, Lambda, eps);
+  auto G = test_utils::ad_to_atom_prop(m.ad, beta, Lambda, eps);
   DiagramEvaluator D_ad(m.hyb_poles, m.hyb_coeffs, G[0].mesh(), m.ad, m.dynint_ops, m.dynint_coeffs);
   EXPECT_GE(D_ad.Nmax, msd);
 
@@ -357,10 +358,10 @@ TEST(BlockSparseDynintEvaluator, Nmax_covers_the_largest_subspace) {
  */
 TEST(BlockSparseDynintEvaluator, Nmax_does_not_assume_symmetry_set_zero_covers_the_space) {
 
-  auto ad       = unequal_sym_set_model(true);
+  auto ad       = test_utils::unequal_sym_set_model(true);
   int n_hyb     = static_cast<int>(ad.get_fops().size());
   auto labels_f = std::get<1>(get_operators(ad, nda::zeros<dcomplex>(p_poles, n_hyb, n_hyb)));
-  auto hyb      = sym_set_diagonal_hyb(labels_f, p_poles);
+  auto hyb      = test_utils::sym_set_diagonal_hyb(labels_f, p_poles);
 
   // A projector onto a single Fock state: block diagonal, and its only block is 1x1.
   std::vector<many_body_operator_real> ops = {many_body_operator_real(n("A", 0) * n("A", 1) * n("B", 0))};
@@ -390,10 +391,10 @@ TEST(BlockSparseDynintEvaluator, Nmax_does_not_assume_symmetry_set_zero_covers_t
  */
 TEST(BlockSparseDynintEvaluator, symmetry_set_order_does_not_change_sigma) {
 
-  auto ad       = unequal_sym_set_model(true);
+  auto ad       = test_utils::unequal_sym_set_model(true);
   int n_hyb     = static_cast<int>(ad.get_fops().size());
   auto labels_f = std::get<1>(get_operators(ad, nda::zeros<dcomplex>(p_poles, n_hyb, n_hyb)));
-  auto hyb      = sym_set_diagonal_hyb(labels_f, p_poles);
+  auto hyb      = test_utils::sym_set_diagonal_hyb(labels_f, p_poles);
 
   auto Fq = std::get<0>(get_operators(ad, hyb));
   ASSERT_GT(nda::max_element(Fq.sym_set_labels), 0) << "vacuous test: this model has only one symmetry set";
@@ -402,7 +403,7 @@ TEST(BlockSparseDynintEvaluator, symmetry_set_order_does_not_change_sigma) {
   nda::vector<double> hyb_poles = {1.3, -0.8};
   nda::array<int, 2> topology   = {{0, 2}, {1, 3}};
   auto itops                    = imtime_ops(Lambda, build_dlr_rf(Lambda, eps));
-  auto Gt                       = ad_to_atom_prop(ad, beta, itops);
+  auto Gt                       = test_utils::ad_to_atom_prop(ad, beta, itops);
 
   DiagramEvaluator Da(beta, Lambda, eps, hyb_poles, hyb, Fq);
   DiagramEvaluator Db(beta, Lambda, eps, hyb_poles, hyb, Fq_perm);
@@ -451,7 +452,7 @@ namespace {
 TEST(BlockSparseDynintEvaluator, spgf_matches_dense_with_dynamical_interactions) {
 
   auto m = dynint_model(/*n_int=*/1);
-  ASSERT_NO_FATAL_FAILURE(assert_parallel_atom_diags(m.ad, m.ad_flat));
+  ASSERT_NO_FATAL_FAILURE(test_utils::assert_parallel_atom_diags(m.ad, m.ad_flat));
 
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   ASSERT_EQ(triqs_xca::topology::topology_parity(topology), -1) << "vacuous test: a fermionic external pair needs a crossing topology here";
@@ -460,8 +461,8 @@ TEST(BlockSparseDynintEvaluator, spgf_matches_dense_with_dynamical_interactions)
   int n_int = static_cast<int>(m.dynint_ops.size());
   ASSERT_GT(n_int, 0) << "vacuous test: no interaction operator";
 
-  auto G_bs = ad_to_atom_prop(m.ad, beta, Lambda, eps);
-  auto G_fl = ad_to_atom_prop(m.ad_flat, beta, Lambda, eps);
+  auto G_bs = test_utils::ad_to_atom_prop(m.ad, beta, Lambda, eps);
+  auto G_fl = test_utils::ad_to_atom_prop(m.ad_flat, beta, Lambda, eps);
 
   auto Fq  = std::get<0>(get_operators_and_interactions(m.ad, m.hyb_coeffs, m.dynint_coeffs, m.dynint_ops));
   auto ext = get_extended_coefficients(m.hyb_coeffs, m.dynint_coeffs);
@@ -485,7 +486,7 @@ TEST(BlockSparseDynintEvaluator, spgf_matches_dense_with_dynamical_interactions)
   // (a) the whole-topology overload
   {
     SCOPED_TRACE("compute_single_ptcle_gf(G, topology)");
-    auto [err, scale] = compare_leading_block(D.compute_single_ptcle_gf(G_bs, topology), spgf_dense, n_hyb);
+    auto [err, scale] = test_utils::compare_leading_block(D.compute_single_ptcle_gf(G_bs, topology), spgf_dense, n_hyb);
     ASSERT_GT(scale, 0.05) << "vacuous test: the single-particle Green's function is too small for an absolute tolerance";
     EXPECT_LE(err, corr_tol) << "max|dense| = " << scale << ", max|bs - dense| = " << err;
   }
@@ -494,13 +495,13 @@ TEST(BlockSparseDynintEvaluator, spgf_matches_dense_with_dynamical_interactions)
     SCOPED_TRACE("compute_single_ptcle_gf(G, topology, f_ix)");
     auto acc = nda::zeros<dcomplex>(D.r, n_hyb, n_hyb);
     for (int f = 0; f < nb; ++f) acc += D.compute_single_ptcle_gf(G_bs, topology, f);
-    auto [err, scale] = compare_leading_block(acc, spgf_dense, n_hyb);
+    auto [err, scale] = test_utils::compare_leading_block(acc, spgf_dense, n_hyb);
     EXPECT_LE(err, corr_tol) << "max|dense| = " << scale << ", max|bs - dense| = " << err;
   }
   // (c) the flat-index-vector overload
   {
     SCOPED_TRACE("compute_single_ptcle_gf(G, topology, f_ix_vec)");
-    auto [err, scale] = compare_leading_block(D.compute_single_ptcle_gf(G_bs, topology, f_ix_vec), spgf_dense, n_hyb);
+    auto [err, scale] = test_utils::compare_leading_block(D.compute_single_ptcle_gf(G_bs, topology, f_ix_vec), spgf_dense, n_hyb);
     EXPECT_LE(err, corr_tol) << "max|dense| = " << scale << ", max|bs - dense| = " << err;
   }
 }
@@ -516,7 +517,7 @@ TEST(BlockSparseDynintEvaluator, spgf_matches_dense_with_dynamical_interactions)
 TEST(BlockSparseDynintEvaluator, one_time_correlator_matches_dense_with_dynamical_interactions) {
 
   auto m = dynint_model(/*n_int=*/1);
-  ASSERT_NO_FATAL_FAILURE(assert_parallel_atom_diags(m.ad, m.ad_flat));
+  ASSERT_NO_FATAL_FAILURE(test_utils::assert_parallel_atom_diags(m.ad, m.ad_flat));
 
   int n_hyb = static_cast<int>(m.ad.get_fops().size());
   int n_int = static_cast<int>(m.dynint_ops.size());
@@ -524,16 +525,16 @@ TEST(BlockSparseDynintEvaluator, one_time_correlator_matches_dense_with_dynamica
   ASSERT_EQ(n_int, 1) << "this test reads correlator component (n_hyb, n_hyb)";
 
   auto itops = imtime_ops(Lambda, build_dlr_rf(Lambda, eps));
-  auto Gt    = ad_to_atom_prop(m.ad, beta, itops);
-  auto G_bs  = ad_to_atom_prop(m.ad, beta, Lambda, eps);
-  auto G_fl  = ad_to_atom_prop(m.ad_flat, beta, Lambda, eps);
+  auto Gt    = test_utils::ad_to_atom_prop(m.ad, beta, itops);
+  auto G_bs  = test_utils::ad_to_atom_prop(m.ad, beta, Lambda, eps);
+  auto G_fl  = test_utils::ad_to_atom_prop(m.ad_flat, beta, Lambda, eps);
 
   auto Fq  = std::get<0>(get_operators_and_interactions(m.ad, m.hyb_coeffs, m.dynint_coeffs, m.dynint_ops));
   auto ext = get_extended_coefficients(m.hyb_coeffs, m.dynint_coeffs);
   DiagramEvaluator D(beta, Lambda, eps, m.hyb_poles, ext, Fq, n_int);
   dense::DiagramEvaluator D_dense(m.hyb_poles, m.hyb_coeffs, G_fl[0].mesh(), m.ad_flat, m.dynint_ops, m.dynint_coeffs);
 
-  auto [mu_ops, kap_ops] = make_correlator_ops(Fq, n_ext);
+  auto [mu_ops, kap_ops] = test_utils::make_correlator_ops(Fq, n_ext);
   ASSERT_EQ(static_cast<int>(mu_ops.size()), n_ext);
 
   auto Fq_ferm = std::get<0>(get_operators(m.ad, m.hyb_coeffs));
@@ -618,7 +619,7 @@ TEST(BlockSparseDynintEvaluator, self_energy_flat_index_overloads_agree) {
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   ASSERT_EQ(triqs_xca::topology::topology_parity(topology), -1) << "vacuous test: topology is not crossing";
 
-  auto G_bs = ad_to_atom_prop(m.ad, beta, Lambda, eps);
+  auto G_bs = test_utils::ad_to_atom_prop(m.ad, beta, Lambda, eps);
   auto Fq   = std::get<0>(get_operators_and_interactions(m.ad, m.hyb_coeffs, m.dynint_coeffs, m.dynint_ops));
   auto ext  = get_extended_coefficients(m.hyb_coeffs, m.dynint_coeffs);
   DiagramEvaluator D(beta, Lambda, eps, m.hyb_poles, ext, Fq, n_int);
@@ -666,7 +667,7 @@ TEST(BlockSparseDynintEvaluator, spgf_flat_index_overloads_agree) {
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   ASSERT_EQ(triqs_xca::topology::topology_parity(topology), -1) << "vacuous test: topology is not crossing";
 
-  auto G   = ad_to_atom_prop(m.ad, beta, Lambda, eps);
+  auto G   = test_utils::ad_to_atom_prop(m.ad, beta, Lambda, eps);
   auto Fq  = std::get<0>(get_operators_and_interactions(m.ad, m.hyb_coeffs, m.dynint_coeffs, m.dynint_ops));
   auto ext = get_extended_coefficients(m.hyb_coeffs, m.dynint_coeffs);
   DiagramEvaluator D(beta, Lambda, eps, m.hyb_poles, ext, Fq, n_int);
@@ -726,13 +727,13 @@ TEST(BlockSparseDynintEvaluator, spgf_flat_index_overloads_agree) {
  * dynint symmetry set of size 2, since n_up0 and n_do0 share a connection row.
  */
 TEST(BlockSparseDynintEvaluator, matches_dense_on_the_interleaved_deep_subspace_model) {
-  auto ad      = spin_flip_atom_diag_helper(2, false);
-  auto ad_flat = spin_flip_atom_diag_helper_single_subspace(2);
-  assert_parallel_atom_diags(ad, ad_flat);
+  auto ad      = test_utils::spin_flip_atom_diag_helper(2, false);
+  auto ad_flat = test_utils::spin_flip_atom_diag_helper_single_subspace(2);
+  test_utils::assert_parallel_atom_diags(ad, ad_flat);
 
   int n_hyb     = static_cast<int>(ad.get_fops().size());
   auto labels_f = std::get<1>(get_operators(ad, nda::zeros<dcomplex>(p_poles, n_hyb, n_hyb)));
-  auto hyb      = sym_set_diagonal_hyb(labels_f, p_poles);
+  auto hyb      = test_utils::sym_set_diagonal_hyb(labels_f, p_poles);
 
   // two density operators on the same orbital share a connection row, hence one dynint set of size 2
   std::vector<many_body_operator_real> ops{n("up", 0), n("do", 0)};
@@ -760,10 +761,10 @@ TEST(BlockSparseDynintEvaluator, matches_dense_on_the_interleaved_deep_subspace_
   }
 
   auto itops = imtime_ops(Lambda, build_dlr_rf(Lambda, eps));
-  auto Gt    = ad_to_atom_prop(ad, beta, itops);
+  auto Gt    = test_utils::ad_to_atom_prop(ad, beta, itops);
   DiagramEvaluator D(beta, Lambda, eps, hyb_poles, ext, Fq, n_int);
 
-  auto G_flat = ad_to_atom_prop(ad_flat, beta, Lambda, eps);
+  auto G_flat = test_utils::ad_to_atom_prop(ad_flat, beta, Lambda, eps);
   dense::DiagramEvaluator D_dense(hyb_poles, hyb, G_flat[0].mesh(), ad_flat, ops, d);
 
   int max_dim = 0;
@@ -779,7 +780,7 @@ TEST(BlockSparseDynintEvaluator, matches_dense_on_the_interleaved_deep_subspace_
     SCOPED_TRACE("self-energy");
     auto Sigma        = BlockDiagOpFun(D.compute_self_energy(Gt, topology));
     auto Sigma_dense  = D_dense.compute_self_energy(G_flat, topology);
-    auto [err, scale] = compare_sigma_with_dense(Sigma, Sigma_dense, ad);
+    auto [err, scale] = test_utils::compare_sigma_with_dense(Sigma, Sigma_dense, ad);
     ASSERT_GT(scale, 0.01) << "vacuous test: the self-energy is too small for an absolute tolerance";
     EXPECT_LE(err, sigma_tol * std::max(1.0, scale)) << "max|Sigma_dense| = " << scale << ", max|bs - dense| = " << err;
   }
@@ -788,7 +789,7 @@ TEST(BlockSparseDynintEvaluator, matches_dense_on_the_interleaved_deep_subspace_
   {
     SCOPED_TRACE("single-particle Green's function");
     auto spgf_dense   = D_dense.compute_single_ptcle_gf(G_flat, topology);
-    auto [err, scale] = compare_leading_block(D.compute_single_ptcle_gf(Gt, topology), spgf_dense, n_hyb);
+    auto [err, scale] = test_utils::compare_leading_block(D.compute_single_ptcle_gf(Gt, topology), spgf_dense, n_hyb);
     ASSERT_GT(scale, 1.0e-3) << "vacuous test: the spgf is too small to compare";
     EXPECT_LE(err, sigma_tol * std::max(1.0, scale)) << "max|spgf_dense| = " << scale << ", max|bs - dense| = " << err;
   }

@@ -12,7 +12,7 @@
 #include <triqs_xca/block_sparse/diagram_evaluator.hpp>
 #include <triqs_xca/topology.hpp>
 
-#include "block_sparse_utils.hpp"
+#include "test_utils/block_sparse.hpp"
 
 using nda::dcomplex;
 
@@ -25,9 +25,10 @@ using triqs_xca::block_sparse::BlockDiagOpFun;
 using triqs_xca::block_sparse::BlockOpSymQuartet;
 using triqs_xca::block_sparse::DiagramEvaluator;
 using triqs_xca::block_sparse::sym_set_coupling_tol;
+namespace test_utils = triqs_xca::test_utils;
 
 /**
- * @file test_block_sparse_sym_set_mask.cpp
+ * @file block_sparse/sym_set_mask.cpp
  *
  * @brief Tests of the symmetry-set mask on the zero vertex of the self-energy, and of the input validation of the Fq-only constructor
  *
@@ -61,7 +62,7 @@ namespace {
    */
   nda::array<dcomplex, 3> perturbed_hyb(nda::vector_const_view<int> lab, Slot slot, double delta) {
     int n_hyb  = static_cast<int>(lab.size());
-    auto c     = nda::array<dcomplex, 3>(sym_set_diagonal_hyb(lab, p_poles));
+    auto c     = nda::array<dcomplex, 3>(test_utils::sym_set_diagonal_hyb(lab, p_poles));
     double sgn = 1.0;
     for (int l = 0; l < p_poles; ++l)
       for (int i = 0; i < n_hyb; ++i)
@@ -83,7 +84,7 @@ namespace {
     auto itops = imtime_ops(Lambda, build_dlr_rf(Lambda, eps));
     auto Fq    = std::get<0>(get_operators(ad, coeffs));
     DiagramEvaluator D(beta, Lambda, eps, hyb_poles, coeffs, Fq, /*n_int=*/0);
-    auto Gt = ad_to_atom_prop(ad, beta, itops);
+    auto Gt = test_utils::ad_to_atom_prop(ad, beta, itops);
     return BlockDiagOpFun(D.compute_self_energy(Gt, topology));
   }
 
@@ -120,9 +121,9 @@ TEST(BlockSparseSymSetMask, accepted_cross_set_coefficients_leave_sigma_unchange
     triqs::atom_diag::atom_diag<true> ad;
   };
   std::vector<Fixture> fixtures;
-  fixtures.push_back({"unequal_sym_set_model(true)", unequal_sym_set_model(true)});                   // sets {2, 1}
-  fixtures.push_back({"spin_flip_atom_diag_helper(2, false)", spin_flip_atom_diag_helper(2, false)}); // interleaved sets
-  fixtures.push_back({"sz_resolved_atom_diag_helper(2)", sz_resolved_atom_diag_helper(2, true)});     // contiguous sets
+  fixtures.push_back({"unequal_sym_set_model(true)", test_utils::unequal_sym_set_model(true)});                   // sets {2, 1}
+  fixtures.push_back({"spin_flip_atom_diag_helper(2, false)", test_utils::spin_flip_atom_diag_helper(2, false)}); // interleaved sets
+  fixtures.push_back({"sz_resolved_atom_diag_helper(2)", test_utils::sz_resolved_atom_diag_helper(2, true)});     // contiguous sets
 
   for (auto const &f : fixtures) {
     SCOPED_TRACE(f.name);
@@ -178,7 +179,7 @@ TEST(BlockSparseSymSetMask, accepted_cross_set_coefficients_leave_sigma_unchange
  * separately and the quartet stores no coefficients to check against.
  */
 TEST(BlockSparseSymSetMask, Fq_only_constructor_rejects_cross_set_coefficients) {
-  auto ad   = unequal_sym_set_model(true);
+  auto ad   = test_utils::unequal_sym_set_model(true);
   auto lab  = sym_set_labels_of(ad);
   auto good = perturbed_hyb(lab, Slot::cross, 0.0);
   auto Fq   = std::get<0>(get_operators(ad, good));
@@ -204,7 +205,7 @@ TEST(BlockSparseSymSetMask, Fq_only_constructor_rejects_cross_set_coefficients) 
  * @brief Check that the Fq-only constructor rejects coefficients whose extents disagree with the quartet or the poles
  */
 TEST(BlockSparseSymSetMask, Fq_only_constructor_rejects_mismatched_coefficient_extents) {
-  auto ad  = unequal_sym_set_model(true);
+  auto ad  = test_utils::unequal_sym_set_model(true);
   auto lab = sym_set_labels_of(ad);
   auto Fq  = std::get<0>(get_operators(ad, perturbed_hyb(lab, Slot::cross, 0.0)));
 

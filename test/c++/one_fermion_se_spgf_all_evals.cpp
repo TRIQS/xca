@@ -18,8 +18,8 @@
 
 #include <cppdlr/cppdlr.hpp>
 
-#include "block_sparse_utils.hpp"
-#include "dense_utils.hpp"
+#include "test_utils/block_sparse.hpp"
+#include "test_utils/dense.hpp"
 
 using cppdlr::_;
 using cppdlr::build_dlr_rf;
@@ -37,10 +37,14 @@ using triqs_xca::dense::FSet;
 using triqs_xca::block_sparse::DiagramEvaluator;
 
 using triqs_xca::topology::topology_parity;
+using nda::dcomplex;
+using triqs_xca::block_sparse::BlockDiagOpFun;
+using triqs_xca::block_sparse::BlockOpSymQuartet;
+namespace test_utils = triqs_xca::test_utils;
 
 
 /**
- * @file test_one_fermion_se_spgf_all_evals.cpp
+ * @file one_fermion_se_spgf_all_evals.cpp
  *
  * @brief Tests of self-energy and single-particle Green's function diagram evaluators for models with one spinless fermion
  *
@@ -85,13 +89,13 @@ namespace {
    * @brief One-fermion model (trivial atomic Hamiltonian H = 0, one orbital) with the hybridization
    * Delta(tau) = sum_k coeffs[k] K(tau, poles[k])
    *
-   * @details Same atom as the one-fermion helper in block_sparse_utils.cpp; that helper only builds
+   * @details Same atom as the one-fermion helper in test_utils/block_sparse.cpp; that helper only builds
    * single-pole hybridizations, so the general sum over poles is assembled here.
    *
    * @param[in] poles Hybridization poles omega_k
    * @param[in] coeffs Coefficients c_k, one per pole
    */
-  FermionModelData one_fermion_model(double beta, double Lambda, double eps, std::vector<double> const &poles, std::vector<dcomplex> const &coeffs) {
+  test_utils::FermionModelData one_fermion_model(double beta, double Lambda, double eps, std::vector<double> const &poles, std::vector<dcomplex> const &coeffs) {
     int p    = poles.size();
     int norb = 1;
     nda::array<dcomplex, 3> hyb_coeffs(p, norb, norb);
@@ -110,7 +114,7 @@ namespace {
     fop_set.insert("0", 0);
     auto ad = triqs::atom_diag::atom_diag<true>(H, fop_set);
 
-    auto G_ppsc = ad_to_atom_prop(ad, beta, Lambda, eps);
+    auto G_ppsc = test_utils::ad_to_atom_prop(ad, beta, Lambda, eps);
     auto G_bdof = BlockDiagOpFun(G_ppsc);
 
     return {.hyb_coeffs = hyb_coeffs, .hyb_poles = hyb_poles, .ad = ad, .G_ppsc = G_ppsc, .G_bdof = G_bdof};
@@ -136,7 +140,7 @@ namespace {
     imtime_ops itops;
     nda::vector<double> dlr_it; // DLR imaginary time nodes, relative format
     int r;                      // DLR rank
-    FermionModelData model;     // hybridization, atom_diag object, and atomic propagator
+    test_utils::FermionModelData model;     // hybridization, atom_diag object, and atomic propagator
 
     nda::array<dcomplex, 3> Gt_dense;      // atomic propagator over the full Hilbert space
     nda::array<dcomplex, 3> Gt_dense_refl; // ... evaluated at (beta - tau)
@@ -179,7 +183,7 @@ namespace {
     // block-sparse model, so that the dense evaluators are fed through an independent code path.
     static nda::array<dcomplex, 3> make_dense_propagator(triqs::atom_diag::atom_diag<true> const &ad, double beta,
                                                          nda::vector_const_view<double> dlr_it) {
-      return Hmat_to_Gtmat(get_full_h_atomic(ad), beta, cppdlr::rel2abs(dlr_it));
+      return test_utils::Hmat_to_Gtmat(test_utils::get_full_h_atomic(ad), beta, cppdlr::rel2abs(dlr_it));
     }
 
     // The field operators of the block-sparse evaluator. get_operators also returns the symmetry set labels,
@@ -232,7 +236,7 @@ TEST(one_fermion, const_hyb_se) {
   auto G0_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
   G0_ana(_, 0, 0) = tau_ref(s.dlr_it, [](double t) { return -exp(-t * std::numbers::ln2); }); // the atom has H = 0
   G0_ana(_, 1, 1) = G0_ana(_, 0, 0);                                                          // same in both sectors
-  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(s.model.G_bdof, s.model.ad) - G0_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(test_utils::get_tensor_in_full_hilbert_space(s.model.G_bdof, s.model.ad) - G0_ana)), eps);
 
   // parameters for trapezoidal routines
   int n_quad     = 20;
@@ -244,7 +248,7 @@ TEST(one_fermion, const_hyb_se) {
   nda::array<int, 2> nca_topology = {{0, 1}};
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto nca_bs = nda::make_regular(topology_parity(nca_topology)
-                                  * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, nca_topology), s.model.ad));
+                                  * test_utils::get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, nca_topology), s.model.ad));
   // compute using dense::DiagramEvaluator, and ensure sign is correct
   auto nca_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, nca_topology);
   auto nca_dense    = nda::make_regular(topology_parity(nca_topology) * nca_dense_gf[0].data());
@@ -255,7 +259,7 @@ TEST(one_fermion, const_hyb_se) {
   auto nca_manual_dense = dense::manual::sigma_nca(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine, convert to dense format
   auto nca_manual_bdof = block_sparse::manual::sigma_nca(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
-  auto nca_manual_bs   = get_tensor_in_full_hilbert_space(nca_manual_bdof, s.model.ad, s.r);
+  auto nca_manual_bs   = test_utils::get_tensor_in_full_hilbert_space(nca_manual_bdof, s.model.ad, s.r);
 
   // compute analytical reference
   auto nca_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
@@ -273,7 +277,7 @@ TEST(one_fermion, const_hyb_se) {
   nda::array<int, 2> oca_topology = {{0, 2}, {1, 3}};
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto oca_bs = nda::make_regular(topology_parity(oca_topology)
-                                  * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, oca_topology), s.model.ad));
+                                  * test_utils::get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, oca_topology), s.model.ad));
   // compute using dense::DiagramEvaluator, and ensure sign is correct
   auto oca_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, oca_topology);
   auto oca_dense    = nda::make_regular(topology_parity(oca_topology) * oca_dense_gf[0].data());
@@ -285,10 +289,10 @@ TEST(one_fermion, const_hyb_se) {
                                     s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine, and convert to dense format
   auto oca_manual_bdof = block_sparse::manual::sigma_oca(s.D.hyb.values, s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
-  auto oca_manual_bs   = get_tensor_in_full_hilbert_space(oca_manual_bdof, s.model.ad, s.r);
+  auto oca_manual_bs   = test_utils::get_tensor_in_full_hilbert_space(oca_manual_bdof, s.model.ad, s.r);
   // compute using trapezoidal quadrature
   auto oca_tpz   = dense::manual::sigma_oca_tpz(hyb, s.itops, s.beta, s.Gt_dense, s.Fs_dense, n_quad);
-  auto oca_bs_eq = eval_eq(s.itops, oca_bs, n_quad);
+  auto oca_bs_eq = test_utils::eval_eq(s.itops, oca_bs, n_quad);
 
   // no analytical reference here because the expected result is zero
 
@@ -298,7 +302,7 @@ TEST(one_fermion, const_hyb_se) {
   EXPECT_LE(nda::max_element(nda::abs(oca_dense - oca_pairs)), eps);
   EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_dense)), eps);
   EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_bs)), eps);
-  EXPECT_LE(max_offdiag(oca_dense), eps);
+  EXPECT_LE(test_utils::max_offdiag(oca_dense), eps);
   // oca_bs is exactly diagonal, so comparing whole tensors also bounds the quadrature result's off-diagonals
   EXPECT_LE(nda::max_element(nda::abs(oca_bs_eq - oca_tpz)), tpz_tol);
 
@@ -306,7 +310,7 @@ TEST(one_fermion, const_hyb_se) {
   nda::array<int, 2> third_topology = {{0, 3}, {1, 4}, {2, 5}};
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto third_bs = nda::make_regular(topology_parity(third_topology)
-                                    * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, third_topology), s.model.ad));
+                                    * test_utils::get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, third_topology), s.model.ad));
   // compute using dense::DiagramEvaluator, and ensure sign is correct
   auto third_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, third_topology);
   auto third_dense    = nda::make_regular(topology_parity(third_topology) * third_dense_gf[0].data());
@@ -350,7 +354,7 @@ TEST(one_fermion, one_hyb_pole_se) {
   auto G0_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
   G0_ana(_, 0, 0) = tau_ref(s.dlr_it, [](double t) { return -exp(-t * std::numbers::ln2); }); // the atom has H = 0
   G0_ana(_, 1, 1) = G0_ana(_, 0, 0);                                                          // same in both sectors
-  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(s.model.G_bdof, s.model.ad) - G0_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(test_utils::get_tensor_in_full_hilbert_space(s.model.G_bdof, s.model.ad) - G0_ana)), eps);
 
   // parameters for trapezoidal routines
   int n_quad     = 20;
@@ -362,7 +366,7 @@ TEST(one_fermion, one_hyb_pole_se) {
   nda::array<int, 2> nca_topology = {{0, 1}};
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto nca_bs = nda::make_regular(topology_parity(nca_topology)
-                                  * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, nca_topology), s.model.ad));
+                                  * test_utils::get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, nca_topology), s.model.ad));
   // compute using dense::DiagramEvaluator, and ensure sign is correct
   auto nca_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, nca_topology);
   auto nca_dense    = nda::make_regular(topology_parity(nca_topology) * nca_dense_gf[0].data());
@@ -373,7 +377,7 @@ TEST(one_fermion, one_hyb_pole_se) {
   auto nca_manual_dense = dense::manual::sigma_nca(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine, convert to dense format
   auto nca_manual_bdof = block_sparse::manual::sigma_nca(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
-  auto nca_manual_bs   = get_tensor_in_full_hilbert_space(nca_manual_bdof, s.model.ad, s.r);
+  auto nca_manual_bs   = test_utils::get_tensor_in_full_hilbert_space(nca_manual_bdof, s.model.ad, s.r);
 
   // compute analytical reference
   auto nca_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
@@ -391,7 +395,7 @@ TEST(one_fermion, one_hyb_pole_se) {
   nda::array<int, 2> oca_topology = {{0, 2}, {1, 3}};
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto oca_bs = nda::make_regular(topology_parity(oca_topology)
-                                  * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, oca_topology), s.model.ad));
+                                  * test_utils::get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, oca_topology), s.model.ad));
   // compute using dense::DiagramEvaluator, and ensure sign is correct
   auto oca_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, oca_topology);
   auto oca_dense    = nda::make_regular(topology_parity(oca_topology) * oca_dense_gf[0].data());
@@ -403,10 +407,10 @@ TEST(one_fermion, one_hyb_pole_se) {
                                     s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine, and convert to dense format
   auto oca_manual_bdof = block_sparse::manual::sigma_oca(s.D.hyb.values, s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
-  auto oca_manual_bs   = get_tensor_in_full_hilbert_space(oca_manual_bdof, s.model.ad, s.r);
+  auto oca_manual_bs   = test_utils::get_tensor_in_full_hilbert_space(oca_manual_bdof, s.model.ad, s.r);
   // compute using trapezoidal quadrature
   auto oca_tpz   = dense::manual::sigma_oca_tpz(hyb, s.itops, s.beta, s.Gt_dense, s.Fs_dense, n_quad);
-  auto oca_bs_eq = eval_eq(s.itops, oca_bs, n_quad);
+  auto oca_bs_eq = test_utils::eval_eq(s.itops, oca_bs, n_quad);
 
   // no analytical reference here because the expected result is zero
 
@@ -416,14 +420,14 @@ TEST(one_fermion, one_hyb_pole_se) {
   EXPECT_LE(nda::max_element(nda::abs(oca_dense - oca_pairs)), eps);
   EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_dense)), eps);
   EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_bs)), eps);
-  EXPECT_LE(max_offdiag(oca_dense), eps);
+  EXPECT_LE(test_utils::max_offdiag(oca_dense), eps);
   EXPECT_LE(nda::max_element(nda::abs(oca_bs_eq - oca_tpz)), tpz_tol);
 
   // ----- third order -----
   nda::array<int, 2> third_topology = {{0, 3}, {1, 4}, {2, 5}};
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto third_bs = nda::make_regular(topology_parity(third_topology)
-                                    * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, third_topology), s.model.ad));
+                                    * test_utils::get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, third_topology), s.model.ad));
   // compute using dense::DiagramEvaluator, and ensure sign is correct
   auto third_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, third_topology);
   auto third_dense    = nda::make_regular(topology_parity(third_topology) * third_dense_gf[0].data());
@@ -474,7 +478,7 @@ TEST(one_fermion, two_hyb_poles_se) {
   auto G0_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
   G0_ana(_, 0, 0) = tau_ref(s.dlr_it, [](double t) { return -exp(-t * std::numbers::ln2); }); // the atom has H = 0
   G0_ana(_, 1, 1) = G0_ana(_, 0, 0);                                                          // same in both sectors
-  EXPECT_LE(nda::max_element(nda::abs(get_tensor_in_full_hilbert_space(s.model.G_bdof, s.model.ad) - G0_ana)), eps);
+  EXPECT_LE(nda::max_element(nda::abs(test_utils::get_tensor_in_full_hilbert_space(s.model.G_bdof, s.model.ad) - G0_ana)), eps);
 
   // parameters for trapezoidal routines
   int n_quad     = 20;
@@ -486,7 +490,7 @@ TEST(one_fermion, two_hyb_poles_se) {
   nda::array<int, 2> nca_topology = {{0, 1}};
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto nca_bs = nda::make_regular(topology_parity(nca_topology)
-                                  * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, nca_topology), s.model.ad));
+                                  * test_utils::get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, nca_topology), s.model.ad));
   // compute using dense::DiagramEvaluator, and ensure sign is correct
   auto nca_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, nca_topology);
   auto nca_dense    = nda::make_regular(topology_parity(nca_topology) * nca_dense_gf[0].data());
@@ -497,7 +501,7 @@ TEST(one_fermion, two_hyb_poles_se) {
   auto nca_manual_dense = dense::manual::sigma_nca(s.D.hyb.values, s.D.hyb.values_reflect, s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine, convert to dense format
   auto nca_manual_bdof = block_sparse::manual::sigma_nca(s.D.hyb.values, s.D.hyb.values_reflect, s.model.G_bdof, s.Fq);
-  auto nca_manual_bs   = get_tensor_in_full_hilbert_space(nca_manual_bdof, s.model.ad, s.r);
+  auto nca_manual_bs   = test_utils::get_tensor_in_full_hilbert_space(nca_manual_bdof, s.model.ad, s.r);
 
   // compute analytical reference
   auto nca_ana     = nda::zeros<dcomplex>(s.r, 2, 2);
@@ -521,7 +525,7 @@ TEST(one_fermion, two_hyb_poles_se) {
   nda::array<int, 2> oca_topology = {{0, 2}, {1, 3}};
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto oca_bs = nda::make_regular(topology_parity(oca_topology)
-                                  * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, oca_topology), s.model.ad));
+                                  * test_utils::get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, oca_topology), s.model.ad));
   // compute using dense::DiagramEvaluator, and ensure sign is correct
   auto oca_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, oca_topology);
   auto oca_dense    = nda::make_regular(topology_parity(oca_topology) * oca_dense_gf[0].data());
@@ -533,10 +537,10 @@ TEST(one_fermion, two_hyb_poles_se) {
                                     s.Gt_dense, s.Fs_dense, s.F_dags_dense);
   // manual block-sparse routine, and convert to dense format
   auto oca_manual_bdof = block_sparse::manual::sigma_oca(s.D.hyb.values, s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
-  auto oca_manual_bs   = get_tensor_in_full_hilbert_space(oca_manual_bdof, s.model.ad, s.r);
+  auto oca_manual_bs   = test_utils::get_tensor_in_full_hilbert_space(oca_manual_bdof, s.model.ad, s.r);
   // compute using trapezoidal quadrature
   auto oca_tpz   = dense::manual::sigma_oca_tpz(hyb, s.itops, s.beta, s.Gt_dense, s.Fs_dense, n_quad);
-  auto oca_bs_eq = eval_eq(s.itops, oca_bs, n_quad);
+  auto oca_bs_eq = test_utils::eval_eq(s.itops, oca_bs, n_quad);
 
   // no analytical reference here because the expected result is zero
 
@@ -546,14 +550,14 @@ TEST(one_fermion, two_hyb_poles_se) {
   EXPECT_LE(nda::max_element(nda::abs(oca_dense - oca_pairs)), eps);
   EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_dense)), eps);
   EXPECT_LE(nda::max_element(nda::abs(oca_bs - oca_manual_bs)), eps);
-  EXPECT_LE(max_offdiag(oca_dense), eps);
+  EXPECT_LE(test_utils::max_offdiag(oca_dense), eps);
   EXPECT_LE(nda::max_element(nda::abs(oca_bs_eq - oca_tpz)), tpz_tol);
 
   // ----- third order -----
   nda::array<int, 2> third_topology = {{0, 3}, {1, 4}, {2, 5}};
   // compute using DiagramEvaluator, convert block-sparse result to dense format, and ensure sign is correct
   auto third_bs = nda::make_regular(topology_parity(third_topology)
-                                    * get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, third_topology), s.model.ad));
+                                    * test_utils::get_tensor_in_full_hilbert_space(s.D.compute_self_energy(s.model.G_ppsc, third_topology), s.model.ad));
   // compute using dense::DiagramEvaluator, and ensure sign is correct
   auto third_dense_gf = s.D_dense.compute_self_energy(s.G0_ppsc_dense, third_topology);
   auto third_dense    = nda::make_regular(topology_parity(third_topology) * third_dense_gf[0].data());
@@ -564,7 +568,7 @@ TEST(one_fermion, two_hyb_poles_se) {
   // compute using trapezoidal rule
   auto third_tpz = dense::manual::sigma_o3_tpz(hyb, s.itops, s.beta, s.Gt_dense, s.Fs_dense, n_quad);
   // evaluate block-sparse results on equispaced grid to compare against the output of the trapezoidal routine above
-  auto third_bs_eq = eval_eq(s.itops, third_bs, n_quad);
+  auto third_bs_eq = test_utils::eval_eq(s.itops, third_bs, n_quad);
 
   // analytical reference: computed from the closed form in one_fermion_two_poles_analytical_solutions.ipynb and cross-validated there against
   // brute-force nested quadrature of the undecomposed diagram integral
@@ -581,7 +585,7 @@ TEST(one_fermion, two_hyb_poles_se) {
   }
   EXPECT_LE(nda::max_element(nda::abs(third_bs - third_dense)), eps);
   EXPECT_LE(nda::max_element(nda::abs(third_dense - third_pairs)), eps);
-  EXPECT_LE(max_offdiag(third_dense), eps);
+  EXPECT_LE(test_utils::max_offdiag(third_dense), eps);
   // third_bs is exactly diagonal, so comparing whole tensors also bounds the quadrature result's off-diagonals
   EXPECT_LE(nda::max_element(nda::abs(third_bs_eq - third_tpz)), tpz_tol);
 }
@@ -645,7 +649,7 @@ TEST(one_fermion, const_hyb_spgf) {
   auto oca_manual_bs = block_sparse::manual::spgf_oca(s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
   // compute using trapezoidal quadrature
   auto oca_tpz   = dense::manual::spgf_oca_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
-  auto oca_bs_eq = eval_eq(s.itops, oca_bs, n_quad);
+  auto oca_bs_eq = test_utils::eval_eq(s.itops, oca_bs, n_quad);
 
   // no analytical reference here because the expected result is zero
 
@@ -666,7 +670,7 @@ TEST(one_fermion, const_hyb_spgf) {
   // no manual third-order routine
   // compute using trapezoidal quadrature
   auto third_tpz   = dense::manual::spgf_o3_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
-  auto third_bs_eq = eval_eq(s.itops, third_bs, n_quad);
+  auto third_bs_eq = test_utils::eval_eq(s.itops, third_bs, n_quad);
 
   // compute analytical reference
   auto third_ana     = nda::zeros<dcomplex>(s.r, 1, 1);
@@ -742,7 +746,7 @@ TEST(one_fermion, one_hyb_pole_spgf) {
   auto oca_manual_bs = block_sparse::manual::spgf_oca(s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
   // compute using trapezoidal quadrature
   auto oca_tpz   = dense::manual::spgf_oca_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
-  auto oca_bs_eq = eval_eq(s.itops, oca_bs, n_quad);
+  auto oca_bs_eq = test_utils::eval_eq(s.itops, oca_bs, n_quad);
 
   // no analytical reference here because the expected result is zero
 
@@ -762,7 +766,7 @@ TEST(one_fermion, one_hyb_pole_spgf) {
   // no manual third-order routine
   // compute using trapezoidal quadrature
   auto third_tpz   = dense::manual::spgf_o3_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
-  auto third_bs_eq = eval_eq(s.itops, third_bs, n_quad);
+  auto third_bs_eq = test_utils::eval_eq(s.itops, third_bs, n_quad);
 
   // compute analytical reference
   auto third_ana     = nda::zeros<dcomplex>(s.r, 1, 1);
@@ -841,7 +845,7 @@ TEST(one_fermion, two_hyb_poles_spgf) {
   auto oca_manual_bs = block_sparse::manual::spgf_oca(s.D.hyb.poles, s.itops, s.beta, s.model.G_bdof, s.Fq);
   // compute using trapezoidal quadrature
   auto oca_tpz   = dense::manual::spgf_oca_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
-  auto oca_bs_eq = eval_eq(s.itops, oca_bs, n_quad);
+  auto oca_bs_eq = test_utils::eval_eq(s.itops, oca_bs, n_quad);
 
   // no analytical reference here because the expected result is zero
 
@@ -861,7 +865,7 @@ TEST(one_fermion, two_hyb_poles_spgf) {
   // no manual third-order routine
   // compute using trapezoidal quadrature
   auto third_tpz   = dense::manual::spgf_o3_tpz(hyb_coeffs, hyb_refl_coeffs, s.itops, s.beta, Gt_coeffs, s.Fs_dense, n_quad);
-  auto third_bs_eq = eval_eq(s.itops, third_bs, n_quad);
+  auto third_bs_eq = test_utils::eval_eq(s.itops, third_bs, n_quad);
 
   // analytical reference: computed from the closed form in one_fermion_two_poles_analytical_solutions.ipynb and
   // cross-validated there against brute-force nested quadrature of the undecomposed diagram integral

@@ -1,8 +1,10 @@
 #include <triqs/operators/many_body_operator.hpp>
 
-#include "block_sparse_utils.hpp"
-#include "dense_utils.hpp"
+#include "test_utils/block_sparse.hpp"
+#include "test_utils/dense.hpp"
 #include <triqs_xca/dense/atom_diag.hpp>
+
+namespace triqs_xca::test_utils {
 
 using nda::dcomplex;
 using nda::linalg::matmul;
@@ -538,3 +540,5 @@ triqs::gfs::block_gf<triqs::mesh::dlr_imtime> ad_to_atom_prop(const triqs_atom_d
   for (int i = 0; i < ap.get_num_block_cols(); ++i) { gf_blocks[i] = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, ap.get_block(i)); }
   return {gf_blocks};
 }
+
+} // namespace triqs_xca::test_utils

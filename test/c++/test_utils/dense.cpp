@@ -1,7 +1,9 @@
 #include <optional>
 #include <stdexcept>
 
-#include "dense_utils.hpp"
+#include "test_utils/dense.hpp"
+
+namespace triqs_xca::test_utils {
 
 using cppdlr::_;
 
@@ -136,3 +138,5 @@ nda::array<dcomplex, 3> get_tensor_in_full_hilbert_space(triqs::gfs::block_gf<tr
 nda::array<dcomplex, 3> get_tensor_in_full_hilbert_space(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G, triqs_atom_diag const &ad) {
   return get_tensor_in_full_hilbert_space(triqs::gfs::block_gf_const_view<triqs::mesh::dlr_imtime>{G}, ad);
 }
+
+} // namespace triqs_xca::test_utils

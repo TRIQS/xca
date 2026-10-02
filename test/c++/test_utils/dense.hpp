@@ -7,6 +7,8 @@
 #include <triqs_xca/atom_diag.hpp>
 #include <triqs_xca/block_sparse/block_op.hpp>
 
+namespace triqs_xca::test_utils {
+
 using nda::dcomplex;
 
 using cppdlr::imtime_ops;
@@ -75,3 +77,5 @@ nda::array<dcomplex, 3> get_tensor_in_full_hilbert_space(triqs::gfs::block_gf_co
  */
 nda::array<dcomplex, 3> get_tensor_in_full_hilbert_space(triqs::gfs::block_gf<triqs::mesh::dlr_imtime> const &G, triqs_atom_diag const &ad);
 nda::array<dcomplex, 3> get_tensor_in_full_hilbert_space(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G, triqs_atom_diag const &ad);
+
+} // namespace triqs_xca::test_utils

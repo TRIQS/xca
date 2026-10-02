@@ -8,7 +8,9 @@
 
 #include <triqs_xca/atom_diag.hpp>
 #include <triqs_xca/dense/atom_diag.hpp>
-#include "dense_utils.hpp"
+#include "test_utils/dense.hpp"
+
+namespace triqs_xca::test_utils {
 
 /**
  * @file parallel_atom_diag_check.hpp
@@ -41,3 +43,5 @@ inline void assert_parallel_atom_diags(triqs::atom_diag::atom_diag<true> const &
   EXPECT_LE(nda::max_element(nda::abs(Fdags_bs - Fdags_flat)), tol) << "the two atom_diags give different c^dag operators in the Fock basis";
   ASSERT_GT(nda::max_element(nda::abs(Fs_bs)), 0.5) << "non-vacuity: the comparison above must not be between two zero tensors";
 }
+
+} // namespace triqs_xca::test_utils

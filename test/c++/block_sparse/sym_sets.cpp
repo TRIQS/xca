@@ -8,7 +8,7 @@
 #include <triqs_xca/block_sparse/block_op.hpp>
 #include <triqs_xca/dense/fset.hpp>
 
-#include "block_sparse_utils.hpp"
+#include "test_utils/block_sparse.hpp"
 
 using nda::dcomplex;
 
@@ -16,6 +16,8 @@ using triqs::operators::c;
 using triqs::operators::c_dag;
 using triqs::operators::many_body_operator_complex;
 using triqs::operators::n;
+using triqs_xca::block_sparse::BlockOpSymQuartet;
+namespace test_utils = triqs_xca::test_utils;
 
 namespace block_sparse = triqs_xca::block_sparse;
 
@@ -23,7 +25,7 @@ namespace dense = triqs_xca::dense;
 
 
 /**
- * @file test_block_sparse_sym_sets.cpp
+ * @file block_sparse/sym_sets.cpp
  *
  * @brief Tests of the barred-operator construction in the BlockOpSymQuartet constructor
  *
@@ -40,7 +42,7 @@ namespace dense = triqs_xca::dense;
  */
 TEST(BlockSparseSymSets, model_has_unequal_symmetry_sets) {
 
-  auto ad = unequal_sym_set_model();
+  auto ad = test_utils::unequal_sym_set_model();
   int p   = 2;
 
   auto zero_coeffs  = nda::zeros<dcomplex>(p, 3, 3);
@@ -57,7 +59,7 @@ TEST(BlockSparseSymSets, model_has_unequal_symmetry_sets) {
  */
 TEST(BlockSparseSymSets, bars_reject_symmetry_set_coupling) {
 
-  auto ad = unequal_sym_set_model();
+  auto ad = test_utils::unequal_sym_set_model();
   int p   = 2;
 
   auto labels = std::get<1>(block_sparse::atom_diag::get_operators(ad, nda::zeros<dcomplex>(p, 3, 3)));
@@ -75,7 +77,7 @@ TEST(BlockSparseSymSets, bars_reject_symmetry_set_coupling) {
   }
   ASSERT_GE(i_cross, 0);
 
-  auto hyb_coeffs = sym_set_diagonal_hyb(labels, p);
+  auto hyb_coeffs = test_utils::sym_set_diagonal_hyb(labels, p);
 
   // couple the two symmetry sets
   hyb_coeffs(0, i_cross, j_cross) = 0.42;
@@ -105,12 +107,12 @@ TEST(BlockSparseSymSets, bars_bracket_symmetry_set_coupling_tolerance) {
   static_assert(sym_set_coupling_tol > 0.0 && sym_set_coupling_tol <= 1.0e-10,
                 "the guard is only meaningful at a round-off-scale relative tolerance");
 
-  auto ad = unequal_sym_set_model();
+  auto ad = test_utils::unequal_sym_set_model();
   int p   = 2;
 
   auto labels = std::get<1>(block_sparse::atom_diag::get_operators(ad, nda::zeros<dcomplex>(p, 3, 3)));
   // scaled away from 1 to distinguish a relative threshold from an absolute one
-  auto hyb_coeffs = nda::make_regular(1.0e6 * sym_set_diagonal_hyb(labels, p));
+  auto hyb_coeffs = nda::make_regular(1.0e6 * test_utils::sym_set_diagonal_hyb(labels, p));
   int norb        = static_cast<int>(labels.size());
 
   // check that the fixture has cross-set entries and that they are exactly zero
@@ -164,11 +166,11 @@ TEST(BlockSparseSymSets, bars_bracket_symmetry_set_coupling_tolerance) {
  */
 TEST(BlockSparseSymSets, bars_match_dense_for_unequal_sym_sets) {
 
-  auto ad = unequal_sym_set_model();
+  auto ad = test_utils::unequal_sym_set_model();
   int p   = 2;
 
   auto labels     = std::get<1>(block_sparse::atom_diag::get_operators(ad, nda::zeros<dcomplex>(p, 3, 3)));
-  auto hyb_coeffs = sym_set_diagonal_hyb(labels, p);
+  auto hyb_coeffs = test_utils::sym_set_diagonal_hyb(labels, p);
 
   auto [Fq, labels2] = block_sparse::atom_diag::get_operators(ad, hyb_coeffs);
   auto Fset          = dense::atom_diag::get_operators(ad, hyb_coeffs); // dense reference, no symmetry sets involved
