@@ -44,7 +44,7 @@ def test_h5():
 
     S.solve(max_order=1, tol=1e-9, maxiter=1)
         
-    filename = 'data_h5_io_bs.h5'
+    filename = 'data_h5_io.h5'
     
     with HDFArchive(filename, 'w') as A: A['S'] = S
     with HDFArchive(filename, 'r') as A: S_ref = A['S']

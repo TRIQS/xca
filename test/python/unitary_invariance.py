@@ -2,7 +2,7 @@
 
 The PPSC equations are invariant under a unitary transform of the single-particle basis: solving the same
 problem in two bases and rotating one result back must give the same Green's function, exactly and without
-an ED reference. unitary_invariance.py asserts this for the legacy Solver path, this file for the two
+an ED reference. triqs_soehyb/unitary_invariance.py asserts this for the legacy Solver path, this file for the two
 evaluators the dynamical-interaction port uses, on the same fixture.
 
 The discriminant is the rotation, not the hybridization. The backward branch of the zero-vertex line
