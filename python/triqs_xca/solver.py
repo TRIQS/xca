@@ -372,6 +372,7 @@ class Solver(object):
 
         * ``'classic'``: Classical normalization (Default)
         * ``'root'``: Root normalization
+        * ``'bisect'``: Bracketed search on :math:`\\ln|Z|` followed by Root normalization
         * ``'ode+classic'``: ODE with classic normalization
         * ``'ode+root'``: ODE with root normalization
         * ``'odeG+classic'``: ODE on G with classic normalization
@@ -407,6 +408,10 @@ class Solver(object):
 
             elif normalization == 'root':
                 self.solve_ppsc_chempot_newton(xtol=10*self.eps)
+                G_new = self.solve_dyson(self.Sigma, self.eta)
+
+            elif normalization == 'bisect':
+                self.solve_ppsc_chempot_bisection(xtol=10*self.eps, verbose=verbose)
                 G_new = self.solve_dyson(self.Sigma, self.eta)
 
             elif normalization == 'ode+root':
@@ -1169,104 +1174,114 @@ class Solver(object):
     
 
     @timer('Bisection normalization')
-    def solve_ppsc_chempot_bisection(self, **kwargs):
+    def solve_ppsc_chempot_bisection(self, xtol=None, bracket_width=0.1, max_expansions=12, bisect_width=2.0, verbose=None):
+        r""" Pseudo-particle chemical potential :math:`\eta` from a bracketed search on :math:`\ln|Z(\eta)|`,
+        polished with the Newton solver of ``solve_ppsc_chempot_newton``.
 
-        if is_root(): print(f'PPSC: Starting bisection solver for eta with kwargs = {kwargs}')
-        
-        def func(eta):
-            Sigma = self.pseudo_particle_self_energy()
-            G = self.solve_dyson(Sigma, eta)
+        The partition function of the Dyson solution at a trial :math:`\eta` is exactly
+        :math:`Z(\eta) = e^{-\beta (\eta - \eta^*)}`, but the DLR Dyson solve reproduces it only close to the root
+        :math:`\eta^*`: further away the propagators span more orders of magnitude than the DLR accuracy resolves,
+        and the computed :math:`Z` saturates with an unreliable sign below :math:`\eta^*` and flattens to a value
+        below one above it. Its magnitude still tells the side, :math:`|Z| > 1` below the root and :math:`|Z| < 1`
+        above it, so the root is bracketed by the sign of :math:`\ln|Z|`: starting from the current ``eta`` the
+        bracket is expanded geometrically in the direction given by that sign until it changes, bisected until
+        :math:`\ln Z` changes by no more than ``bisect_width`` across it, and the midpoint is handed to the Newton
+        solver. If the Newton solver does not converge, the bracket is bisected down to ``xtol`` instead.
 
-            # Try to detect extreme limits by oscillations in Ga
+        Parameters
+        ----------
+        xtol : float, optional
+            Tolerance on :math:`\eta` of the Halley polish and of the bisection fallback. Default ``10 * eps``.
+        bracket_width : float, optional
+            Initial width of the bracket, doubled at each expansion. Default 0.1.
+        max_expansions : int, optional
+            Maximum number of bracket doublings. Default 12.
+        bisect_width : float, optional
+            Change of :math:`\ln Z` across the final bracket, i.e. the bracket is bisected to a width
+            ``bisect_width / beta``. Default 2.
+        verbose : bool, optional
+            Report the bracketing. Default ``self.verbose``.
 
-            def num_sign_changes_blockgf(G):
-                max_num_changes = 0
-                for bidx, g in G:
-                    g_diag = np.diagonal(g.data.real, axis1=1, axis2=2)
-                    num_changes = np.sum(np.abs(np.diff(np.sign(g_diag), axis=0)))
-                    max_num_changes = max(max_num_changes, num_changes)
-                return max_num_changes
+        Returns
+        -------
+        scipy.optimize.RootResults
+            Result of the Halley polish (or of the bisection fallback), with the extra attribute ``n_dyson``,
+            the number of Dyson solves spent on bracketing and bisection.
+        """
 
-            def max_blockgf(G):
-                max_val = float('-inf')
-                for bidx, g in G:
-                    max_val = max(max_val, np.max(g.data.real))
-                return max_val
+        if xtol is None: xtol = 10 * self.eps
+        if verbose is None: verbose = self.verbose
 
-            def min_blockgf(G):
-                min_val = float('inf')
-                for bidx, g in G:
-                    min_val = min(min_val, np.min(g.data.real))
-                return min_val
+        Sigma = self.pseudo_particle_self_energy()
+        n_dyson = [0]
 
-            def max_tau0_blockgf(G):
-                max_val = float('-inf')
-                for bidx, g in G:
-                    max_val = max(max_val, np.max(np.diag(g.data[0].real)))
-                return max_val
+        def report(msg):
+            if verbose and is_root(): print(f'PPSC bisect: {msg}')
 
-            def min_tau0_blockgf(G):
-                min_val = float('inf')
-                for bidx, g in G:
-                    min_val = min(min_val, np.min(np.diag(g.data[0].real)))
-                return min_val
+        def lnZ(eta):
+            """ ln|Z(eta)| of the Dyson solution. Overflow counts as far below the root, underflow as far above. """
+            n_dyson[0] += 1
+            Z = -trace(self.solve_dyson(Sigma, eta)).real
+            if np.isnan(Z) or np.isinf(Z): return np.inf
+            if Z == 0.: return -np.inf
+            return np.log(np.abs(Z))
 
-            Z = -trace(G)
-            val = Z.real - 1
+        def bisect(lo, hi, f_lo, f_hi, tol):
+            """ Bisection on the sign of lnZ until hi - lo <= tol. """
+            while hi - lo > tol:
+                mid = 0.5 * (lo + hi)
+                fm = lnZ(mid)
+                if fm > 0.: lo, f_lo = mid, fm
+                else:       hi, f_hi = mid, fm
+            return lo, hi, f_lo, f_hi
 
-            # Are we in a trouble some regime?
-            #if np.abs(val) > 1e2 or np.abs(val) < 1e-2:
-            if max_blockgf(G) > 1. or min_blockgf(G) < -1.:
-                print(f'Warning: max(G) = {max_blockgf(G)}, min(G) = {min_blockgf(G)}')
-                print(f'Warning: max(G(tau0)) = {max_tau0_blockgf(G)}, min(G(tau0)) = {min_tau0_blockgf(G)}')
-                print(f'Warning: num_sign_changes = {num_sign_changes_blockgf(G)}')
+        # bracket: lnZ > 0 means eta below the root, expand upwards; lnZ <= 0 above, expand downwards
+        eta0 = self.eta
+        f0 = lnZ(eta0)
+        w = bracket_width
+        if f0 > 0.:
+            lo, f_lo = eta0, f0
+            hi = lo + w
+            f_hi = lnZ(hi)
+            for _ in range(max_expansions):
+                if f_hi <= 0.: break
+                lo, f_lo, w = hi, f_hi, 2 * w
+                hi = lo + w
+                f_hi = lnZ(hi)
+            else:
+                raise RuntimeError(f'solve_ppsc_chempot_bisection: no sign change of ln|Z| up to eta = {hi}')
+        else:
+            hi, f_hi = eta0, f0
+            lo = hi - w
+            f_lo = lnZ(lo)
+            for _ in range(max_expansions):
+                if f_lo > 0.: break
+                hi, f_hi, w = lo, f_lo, 2 * w
+                lo = hi - w
+                f_lo = lnZ(lo)
+            else:
+                raise RuntimeError(f'solve_ppsc_chempot_bisection: no sign change of ln|Z| down to eta = {lo}')
+        report(f'bracket [{lo:.6f}, {hi:.6f}], ln|Z| = [{f_lo:+.2f}, {f_hi:+.2f}], {n_dyson[0]} Dyson solves')
 
-                #if max_tau0_blockgf(G) > -1. and min_tau0_blockgf(G) > -1.:
-                #    val = +1.
-                
-                #if max_tau0_blockgf(G) < -1. and min_tau0_blockgf(G) < -1.:
-                #    val = -1.
+        lo, hi, f_lo, f_hi = bisect(lo, hi, f_lo, f_hi, bisect_width / self.beta)
+        self.eta = 0.5 * (lo + hi)
+        report(f'bisected to [{lo:.6f}, {hi:.6f}], ln|Z| = [{f_lo:+.2f}, {f_hi:+.2f}], {n_dyson[0]} Dyson solves, '
+               f'polishing from eta = {self.eta:.6f}')
 
-                if max_blockgf(G) > 1.:
-                    val = -1.
-                
-                if max_blockgf(G) < 1.:
-                    val = +1.
+        sol = self.solve_ppsc_chempot_newton(xtol=xtol)
 
-            print(f'func: eta = {eta}, Z = {Z}, max(G) = {max_blockgf(G)}, min(G) = {min_blockgf(G)}, val = {val}')
+        if not sol.converged or not (lo - xtol <= sol.root <= hi + xtol):
+            report(f'Halley polish failed (converged = {sol.converged}, eta = {sol.root:.6f}), bisecting down to xtol = {xtol:.1e}')
+            lo, hi, f_lo, f_hi = bisect(lo, hi, f_lo, f_hi, xtol)
+            self.eta = 0.5 * (lo + hi)
+            sol.root, sol.converged, sol.flag = self.eta, True, 'bisection'
 
-            from triqs.plot.mpl_interface import oplot, plt, oplotr, oploti
-            oplot(G)
-            plt.show()
-
-
-            return val
-        
-        print(f'Pole energies = {np.max(np.abs(self.hyb.poles))}, max AD energy = {np.max(np.abs(self.atom_diag.energies))}')
-
-        #E_max = 0.5 * np.max([np.max(self.hyb.poles), np.max(self.atom_diag.energies)])
-        E_max = np.max(np.abs(self.atom_diag.energies)) * 10
-        #E_min = np.min([np.min(self.hyb.poles), np.min(self.atom_diag.energies)])
-        E_min = 0.
-
-        print(f'E_max = {E_max}, E_min = {E_min}')
-
-        from scipy.optimize import root_scalar
-
-        sol = root_scalar(
-            func, bracket=(E_min, E_max),
-            method='bisect',
-            **kwargs,
-            )
-        
-        self.eta = sol.root
-
-        G = self.solve_dyson(self.Sigma, self.eta)
+        G = self.solve_dyson(Sigma, self.eta)
         Z = self.partition_function_from_ppgf(G)
+        sol.n_dyson = n_dyson[0]
+        report(f'done, eta = {self.eta:+.6f}, Z-1 = {Z-1:+2.2E}, {n_dyson[0]} Dyson solves for bracketing + {sol.function_calls} Halley evaluations')
 
-        if is_root(): print(f'PPSC: Bisection solver done, eta = {self.eta:+2.2E} Z-1 = {Z-1:+2.2E}')
-
-        return sol    
+        return sol
 
 
     def __eq__(self, obj):
