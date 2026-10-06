@@ -159,7 +159,7 @@ class Solver(object):
     # C++ solvers (cthyb: CTHYB_SolverCore, ctint: CTINT_SolverCore). Without it
     # the tag would default to the class name "Solver", which is not unique
     # across the TRIQS ecosystem.
-    _hdf5_format_ = "XCA_Solver"
+    _hdf5_format_ = "SOEHYB_Solver"
 
     def __init__(self, beta, lamb, eps,
                  H_loc, fundamental_operators,

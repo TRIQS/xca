@@ -34,6 +34,12 @@ def scatter_array_over_ranks(arr):
 
 class Solver(object):
 
+    # Application-prefixed hdf5 format tag, following the convention used by the
+    # C++ solvers (cthyb: CTHYB_SolverCore, ctint: CTINT_SolverCore). Without it
+    # the tag would default to the class name "Solver", which is not unique
+    # across the TRIQS ecosystem.
+    _hdf5_format_ = "XCA_Solver"
+
     """ Solver class for triqs_xca using the block sparse algorithm. 
     
     Parameters
