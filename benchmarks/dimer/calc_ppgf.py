@@ -330,15 +330,14 @@ def eval_pseudo_particle_self_energy_order(S, G, order, connected=True):
         
         topology_int32 = np.array(topology, dtype=np.int32)
         t1 = time.time()
-        Sigma_diag = pow(-1, order) * sign * \
-            S._Solver__eval_pseudo_particle_self_energy_topology_loop(G, topology_int32, verbose=True)
+        Sigma_diag = -S._Solver__eval_pseudo_particle_self_energy_topology_loop(G, topology_int32, verbose=True)
         abs_max = np.max(np.abs(Sigma_diag['0'].data))
         print(f'SIGMA: O{order} topo {topology} sign {sign:+d} absmax {abs_max:2.2E} time {time.time() - t1} s')
 
         if abs_max > 0:
             assert( non_zero )
-            sign = np.sign(Sigma_diag['0'].data[-1, 0, 0].real)
-            C_N -= sign
+            # the sign relative to the normalisation G0 Delta^N of the C_N plot below
+            C_N += np.sign((Sigma_diag['0'].data[-1, 0, 0] / (G['0'].data[-1, 0, 0] * (-t**2 / 2)**order)).real)
             Sigma += Sigma_diag
         else:
             assert( not non_zero )
