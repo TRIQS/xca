@@ -106,7 +106,7 @@ namespace triqs_xca::hyb {
     auto dlr_it = itops.get_itnodes();
     int p       = static_cast<int>(poles.size());
     auto kmat   = cppdlr::build_k_it(dlr_it, nda::make_regular(beta * poles));
-    auto cf_r   = nda::reshape(coefs, p, coefs.size() / p);
+    auto cf_r   = nda::reshape(nda::make_regular(coefs), p, coefs.size() / p); // reshape needs C-ordered memory, coefs may have any strides
     nda::array<dcomplex, 3> vals(r, n1, n2);
     reshape(vals, r, n1 * n2) = matmul(kmat, cf_r);
     return vals;
