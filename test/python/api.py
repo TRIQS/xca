@@ -354,8 +354,8 @@ def test_topologies_dimer_order_three(verbose=False):
 
 def test_order_and_total_sums(verbose=False):
     """ The solver level sums equal the sums over topologies: the self-energy of one order is minus the
-    sum of the topologies of that order, and the single-particle Green's function has the extra
-    factor (-1)^order. """
+    sum of the topologies of that order, also when the dense solver evaluates it by pairs, and the
+    single-particle Green's function has the extra factor (-1)^order. """
 
     model = make_model('dimer')
     max_order = 3
@@ -367,10 +367,16 @@ def test_order_and_total_sums(verbose=False):
 
         Sigma_sum, spgf_sum = 0., 0.
         for order in range(1, max_order + 1):
+            Sigma_order = 0.
             for _, topology in all_connected_pairings(order):
                 topo = np.array(topology, dtype=np.int32)
-                Sigma_sum = Sigma_sum - to_fock(S.eval_pseudo_particle_self_energy_topology(G, topo), S.atom_diag).data
+                Sigma_order = Sigma_order - to_fock(S.eval_pseudo_particle_self_energy_topology(G, topo), S.atom_diag).data
                 spgf_sum = spgf_sum + (-1)**order * S.eval_single_particle_greens_function_topology(G, topo).data
+            Sigma_sum = Sigma_sum + Sigma_order
+
+            if S.use_dense_solver:
+                Sigma_pairs = to_fock(S.eval_pseudo_particle_self_energy_order_by_pairs(G, order), S.atom_diag).data
+                assert_close(Sigma_pairs, Sigma_order, rtol_evaluators, f'order {order} self-energy by pairs ({tag})')
 
         Sigma = to_fock(S.eval_pseudo_particle_self_energy(G, max_order), S.atom_diag).data
         spgf = S.eval_single_particle_greens_function(G, max_order).data

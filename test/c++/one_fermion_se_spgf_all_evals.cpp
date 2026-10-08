@@ -54,7 +54,7 @@ namespace test_utils = triqs_xca::test_utils;
  *
  * - the `compute_self_energy/single_particle_gf` routine of dense::DiagramEvaluator
  * - the `compute_self_energy_by_pairs` routine of dense::DiagramEvaluator, which has no single-particle Green's function analogue
- *   - This routine is a time optimization of the first compute_self_energy routine above and is the one actually used in Python wrappers
+ *   - This routine is a time optimization of the first compute_self_energy routine above and is not used by the Python solver
  * - the `compute_self_energy/single_particle_gf` routine of the DiagramEvaluator, which takes advantage of block-sparsity
  * - `N/OCA_(gf_)dense`, a routine that can only evaluate N/OCA with dense matmuls
  * - `N/OCA_(gf_)bs`, a routine that can only evaluate N/OCA taking advantage of block-sparsity
