@@ -76,8 +76,8 @@ namespace {
       kap_ops(i, range::all, range::all) = U * ad.get_op_mat(op).block_mat[0] * nda::conj(nda::transpose(U));
 
     nda::array<dcomplex, 3> corr = nda::zeros<dcomplex>(D.r, mu_ops.extent(0), kap_ops.extent(0));
-    int nb                       = D.get_num_single_ptcle_gf_backbones(topology);
-    for (int f_ix = 0; f_ix < nb; ++f_ix) corr += D.eval_correlator(G[0].data(), backbone, mu_ops, kap_ops, f_ix, is_fermionic);
+    long nb                      = D.get_num_single_ptcle_gf_backbones(topology);
+    for (long f_ix = 0; f_ix < nb; ++f_ix) corr += D.eval_correlator(G[0].data(), backbone, mu_ops, kap_ops, f_ix, is_fermionic);
     return corr;
   }
 
@@ -122,8 +122,8 @@ TEST(DenseCorrelatorStatistics, spin_flip_operators_are_classified_bosonic) {
      << "vacuous test: the two statistics give the same correlator on this topology, so nothing here "
         "constrains the classification";
 
-  nda::vector<int> f_ix_vec(h.D.get_num_single_ptcle_gf_backbones(topology));
-  for (int i = 0; i < f_ix_vec.size(); ++i) f_ix_vec(i) = i;
+  nda::vector<long> f_ix_vec(h.D.get_num_single_ptcle_gf_backbones(topology));
+  for (long i = 0; i < f_ix_vec.size(); ++i) f_ix_vec(i) = i;
   auto chosen = h.D.compute_one_time_correlator(h.G, ops_tau, ops_0, h.ad, topology, f_ix_vec);
 
   EXPECT_LE(maxabs(nda::make_regular(chosen - as_boson)), 1.0e-13 * std::max(1.0, maxabs(as_boson)))
@@ -139,8 +139,8 @@ TEST(DenseCorrelatorStatistics, densities_stay_bosonic_and_single_fermions_stay_
   auto h                      = make_harness(two_orbital_model());
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
 
-  nda::vector<int> f_ix_vec(h.D.get_num_single_ptcle_gf_backbones(topology));
-  for (int i = 0; i < f_ix_vec.size(); ++i) f_ix_vec(i) = i;
+  nda::vector<long> f_ix_vec(h.D.get_num_single_ptcle_gf_backbones(topology));
+  for (long i = 0; i < f_ix_vec.size(); ++i) f_ix_vec(i) = i;
 
   {
     SCOPED_TRACE("density-density, must be bosonic");
@@ -166,8 +166,8 @@ TEST(DenseCorrelatorStatistics, densities_stay_bosonic_and_single_fermions_stay_
 TEST(DenseCorrelatorStatistics, mixed_parity_operators_are_rejected) {
   auto h                      = make_harness(two_orbital_model());
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
-  nda::vector<int> f_ix_vec(h.D.get_num_single_ptcle_gf_backbones(topology));
-  for (int i = 0; i < f_ix_vec.size(); ++i) f_ix_vec(i) = i;
+  nda::vector<long> f_ix_vec(h.D.get_num_single_ptcle_gf_backbones(topology));
+  for (long i = 0; i < f_ix_vec.size(); ++i) f_ix_vec(i) = i;
 
   std::vector<many_body_operator_real> mixed{c<double>("up", 0) + n<double>("up", 0)};
   std::vector<many_body_operator_real> plain{c<double>("up", 0)};

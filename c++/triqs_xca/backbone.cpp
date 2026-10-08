@@ -9,6 +9,19 @@ namespace triqs_xca::backbone {
 
   using nda::range;
 
+  namespace {
+
+    // base^exp, throwing instead of overflowing a long
+    long checked_pow(long base, long exp) {
+      long result = 1;
+      for (long i = 0; i < exp; ++i)
+        if (__builtin_mul_overflow(result, base, &result))
+          throw std::overflow_error("Backbone: " + std::to_string(base) + "^" + std::to_string(exp) + " does not fit in a long");
+      return result;
+    }
+
+  } // namespace
+
   BackboneVertex::BackboneVertex() : bar(false), dag(false), hyb_ind(0), Ksign(0), orb(0) { ; }
 
   bool BackboneVertex::has_bar() { return bar; }
@@ -28,8 +41,8 @@ namespace triqs_xca::backbone {
        n(n),
        n_hyb(n - n_int), // number of hybridization operators is total number of operators minus number of interaction operators
        n_int(n_int),
-       fb_ix_max(static_cast<int>(pow(2, m))),
-       o_ix_max(static_cast<int>(pow(n, m - 1))),
+       fb_ix_max(checked_pow(2, m)),
+       o_ix_max(checked_pow(n, m - 1)),
        prefactor_sign(1),
        vertices(std::vector<BackboneVertex>(2 * m)),
        prefactor_Ksigns(nda::vector<int>(m - 1, 0)),
@@ -91,7 +104,7 @@ namespace triqs_xca::backbone {
     }
   }
 
-  void Backbone::set_directions(int fb_ix) {
+  void Backbone::set_directions(long fb_ix) {
 
     auto fb_vec = nda::vector<int>(m);
     for (int i = 0; i < m; i++) {
@@ -164,9 +177,9 @@ namespace triqs_xca::backbone {
     }
   }
 
-  void Backbone::set_pole_inds(int p_ix, nda::vector_const_view<double> hyb_poles) {
+  void Backbone::set_pole_inds(long p_ix, nda::vector_const_view<double> hyb_poles) {
 
-    int p              = hyb_poles.size();
+    long p             = hyb_poles.size();
     auto pole_inds_vec = nda::vector<int>(m - 1);
     for (int i = 0; i < m - 1; i++) {
       pole_inds_vec(i) = p_ix % p;
@@ -197,7 +210,7 @@ namespace triqs_xca::backbone {
     }
   }
 
-  void Backbone::set_orb_inds(int o_ix) {
+  void Backbone::set_orb_inds(long o_ix) {
     // set orbital indices from a single integer index
     auto orb_inds_vec            = nda::vector<int>(2 * m);
     orb_inds_vec(0)              = -1;
@@ -262,23 +275,32 @@ namespace triqs_xca::backbone {
     return fermionic_parity;
   }
 
-  void Backbone::set_flat_index(int flat_ix, nda::vector_const_view<double> hyb_poles) {
+  long Backbone::num_flat_indices(long p) const {
+    long n_flat   = 0;
+    bool overflow = __builtin_mul_overflow(fb_ix_max, o_ix_max, &n_flat);
+    for (int i = 0; i < m - 1 && !overflow; ++i) overflow = __builtin_mul_overflow(n_flat, p, &n_flat);
+    if (overflow)
+      throw std::overflow_error("Backbone: the number of backbones of order " + std::to_string(m) + " with " + std::to_string(n) + " flavours and "
+                                + std::to_string(p) + " poles does not fit in a long");
+    return n_flat;
+  }
+
+  void Backbone::set_flat_index(long flat_ix, nda::vector_const_view<double> hyb_poles) {
     // set directions, pole indices, and orbital indices from a single integer index.
     // In terms of fb_ix, p_ix, and o_ix,
     // f_ix = o_ix + n^(m-1) * p_ix + (n * r)^(m-1) * fb_ix, where r is the number of hybridization indices.
 
-    int p        = hyb_poles.size();
-    int p_ix_max = static_cast<int>(pow(p, m - 1));
-    long n_flat  = static_cast<long>(fb_ix_max) * p_ix_max * o_ix_max;
+    long n_flat = num_flat_indices(hyb_poles.size());
     if (flat_ix < 0 || flat_ix >= n_flat)
       throw std::invalid_argument("set_flat_index: flat index " + std::to_string(flat_ix) + " is out of range [0, " + std::to_string(n_flat) + ")");
 
-    this->f_ix = flat_ix;
-    int rem    = flat_ix;
-    int o_ix   = rem % o_ix_max; // orbital indices
+    this->f_ix    = flat_ix;
+    long p_ix_max = n_flat / (fb_ix_max * o_ix_max);
+    long rem      = flat_ix;
+    long o_ix     = rem % o_ix_max; // orbital indices
     rem /= o_ix_max;
-    int p_ix  = rem % p_ix_max; // pole indices
-    int fb_ix = rem / p_ix_max; // directions
+    long p_ix  = rem % p_ix_max; // pole indices
+    long fb_ix = rem / p_ix_max; // directions
 
     set_directions(fb_ix);
     set_pole_inds(p_ix, hyb_poles);
@@ -312,13 +334,13 @@ namespace triqs_xca::backbone {
   int Backbone::get_pole_ind(int i) { return pole_inds(i); }
   int Backbone::get_fb(int i) { return fb(i); }
   int Backbone::get_orb_ind(int i) { return orb_inds(i); }
-  int Backbone::get_flat_index() { return f_ix; }
+  long Backbone::get_flat_index() { return f_ix; }
 
   CorrelatorBackbone::CorrelatorBackbone(nda::array<int, 2> topology, int n, int n_int) : Backbone(topology, n, n_int) {
-    fb_ix_max = static_cast<int>(pow(2, m - 1));
+    fb_ix_max = checked_pow(2, m - 1);
   }
 
-  void CorrelatorBackbone::set_directions(int fb_ix) {
+  void CorrelatorBackbone::set_directions(long fb_ix) {
 
     auto fb_vec = nda::vector<int>(m - 1);
     for (int i = 0; i < m - 1; i++) {
@@ -351,29 +373,6 @@ namespace triqs_xca::backbone {
         vertices[topology(i, 1)].set_dag(false); // annihilation operator on vertex i
       }
     }
-  }
-
-  void CorrelatorBackbone::set_flat_index(int flat_ix, nda::vector_const_view<double> hyb_poles) {
-    // set directions, pole indices, and orbital indices from a single integer index.
-    // In terms of fb_ix, p_ix, and o_ix,
-    // f_ix = o_ix + n^(m-1) * p_ix + (n * r)^(m-1) * fb_ix, where r is the number of hybridization indices.
-
-    int p        = hyb_poles.size();
-    int p_ix_max = static_cast<int>(pow(p, m - 1));
-    long n_flat  = static_cast<long>(fb_ix_max) * p_ix_max * o_ix_max;
-    if (flat_ix < 0 || flat_ix >= n_flat)
-      throw std::invalid_argument("set_flat_index: flat index " + std::to_string(flat_ix) + " is out of range [0, " + std::to_string(n_flat) + ")");
-
-    this->f_ix = flat_ix;
-    int rem    = flat_ix;
-    int o_ix   = rem % o_ix_max; // orbital indices
-    rem /= o_ix_max;
-    int p_ix  = rem % p_ix_max; // pole indices
-    int fb_ix = rem / p_ix_max; // directions
-
-    set_directions(fb_ix);
-    set_pole_inds(p_ix, hyb_poles);
-    set_orb_inds(o_ix);
   }
 
   std::ostream &operator<<(std::ostream &os, Backbone &B) {

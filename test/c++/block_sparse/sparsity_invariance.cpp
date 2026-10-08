@@ -347,18 +347,18 @@ TEST(SparsityInvariance, spgf_is_indexed_by_orbital) {
   EXPECT_LE(nda::max_element(nda::abs(spgf - ref_bs)), 1.0e-13 * scale)
      << "compute_single_ptcle_gf disagrees with eval_correlator fed make_correlator_ops";
 
-  int n_backbones = D.get_num_single_ptcle_gf_backbones(topology);
+  long n_backbones = D.get_num_single_ptcle_gf_backbones(topology);
   ASSERT_GT(n_backbones, 0);
 
   auto spgf_single = nda::make_regular(0 * ref_dense);
-  for (int f_ix = 0; f_ix < n_backbones; ++f_ix) spgf_single += D.compute_single_ptcle_gf(Gt, topology, f_ix);
+  for (long f_ix = 0; f_ix < n_backbones; ++f_ix) spgf_single += D.compute_single_ptcle_gf(Gt, topology, f_ix);
   EXPECT_LE(nda::max_element(nda::abs(spgf_single - ref_dense)), 1.0e-13 * scale)
      << "compute_single_ptcle_gf(Gt, topology, f_ix) disagrees with the dense evaluator";
 
   // the f_ix_vec overload is the one driven by the solver and takes a block_gf, so the propagator is rebuilt in that form
   auto G_ppsc = test_utils::ad_to_atom_prop(ad, beta, Lambda, eps);
-  nda::vector<int> f_ix_vec(n_backbones);
-  for (int f_ix = 0; f_ix < n_backbones; ++f_ix) f_ix_vec(f_ix) = f_ix;
+  nda::vector<long> f_ix_vec(n_backbones);
+  for (long f_ix = 0; f_ix < n_backbones; ++f_ix) f_ix_vec(f_ix) = f_ix;
   auto spgf_vec = D.compute_single_ptcle_gf(G_ppsc, topology, f_ix_vec);
   EXPECT_LE(nda::max_element(nda::abs(spgf_vec - ref_dense)), 1.0e-13 * scale)
      << "compute_single_ptcle_gf(G_ppsc, topology, f_ix_vec) disagrees with the dense evaluator";

@@ -316,7 +316,7 @@ void DiagramEvaluator::multiply_left_vertex_and_right_zero_vertex(nda::array_vie
   }
 }
 
-void DiagramEvaluator::find_path_self_energy(BlockDiagOpFun &Gt, Backbone &backbone, int f_ix, nda::vector_view<int> ind_path, nda::vector_view<int> block_dims) {
+void DiagramEvaluator::find_path_self_energy(BlockDiagOpFun &Gt, Backbone &backbone, long f_ix, nda::vector_view<int> ind_path, nda::vector_view<int> block_dims) {
 
   int m = backbone.m; // Diagram order
   int vct0 = backbone.get_topology(0, 1); // vertex connected to zero
@@ -403,7 +403,7 @@ void DiagramEvaluator::find_path_self_energy(BlockDiagOpFun &Gt, Backbone &backb
   backbone.reset_all_inds(); // reset directions, pole indices, and orbital indices for the next iteration
 }
 
-void DiagramEvaluator::eval_self_energy(BlockDiagOpFun &Gt, Backbone &backbone, int f_ix) {
+void DiagramEvaluator::eval_self_energy(BlockDiagOpFun &Gt, Backbone &backbone, long f_ix) {
   int m = backbone.m;
 
   nda::vector<int> ind_path(2 * m - 1);   // tracks block indices of factors for computing a particular block of the self-energy
@@ -419,8 +419,8 @@ void DiagramEvaluator::eval_self_energy(BlockDiagOpFun &Gt, Backbone &backbone) 
   nda::vector<int> block_dims(2 * m + 1); // tracks the dimensions of the blocks in these factors
 
   // loop over all flat indices
-  int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb.poles.size(), m - 1));
-  for (int f_ix = 0; f_ix < f_ix_max; f_ix++) { find_path_self_energy(Gt, backbone, f_ix, ind_path, block_dims); }
+  long f_ix_max = backbone.num_flat_indices(hyb.poles.size());
+  for (long f_ix = 0; f_ix < f_ix_max; f_ix++) { find_path_self_energy(Gt, backbone, f_ix, ind_path, block_dims); }
   Sigma.set_zero_block_indices(); // set zero_block_indices according to current blocks
 }
 
@@ -486,7 +486,7 @@ triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_ene
 }
 
 triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_energy(
-  triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, int f_ix) 
+  triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, long f_ix) 
   {
   auto Gt = native_propagator(G_ppsc);
   return compute_self_energy(Gt, topology, f_ix);
@@ -494,7 +494,7 @@ triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_ene
 
 triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_energy(
   triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, 
-  nda::array_const_view<int, 1> f_ix_vec) 
+  nda::array_const_view<long, 1> f_ix_vec) 
   {
   auto Gt = native_propagator(G_ppsc);
 
@@ -523,7 +523,7 @@ triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_ene
 } 
 
 triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_energy(
-  BlockDiagOpFun &Gt, nda::array_const_view<int, 2> topology, int f_ix) 
+  BlockDiagOpFun &Gt, nda::array_const_view<int, 2> topology, long f_ix) 
   {
   // Allocate Sigma and set to zero
   Sigma = Gt;
@@ -605,18 +605,17 @@ void DiagramEvaluator::integrate_right_edge(nda::array_view<dcomplex, 3> U_buf, 
 nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(BlockDiagOpFun &Gt, CorrelatorBackbone &backbone,
     std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops, bool is_fermionic) {
 
-  int m        = backbone.m;
-  int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb.poles.size(), m - 1));
+  long f_ix_max = backbone.num_flat_indices(hyb.poles.size());
 
   nda::array<dcomplex, 3> correlator(r, mu_ops.size(), kap_ops.size()), Tmuop(r, Nmax, Nmax);
   correlator = 0;
 
-  for (int f_ix = 0; f_ix < f_ix_max; ++f_ix) { correlator += eval_correlator(Gt, backbone, mu_ops, kap_ops, f_ix, is_fermionic); }
+  for (long f_ix = 0; f_ix < f_ix_max; ++f_ix) { correlator += eval_correlator(Gt, backbone, mu_ops, kap_ops, f_ix, is_fermionic); }
   return correlator;
 }
 
 nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(BlockDiagOpFun &Gt, CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops,
-                                                          int f_ix, bool is_fermionic) {
+                                                          long f_ix, bool is_fermionic) {
   int m = backbone.m;
   int vct0 = backbone.get_topology(0, 1);
 
@@ -834,21 +833,21 @@ void DiagramEvaluator::reset() {
   }
 }
 
-int DiagramEvaluator::get_num_self_energy_backbones(nda::array_const_view<int, 2> topology) {
+long DiagramEvaluator::get_num_self_energy_backbones(nda::array_const_view<int, 2> topology) {
   Backbone backbone(topology, n, n_int);
-  return static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb.poles.size(), backbone.m - 1));
+  return backbone.num_flat_indices(hyb.poles.size());
 }
 
-void DiagramEvaluator::print_self_energy_backbone(nda::array_const_view<int, 2> topology, int f_ix) {
+void DiagramEvaluator::print_self_energy_backbone(nda::array_const_view<int, 2> topology, long f_ix) {
   Backbone backbone(topology, n, n_int);
   backbone.set_flat_index(f_ix, hyb.poles);
   std::cout << "Self-energy backbone for f_ix = " << f_ix << ":\n";
   std::cout << backbone << std::endl;
 }
 
-int DiagramEvaluator::get_num_single_ptcle_gf_backbones(nda::array_const_view<int, 2> topology) {
+long DiagramEvaluator::get_num_single_ptcle_gf_backbones(nda::array_const_view<int, 2> topology) {
   CorrelatorBackbone backbone(topology, n, n_int);
-  return static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb.poles.size(), backbone.m - 1));
+  return backbone.num_flat_indices(hyb.poles.size());
 }
 
 // Order the operators by orbital index, not by symmetry set, since they index the external legs of the single-particle Green's function
@@ -909,13 +908,13 @@ nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(
 }
 
 nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(
-  triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, int f_ix) {
+  triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, long f_ix) {
   auto Gt = native_propagator(G_ppsc);
   return compute_single_ptcle_gf(Gt, topology, f_ix);
 }
 
 nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(
-  BlockDiagOpFun &Gt, nda::array_const_view<int, 2> topology, int f_ix) 
+  BlockDiagOpFun &Gt, nda::array_const_view<int, 2> topology, long f_ix) 
   {
   CorrelatorBackbone backbone(topology, n, n_int);
   auto mu_ops  = setup_mu_ops_for_single_ptcle_gf();
@@ -924,7 +923,7 @@ nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(
 }
 
 nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(
-  triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec) 
+  triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, nda::array_const_view<long, 1> f_ix_vec) 
   {
   auto Gt = native_propagator(G_ppsc);
   CorrelatorBackbone backbone(topology, n, n_int);
@@ -937,7 +936,7 @@ nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(
   return correlator;
 }
 
-void DiagramEvaluator::print_single_ptcle_gf_backbone(nda::array_const_view<int, 2> topology, int f_ix) {
+void DiagramEvaluator::print_single_ptcle_gf_backbone(nda::array_const_view<int, 2> topology, long f_ix) {
   CorrelatorBackbone backbone(topology, n, n_int);
   backbone.set_flat_index(f_ix, hyb.poles);
   std::cout << "Single-particle Green's function backbone for f_ix = " << f_ix << ":\n";
@@ -984,7 +983,7 @@ nda::array<dcomplex, 3> DiagramEvaluator::compute_one_time_correlator(
     std::vector<triqs::operators::many_body_operator_real> const & ops_tau, 
     std::vector<triqs::operators::many_body_operator_real> const & ops_0, 
     triqs::atom_diag::atom_diag<isComplex> const &ad,
-    nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec){
+    nda::array_const_view<int, 2> topology, nda::array_const_view<long, 1> f_ix_vec){
 
   // the statistics is the fermion parity of the operators, not whether they commute, see operator_statistics.hpp
   bool is_fermionic = correlator_statistics(ops_tau, ops_0, "compute_one_time_correlator");
@@ -1016,7 +1015,7 @@ nda::array<dcomplex, 3> DiagramEvaluator::compute_one_time_correlator(
     std::vector<triqs::operators::many_body_operator_real> const & ops_tau, 
     std::vector<triqs::operators::many_body_operator_real> const & ops_0, 
     triqs::atom_diag::atom_diag<false> const &ad,
-    nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec);
+    nda::array_const_view<int, 2> topology, nda::array_const_view<long, 1> f_ix_vec);
 
 
 template
@@ -1025,7 +1024,7 @@ nda::array<dcomplex, 3> DiagramEvaluator::compute_one_time_correlator(
     std::vector<triqs::operators::many_body_operator_real> const & ops_tau, 
     std::vector<triqs::operators::many_body_operator_real> const & ops_0, 
     triqs::atom_diag::atom_diag<true> const &ad,
-    nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec);
+    nda::array_const_view<int, 2> topology, nda::array_const_view<long, 1> f_ix_vec);
 
 
 } // namespace triqs_xca::block_sparse

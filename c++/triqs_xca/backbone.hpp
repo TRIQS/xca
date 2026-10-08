@@ -66,8 +66,8 @@ namespace triqs_xca::backbone {
     int n;              // number of orbital indices
     int n_hyb;          // number of hybridization operators
     int n_int;          // number of interaction operators
-    int fb_ix_max;      // number of direction indices fb_ix, 2^m (2^(m-1) for a CorrelatorBackbone)
-    int o_ix_max;       // number of orbital indices o_ix, n^(m-1)
+    long fb_ix_max;     // number of direction indices fb_ix, 2^m (2^(m-1) for a CorrelatorBackbone)
+    long o_ix_max;      // number of orbital indices o_ix, n^(m-1)
     int prefactor_sign; // +1 or -1, depending on the sign of the prefactor
     std::vector<BackboneVertex> vertices;
 
@@ -99,17 +99,17 @@ namespace triqs_xca::backbone {
     protected:
     nda::array<int, 2> topology;
     nda::vector<int> fb; // directions of the hybridization lines, 0 for backward, 1 for forward
-    int f_ix;            // flat index
+    long f_ix;           // flat index
 
     public:
-    virtual void set_directions(int fb_ix); // set directions from a single integer index in [[0, 2^m-1]]
+    virtual void set_directions(long fb_ix); // set directions from a single integer index in [[0, 2^m-1]]
     virtual void set_directions(nda::vector_const_view<int> fb_vec);
     void reset_directions();
-    void set_pole_inds(int p_ix, nda::vector_const_view<double> dlr_rf); // set pole indices from a single integer index in [[0, r^(m-1)-1]]
+    void set_pole_inds(long p_ix, nda::vector_const_view<double> dlr_rf); // set pole indices from a single integer index in [[0, r^(m-1)-1]]
     void set_pole_inds(nda::vector_const_view<int> pole_inds_vec, nda::vector_const_view<double> dlr_rf);
     void reset_pole_inds();
     void set_orb_inds(nda::vector_const_view<int> orb_inds_vec);
-    void set_orb_inds(int o_ix); // set orbital indices from a single integer index in [[0, n^(m-1)-1]]
+    void set_orb_inds(long o_ix); // set orbital indices from a single integer index in [[0, n^(m-1)-1]]
     void reset_orb_inds();
 
     // set the orbital indices of vertex 0 and the vertex connected to it, which are not included in orb_inds
@@ -119,8 +119,12 @@ namespace triqs_xca::backbone {
     // based on the topology and orbital indices
     int get_parity();
 
+    // number of flat indices, 2^m n^(m-1) p^(m-1) (2^(m-1) n^(m-1) p^(m-1) for a CorrelatorBackbone) for p poles;
+    // throws std::overflow_error if it does not fit in a long
+    long num_flat_indices(long p) const;
+
     virtual void
-    set_flat_index(int flat_ix,
+    set_flat_index(long flat_ix,
                    nda::vector_const_view<double> hyb_poles); // set directions, pole indices, and orbital indices from a single integer index.
     // In terms of fb_ix, p_ix, and o_ix, f_ix = o_ix + n^(m-1) * p_ix + (n * r)^(m-1) * fb_ix, where r is the number of hybridization indices.
     // Throws std::invalid_argument for a flat index outside [0, number of backbones).
@@ -142,7 +146,7 @@ namespace triqs_xca::backbone {
     int get_pole_ind(int i);
     int get_fb(int i);
     int get_orb_ind(int i);
-    int get_flat_index();
+    long get_flat_index();
 
     /**
    * @brief Constructor for Backbone
@@ -172,11 +176,8 @@ namespace triqs_xca::backbone {
  */
   class CorrelatorBackbone : public Backbone {
     public:
-    void set_directions(int fb_ix) override; // one fewer hybridization edge - use only the first m-1 element of the edges array
+    void set_directions(long fb_ix) override; // one fewer hybridization edge - use only the first m-1 element of the edges array
     void set_directions(nda::vector_const_view<int> fb) override;
-    void set_flat_index(
-       int flat_ix,
-       nda::vector_const_view<double> hyb_poles) override; // set directions, pole indices, and orbital indices from a single integer index.
 
     /**
    * @brief Constructor for CorrelatorBackbone

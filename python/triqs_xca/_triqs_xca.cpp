@@ -56,14 +56,14 @@ nda::array<dcomplex, 3> triqs_xca::dense::DiagramEvaluator::compute_one_time_cor
     gf_vt, std::vector<triqs::operators::many_body_operator_real> const &,
     std::vector<triqs::operators::many_body_operator_real> const &,
     triqs::atom_diag::atom_diag<true> const &, nda::array_const_view<int, 2>,
-    nda::array_const_view<int, 1>);
+    nda::array_const_view<long, 1>);
 
 extern template
 nda::array<dcomplex, 3> triqs_xca::dense::DiagramEvaluator::compute_one_time_correlator<false>(
     gf_vt, std::vector<triqs::operators::many_body_operator_real> const &,
     std::vector<triqs::operators::many_body_operator_real> const &,
     triqs::atom_diag::atom_diag<false> const &, nda::array_const_view<int, 2>,
-    nda::array_const_view<int, 1>);
+    nda::array_const_view<long, 1>);
 
 // ==================== block_sparse::DiagramEvaluator ====================
 
@@ -97,7 +97,7 @@ nda::array<dcomplex, 3> triqs_xca::block_sparse::DiagramEvaluator::compute_one_t
     std::vector<triqs::operators::many_body_operator_real> const &,
     std::vector<triqs::operators::many_body_operator_real> const &,
     triqs::atom_diag::atom_diag<true> const &, nda::array_const_view<int, 2>,
-    nda::array_const_view<int, 1>);
+    nda::array_const_view<long, 1>);
 
 extern template
 nda::array<dcomplex, 3> triqs_xca::block_sparse::DiagramEvaluator::compute_one_time_correlator<false>(
@@ -105,7 +105,7 @@ nda::array<dcomplex, 3> triqs_xca::block_sparse::DiagramEvaluator::compute_one_t
     std::vector<triqs::operators::many_body_operator_real> const &,
     std::vector<triqs::operators::many_body_operator_real> const &,
     triqs::atom_diag::atom_diag<false> const &, nda::array_const_view<int, 2>,
-    nda::array_const_view<int, 1>);
+    nda::array_const_view<long, 1>);
 
 // -- Free functions
 

@@ -145,16 +145,16 @@ TEST(DenseDynint, spgf_flat_index_overloads_agree) {
   ASSERT_GT(nda::max_element(nda::abs(spgf_all - spgf_without_n_int)), 1.0e-3 * scale)
      << "vacuous test: the parity of the interaction line does not change the single-particle Green's function";
 
-  int n_backbones = D.get_num_single_ptcle_gf_backbones(topology);
+  long n_backbones = D.get_num_single_ptcle_gf_backbones(topology);
 
   // Path 1: the vector overload, used by the solver for the MPI distributed evaluation.
-  nda::vector<int> f_ix_vec(n_backbones);
-  for (int f_ix = 0; f_ix < n_backbones; ++f_ix) f_ix_vec(f_ix) = f_ix;
+  nda::vector<long> f_ix_vec(n_backbones);
+  for (long f_ix = 0; f_ix < n_backbones; ++f_ix) f_ix_vec(f_ix) = f_ix;
   auto spgf_vec = D.compute_single_ptcle_gf(G_ppsc, topology, f_ix_vec);
 
   // Path 2: accumulating the single flat index overload.
   auto spgf_single = nda::make_regular(0 * spgf_all);
-  for (int f_ix = 0; f_ix < n_backbones; ++f_ix) spgf_single += D.compute_single_ptcle_gf(G_ppsc, topology, f_ix);
+  for (long f_ix = 0; f_ix < n_backbones; ++f_ix) spgf_single += D.compute_single_ptcle_gf(G_ppsc, topology, f_ix);
 
   EXPECT_LE(nda::max_element(nda::abs(spgf_all - spgf_vec)), 1.0e-12)
      << "compute_single_ptcle_gf(G, topology, f_ix_vec) disagrees with compute_single_ptcle_gf(G, topology)";
@@ -191,8 +191,8 @@ TEST(DenseDynint, self_energy_by_pairs_agrees) {
   // check that some backbones carry the interaction operator on the internal line
   DiagramEvaluator D_no_dynint(m.hyb_poles, m.hyb_coeffs, m.G_ppsc[0].mesh(), m.ad);
 
-  int n_backbones           = D.get_num_self_energy_backbones(topology);
-  int n_backbones_fermionic = D_no_dynint.get_num_self_energy_backbones(topology);
+  long n_backbones           = D.get_num_self_energy_backbones(topology);
+  long n_backbones_fermionic = D_no_dynint.get_num_self_energy_backbones(topology);
   ASSERT_GT(n_backbones, n_backbones_fermionic) << "vacuous test: no backbone carries the interaction operator";
 
   auto sigma_all   = D.compute_self_energy(m.G_ppsc, topology);
@@ -230,20 +230,20 @@ TEST(DenseDynint, self_energy_by_pairs_flat_index_overloads_agree) {
 
   // stride n_p of fb_ix in the flat index, from f_ix_max = n_p * fb_ix_max with fb_ix_max = 2^m for the Backbone
   int order    = topology.extent(0);
-  int f_ix_max = D.get_num_self_energy_backbones(topology);
+  long f_ix_max = D.get_num_self_energy_backbones(topology);
   int n_p      = f_ix_max / (1 << order);
 
   std::vector<int> seeds;
   for (int f_ix = 0; f_ix < f_ix_max; ++f_ix) {
     if ((f_ix / n_p) % 2 == 0) seeds.push_back(f_ix);
   }
-  ASSERT_EQ(static_cast<int>(seeds.size()), f_ix_max / 2);
+  ASSERT_EQ(static_cast<long>(seeds.size()), f_ix_max / 2);
 
   auto sigma_all = D.compute_self_energy_by_pairs(m.G_ppsc, topology);
   ASSERT_GT(nda::max_element(nda::abs(sigma_all[0].data())), 1.0e-8) << "vacuous test: the self-energy is zero";
 
-  nda::vector<int> f_ix_vec(seeds.size());
-  for (int i = 0; i < static_cast<int>(seeds.size()); ++i) f_ix_vec(i) = seeds[i];
+  nda::vector<long> f_ix_vec(seeds.size());
+  for (long i = 0; i < static_cast<long>(seeds.size()); ++i) f_ix_vec(i) = seeds[i];
   auto sigma_vec = D.compute_self_energy_by_pairs(m.G_ppsc, topology, f_ix_vec);
 
   auto sigma_single = nda::zeros<dcomplex>(D.r, D.N, D.N);
@@ -300,7 +300,7 @@ TEST(DenseDynint, one_time_correlator_rejects_multi_subspace_atom_diag) {
   nda::array<int, 2> topology              = {{0, 1}};
   std::vector<many_body_operator_real> ops = {n<double>("0", 0)};
 
-  nda::vector<int> f_ix_vec(1);
+  nda::vector<long> f_ix_vec(1);
   f_ix_vec(0) = 0;
 
   // a propagator in the layout the dense evaluator takes, so that only the atom_diag is at fault

@@ -1,3 +1,4 @@
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -191,4 +192,58 @@ TEST(Backbone, flat_index_out_of_range) {
   check(B, 24);
   auto C = CorrelatorBackbone(topology, n);
   check(C, 12);
+}
+
+/**
+ * @brief Check backbone counts and flat indices beyond the range of an int, and that a count beyond the range of a long is rejected
+ */
+TEST(Backbone, flat_indices_beyond_int) {
+  auto crossing = [](int m) { // maximally crossing topology of order m
+    nda::array<int, 2> topology(m, 2);
+    for (int i = 0; i < m; ++i) topology(i, nda::range::all) = nda::vector<int>{i, i + m};
+    return topology;
+  };
+  auto poles = [](int p) {
+    nda::vector<double> poles(p);
+    for (int l = 0; l < p; ++l) poles(l) = -2.0 + 0.2 * l;
+    return poles;
+  };
+
+  // 2^m n^(m-1) p^(m-1) self-energy and 2^(m-1) n^(m-1) p^(m-1) correlator backbones
+  int m = 5, n = 14, p = 20;
+  auto B = Backbone(crossing(m), n);
+  auto C = CorrelatorBackbone(crossing(m), n);
+  ASSERT_EQ(B.num_flat_indices(p), 196689920000L);
+  ASSERT_EQ(C.num_flat_indices(p), 98344960000L);
+
+  // the last flat index has every line forward, every pole index p - 1 and every summed orbital index n - 1
+  for (Backbone *X : {&B, static_cast<Backbone *>(&C)}) {
+    long last = X->num_flat_indices(p) - 1;
+    X->set_flat_index(last, poles(p));
+    EXPECT_EQ(X->get_flat_index(), last);
+    for (int i = (X == &B ? 0 : 1); i < m; ++i) EXPECT_EQ(X->get_fb(i), 1);
+    for (int i = 0; i < m - 1; ++i) EXPECT_EQ(X->get_pole_ind(i), p - 1);
+    for (int v = 1; v < 2 * m; ++v)
+      if (v != m) EXPECT_EQ(X->get_orb_ind(v), n - 1);
+  }
+
+  // a flat index with mixed digits, f = o_ix + n^(m-1) (p_ix + p^(m-1) fb_ix), where the pole index p_ix alone exceeds the range of an int
+  int m9 = 9, n9 = 2, p9 = 20;
+  std::vector<int> fb = {1, 0, 0, 1, 1, 0, 1, 0, 1}, pole = {19, 0, 7, 13, 1, 18, 5, 11}, orb = {1, 0, 1, 1, 0, 0, 1, 0};
+  long fb_ix = 0, p_ix = 0, o_ix = 0, n_o = 1, n_p = 1;
+  for (int i = m9 - 1; i >= 0; --i) fb_ix = 2 * fb_ix + fb[i];
+  for (int i = m9 - 2; i >= 0; --i) p_ix = p9 * p_ix + pole[i];
+  for (int i = m9 - 2; i >= 0; --i) o_ix = n9 * o_ix + orb[i];
+  for (int i = 0; i < m9 - 1; ++i) n_o *= n9, n_p *= p9;
+  ASSERT_GT(p_ix, long{std::numeric_limits<int>::max()});
+  auto B9 = Backbone(crossing(m9), n9);
+  B9.set_flat_index(o_ix + n_o * (p_ix + n_p * fb_ix), poles(p9));
+  for (int i = 0; i < m9; ++i) EXPECT_EQ(B9.get_fb(i), fb[i]);
+  for (int i = 0; i < m9 - 1; ++i) EXPECT_EQ(B9.get_pole_ind(i), pole[i]);
+  for (int i = 1; i < m9; ++i) EXPECT_EQ(B9.get_orb_ind(i), orb[i - 1]); // line i joins vertices i and i + m
+
+  // overflow of n^(m-1), of p^(m-1), and of the product
+  EXPECT_THROW(Backbone(crossing(18), 14), std::overflow_error);
+  EXPECT_THROW(Backbone(crossing(14), 2).num_flat_indices(40), std::overflow_error);
+  EXPECT_THROW(Backbone(crossing(17), 14).num_flat_indices(40), std::overflow_error);
 }

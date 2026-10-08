@@ -472,13 +472,13 @@ TEST(BlockSparseDynintEvaluator, spgf_matches_dense_with_dynamical_interactions)
   // check that the interaction flavour is in the backbone enumeration
   auto Fq_ferm = std::get<0>(get_operators(m.ad, m.hyb_coeffs));
   DiagramEvaluator D_ferm(beta, Lambda, eps, m.hyb_poles, m.hyb_coeffs, Fq_ferm);
-  int nb = D.get_num_single_ptcle_gf_backbones(topology);
+  long nb = D.get_num_single_ptcle_gf_backbones(topology);
   ASSERT_GT(nb, D_ferm.get_num_single_ptcle_gf_backbones(topology))
      << "vacuous test: the interaction flavour is not in the backbone enumeration (this compares two evaluators, so it asserts n_ext > n_hyb rather than that any particular backbone puts the interaction on an internal line)";
   ASSERT_EQ(nb, D_dense.get_num_single_ptcle_gf_backbones(topology)) << "the two evaluators do not enumerate the same backbones";
 
-  auto f_ix_vec = nda::array<int, 1>(nb);
-  for (int i = 0; i < nb; ++i) f_ix_vec(i) = i;
+  auto f_ix_vec = nda::array<long, 1>(nb);
+  for (long i = 0; i < nb; ++i) f_ix_vec(i) = i;
 
   auto spgf_dense = D_dense.compute_single_ptcle_gf(G_fl, topology);
   ASSERT_EQ(spgf_dense.extent(1), n_hyb);
@@ -494,7 +494,7 @@ TEST(BlockSparseDynintEvaluator, spgf_matches_dense_with_dynamical_interactions)
   {
     SCOPED_TRACE("compute_single_ptcle_gf(G, topology, f_ix)");
     auto acc = nda::zeros<dcomplex>(D.r, n_hyb, n_hyb);
-    for (int f = 0; f < nb; ++f) acc += D.compute_single_ptcle_gf(G_bs, topology, f);
+    for (long f = 0; f < nb; ++f) acc += D.compute_single_ptcle_gf(G_bs, topology, f);
     auto [err, scale] = test_utils::compare_spgf(acc, spgf_dense);
     EXPECT_LE(err, corr_tol) << "max|dense| = " << scale << ", max|bs - dense| = " << err;
   }
@@ -557,12 +557,12 @@ TEST(BlockSparseDynintEvaluator, one_time_correlator_matches_dense_with_dynamica
     // on a purely fermionic model, so keep this test off that case
     ASSERT_NE(topology(0, 1), two_m - 1) << "covered by the sparsity-invariance correlator test, not here";
 
-    int nb = D.get_num_single_ptcle_gf_backbones(topology);
+    long nb = D.get_num_single_ptcle_gf_backbones(topology);
     ASSERT_EQ(nb, D_dense.get_num_single_ptcle_gf_backbones(topology)) << "the two evaluators do not enumerate the same backbones";
     ASSERT_GT(nb, D_ferm.get_num_single_ptcle_gf_backbones(topology))
        << "vacuous test: the interaction flavour is not in the backbone enumeration (this compares two evaluators, so it asserts n_ext > n_hyb rather than that any particular backbone puts the interaction on an internal line)";
-    auto f_ix_vec = nda::array<int, 1>(nb);
-    for (int i = 0; i < nb; ++i) f_ix_vec(i) = i;
+    auto f_ix_vec = nda::array<long, 1>(nb);
+    for (long i = 0; i < nb; ++i) f_ix_vec(i) = i;
 
     // dense reference on the single-subspace twin, the one-time correlator is a trace and needs no basis bridge
     auto ref = nda::array<dcomplex, 1>(
@@ -626,12 +626,12 @@ TEST(BlockSparseDynintEvaluator, self_energy_flat_index_overloads_agree) {
 
   auto Fq_ferm = std::get<0>(get_operators(m.ad, m.hyb_coeffs));
   DiagramEvaluator D_ferm(beta, Lambda, eps, m.hyb_poles, m.hyb_coeffs, Fq_ferm);
-  int nb = D.get_num_self_energy_backbones(topology);
+  long nb = D.get_num_self_energy_backbones(topology);
   ASSERT_GT(nb, D_ferm.get_num_self_energy_backbones(topology))
      << "vacuous test: the interaction flavour is not in the backbone enumeration (this compares two evaluators, so it asserts n_ext > n_hyb rather than that any particular backbone puts the interaction on an internal line)";
 
-  auto f_ix_vec = nda::array<int, 1>(nb);
-  for (int i = 0; i < nb; ++i) f_ix_vec(i) = i;
+  auto f_ix_vec = nda::array<long, 1>(nb);
+  for (long i = 0; i < nb; ++i) f_ix_vec(i) = i;
 
   auto S_all = BlockDiagOpFun(D.compute_self_energy(G_bs, topology));
   auto S_vec = BlockDiagOpFun(D.compute_self_energy(G_bs, topology, f_ix_vec)); // the solver's entry point
@@ -677,7 +677,7 @@ TEST(BlockSparseDynintEvaluator, spgf_flat_index_overloads_agree) {
   // check that the interaction flavour is in the backbone enumeration
   auto Fq_ferm = std::get<0>(get_operators(m.ad, m.hyb_coeffs));
   DiagramEvaluator D_ferm(beta, Lambda, eps, m.hyb_poles, m.hyb_coeffs, Fq_ferm);
-  int n_backbones = D.get_num_single_ptcle_gf_backbones(topology);
+  long n_backbones = D.get_num_single_ptcle_gf_backbones(topology);
   ASSERT_GT(n_backbones, D_ferm.get_num_single_ptcle_gf_backbones(topology))
      << "vacuous test: the interaction flavour is not in the backbone enumeration (this compares two evaluators, so it asserts n_ext > n_hyb rather than that any particular backbone puts the interaction on an internal line)";
 
@@ -687,13 +687,13 @@ TEST(BlockSparseDynintEvaluator, spgf_flat_index_overloads_agree) {
   ASSERT_EQ(spgf_all.extent(2), n_hyb);
 
   // Route 2: the vector overload, driven by the solver for the MPI split
-  nda::vector<int> f_ix_vec(n_backbones);
-  for (int f_ix = 0; f_ix < n_backbones; ++f_ix) f_ix_vec(f_ix) = f_ix;
+  nda::vector<long> f_ix_vec(n_backbones);
+  for (long f_ix = 0; f_ix < n_backbones; ++f_ix) f_ix_vec(f_ix) = f_ix;
   auto spgf_vec = D.compute_single_ptcle_gf(G, topology, f_ix_vec);
 
   // Route 3: accumulating the single flat index overload
   auto spgf_single = nda::make_regular(0 * spgf_all);
-  for (int f_ix = 0; f_ix < n_backbones; ++f_ix) spgf_single += D.compute_single_ptcle_gf(G, topology, f_ix);
+  for (long f_ix = 0; f_ix < n_backbones; ++f_ix) spgf_single += D.compute_single_ptcle_gf(G, topology, f_ix);
 
   // the comparisons are absolute, so require a non-negligible Green's function
   double scale = nda::max_element(nda::abs(spgf_all));

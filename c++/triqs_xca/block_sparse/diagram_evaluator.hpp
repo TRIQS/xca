@@ -60,8 +60,8 @@ class DiagramEvaluator {
   void multiply_left_vertex_and_right_zero_vertex(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone, bool is_forward, int b_ix_0, int p_kap,
                                                   int p_mu, nda::vector_const_view<int> ind_path, nda::vector_const_view<int> block_dims);
 
-  void find_path_self_energy(BlockDiagOpFun &Gt, Backbone &backbone, int f_ix, nda::vector_view<int> ind_path, nda::vector_view<int> block_dims);
-  void eval_self_energy(BlockDiagOpFun &Gt, Backbone &backbone, int f_ix); // evaluate a particular backbone diagram
+  void find_path_self_energy(BlockDiagOpFun &Gt, Backbone &backbone, long f_ix, nda::vector_view<int> ind_path, nda::vector_view<int> block_dims);
+  void eval_self_energy(BlockDiagOpFun &Gt, Backbone &backbone, long f_ix); // evaluate a particular backbone diagram
   void eval_self_energy(BlockDiagOpFun &Gt, Backbone &backbone);           // evaluate a diagram of a given order and topology in block-sparse storage
 
   // evaluate a diagram with fixed orbital indices, poles, and line directions in dense storage, including prefactor
@@ -93,40 +93,40 @@ class DiagramEvaluator {
   void reset(); // reset all arrays to zero
 
   // routines for self-energy diagrams
-  int get_num_self_energy_backbones(nda::array_const_view<int, 2> topology);                  // get number of backbones for given topology
+  long get_num_self_energy_backbones(nda::array_const_view<int, 2> topology);                  // get number of backbones for given topology
 
   C2PY_IGNORE triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy(BlockDiagOpFun &Gt, nda::array_const_view<int, 2> topology);
-  C2PY_IGNORE triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy(BlockDiagOpFun &Gt, nda::array_const_view<int, 2> topology, int f_ix);
+  C2PY_IGNORE triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy(BlockDiagOpFun &Gt, nda::array_const_view<int, 2> topology, long f_ix);
 
   triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology);           // compute self-energy for given topology
-  triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, int f_ix); // compute self-energy for given topology and flat index
-  triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec); // compute self-energy for given topology and flat index vector
+  triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, long f_ix); // compute self-energy for given topology and flat index
+  triqs::gfs::block_gf<triqs::mesh::dlr_imtime> compute_self_energy(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, nda::array_const_view<long, 1> f_ix_vec); // compute self-energy for given topology and flat index vector
 
   void print_self_energy_backbone(nda::array_const_view<int, 2> topology,
-                                  int f_ix); // print the backbone corresponding to a given flat index for debugging
+                                  long f_ix); // print the backbone corresponding to a given flat index for debugging
 
   // routines for correlator diagrams
-  int get_num_single_ptcle_gf_backbones(nda::array_const_view<int, 2> topology); // get number of backbones for given topology
+  long get_num_single_ptcle_gf_backbones(nda::array_const_view<int, 2> topology); // get number of backbones for given topology
 
   C2PY_IGNORE nda::array<dcomplex, 3> eval_correlator(
     BlockDiagOpFun &Gt, CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops, bool is_fermionic = true);
 
   C2PY_IGNORE nda::array<dcomplex, 3> eval_correlator(
-    BlockDiagOpFun &Gt, CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops, int f_ix, bool is_fermionic = true);
+    BlockDiagOpFun &Gt, CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops, long f_ix, bool is_fermionic = true);
 
   // compute single particle Green's function for given topology (and flat index)
   C2PY_IGNORE nda::array<dcomplex, 3> compute_single_ptcle_gf(BlockDiagOpFun &Gt, nda::array_const_view<int, 2> topology);
-  C2PY_IGNORE nda::array<dcomplex, 3> compute_single_ptcle_gf(BlockDiagOpFun &Gt, nda::array_const_view<int, 2> topology, int f_ix);
+  C2PY_IGNORE nda::array<dcomplex, 3> compute_single_ptcle_gf(BlockDiagOpFun &Gt, nda::array_const_view<int, 2> topology, long f_ix);
 
   nda::array<dcomplex, 3> compute_single_ptcle_gf(
     triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology);
   nda::array<dcomplex, 3> compute_single_ptcle_gf(
-    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, int f_ix);
+    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, long f_ix);
   nda::array<dcomplex, 3> compute_single_ptcle_gf(
-    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec);
+    triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, nda::array_const_view<long, 1> f_ix_vec);
 
   void print_single_ptcle_gf_backbone(nda::array_const_view<int, 2> topology,
-                                      int f_ix); // print the backbone corresponding to a given flat index for debugging
+                                      long f_ix); // print the backbone corresponding to a given flat index for debugging
  
   // compute one time correlator for given operators
   template<bool isComplex>
@@ -135,7 +135,7 @@ class DiagramEvaluator {
     std::vector<triqs::operators::many_body_operator_real> const &ops_tau, 
     std::vector<triqs::operators::many_body_operator_real> const &ops_0, 
     triqs::atom_diag::atom_diag<isComplex> const &ad,
-    nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec);
+    nda::array_const_view<int, 2> topology, nda::array_const_view<long, 1> f_ix_vec);
 
   /**
    * @brief Constructor for DiagramEvaluator

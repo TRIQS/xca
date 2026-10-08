@@ -50,7 +50,7 @@ TEST(PropagatorLayout, wrong_layouts_are_rejected) {
   auto G_flat     = test_utils::ad_to_atom_prop(ad_flat, beta, Lambda, eps);
   auto ops        = std::vector<many_body_operator_real>{n("A", 0)};
   auto topology   = nda::array<int, 2>{{0, 1}};
-  auto f_ix_vec   = nda::vector<int>{0};
+  auto f_ix_vec   = nda::vector<long>{0};
   auto D_dense    = dense::DiagramEvaluator(hyb_poles, hyb_coeffs, G_flat[0].mesh(), ad_flat);
   auto D_bs       = block_sparse::DiagramEvaluator(hyb_poles, hyb_coeffs, G_bs[0].mesh(), ad);
 
