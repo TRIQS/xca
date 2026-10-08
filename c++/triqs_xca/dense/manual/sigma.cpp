@@ -156,7 +156,8 @@ namespace triqs_xca::dense::manual {
     int N = Gt.extent(1);
 
     auto hyb_coeffs      = itops.vals2coefs(hyb); // hybridization DLR coeffs
-    auto hyb_refl        = itops.reflect(hyb);
+    // reflect reshapes its argument, which needs C-contiguous memory
+    auto hyb_refl        = itops.reflect(nda::make_regular(hyb));
     auto hyb_refl_coeffs = hyb_coeffs;
     int num_Fs           = Fs.extent(0);
 
@@ -303,7 +304,8 @@ namespace triqs_xca::dense::manual {
     int N = Gt.extent(1);
 
     auto hyb_coeffs      = itops.vals2coefs(hyb); // hybridization DLR coeffs
-    auto hyb_refl        = nda::make_regular(-itops.reflect(hyb));
+    // reflect reshapes its argument, which needs C-contiguous memory
+    auto hyb_refl        = nda::make_regular(-itops.reflect(nda::make_regular(hyb)));
     auto hyb_refl_coeffs = itops.vals2coefs(hyb_refl);
 
     // get F^dagger operators
@@ -387,7 +389,8 @@ namespace triqs_xca::dense::manual {
     int N = Gt.extent(1);
 
     auto hyb_coeffs      = itops.vals2coefs(hyb); // hybridization DLR coeffs
-    auto hyb_refl        = nda::make_regular(-itops.reflect(hyb));
+    // reflect reshapes its argument, which needs C-contiguous memory
+    auto hyb_refl        = nda::make_regular(-itops.reflect(nda::make_regular(hyb)));
     auto hyb_refl_coeffs = itops.vals2coefs(hyb_refl);
 
     // get F^dagger operators

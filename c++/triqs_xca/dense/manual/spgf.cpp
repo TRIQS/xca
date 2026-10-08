@@ -162,10 +162,12 @@ namespace triqs_xca::dense::manual {
     auto it_eq = cppdlr::eqptsrel(n_quad + 1);
     nda::array<dcomplex, 3> hyb_eq(n_quad + 1, n, n), hyb_refl_eq(n_quad + 1, n, n), Gt_eq(n_quad + 1, N, N), gf_eq(n_quad + 1, n, n);
     gf_eq = 0;
+    // coefs2eval reshapes its argument, which needs C-contiguous memory
+    auto hyb_c = nda::make_regular(hyb_coeffs), hyb_refl_c = nda::make_regular(hyb_refl_coeffs), Gt_c = nda::make_regular(Gt_coeffs);
     for (int i = 0; i <= n_quad; i++) {
-      hyb_eq(i, _, _)      = itops.coefs2eval(hyb_coeffs, it_eq(i));
-      hyb_refl_eq(i, _, _) = itops.coefs2eval(hyb_refl_coeffs, it_eq(i));
-      Gt_eq(i, _, _)       = itops.coefs2eval(Gt_coeffs, it_eq(i));
+      hyb_eq(i, _, _)      = itops.coefs2eval(hyb_c, it_eq(i));
+      hyb_refl_eq(i, _, _) = itops.coefs2eval(hyb_refl_c, it_eq(i));
+      Gt_eq(i, _, _)       = itops.coefs2eval(Gt_c, it_eq(i));
     }
 
     double dt = beta / n_quad;
@@ -231,10 +233,12 @@ namespace triqs_xca::dense::manual {
     auto it_eq = cppdlr::eqptsrel(n_quad + 1);
     nda::array<dcomplex, 3> hyb_eq(n_quad + 1, n, n), hyb_refl_eq(n_quad + 1, n, n), Gt_eq(n_quad + 1, N, N), gf_eq(n_quad + 1, n, n);
     gf_eq = 0;
+    // coefs2eval reshapes its argument, which needs C-contiguous memory
+    auto hyb_c = nda::make_regular(hyb_coeffs), hyb_refl_c = nda::make_regular(hyb_refl_coeffs), Gt_c = nda::make_regular(Gt_coeffs);
     for (int i = 0; i <= n_quad; i++) {
-      hyb_eq(i, _, _)      = itops.coefs2eval(hyb_coeffs, it_eq(i));
-      hyb_refl_eq(i, _, _) = itops.coefs2eval(hyb_refl_coeffs, it_eq(i));
-      Gt_eq(i, _, _)       = itops.coefs2eval(Gt_coeffs, it_eq(i));
+      hyb_eq(i, _, _)      = itops.coefs2eval(hyb_c, it_eq(i));
+      hyb_refl_eq(i, _, _) = itops.coefs2eval(hyb_refl_c, it_eq(i));
+      Gt_eq(i, _, _)       = itops.coefs2eval(Gt_c, it_eq(i));
     }
 
     double dt = beta / n_quad;

@@ -237,7 +237,8 @@ namespace triqs_xca::block_sparse::manual {
     int r = dlr_it.shape(0);
 
     auto hyb_coeffs      = itops.vals2coefs(hyb); // hybridization DLR coeffs
-    auto hyb_refl        = itops.reflect(hyb);
+    // reflect reshapes its argument, which needs C-contiguous memory
+    auto hyb_refl        = itops.reflect(nda::make_regular(hyb));
     auto hyb_refl_coeffs = hyb_coeffs;
 
     // get F^dagger operators
@@ -386,7 +387,8 @@ namespace triqs_xca::block_sparse::manual {
     long r = dlr_it.shape(0);
 
     // auto hyb_coeffs      = itops.vals2coefs(hyb); // hybridization DLR coeffs
-    auto hyb_refl = itops.reflect(hyb);
+    // reflect reshapes its argument, which needs C-contiguous memory
+    auto hyb_refl = itops.reflect(nda::make_regular(hyb));
     // auto hyb_refl_coeffs = hyb_coeffs;
     long p = hyb_poles.shape(0);
 

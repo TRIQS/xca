@@ -162,7 +162,7 @@ namespace triqs_xca::block_sparse::manual {
                           cppdlr::TIME_ORDERED);
       }
     }
-    // reflect. Why does only reflecting all of T work?
+    // reflect the whole buffer: a sub-block view is not contiguous, and reflect reshapes its argument
     T = itops.reflect(T);
   }
 
