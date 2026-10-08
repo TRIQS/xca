@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <stdexcept>
+#include <string>
 
 #include "triqs_xca/backbone.hpp"
 #include "triqs_xca/topology.hpp"
@@ -265,14 +267,18 @@ namespace triqs_xca::backbone {
     // In terms of fb_ix, p_ix, and o_ix,
     // f_ix = o_ix + n^(m-1) * p_ix + (n * r)^(m-1) * fb_ix, where r is the number of hybridization indices.
 
+    int p        = hyb_poles.size();
+    int p_ix_max = static_cast<int>(pow(p, m - 1));
+    long n_flat  = static_cast<long>(fb_ix_max) * p_ix_max * o_ix_max;
+    if (flat_ix < 0 || flat_ix >= n_flat)
+      throw std::invalid_argument("set_flat_index: flat index " + std::to_string(flat_ix) + " is out of range [0, " + std::to_string(n_flat) + ")");
+
     this->f_ix = flat_ix;
-    int p      = hyb_poles.size();
     int rem    = flat_ix;
     int o_ix   = rem % o_ix_max; // orbital indices
     rem /= o_ix_max;
-    int p_ix_max = static_cast<int>(pow(p, m - 1));
-    int p_ix     = rem % p_ix_max; // pole indices
-    int fb_ix    = rem / p_ix_max; // directions
+    int p_ix  = rem % p_ix_max; // pole indices
+    int fb_ix = rem / p_ix_max; // directions
 
     set_directions(fb_ix);
     set_pole_inds(p_ix, hyb_poles);
@@ -352,14 +358,18 @@ namespace triqs_xca::backbone {
     // In terms of fb_ix, p_ix, and o_ix,
     // f_ix = o_ix + n^(m-1) * p_ix + (n * r)^(m-1) * fb_ix, where r is the number of hybridization indices.
 
+    int p        = hyb_poles.size();
+    int p_ix_max = static_cast<int>(pow(p, m - 1));
+    long n_flat  = static_cast<long>(fb_ix_max) * p_ix_max * o_ix_max;
+    if (flat_ix < 0 || flat_ix >= n_flat)
+      throw std::invalid_argument("set_flat_index: flat index " + std::to_string(flat_ix) + " is out of range [0, " + std::to_string(n_flat) + ")");
+
     this->f_ix = flat_ix;
-    int p      = hyb_poles.size();
     int rem    = flat_ix;
     int o_ix   = rem % o_ix_max; // orbital indices
     rem /= o_ix_max;
-    int p_ix_max = static_cast<int>(pow(p, m - 1));
-    int p_ix     = rem % p_ix_max; // pole indices
-    int fb_ix    = rem / p_ix_max; // directions
+    int p_ix  = rem % p_ix_max; // pole indices
+    int fb_ix = rem / p_ix_max; // directions
 
     set_directions(fb_ix);
     set_pole_inds(p_ix, hyb_poles);

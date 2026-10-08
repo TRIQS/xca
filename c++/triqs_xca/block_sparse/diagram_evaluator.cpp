@@ -381,9 +381,7 @@ void DiagramEvaluator::find_path_self_energy(BlockDiagOpFun &Gt, Backbone &backb
 }
 
 void DiagramEvaluator::eval_self_energy(BlockDiagOpFun &Gt, Backbone &backbone, int f_ix) {
-  int m        = backbone.m;
-  int f_ix_max = static_cast<int>(backbone.fb_ix_max * backbone.o_ix_max * pow(hyb.poles.size(), m - 1));
-  if (f_ix < 0 || f_ix >= f_ix_max) { throw std::runtime_error("DiagramEvaluator::eval_self_energy: f_ix out of range"); }
+  int m = backbone.m;
 
   nda::vector<int> ind_path(2 * m - 1);   // tracks block indices of factors for computing a particular block of the self-energy
   nda::vector<int> block_dims(2 * m + 1); // tracks the dimensions of the blocks in these factors

@@ -66,8 +66,8 @@ namespace triqs_xca::backbone {
     int n;              // number of orbital indices
     int n_hyb;          // number of hybridization operators
     int n_int;          // number of interaction operators
-    int fb_ix_max;      // maximum value of fb_ix, i.e., 2^m - 1
-    int o_ix_max;       // maximum value of o_ix, i.e., n^(m-1) - 1
+    int fb_ix_max;      // number of direction indices fb_ix, 2^m (2^(m-1) for a CorrelatorBackbone)
+    int o_ix_max;       // number of orbital indices o_ix, n^(m-1)
     int prefactor_sign; // +1 or -1, depending on the sign of the prefactor
     std::vector<BackboneVertex> vertices;
 
@@ -123,6 +123,7 @@ namespace triqs_xca::backbone {
     set_flat_index(int flat_ix,
                    nda::vector_const_view<double> hyb_poles); // set directions, pole indices, and orbital indices from a single integer index.
     // In terms of fb_ix, p_ix, and o_ix, f_ix = o_ix + n^(m-1) * p_ix + (n * r)^(m-1) * fb_ix, where r is the number of hybridization indices.
+    // Throws std::invalid_argument for a flat index outside [0, number of backbones).
     void reverse_hyb_line_zero(); // reverse the direction of the hybridization line connected to vertex 0
     void reset_all_inds();
 

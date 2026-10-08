@@ -114,6 +114,7 @@ namespace triqs_xca::dense {
   }
 
   triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_energy(gf_vt G_ppsc, nda::array_const_view<int, 2> topology) {
+    reset(); // a previous call that threw may have left a partial sum in Sigma
     Backbone backbone(topology, n, n_int);
     eval_self_energy(G_ppsc[0].data(), backbone);
     auto sigma_gf = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, this->Sigma);
@@ -123,6 +124,7 @@ namespace triqs_xca::dense {
 
   triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_energy(gf_vt G_ppsc, nda::array_const_view<int, 2> topology,
                                                                                            int f_ix) {
+    reset();
     Backbone backbone(topology, n, n_int);
     eval_self_energy_fixed_indices(G_ppsc[0].data(), backbone, f_ix); // evaluate the diagram with these directions, poles, and orbital indices
     auto sigma_gf = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, this->Sigma);
@@ -132,6 +134,7 @@ namespace triqs_xca::dense {
 
   triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_energy(gf_vt G_ppsc, nda::array_const_view<int, 2> topology,
                                                                                            nda::array_const_view<int, 1> f_ix_vec) {
+    reset();
     Backbone backbone(topology, n, n_int);
     for (int f_ix : f_ix_vec)
       eval_self_energy_fixed_indices(G_ppsc[0].data(), backbone, f_ix); // evaluate the diagram with these directions, poles, and orbital indices
@@ -142,6 +145,7 @@ namespace triqs_xca::dense {
 
   triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_energy_by_pairs(gf_vt G_ppsc,
                                                                                                     nda::array_const_view<int, 2> topology) {
+    reset();
     Backbone backbone(topology, n, n_int);
     eval_self_energy_by_pairs(G_ppsc[0].data(), backbone);
     auto sigma_gf = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, this->Sigma);
@@ -151,6 +155,7 @@ namespace triqs_xca::dense {
 
   triqs::gfs::block_gf<triqs::mesh::dlr_imtime>
   DiagramEvaluator::compute_self_energy_by_pairs(gf_vt G_ppsc, nda::array_const_view<int, 2> topology, int f_ix) {
+    reset();
     Backbone backbone(topology, n, n_int);
     eval_self_energy_fixed_index_pair(G_ppsc[0].data(), backbone, f_ix);
     auto sigma_gf = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, this->Sigma);
@@ -160,6 +165,7 @@ namespace triqs_xca::dense {
 
   triqs::gfs::block_gf<triqs::mesh::dlr_imtime>
   DiagramEvaluator::compute_self_energy_by_pairs(gf_vt G_ppsc, nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec) {
+    reset();
     Backbone backbone(topology, n, n_int);
     for (int f_ix : f_ix_vec) eval_self_energy_fixed_index_pair(G_ppsc[0].data(), backbone, f_ix);
     auto sigma_gf = triqs::gfs::gf<triqs::mesh::dlr_imtime>(tau_mesh, this->Sigma);

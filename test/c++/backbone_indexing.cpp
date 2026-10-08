@@ -1,3 +1,4 @@
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -11,6 +12,7 @@
 using cppdlr::build_dlr_rf;
 
 using triqs_xca::backbone::Backbone;
+using triqs_xca::backbone::CorrelatorBackbone;
 
 /**
  * @file backbone_indexing.cpp
@@ -167,4 +169,26 @@ TEST(Backbone, indexing) {
     expect_generated(B3);
     ASSERT_EQ(B3.get_flat_index(), f_ix);
   }
+}
+
+/**
+ * @brief Check that a flat index outside [0, number of backbones) is rejected instead of wrapped around, and leaves the backbone unchanged
+ */
+TEST(Backbone, flat_index_out_of_range) {
+  nda::array<int, 2> topology = {{0, 2}, {1, 3}};
+  int n                       = 3;
+  nda::vector<double> poles   = {1.3, -0.8};
+
+  auto check = [&](Backbone &B, int n_flat) {
+    EXPECT_NO_THROW(B.set_flat_index(n_flat - 1, poles));
+    EXPECT_THROW(B.set_flat_index(n_flat, poles), std::invalid_argument);
+    EXPECT_THROW(B.set_flat_index(-1, poles), std::invalid_argument);
+    EXPECT_EQ(B.get_flat_index(), n_flat - 1);
+  };
+
+  // 2^m n^(m-1) p^(m-1) self-energy and 2^(m-1) n^(m-1) p^(m-1) correlator backbones
+  auto B = Backbone(topology, n);
+  check(B, 24);
+  auto C = CorrelatorBackbone(topology, n);
+  check(C, 12);
 }
