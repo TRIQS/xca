@@ -610,8 +610,8 @@ TEST(one_fermion, const_hyb_spgf) {
   double tpz_tol = 2.0e-3; // ~2x the empirically observed n_quad=20 error
   // the itops overload of coefs2vals; the beta/Lambda/eps one hardcodes a symmetrized grid internally
   auto hyb = triqs_xca::hyb::coefs2vals(s.beta, s.itops, s.model.hyb_coeffs, s.model.hyb_poles);
-  // unlike sigma_oca_tpz and sigma_o3_tpz, the *_gf_tpz routines want DLR coefficients rather than values, and
-  // they do not build the reflected hybridization themselves, so the -reflect(hyb) convention is applied here
+  // unlike sigma_oca_tpz and sigma_o3_tpz, the spgf_*_tpz routines want DLR coefficients rather than values, and
+  // they do not build the reflected hybridization themselves; they take the plain reflection +reflect(hyb)
   auto hyb_coeffs      = s.itops.vals2coefs(hyb);
   auto hyb_refl_coeffs = s.itops.vals2coefs(s.itops.reflect(hyb));
   auto Gt_coeffs       = s.itops.vals2coefs(s.Gt_dense);
@@ -707,8 +707,8 @@ TEST(one_fermion, one_hyb_pole_spgf) {
   double tpz_tol = 2.0e-3; // ~2x the empirically observed n_quad=20 error
   // the itops overload of coefs2vals; the beta/Lambda/eps one hardcodes a symmetrized grid internally
   auto hyb = triqs_xca::hyb::coefs2vals(s.beta, s.itops, s.model.hyb_coeffs, s.model.hyb_poles);
-  // unlike sigma_oca_tpz and sigma_o3_tpz, the *_gf_tpz routines want DLR coefficients rather than values, and
-  // they do not build the reflected hybridization themselves, so the -reflect(hyb) convention is applied here
+  // unlike sigma_oca_tpz and sigma_o3_tpz, the spgf_*_tpz routines want DLR coefficients rather than values, and
+  // they do not build the reflected hybridization themselves; they take the plain reflection +reflect(hyb)
   auto hyb_coeffs      = s.itops.vals2coefs(hyb);
   auto hyb_refl_coeffs = s.itops.vals2coefs(s.itops.reflect(hyb));
   auto Gt_coeffs       = s.itops.vals2coefs(s.Gt_dense);
@@ -805,8 +805,8 @@ TEST(one_fermion, two_hyb_poles_spgf) {
   double tpz_tol = 2.0e-3; // ~2x the empirically observed n_quad=20 error
   // the itops overload of coefs2vals; the beta/Lambda/eps one hardcodes a symmetrized grid internally
   auto hyb = triqs_xca::hyb::coefs2vals(s.beta, s.itops, s.model.hyb_coeffs, s.model.hyb_poles);
-  // unlike sigma_oca_tpz and sigma_o3_tpz, the *_gf_tpz routines want DLR coefficients rather than values, and
-  // they do not build the reflected hybridization themselves, so the -reflect(hyb) convention is applied here
+  // unlike sigma_oca_tpz and sigma_o3_tpz, the spgf_*_tpz routines want DLR coefficients rather than values, and
+  // they do not build the reflected hybridization themselves; they take the plain reflection +reflect(hyb)
   auto hyb_coeffs      = s.itops.vals2coefs(hyb);
   auto hyb_refl_coeffs = s.itops.vals2coefs(s.itops.reflect(hyb));
   auto Gt_coeffs       = s.itops.vals2coefs(s.Gt_dense);
