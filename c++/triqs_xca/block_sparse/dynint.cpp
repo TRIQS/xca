@@ -23,7 +23,7 @@ namespace triqs_xca::block_sparse::dynint {
         };
 
         template <bool IsComplex>
-        DynintOpBlocks resolve_dynint_op(const triqs_atom_diag_t<IsComplex> &ad, triqs::operators::many_body_operator_real const &op, int i) {
+        DynintOpBlocks resolve_dynint_op(const triqs_atom_diag_t<IsComplex> &ad, triqs::operators::many_body_operator_complex const &op, int i) {
 
             int nb = ad.n_subspaces();
 
@@ -34,9 +34,9 @@ namespace triqs_xca::block_sparse::dynint {
             };
 
             // get_op_mat throws when two monomials of op take one subspace to different targets.
-            auto op_mat_of = [&](triqs::operators::many_body_operator_real const &o, std::string const &what) {
+            auto op_mat_of = [&](triqs::operators::many_body_operator_complex const &o, std::string const &what) {
                 try {
-                    return ad.get_op_mat(o);
+                    return triqs_xca::atom_diag::get_op_mat(ad, o);
                 } catch (std::exception const &e) {
                     throw std::invalid_argument(context(what + ": atom_diag::get_op_mat failed with \"" + std::string(e.what())
                                                         + "\". Every monomial must take each atom_diag subspace to the same target subspace."));
@@ -53,7 +53,7 @@ namespace triqs_xca::block_sparse::dynint {
             if (!any_present) throw std::invalid_argument(context("is zero on every atom_diag subspace"));
 
             // The connection row must be injective for the adjoint to have a well defined connection row. Checked before
-            // the adjoint is fetched, since get_op_mat(dagger(op)) would otherwise throw from inside TRIQS with a less specific message.
+            // the adjoint is fetched, whose blocks would otherwise fail as multi-target rather than report the non-injective map.
             std::set<int> seen;
             for (int b = 0; b < nb; ++b) {
                 if (conn(b) == -1) continue;
@@ -72,7 +72,7 @@ namespace triqs_xca::block_sparse::dynint {
                 }
             }
 
-            auto omd      = op_mat_of(triqs::operators::many_body_operator_real{dagger(op)}, "has an adjoint that is not block resolvable");
+            auto omd      = op_mat_of(triqs::operators::many_body_operator_complex{dagger(op)}, "has an adjoint that is not block resolvable");
             auto conn_dag = nda::vector<int>(nb);
             for (int b = 0; b < nb; ++b) conn_dag(b) = static_cast<int>(omd.connection(b));
 
@@ -109,7 +109,7 @@ namespace triqs_xca::block_sparse::dynint {
         const triqs_atom_diag_t<IsComplex> &ad,
         nda::array_const_view<dcomplex, 3> hyb_coeffs,
         nda::array_const_view<dcomplex, 3> dynint_coeffs,
-        std::vector<triqs::operators::many_body_operator_real> const &dynint_ops) {
+        std::vector<triqs::operators::many_body_operator_complex> const &dynint_ops) {
 
         int nb    = ad.n_subspaces();
         int p     = hyb_coeffs.extent(0);
@@ -197,7 +197,7 @@ namespace triqs_xca::block_sparse::dynint {
         const triqs_atom_diag_t<true> &ad,
         nda::array_const_view<dcomplex, 3> hyb_coeffs,
         nda::array_const_view<dcomplex, 3> dynint_coeffs,
-        std::vector<triqs::operators::many_body_operator_real> const &dynint_ops) {
+        std::vector<triqs::operators::many_body_operator_complex> const &dynint_ops) {
         return get_operators_and_interactions_impl(ad, hyb_coeffs, dynint_coeffs, dynint_ops);
     }
 
@@ -205,7 +205,7 @@ namespace triqs_xca::block_sparse::dynint {
         const triqs_atom_diag_t<false> &ad,
         nda::array_const_view<dcomplex, 3> hyb_coeffs,
         nda::array_const_view<dcomplex, 3> dynint_coeffs,
-        std::vector<triqs::operators::many_body_operator_real> const &dynint_ops) {
+        std::vector<triqs::operators::many_body_operator_complex> const &dynint_ops) {
         return get_operators_and_interactions_impl(ad, hyb_coeffs, dynint_coeffs, dynint_ops);
     }
 

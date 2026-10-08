@@ -390,7 +390,7 @@ namespace triqs_xca::block_sparse {
    * @return Expectation value -Tr[G(\beta) O]
    */
   template <bool isComplex>
-  dcomplex expectation_value(triqs::operators::many_body_operator_real const &op, triqs::atom_diag::atom_diag<isComplex> const &ad,
+  dcomplex expectation_value(triqs::operators::many_body_operator_complex const &op, triqs::atom_diag::atom_diag<isComplex> const &ad,
                              triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc);
 
   /**

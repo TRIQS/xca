@@ -15,7 +15,7 @@
 using nda::dcomplex;
 
 using triqs::operators::c_dag;
-using triqs::operators::many_body_operator_real;
+using triqs::operators::many_body_operator_complex;
 using triqs::operators::n;
 
 using mesh_t = triqs::mesh::dlr_imtime;
@@ -50,7 +50,7 @@ TEST(PropagatorLayout, wrong_layouts_are_rejected) {
   auto hyb_poles  = nda::vector<double>{1.3, -0.8};
   auto G_bs       = test_utils::ad_to_atom_prop(ad, beta, Lambda, eps);
   auto G_flat     = test_utils::ad_to_atom_prop(ad_flat, beta, Lambda, eps);
-  auto ops        = std::vector<many_body_operator_real>{n("A", 0)};
+  auto ops        = std::vector<many_body_operator_complex>{n("A", 0)};
   auto topology   = nda::array<int, 2>{{0, 1}};
   auto f_ix_vec   = nda::vector<long>{0};
   auto D_dense    = dense::DiagramEvaluator(hyb_poles, hyb_coeffs, G_flat[0].mesh(), ad_flat);
@@ -126,12 +126,12 @@ TEST(PropagatorLayout, wrong_layouts_are_rejected) {
   }
 
   // expectation_value with the layouts of its atom_diag and of another one, and with an operator that leaves the subspaces
-  auto op = many_body_operator_real(n("A", 0));
+  auto op = many_body_operator_complex(n("A", 0));
   EXPECT_NO_THROW(block_sparse::expectation_value(op, ad, G_bs));
   for (auto &[what, G] : wrong_for_bs) {
     if (what == "other rank") continue; // expectation_value reads G on its own mesh
     SCOPED_TRACE("expectation_value, " + what);
     EXPECT_THROW(block_sparse::expectation_value(op, ad, G), std::invalid_argument);
   }
-  EXPECT_EQ(std::abs(block_sparse::expectation_value(many_body_operator_real(c_dag("A", 0)), ad, G_bs)), 0.0);
+  EXPECT_EQ(std::abs(block_sparse::expectation_value(many_body_operator_complex(c_dag("A", 0)), ad, G_bs)), 0.0);
 }

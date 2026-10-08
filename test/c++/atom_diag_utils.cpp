@@ -539,3 +539,62 @@ TEST(AtomDiagUtils, hamiltonian_blocks_are_the_blocks_of_the_full_matrix) {
     EXPECT_NEAR(sum_blocks, frobenius_norm_squared(full), 1e-12);
   }
 }
+
+/**
+ * @brief Operator blocks with complex coefficients, for a real and a complex atom_diag of one real Hamiltonian
+ *
+ * @details S_y = (S+ - S-) / 2i has imaginary coefficients, which atom_diag<false>::get_op_mat cannot take. The blocks of
+ * triqs_xca::atom_diag::get_op_mat, rotated to the Fock basis, reproduce the matrix assembled from the fundamental operators, for a real
+ * operator they are those of atom_diag::get_op_mat, and an operator that takes one subspace to two targets is rejected.
+ */
+TEST(AtomDiagUtils, complex_operator_blocks) {
+  using triqs::operators::many_body_operator_complex;
+  using triqs::operators::many_body_operator_real;
+  using triqs_xca::atom_diag::get_op_mat;
+
+  // one spinful orbital in a transverse field, so the N = 1 eigenvectors mix up and down
+  auto H = 1.0 * n("up", 0) * n("do", 0) - 0.4 * (n("up", 0) + n("do", 0)) + 0.3 * (c_dag("up", 0) * c("do", 0) + c_dag("do", 0) * c("up", 0));
+  auto N = n("up", 0) + n("do", 0);
+  triqs::atom_diag::fundamental_operator_set fops;
+  fops.insert("do", 0);
+  fops.insert("up", 0);
+  auto ad_r = triqs::atom_diag::atom_diag<false>(H, fops, std::vector<many_body_operator_real>{N});
+  auto ad_c = triqs::atom_diag::atom_diag<true>(H, fops, std::vector<many_body_operator_complex>{N});
+  ASSERT_EQ(ad_r.n_subspaces(), 3);
+
+  // the Fock-basis matrix of an operator from its eigenbasis blocks
+  auto from_blocks = [](auto const &ad, triqs_xca::atom_diag::op_block_mat const &om) {
+    long dim                   = ad.get_full_hilbert_space_dim();
+    nda::matrix<dcomplex> full = nda::zeros<dcomplex>(dim, dim);
+    for (int s = 0; s < ad.n_subspaces(); ++s) {
+      long t = om.connection(s);
+      if (t == -1) continue;
+      nda::matrix<dcomplex> m = ad.get_unitary_matrix(t) * om.block_mat[s] * nda::conj(nda::transpose(ad.get_unitary_matrix(s)));
+      auto f_source = ad.get_fock_states(s), f_target = ad.get_fock_states(t);
+      for (int i = 0; i < f_target.size(); ++i) {
+        for (int j = 0; j < f_source.size(); ++j) full(f_target[i], f_source[j]) = m(i, j);
+      }
+    }
+    return full;
+  };
+
+  int up = fops[{"up", 0}], dn = fops[{"do", 0}];
+  nda::matrix<dcomplex> Sp_ref = get_operator(ad_r, up, true) * get_operator(ad_r, dn, false);
+  nda::matrix<dcomplex> Sm_ref = get_operator(ad_r, dn, true) * get_operator(ad_r, up, false);
+  nda::matrix<dcomplex> Sy_ref = dcomplex(0.0, -0.5) * (Sp_ref - Sm_ref);
+  ASSERT_GT(nda::max_element(nda::abs(nda::imag(Sy_ref))), 0.1);
+
+  many_body_operator_complex Sy = dcomplex(0.0, -0.5) * (c_dag("up", 0) * c("do", 0) - c_dag("do", 0) * c("up", 0));
+  EXPECT_LE(nda::max_element(nda::abs(from_blocks(ad_r, get_op_mat(ad_r, Sy)) - Sy_ref)), 1e-14);
+  EXPECT_LE(nda::max_element(nda::abs(from_blocks(ad_c, get_op_mat(ad_c, Sy)) - Sy_ref)), 1e-14);
+
+  many_body_operator_real O = c_dag("up", 0) * c("do", 0) + 0.3 * n("up", 0);
+  auto om_xca               = get_op_mat(ad_r, O);
+  auto om                   = ad_r.get_op_mat(O);
+  for (int s = 0; s < ad_r.n_subspaces(); ++s) {
+    ASSERT_EQ(om_xca.connection(s), om.connection(s)) << "subspace " << s;
+    if (om.connection(s) != -1) EXPECT_LE(nda::max_element(nda::abs(om_xca.block_mat[s] - om.block_mat[s])), 1e-15) << "subspace " << s;
+  }
+
+  EXPECT_THROW(get_op_mat(ad_r, c_dag("up", 0) * c("do", 0) + c_dag("up", 0)), std::runtime_error);
+}

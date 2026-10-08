@@ -24,7 +24,7 @@ using nda::dcomplex;
 
 using triqs::operators::c;
 using triqs::operators::c_dag;
-using triqs::operators::many_body_operator_real;
+using triqs::operators::many_body_operator_complex;
 
 using triqs_xca::block_sparse::atom_diag::get_operators;
 using triqs_xca::block_sparse::BlockDiagOpFun;
@@ -61,17 +61,17 @@ namespace {
     nda::vector<double> hyb_poles;
     nda::array<dcomplex, 3> hyb_coeffs;
     nda::array<dcomplex, 3> dynint_coeffs;
-    std::vector<many_body_operator_real> dynint_ops;
+    std::vector<many_body_operator_complex> dynint_ops;
   };
 
-  many_body_operator_real S_minus(int norb) {
-    many_body_operator_real op;
+  many_body_operator_complex S_minus(int norb) {
+    many_body_operator_complex op;
     for (int i = 0; i < norb; ++i) op += c_dag("do", i) * c("up", i);
     return op;
   }
 
-  many_body_operator_real S_plus(int norb) {
-    many_body_operator_real op;
+  many_body_operator_complex S_plus(int norb) {
+    many_body_operator_complex op;
     for (int i = 0; i < norb; ++i) op += c_dag("up", i) * c("do", i);
     return op;
   }
@@ -91,7 +91,7 @@ namespace {
     auto labels_f = std::get<1>(get_operators(ad, nda::zeros<dcomplex>(p_poles, n_hyb, n_hyb)));
     auto hyb      = test_utils::sym_set_diagonal_hyb(labels_f, p_poles);
 
-    std::vector<many_body_operator_real> ops{S_minus(norb), S_plus(norb)};
+    std::vector<many_body_operator_complex> ops{S_minus(norb), S_plus(norb)};
 
     auto d = nda::zeros<dcomplex>(p_poles, 2, 2);
     for (int l = 0; l < p_poles; ++l) {

@@ -15,7 +15,7 @@ namespace triqs_xca::dense::dynint {
         const triqs_atom_diag_t<IsComplex> &ad, 
         nda::array_const_view<dcomplex, 3> hyb_coeffs, 
         nda::array_const_view<dcomplex, 3> dynint_coeffs,  
-        std::vector<triqs::operators::many_body_operator_real> const &dynint_ops) {
+        std::vector<triqs::operators::many_body_operator_complex> const &dynint_ops) {
 
         auto ext_coeffs = hyb::get_extended_coefficients(hyb_coeffs, dynint_coeffs);
         int n_ext = ext_coeffs.extent(1);
@@ -44,7 +44,7 @@ namespace triqs_xca::dense::dynint {
 
         for (int i = 0; i < dynint_ops.size(); ++i) {
             auto op = dynint_ops[i];
-            auto op_mat = U_mat * ad.get_op_mat(op).block_mat[0] * nda::conj(nda::transpose(U_mat));
+            auto op_mat = U_mat * triqs_xca::atom_diag::get_op_mat(ad, op).block_mat[0] * nda::conj(nda::transpose(U_mat));
             Fs_ext(n_hyb + i, _, _) = op_mat;
             Fdags_ext(n_hyb + i, _, _) = nda::conj(nda::transpose(op_mat));
             //std::cout << "i = " << i << ", op = " << op << std::endl;
@@ -73,7 +73,7 @@ namespace triqs_xca::dense::dynint {
         const triqs_atom_diag_t<true> &ad, 
         nda::array_const_view<dcomplex, 3> hyb_coeffs, 
         nda::array_const_view<dcomplex, 3> dynint_coeffs,  
-        std::vector<triqs::operators::many_body_operator_real> const &dynint_ops) {
+        std::vector<triqs::operators::many_body_operator_complex> const &dynint_ops) {
         return get_operators_and_interactions_impl(ad, hyb_coeffs, dynint_coeffs, dynint_ops);
     }
 
@@ -81,7 +81,7 @@ namespace triqs_xca::dense::dynint {
         const triqs_atom_diag_t<false> &ad, 
         nda::array_const_view<dcomplex, 3> hyb_coeffs, 
         nda::array_const_view<dcomplex, 3> dynint_coeffs,  
-        std::vector<triqs::operators::many_body_operator_real> const &dynint_ops) {
+        std::vector<triqs::operators::many_body_operator_complex> const &dynint_ops) {
         return get_operators_and_interactions_impl(ad, hyb_coeffs, dynint_coeffs, dynint_ops);
     }
 

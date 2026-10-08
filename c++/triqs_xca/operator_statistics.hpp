@@ -21,7 +21,7 @@ namespace triqs_xca {
    * @throws std::runtime_error if op has monomials of both parities, or is identically zero
    * @return true if fermionic (odd), false if bosonic (even)
    */
-  inline bool is_fermionic_parity(triqs::operators::many_body_operator_real const &op, std::string const &ctx) {
+  inline bool is_fermionic_parity(triqs::operators::many_body_operator_complex const &op, std::string const &ctx) {
     std::optional<bool> odd;
     for (auto const &term : op) {
       bool this_odd = (term.monomial.size() % 2 == 1);
@@ -48,10 +48,10 @@ namespace triqs_xca {
    * @throws std::runtime_error if the operators do not all share one fermion parity
    * @return the common statistics, true if fermionic
    */
-  inline bool correlator_statistics(std::vector<triqs::operators::many_body_operator_real> const &ops_tau,
-                                    std::vector<triqs::operators::many_body_operator_real> const &ops_0, std::string const &ctx) {
+  inline bool correlator_statistics(std::vector<triqs::operators::many_body_operator_complex> const &ops_tau,
+                                    std::vector<triqs::operators::many_body_operator_complex> const &ops_0, std::string const &ctx) {
     std::optional<bool> common;
-    auto consider = [&](triqs::operators::many_body_operator_real const &op) {
+    auto consider = [&](triqs::operators::many_body_operator_complex const &op) {
       bool f = is_fermionic_parity(op, ctx);
       if (!common)
         common = f;

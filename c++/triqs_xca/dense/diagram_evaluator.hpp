@@ -128,8 +128,8 @@ namespace triqs_xca::dense {
 
     // compute one time correlator for given operators
     template <bool isComplex>
-    nda::array<dcomplex, 3> compute_one_time_correlator(gf_vt G_ppsc, std::vector<triqs::operators::many_body_operator_real> const &ops_tau,
-                                                        std::vector<triqs::operators::many_body_operator_real> const &ops_0,
+    nda::array<dcomplex, 3> compute_one_time_correlator(gf_vt G_ppsc, std::vector<triqs::operators::many_body_operator_complex> const &ops_tau,
+                                                        std::vector<triqs::operators::many_body_operator_complex> const &ops_0,
                                                         triqs::atom_diag::atom_diag<isComplex> const &ad, nda::array_const_view<int, 2> topology,
                                                         nda::array_const_view<long, 1> f_ix_vec);
 
@@ -163,13 +163,13 @@ namespace triqs_xca::dense {
        * @param[in] hyb_coeffs hybridization function coefficients (at poles)
        * @param[in] tau_mesh TRIQS imagnary time DLR mesh
        * @param[in] ad TRIQS atom_diag object with Hamiltonian and field operators
-       * @param[in] dynint_ops vector of many_body_operator_real objects representing the dynamic interactions
+       * @param[in] dynint_ops vector of many_body_operator_complex objects representing the dynamic interactions
        * @param[in] dynint_coeffs array of coefficients for the dynamic interactions (also using hyb_poles)
        */
     template <bool isComplex>
     DiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs, triqs::mesh::dlr_imtime tau_mesh,
-                          triqs::atom_diag::atom_diag<isComplex> const &ad, std::vector<triqs::operators::many_body_operator_real> const &dynint_ops,
-                          nda::array_const_view<dcomplex, 3> dynint_coeffs);
+                     triqs::atom_diag::atom_diag<isComplex> const &ad, std::vector<triqs::operators::many_body_operator_complex> const &dynint_ops,
+                     nda::array_const_view<dcomplex, 3> dynint_coeffs);
 
     virtual ~DiagramEvaluator() = default;
   };

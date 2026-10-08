@@ -19,7 +19,6 @@ using nda::range;
 using triqs::operators::c;
 using triqs::operators::c_dag;
 using triqs::operators::many_body_operator_complex;
-using triqs::operators::many_body_operator_real;
 using triqs::operators::n;
 
 using triqs_xca::dense::DiagramEvaluator;
@@ -57,14 +56,14 @@ namespace {
     return triqs::atom_diag::atom_diag<true>(H, fs, std::vector<many_body_operator_complex>{});
   }
 
-  many_body_operator_real S_plus() { return c_dag<double>("up", 0) * c<double>("do", 0) + c_dag<double>("up", 1) * c<double>("do", 1); }
-  many_body_operator_real S_minus() { return c_dag<double>("do", 0) * c<double>("up", 0) + c_dag<double>("do", 1) * c<double>("up", 1); }
+  many_body_operator_complex S_plus() { return c_dag<double>("up", 0) * c<double>("do", 0) + c_dag<double>("up", 1) * c<double>("do", 1); }
+  many_body_operator_complex S_minus() { return c_dag<double>("do", 0) * c<double>("up", 0) + c_dag<double>("do", 1) * c<double>("up", 1); }
 
   /// The body of compute_one_time_correlator with the statistics flag forced rather than inferred
   nda::array<dcomplex, 3> correlator_with_flag(DiagramEvaluator &D, triqs::gfs::block_gf<triqs::mesh::dlr_imtime> const &G,
-                                               std::vector<many_body_operator_real> const &ops_tau, std::vector<many_body_operator_real> const &ops_0,
-                                               triqs::atom_diag::atom_diag<true> const &ad, nda::array_const_view<int, 2> topology,
-                                               bool is_fermionic) {
+                                               std::vector<many_body_operator_complex> const &ops_tau,
+                                               std::vector<many_body_operator_complex> const &ops_0, triqs::atom_diag::atom_diag<true> const &ad,
+                                               nda::array_const_view<int, 2> topology, bool is_fermionic) {
     CorrelatorBackbone backbone(topology, D.n, D.n_int);
     int N                           = D.N;
     auto U                          = ad.get_unitary_matrix(0);
@@ -112,7 +111,7 @@ TEST(DenseCorrelatorStatistics, spin_flip_operators_are_classified_bosonic) {
   nda::array<int, 2> topology = {{0, 2}, {1, 3}};
   ASSERT_EQ(triqs_xca::topology::topology_parity(topology), -1) << "vacuous test: topology is not crossing";
 
-  std::vector<many_body_operator_real> ops_tau{S_plus()}, ops_0{S_minus()};
+  std::vector<many_body_operator_complex> ops_tau{S_plus()}, ops_0{S_minus()};
 
   auto as_boson   = correlator_with_flag(h.D, h.G, ops_tau, ops_0, h.ad, topology, false);
   auto as_fermion = correlator_with_flag(h.D, h.G, ops_tau, ops_0, h.ad, topology, true);
@@ -144,7 +143,7 @@ TEST(DenseCorrelatorStatistics, densities_stay_bosonic_and_single_fermions_stay_
 
   {
     SCOPED_TRACE("density-density, must be bosonic");
-    std::vector<many_body_operator_real> ops{n<double>("up", 0)};
+    std::vector<many_body_operator_complex> ops{n<double>("up", 0)};
     auto as_boson = correlator_with_flag(h.D, h.G, ops, ops, h.ad, topology, false);
     auto chosen   = h.D.compute_one_time_correlator(h.G, ops, ops, h.ad, topology, f_ix_vec);
     ASSERT_GT(maxabs(as_boson), 1.0e-6) << "vacuous: chi_nn is zero on this model";
@@ -152,7 +151,7 @@ TEST(DenseCorrelatorStatistics, densities_stay_bosonic_and_single_fermions_stay_
   }
   {
     SCOPED_TRACE("c / c_dag, must be fermionic");
-    std::vector<many_body_operator_real> ops_tau{c<double>("up", 0)}, ops_0{c_dag<double>("up", 0)};
+    std::vector<many_body_operator_complex> ops_tau{c<double>("up", 0)}, ops_0{c_dag<double>("up", 0)};
     auto as_fermion = correlator_with_flag(h.D, h.G, ops_tau, ops_0, h.ad, topology, true);
     auto chosen     = h.D.compute_one_time_correlator(h.G, ops_tau, ops_0, h.ad, topology, f_ix_vec);
     ASSERT_GT(maxabs(as_fermion), 1.0e-6) << "vacuous: the single-particle correlator is zero on this model";
@@ -169,14 +168,14 @@ TEST(DenseCorrelatorStatistics, mixed_parity_operators_are_rejected) {
   nda::vector<long> f_ix_vec(h.D.get_num_single_ptcle_gf_backbones(topology));
   for (long i = 0; i < f_ix_vec.size(); ++i) f_ix_vec(i) = i;
 
-  std::vector<many_body_operator_real> mixed{c<double>("up", 0) + n<double>("up", 0)};
-  std::vector<many_body_operator_real> plain{c<double>("up", 0)};
+  std::vector<many_body_operator_complex> mixed{c<double>("up", 0) + n<double>("up", 0)};
+  std::vector<many_body_operator_complex> plain{c<double>("up", 0)};
 
   EXPECT_THROW(h.D.compute_one_time_correlator(h.G, mixed, plain, h.ad, topology, f_ix_vec), std::runtime_error)
      << "an operator with both even- and odd-length monomials has no fermion parity and must be rejected";
 
   // all-odd with several monomials must be accepted
-  std::vector<many_body_operator_real> all_odd{c<double>("up", 0) + c_dag<double>("up", 1) * c_dag<double>("do", 1) * c<double>("up", 0)};
+  std::vector<many_body_operator_complex> all_odd{c<double>("up", 0) + c_dag<double>("up", 1) * c_dag<double>("do", 1) * c<double>("up", 0)};
   EXPECT_NO_THROW(h.D.compute_one_time_correlator(h.G, all_odd, plain, h.ad, topology, f_ix_vec))
      << "an operator whose monomials are all odd has a well-defined fermion parity and must be accepted";
 }

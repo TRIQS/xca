@@ -24,7 +24,7 @@ using cppdlr::build_dlr_rf;
 using cppdlr::imtime_ops;
 using nda::dcomplex;
 
-using triqs::operators::many_body_operator_real;
+using triqs::operators::many_body_operator_complex;
 using triqs::operators::n;
 
 using triqs_xca::block_sparse::atom_diag::get_operators;
@@ -61,7 +61,7 @@ namespace {
     nda::vector<double> hyb_poles;
     nda::array<dcomplex, 3> hyb_coeffs;
     nda::array<dcomplex, 3> dynint_coeffs;
-    std::vector<many_body_operator_real> dynint_ops;
+    std::vector<many_body_operator_complex> dynint_ops;
   };
 
   /**
@@ -76,7 +76,7 @@ namespace {
     auto labels_f = std::get<1>(get_operators(ad, nda::zeros<dcomplex>(p_poles, n_hyb, n_hyb)));
     auto hyb      = test_utils::sym_set_diagonal_hyb(labels_f, p_poles);
 
-    std::vector<many_body_operator_real> ops;
+    std::vector<many_body_operator_complex> ops;
     if (n_int > 0) ops.emplace_back(n("A", 0));
     // n_A0 and n_B0 have different connection rows and land in two singleton dynint sets
     if (n_int > 1) ops.emplace_back(n("B", 0));
@@ -364,7 +364,7 @@ TEST(BlockSparseDynintEvaluator, Nmax_does_not_assume_symmetry_set_zero_covers_t
   auto hyb      = test_utils::sym_set_diagonal_hyb(labels_f, p_poles);
 
   // A projector onto a single Fock state: block diagonal, and its only block is 1x1.
-  std::vector<many_body_operator_real> ops = {many_body_operator_real(n("A", 0) * n("A", 1) * n("B", 0))};
+  std::vector<many_body_operator_complex> ops = {many_body_operator_complex(n("A", 0) * n("A", 1) * n("B", 0))};
   auto d                                   = nda::zeros<dcomplex>(p_poles, 1, 1);
   d(0, 0, 0)                               = 0.61;
   d(1, 0, 0)                               = 0.54;
@@ -736,7 +736,7 @@ TEST(BlockSparseDynintEvaluator, matches_dense_on_the_interleaved_deep_subspace_
   auto hyb      = test_utils::sym_set_diagonal_hyb(labels_f, p_poles);
 
   // two density operators on the same orbital share a connection row, hence one dynint set of size 2
-  std::vector<many_body_operator_real> ops{n("up", 0), n("do", 0)};
+  std::vector<many_body_operator_complex> ops{n("up", 0), n("do", 0)};
   int n_int = static_cast<int>(ops.size());
   auto d    = nda::zeros<dcomplex>(p_poles, n_int, n_int);
   for (int l = 0; l < p_poles; ++l)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <vector>
 
 #include <nda/nda.hpp>
 #include <cppdlr/dlr_imtime.hpp>
@@ -44,5 +45,24 @@ namespace triqs_xca::atom_diag {
  * @param[in] s subspace
  */
   nda::matrix<dcomplex> get_hamiltonian_block(const triqs_atom_diag &ad, int s);
+
+  /// Blocks of a many-body operator between atom_diag subspaces, laid out as triqs::atom_diag::atom_diag::op_block_mat_t
+  struct op_block_mat {
+    nda::array<long, 1> connection;               // target subspace of each subspace, -1 where the operator takes it to zero
+    std::vector<nda::matrix<dcomplex>> block_mat; // block from each subspace to its target in the eigenbases, empty where absent
+  };
+
+  /**
+ * @brief Blocks of a many-body operator with complex coefficients, in the eigenbases of the atom_diag subspaces
+ *
+ * @details atom_diag::get_op_mat takes operators with the scalar type of the atom_diag, so a real atom_diag cannot represent an operator
+ * with complex coefficients such as S_y. The blocks are assembled monomial by monomial, as get_op_mat does, with complex coefficients.
+ *
+ * @param[in] ad AtomDiag object
+ * @param[in] op many-body operator
+ * @throws std::runtime_error if two monomials of op take one subspace to different target subspaces
+ */
+  op_block_mat get_op_mat(const triqs_atom_diag_t<true> &ad, triqs::operators::many_body_operator_complex const &op);
+  op_block_mat get_op_mat(const triqs_atom_diag_t<false> &ad, triqs::operators::many_body_operator_complex const &op);
 
 } // namespace triqs_xca::atom_diag

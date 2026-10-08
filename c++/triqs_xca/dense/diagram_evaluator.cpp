@@ -72,9 +72,9 @@ namespace triqs_xca::dense {
 
   template <bool isComplex>
   DiagramEvaluator::DiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-                                               triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<isComplex> const &ad,
-                                               std::vector<triqs::operators::many_body_operator_real> const &dynint_ops,
-                                               nda::array_const_view<dcomplex, 3> dynint_coeffs)
+                                     triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<isComplex> const &ad,
+                                     std::vector<triqs::operators::many_body_operator_complex> const &dynint_ops,
+                                     nda::array_const_view<dcomplex, 3> dynint_coeffs)
      : tau_mesh(tau_mesh),
        beta(tau_mesh.beta()),
        itops(tau_mesh.dlr_it()),
@@ -95,14 +95,14 @@ namespace triqs_xca::dense {
        Tmu(nda::zeros<dcomplex>(r, N, N)) {}
 
   template DiagramEvaluator::DiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-                                                        triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<true> const &ad,
-                                                        std::vector<triqs::operators::many_body_operator_real> const &dynint_ops,
-                                                        nda::array_const_view<dcomplex, 3> dynint_coeffs);
+                                              triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<true> const &ad,
+                                              std::vector<triqs::operators::many_body_operator_complex> const &dynint_ops,
+                                              nda::array_const_view<dcomplex, 3> dynint_coeffs);
 
   template DiagramEvaluator::DiagramEvaluator(nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
-                                                        triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<false> const &ad,
-                                                        std::vector<triqs::operators::many_body_operator_real> const &dynint_ops,
-                                                        nda::array_const_view<dcomplex, 3> dynint_coeffs);
+                                              triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<false> const &ad,
+                                              std::vector<triqs::operators::many_body_operator_complex> const &dynint_ops,
+                                              nda::array_const_view<dcomplex, 3> dynint_coeffs);
 
   void DiagramEvaluator::reset() {
     T     = 0;
@@ -499,8 +499,8 @@ namespace triqs_xca::dense {
 
   template <bool isComplex>
   nda::array<dcomplex, 3>
-  DiagramEvaluator::compute_one_time_correlator(gf_vt G_ppsc, std::vector<triqs::operators::many_body_operator_real> const &ops_tau,
-                                                std::vector<triqs::operators::many_body_operator_real> const &ops_0,
+  DiagramEvaluator::compute_one_time_correlator(gf_vt G_ppsc, std::vector<triqs::operators::many_body_operator_complex> const &ops_tau,
+                                                std::vector<triqs::operators::many_body_operator_complex> const &ops_0,
                                                 triqs::atom_diag::atom_diag<isComplex> const &ad, nda::array_const_view<int, 2> topology,
                                                 nda::array_const_view<long, 1> f_ix_vec) {
 
@@ -521,9 +521,13 @@ namespace triqs_xca::dense {
     nda::array<dcomplex, 3> mu_ops  = nda::zeros<dcomplex>(ops_tau.size(), N, N);
     nda::array<dcomplex, 3> kap_ops = nda::zeros<dcomplex>(ops_0.size(), N, N);
 
-    for (auto [i, op] : itertools::enumerate(ops_tau)) { mu_ops(i, _, _) = U * ad.get_op_mat(op).block_mat[0] * nda::conj(nda::transpose(U)); }
+    for (auto [i, op] : itertools::enumerate(ops_tau)) {
+      mu_ops(i, _, _) = U * triqs_xca::atom_diag::get_op_mat(ad, op).block_mat[0] * nda::conj(nda::transpose(U));
+    }
 
-    for (auto [i, op] : itertools::enumerate(ops_0)) { kap_ops(i, _, _) = U * ad.get_op_mat(op).block_mat[0] * nda::conj(nda::transpose(U)); }
+    for (auto [i, op] : itertools::enumerate(ops_0)) {
+      kap_ops(i, _, _) = U * triqs_xca::atom_diag::get_op_mat(ad, op).block_mat[0] * nda::conj(nda::transpose(U));
+    }
 
     nda::array<dcomplex, 3> correlator = nda::zeros<dcomplex>(r, mu_ops.extent(0), kap_ops.extent(0));
 
@@ -540,14 +544,14 @@ namespace triqs_xca::dense {
   }
 
   template nda::array<dcomplex, 3>
-  DiagramEvaluator::compute_one_time_correlator(gf_vt G_ppsc, std::vector<triqs::operators::many_body_operator_real> const &ops_tau,
-                                                std::vector<triqs::operators::many_body_operator_real> const &ops_0,
+  DiagramEvaluator::compute_one_time_correlator(gf_vt G_ppsc, std::vector<triqs::operators::many_body_operator_complex> const &ops_tau,
+                                                std::vector<triqs::operators::many_body_operator_complex> const &ops_0,
                                                 triqs::atom_diag::atom_diag<false> const &ad, nda::array_const_view<int, 2> topology,
                                                 nda::array_const_view<long, 1> f_ix_vec);
 
   template nda::array<dcomplex, 3>
-  DiagramEvaluator::compute_one_time_correlator(gf_vt G_ppsc, std::vector<triqs::operators::many_body_operator_real> const &ops_tau,
-                                                std::vector<triqs::operators::many_body_operator_real> const &ops_0,
+  DiagramEvaluator::compute_one_time_correlator(gf_vt G_ppsc, std::vector<triqs::operators::many_body_operator_complex> const &ops_tau,
+                                                std::vector<triqs::operators::many_body_operator_complex> const &ops_0,
                                                 triqs::atom_diag::atom_diag<true> const &ad, nda::array_const_view<int, 2> topology,
                                                 nda::array_const_view<long, 1> f_ix_vec);
 

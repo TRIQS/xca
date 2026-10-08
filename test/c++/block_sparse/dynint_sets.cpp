@@ -19,7 +19,6 @@ using nda::dcomplex;
 using triqs::operators::c;
 using triqs::operators::c_dag;
 using triqs::operators::many_body_operator_complex;
-using triqs::operators::many_body_operator_real;
 using triqs::operators::n;
 
 using triqs_xca::block_sparse::BlockOpSymQuartet;
@@ -132,8 +131,8 @@ namespace {
     return d;
   }
 
-  many_body_operator_real S_plus(int norb) {
-    many_body_operator_real S;
+  many_body_operator_complex S_plus(int norb) {
+    many_body_operator_complex S;
     for (int i = 0; i < norb; ++i) S += c_dag("up", i) * c("do", i);
     return S;
   }
@@ -152,7 +151,7 @@ TEST(BlockSparseDynintSets, fixtures_have_the_expected_connection_structure) {
     ASSERT_EQ(labels.size(), 3);
     EXPECT_EQ(nda::max_element(labels) + 1, 2);
 
-    auto conn           = ad.get_op_mat(many_body_operator_real(n("A", 0) + n("A", 1))).connection;
+    auto conn           = ad.get_op_mat(many_body_operator_complex(n("A", 0) + n("A", 1))).connection;
     bool block_diagonal = true;
     for (int b = 0; b < ad.n_subspaces(); ++b)
       if (conn(b) >= 0 && conn(b) != b) block_diagonal = false;
@@ -167,9 +166,9 @@ TEST(BlockSparseDynintSets, fixtures_have_the_expected_connection_structure) {
     ASSERT_EQ(labels.size(), 4);
     EXPECT_EQ(labels, (nda::vector<int>{0, 1, 0, 1})) << "expected interleaved fermionic sets, got " << labels;
 
-    auto up0 = ad.get_op_mat(many_body_operator_real(n("up", 0))).connection;
-    auto do0 = ad.get_op_mat(many_body_operator_real(n("do", 0))).connection;
-    auto up1 = ad.get_op_mat(many_body_operator_real(n("up", 1))).connection;
+    auto up0 = ad.get_op_mat(many_body_operator_complex(n("up", 0))).connection;
+    auto do0 = ad.get_op_mat(many_body_operator_complex(n("do", 0))).connection;
+    auto up1 = ad.get_op_mat(many_body_operator_complex(n("up", 1))).connection;
     EXPECT_EQ(up0, do0) << "n(up,0) and n(do,0) must share a connection row to form one dynint set";
     EXPECT_NE(up0, up1) << "n(up,0) and n(up,1) must differ, or there is only one dynint set";
   }
@@ -178,7 +177,7 @@ TEST(BlockSparseDynintSets, fixtures_have_the_expected_connection_structure) {
   {
     auto ad = test_utils::sz_resolved_atom_diag_helper(2);
     auto Sp = S_plus(2);
-    auto Sm = many_body_operator_real(dagger(Sp));
+    auto Sm = many_body_operator_complex(dagger(Sp));
 
     auto cp = ad.get_op_mat(Sp).connection;
     auto cm = ad.get_op_mat(Sm).connection;
@@ -216,7 +215,7 @@ TEST(BlockSparseDynintSets, dynint_ops_get_their_own_contiguous_symmetry_sets) {
     int n_sym_hyb = static_cast<int>(nda::max_element(labels_f) + 1);
     auto hyb      = test_utils::sym_set_diagonal_hyb(labels_f, p);
 
-    std::vector<many_body_operator_real> ops = {many_body_operator_real(n("A", 0) + n("A", 1))};
+    std::vector<many_body_operator_complex> ops = {many_body_operator_complex(n("A", 0) + n("A", 1))};
     auto dynint_coeffs                       = group_diagonal_dynint_coeffs({0}, p);
 
     auto [Fq, labels] = block_sparse::dynint::get_operators_and_interactions(ad, hyb, dynint_coeffs, ops);
@@ -240,8 +239,8 @@ TEST(BlockSparseDynintSets, dynint_ops_get_their_own_contiguous_symmetry_sets) {
     int n_sym_hyb = static_cast<int>(nda::max_element(labels_f) + 1);
     auto hyb      = test_utils::sym_set_diagonal_hyb(labels_f, p);
 
-    std::vector<many_body_operator_real> ops = {many_body_operator_real(n("up", 0)), many_body_operator_real(n("do", 0)),
-                                                many_body_operator_real(n("up", 1)), many_body_operator_real(n("do", 1))};
+    std::vector<many_body_operator_complex> ops = {many_body_operator_complex(n("up", 0)), many_body_operator_complex(n("do", 0)),
+                                                   many_body_operator_complex(n("up", 1)), many_body_operator_complex(n("do", 1))};
     auto dynint_coeffs                       = group_diagonal_dynint_coeffs({0, 0, 1, 1}, p);
 
     auto [Fq, labels] = block_sparse::dynint::get_operators_and_interactions(ad, hyb, dynint_coeffs, ops);
@@ -275,7 +274,7 @@ TEST(BlockSparseDynintSets, bars_match_dense_with_dynamical_interactions) {
     auto labels_f = std::get<1>(block_sparse::atom_diag::get_operators(ad_bs, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));
     auto hyb      = test_utils::sym_set_diagonal_hyb(labels_f, p);
 
-    std::vector<many_body_operator_real> ops = {many_body_operator_real(n("A", 0) + n("A", 1))};
+    std::vector<many_body_operator_complex> ops = {many_body_operator_complex(n("A", 0) + n("A", 1))};
     auto dynint_coeffs                       = group_diagonal_dynint_coeffs({0}, p);
 
     auto Fq   = std::get<0>(block_sparse::dynint::get_operators_and_interactions(ad_bs, hyb, dynint_coeffs, ops));
@@ -303,8 +302,8 @@ TEST(BlockSparseDynintSets, bars_match_dense_with_dynamical_interactions) {
     auto labels_f = std::get<1>(block_sparse::atom_diag::get_operators(ad_bs, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));
     auto hyb      = test_utils::sym_set_diagonal_hyb(labels_f, p);
 
-    std::vector<many_body_operator_real> ops = {many_body_operator_real(n("up", 0)), many_body_operator_real(n("do", 0)),
-                                                many_body_operator_real(n("up", 1)), many_body_operator_real(n("do", 1))};
+    std::vector<many_body_operator_complex> ops = {many_body_operator_complex(n("up", 0)), many_body_operator_complex(n("do", 0)),
+                                                   many_body_operator_complex(n("up", 1)), many_body_operator_complex(n("do", 1))};
     auto dynint_coeffs                       = group_diagonal_dynint_coeffs({0, 0, 1, 1}, p);
 
     // check that the dynint coefficients are non-diagonal and asymmetric within a set, so that the operator order inside a set is observable
@@ -336,9 +335,9 @@ TEST(BlockSparseDynintSets, bars_match_dense_with_dynamical_interactions) {
     auto labels_f = std::get<1>(block_sparse::atom_diag::get_operators(ad_bs, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));
     auto hyb      = test_utils::sym_set_diagonal_hyb(labels_f, p);
 
-    many_body_operator_real A0               = c_dag("up", 0) * c("do", 0);
-    many_body_operator_real A1               = c_dag("up", 1) * c("do", 1);
-    std::vector<many_body_operator_real> ops = {A0, A1, many_body_operator_real(dagger(A0)), many_body_operator_real(dagger(A1))};
+    many_body_operator_complex A0               = c_dag("up", 0) * c("do", 0);
+    many_body_operator_complex A1               = c_dag("up", 1) * c("do", 1);
+    std::vector<many_body_operator_complex> ops = {A0, A1, many_body_operator_complex(dagger(A0)), many_body_operator_complex(dagger(A1))};
     auto dynint_coeffs                       = group_diagonal_dynint_coeffs({0, 0, 1, 1}, p);
 
     auto Fq   = std::get<0>(block_sparse::dynint::get_operators_and_interactions(ad_bs, hyb, dynint_coeffs, ops));
@@ -402,7 +401,7 @@ TEST(BlockSparseDynintSets, rejects_coefficients_coupling_different_dynint_sets)
   auto hyb      = test_utils::sym_set_diagonal_hyb(labels_f, p);
 
   // n(A,0) is block diagonal; c^dag_A0 c_B0 moves (N_A, N_B) -> (N_A+1, N_B-1). Different rows.
-  std::vector<many_body_operator_real> ops = {many_body_operator_real(n("A", 0)), many_body_operator_real(c_dag("A", 0) * c("B", 0))};
+  std::vector<many_body_operator_complex> ops = {many_body_operator_complex(n("A", 0)), many_body_operator_complex(c_dag("A", 0) * c("B", 0))};
   auto dynint_coeffs                       = group_diagonal_dynint_coeffs({0, 1}, p);
 
   // check that the two operators land in different sets
@@ -453,8 +452,8 @@ TEST(BlockSparseDynintSets, non_block_diagonal_ops_form_distinct_symmetry_sets) 
   auto hyb      = test_utils::sym_set_diagonal_hyb(labels_f, p);
 
   auto Sp                                  = S_plus(2);
-  auto Sm                                  = many_body_operator_real(dagger(Sp));
-  std::vector<many_body_operator_real> ops = {Sm, Sp};
+  auto Sm                                     = many_body_operator_complex(dagger(Sp));
+  std::vector<many_body_operator_complex> ops = {Sm, Sp};
 
   auto dynint_coeffs = nda::zeros<dcomplex>(p, 2, 2);
   for (int l = 0; l < p; ++l) {
@@ -522,7 +521,7 @@ TEST(BlockSparseDynintSets, rejects_non_injective_connection_map) {
   H += 0.0 * n("x", 0);
   auto ad = triqs::atom_diag::atom_diag<true>(H, fop_set);
 
-  many_body_operator_real O = c_dag("x", 0) + c("x", 1) * n("x", 0);
+  many_body_operator_complex O = c_dag("x", 0) + c("x", 1) * n("x", 0);
 
   // check that the map is single-target but non-injective
   auto conn        = ad.get_op_mat(O).connection;
@@ -531,7 +530,7 @@ TEST(BlockSparseDynintSets, rejects_non_injective_connection_map) {
     for (int b2 = b1 + 1; b2 < ad.n_subspaces(); ++b2)
       if (conn(b1) >= 0 && conn(b1) == conn(b2)) ++n_collisions;
   ASSERT_GT(n_collisions, 0) << "the operator's connection map " << conn << " is injective, so this test proves nothing";
-  ASSERT_ANY_THROW(ad.get_op_mat(many_body_operator_real(dagger(O)))) << "the adjoint was expected to be multi-target";
+  ASSERT_ANY_THROW(ad.get_op_mat(many_body_operator_complex(dagger(O)))) << "the adjoint was expected to be multi-target";
 
   int n_hyb          = static_cast<int>(ad.get_fops().size());
   auto labels_f      = std::get<1>(block_sparse::atom_diag::get_operators(ad, nda::zeros<dcomplex>(p, n_hyb, n_hyb)));

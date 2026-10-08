@@ -32,12 +32,12 @@ namespace triqs_xca::block_sparse::dynint {
         const triqs_atom_diag_t<true> &ad,
         nda::array_const_view<dcomplex, 3> hyb_coeffs,
         nda::array_const_view<dcomplex, 3> dynint_coeffs,
-        std::vector<triqs::operators::many_body_operator_real> const &dynint_ops);
+        std::vector<triqs::operators::many_body_operator_complex> const &dynint_ops);
 
     std::tuple<BlockOpSymQuartet, nda::vector<long>> get_operators_and_interactions(
         const triqs_atom_diag_t<false> &ad,
         nda::array_const_view<dcomplex, 3> hyb_coeffs,
         nda::array_const_view<dcomplex, 3> dynint_coeffs,
-        std::vector<triqs::operators::many_body_operator_real> const &dynint_ops);
+        std::vector<triqs::operators::many_body_operator_complex> const &dynint_ops);
 
 }

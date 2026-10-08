@@ -164,7 +164,7 @@ DiagramEvaluator::DiagramEvaluator(
   nda::array_const_view<dcomplex, 3> hyb_coeffs,
   triqs::mesh::dlr_imtime tau_mesh,
   triqs::atom_diag::atom_diag<isComplex> const &ad,
-  std::vector<triqs::operators::many_body_operator_real> const &dynint_ops,
+  std::vector<triqs::operators::many_body_operator_complex> const &dynint_ops,
   nda::array_const_view<dcomplex, 3> dynint_coeffs)
    :
      tau_mesh(tau_mesh),
@@ -195,7 +195,7 @@ template DiagramEvaluator::DiagramEvaluator(
   nda::array_const_view<dcomplex, 3> hyb_coeffs,
   triqs::mesh::dlr_imtime tau_mesh,
   triqs::atom_diag::atom_diag<true> const &ad,
-  std::vector<triqs::operators::many_body_operator_real> const &dynint_ops,
+  std::vector<triqs::operators::many_body_operator_complex> const &dynint_ops,
   nda::array_const_view<dcomplex, 3> dynint_coeffs);
 
 template DiagramEvaluator::DiagramEvaluator(
@@ -203,7 +203,7 @@ template DiagramEvaluator::DiagramEvaluator(
   nda::array_const_view<dcomplex, 3> hyb_coeffs,
   triqs::mesh::dlr_imtime tau_mesh,
   triqs::atom_diag::atom_diag<false> const &ad,
-  std::vector<triqs::operators::many_body_operator_real> const &dynint_ops,
+  std::vector<triqs::operators::many_body_operator_complex> const &dynint_ops,
   nda::array_const_view<dcomplex, 3> dynint_coeffs);
 
 // ----------- Private routines for any diagram ==========
@@ -965,13 +965,13 @@ void DiagramEvaluator::print_single_ptcle_gf_backbone(nda::array_const_view<int,
 
 template<bool isComplex>
 std::vector<BlockOp> setup_ops_from_triqs_2nd_quant_ops(
-  std::vector<triqs::operators::many_body_operator_real> const & ops,
+  std::vector<triqs::operators::many_body_operator_complex> const & ops,
   triqs::atom_diag::atom_diag<isComplex> const &ad) {
 
   std::vector<BlockOp> bops;
 
   for (auto &op : ops) {
-    auto op_blocks = ad.get_op_mat(op);
+    auto op_blocks = triqs_xca::atom_diag::get_op_mat(ad, op);
 
     std::vector<nda::array<dcomplex, 2>> blocks;
 
@@ -1000,8 +1000,8 @@ std::vector<BlockOp> setup_ops_from_triqs_2nd_quant_ops(
 template<bool isComplex>
 nda::array<dcomplex, 3> DiagramEvaluator::compute_one_time_correlator(
     triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, 
-    std::vector<triqs::operators::many_body_operator_real> const & ops_tau, 
-    std::vector<triqs::operators::many_body_operator_real> const & ops_0, 
+    std::vector<triqs::operators::many_body_operator_complex> const & ops_tau, 
+    std::vector<triqs::operators::many_body_operator_complex> const & ops_0, 
     triqs::atom_diag::atom_diag<isComplex> const &ad,
     nda::array_const_view<int, 2> topology, nda::array_const_view<long, 1> f_ix_vec){
 
@@ -1032,8 +1032,8 @@ nda::array<dcomplex, 3> DiagramEvaluator::compute_one_time_correlator(
 template
 nda::array<dcomplex, 3> DiagramEvaluator::compute_one_time_correlator(
     triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, 
-    std::vector<triqs::operators::many_body_operator_real> const & ops_tau, 
-    std::vector<triqs::operators::many_body_operator_real> const & ops_0, 
+    std::vector<triqs::operators::many_body_operator_complex> const & ops_tau, 
+    std::vector<triqs::operators::many_body_operator_complex> const & ops_0, 
     triqs::atom_diag::atom_diag<false> const &ad,
     nda::array_const_view<int, 2> topology, nda::array_const_view<long, 1> f_ix_vec);
 
@@ -1041,8 +1041,8 @@ nda::array<dcomplex, 3> DiagramEvaluator::compute_one_time_correlator(
 template
 nda::array<dcomplex, 3> DiagramEvaluator::compute_one_time_correlator(
     triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, 
-    std::vector<triqs::operators::many_body_operator_real> const & ops_tau, 
-    std::vector<triqs::operators::many_body_operator_real> const & ops_0, 
+    std::vector<triqs::operators::many_body_operator_complex> const & ops_tau, 
+    std::vector<triqs::operators::many_body_operator_complex> const & ops_0, 
     triqs::atom_diag::atom_diag<true> const &ad,
     nda::array_const_view<int, 2> topology, nda::array_const_view<long, 1> f_ix_vec);
 

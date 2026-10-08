@@ -1,3 +1,6 @@
+#include <stdexcept>
+#include <string>
+
 #include "triqs_xca/atom_diag.hpp"
 
 namespace triqs_xca::atom_diag {
@@ -19,6 +22,32 @@ namespace triqs_xca::atom_diag {
       nda::matrix<dcomplex> block_mat_fock = U2 * block_mat * nda::conj(nda::transpose(U1));
 
       return block_mat_fock;
+    }
+
+    template <bool IsComplex>
+    op_block_mat get_op_mat_impl(const triqs_atom_diag_t<IsComplex> &ad, triqs::operators::many_body_operator_complex const &op) {
+      int nb = ad.n_subspaces();
+      op_block_mat op_mat{nda::array<long, 1>(nb), std::vector<nda::matrix<dcomplex>>(nb)};
+      op_mat.connection() = -1;
+
+      for (int b = 0; b < nb; ++b) {
+        for (auto const &term : op) {
+          auto [bb, mat] = ad.get_matrix_element_of_monomial(term.monomial, b);
+          if (bb == -1) continue;
+
+          nda::matrix<dcomplex> contribution = term.coef * nda::matrix<dcomplex>{mat};
+          if (op_mat.connection(b) == -1) {
+            op_mat.connection(b) = bb;
+            op_mat.block_mat[b]  = contribution;
+          } else if (op_mat.connection(b) != bb) {
+            throw std::runtime_error("get_op_mat: the monomials of the operator take subspace " + std::to_string(b) + " to different subspaces, "
+                                     + std::to_string(op_mat.connection(b)) + " and " + std::to_string(bb));
+          } else {
+            op_mat.block_mat[b] += contribution;
+          }
+        }
+      }
+      return op_mat;
     }
 
   } // namespace
@@ -43,6 +72,14 @@ namespace triqs_xca::atom_diag {
     nda::matrix<dcomplex> H_block = U * H_block_diag * nda::conj(nda::transpose(U));
 
     return H_block;
+  }
+
+  op_block_mat get_op_mat(const triqs_atom_diag_t<true> &ad, triqs::operators::many_body_operator_complex const &op) {
+    return get_op_mat_impl(ad, op);
+  }
+
+  op_block_mat get_op_mat(const triqs_atom_diag_t<false> &ad, triqs::operators::many_body_operator_complex const &op) {
+    return get_op_mat_impl(ad, op);
   }
 
 } // namespace triqs_xca::atom_diag

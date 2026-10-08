@@ -8,6 +8,7 @@
 
 #include <cppdlr/dlr_imtime.hpp>
 
+#include "triqs_xca/atom_diag.hpp"
 #include "triqs_xca/block_sparse/block_op.hpp"
 
 namespace triqs_xca::block_sparse {
@@ -782,7 +783,7 @@ namespace triqs_xca::block_sparse {
   }
 
   template <bool isComplex>
-  dcomplex expectation_value(triqs::operators::many_body_operator_real const &op, triqs::atom_diag::atom_diag<isComplex> const &ad,
+  dcomplex expectation_value(triqs::operators::many_body_operator_complex const &op, triqs::atom_diag::atom_diag<isComplex> const &ad,
                              triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc) {
 
     if (G_ppsc.size() != ad.n_subspaces())
@@ -796,7 +797,7 @@ namespace triqs_xca::block_sparse {
                                     + std::to_string(shape[1]) + ", the subspace has dimension " + std::to_string(dim));
     }
 
-    auto op_blocks = ad.get_op_mat(op);
+    auto op_blocks = triqs_xca::atom_diag::get_op_mat(ad, op);
     auto beta      = G_ppsc[0].mesh().beta();
 
     dcomplex sum = 0;
@@ -814,10 +815,10 @@ namespace triqs_xca::block_sparse {
     return sum;
   }
 
-  template dcomplex expectation_value(triqs::operators::many_body_operator_real const &op, triqs::atom_diag::atom_diag<false> const &ad,
+  template dcomplex expectation_value(triqs::operators::many_body_operator_complex const &op, triqs::atom_diag::atom_diag<false> const &ad,
                                       triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc);
 
-  template dcomplex expectation_value(triqs::operators::many_body_operator_real const &op, triqs::atom_diag::atom_diag<true> const &ad,
+  template dcomplex expectation_value(triqs::operators::many_body_operator_complex const &op, triqs::atom_diag::atom_diag<true> const &ad,
                                       triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc);
 
   triqs::gfs::block_gf<triqs::mesh::dlr_imtime> convolve_ppsc(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G1,

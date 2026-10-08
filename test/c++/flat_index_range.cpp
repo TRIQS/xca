@@ -16,7 +16,7 @@
 
 using nda::dcomplex;
 
-using triqs::operators::many_body_operator_real;
+using triqs::operators::many_body_operator_complex;
 using triqs::operators::n;
 
 namespace block_sparse = triqs_xca::block_sparse;
@@ -59,7 +59,7 @@ TEST(FlatIndexRange, out_of_range_flat_indices_are_rejected) {
   auto hyb_poles   = nda::vector<double>{1.3, -0.8};
   auto G_bs        = test_utils::ad_to_atom_prop(ad, beta, Lambda, eps);
   auto G_flat      = test_utils::ad_to_atom_prop(ad_flat, beta, Lambda, eps);
-  auto ops         = std::vector<many_body_operator_real>{n("A", 0)};
+  auto ops         = std::vector<many_body_operator_complex>{n("A", 0)};
   auto topology    = nda::array<int, 2>{{0, 2}, {1, 3}};
   auto D_dense     = dense::DiagramEvaluator(hyb_poles, hyb_coeffs, G_flat[0].mesh(), ad_flat);
   auto D_bs        = block_sparse::DiagramEvaluator(hyb_poles, hyb_coeffs, G_bs[0].mesh(), ad);
@@ -192,10 +192,10 @@ TEST(FlatIndexRange, flat_indices_beyond_int) {
 
   // the vector overloads, and the one-time correlator of the annihilators and creators, which is the single-particle Green's function
   auto f_spgf_vec = nda::vector<long>{f_spgf};
-  auto c_ops = std::vector<many_body_operator_real>{}, c_dag_ops = std::vector<many_body_operator_real>{};
+  auto c_ops = std::vector<many_body_operator_complex>{}, c_dag_ops = std::vector<many_body_operator_complex>{};
   for (auto const &fop : ad.get_fops()) {
-    c_ops.push_back(many_body_operator_real::make_canonical(false, fop.index));
-    c_dag_ops.push_back(many_body_operator_real::make_canonical(true, fop.index));
+    c_ops.push_back(many_body_operator_complex::make_canonical(false, fop.index));
+    c_dag_ops.push_back(many_body_operator_complex::make_canonical(true, fop.index));
   }
   auto check_g = [&](std::string const &what, nda::array_const_view<dcomplex, 3> x) {
     SCOPED_TRACE(what);

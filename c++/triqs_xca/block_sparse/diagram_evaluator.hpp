@@ -135,8 +135,8 @@ class DiagramEvaluator {
   template<bool isComplex>
   nda::array<dcomplex, 3> compute_one_time_correlator(
     triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, 
-    std::vector<triqs::operators::many_body_operator_real> const &ops_tau, 
-    std::vector<triqs::operators::many_body_operator_real> const &ops_0, 
+    std::vector<triqs::operators::many_body_operator_complex> const &ops_tau, 
+    std::vector<triqs::operators::many_body_operator_complex> const &ops_0, 
     triqs::atom_diag::atom_diag<isComplex> const &ad,
     nda::array_const_view<int, 2> topology, nda::array_const_view<long, 1> f_ix_vec);
 
@@ -172,7 +172,7 @@ class DiagramEvaluator {
   DiagramEvaluator(
     nda::vector_const_view<double> hyb_poles, nda::array_const_view<dcomplex, 3> hyb_coeffs,
     triqs::mesh::dlr_imtime tau_mesh, triqs::atom_diag::atom_diag<isComplex> const &ad,
-    std::vector<triqs::operators::many_body_operator_real> const &dynint_ops,
+    std::vector<triqs::operators::many_body_operator_complex> const &dynint_ops,
     nda::array_const_view<dcomplex, 3> dynint_coeffs);
 
   /**

@@ -16,7 +16,6 @@ using cppdlr::_;
 using cppdlr::build_dlr_rf;
 
 using triqs::operators::many_body_operator_complex;
-using triqs::operators::many_body_operator_real;
 using triqs::operators::n;
 
 using triqs_xca::dense::DiagramEvaluator;
@@ -43,7 +42,7 @@ namespace {
     nda::vector<double> hyb_poles;
     nda::array<dcomplex, 3> hyb_coeffs;
     nda::array<dcomplex, 3> dynint_coeffs;
-    std::vector<many_body_operator_real> dynint_ops;
+    std::vector<many_body_operator_complex> dynint_ops;
   };
 
   /**
@@ -84,7 +83,7 @@ namespace {
     dynint_coeffs(0, 0, 0) = 0.9;
     dynint_coeffs(1, 0, 0) = 0.6;
 
-    std::vector<many_body_operator_real> dynint_ops = {n<double>("0", 0)};
+    std::vector<many_body_operator_complex> dynint_ops = {n<double>("0", 0)};
 
     return {.ad            = ad,
             .G_ppsc        = G_ppsc,
@@ -119,7 +118,7 @@ TEST(DenseDynint, spgf_flat_index_overloads_agree) {
     for (int i = 0; i < n_hyb; ++i)
       for (int j = 0; j < n_hyb; ++j) hyb_coeffs(l, i, j) = dcomplex(0.4 - 0.1 * l + 0.05 * (i - j), 0.03 * (i + 2 * j));
 
-  std::vector<many_body_operator_real> dynint_ops = {n<double>("A", 0)};
+  std::vector<many_body_operator_complex> dynint_ops = {n<double>("A", 0)};
   auto dynint_coeffs                              = nda::zeros<dcomplex>(p, 1, 1);
   dynint_coeffs(0, 0, 0)                          = 0.9;
   dynint_coeffs(1, 0, 0)                          = 0.6;
@@ -298,7 +297,7 @@ TEST(DenseDynint, one_time_correlator_rejects_multi_subspace_atom_diag) {
   DiagramEvaluator D(m.hyb_poles, m.hyb_coeffs, m.G_ppsc[0].mesh(), m.ad);
 
   nda::array<int, 2> topology              = {{0, 1}};
-  std::vector<many_body_operator_real> ops = {n<double>("0", 0)};
+  std::vector<many_body_operator_complex> ops = {n<double>("0", 0)};
 
   nda::vector<long> f_ix_vec(1);
   f_ix_vec(0) = 0;
