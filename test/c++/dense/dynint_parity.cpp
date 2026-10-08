@@ -303,8 +303,11 @@ TEST(DenseDynint, one_time_correlator_rejects_multi_subspace_atom_diag) {
   nda::vector<int> f_ix_vec(1);
   f_ix_vec(0) = 0;
 
+  // a propagator in the layout the dense evaluator takes, so that only the atom_diag is at fault
+  auto G_flat = dynint_model(beta, Lambda, eps).G_ppsc;
+
   try {
-    D.compute_one_time_correlator(m.G_ppsc, ops, ops, m.ad, topology, f_ix_vec);
+    D.compute_one_time_correlator(G_flat, ops, ops, m.ad, topology, f_ix_vec);
     FAIL() << "expected std::invalid_argument for a multi-subspace atom_diag";
   } catch (std::invalid_argument const &e) { EXPECT_NE(std::string(e.what()).find("single subspace"), std::string::npos) << e.what(); }
 }

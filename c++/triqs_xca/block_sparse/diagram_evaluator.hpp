@@ -27,6 +27,10 @@ class DiagramEvaluator {
   nda::vector<double> dlr_it; // DLR imaginary time nodes in relative ordering
   BlockOpSymQuartet Fq;       // BlockOpSymQuartet (field operators with and without bars)
   BlockDiagOpFun Sigma;       // array for storing self-energy contribution (final result)
+  nda::vector<long> subspace_dims; // dimension of each invariant subspace, i.e. of each block of G_ppsc; -1 where no operator acts
+
+  // check that G_ppsc has one (r, d, d) block per invariant subspace of dimension d, in subspace order, and return it as a BlockDiagOpFun
+  BlockDiagOpFun native_propagator(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc) const;
 
   // Diagram composition routines
   

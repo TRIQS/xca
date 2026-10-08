@@ -53,6 +53,9 @@ namespace triqs_xca::dense {
     nda::array<dcomplex, 3> Tmu;   // intermediate storage array
 
     private:
+    // check that G_ppsc is a single (r, N, N) block over the full Hilbert space, the only layout this evaluator takes, and return it
+    nda::array_const_view<dcomplex, 3> native_propagator(gf_vt G_ppsc) const;
+
     // routines for any diagram
 
     // multiply by a single vertex, v_ix, in a backbone diagram using dense storage

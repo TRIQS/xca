@@ -59,6 +59,26 @@ namespace {
     return N;
   }
 
+  // dimension of each invariant subspace, read off the blocks of the operators acting on it; -1 for a subspace no operator acts on
+  nda::vector<long> subspace_dims_of(BlockOpSymQuartet const &Fq) {
+    long n_sub = Fq.Fs[0].get_num_block_cols();
+    nda::vector<long> dims(n_sub);
+    dims = -1;
+    for (auto const *sets : {&Fq.Fs, &Fq.F_dags})
+      for (auto const &F : *sets)
+        for (long b = 0; b < n_sub; ++b)
+          if (F.get_block_index(b) >= 0) dims(b) = F.get_block_size(b, 1);
+    return dims;
+  }
+
+  template <bool isComplex>
+  nda::vector<long> subspace_dims_of(triqs::atom_diag::atom_diag<isComplex> const &ad) {
+    auto const dims = ad.get_subspace_dims();
+    nda::vector<long> result(dims.size());
+    for (std::size_t b = 0; b < dims.size(); ++b) result(b) = dims[b];
+    return result;
+  }
+
   // largest invariant-subspace dimension, i.e. the largest block of the pseudo-particle propagator
   template <bool isComplex>
   int max_subspace_dim(triqs::atom_diag::atom_diag<isComplex> const &ad) {
@@ -78,6 +98,7 @@ DiagramEvaluator::DiagramEvaluator(double beta, double Lambda, double eps,
      dlr_it(itops.get_itnodes()),
      Fq(Fq),
      Sigma({}, {}),
+     subspace_dims(subspace_dims_of(Fq)),
      beta(beta),
      r(itops.rank()),
      n(check_fq_only_coeffs(hyb_coeffs, hyb_poles, Fq)), // number of spin-orbitals; also validates hyb_coeffs
@@ -107,6 +128,7 @@ DiagramEvaluator::DiagramEvaluator(
      dlr_it(itops.get_itnodes()),
      Fq(std::get<0>(atom_diag::get_operators(ad, hyb_coeffs))),
      Sigma({}, {}),
+     subspace_dims(subspace_dims_of(ad)),
      beta(tau_mesh.beta()),
      r(itops.rank()),
      n(ad.get_fops().size()), // number of fermion flavours (spin-orbitals)
@@ -149,6 +171,7 @@ DiagramEvaluator::DiagramEvaluator(
      dlr_it(itops.get_itnodes()),
      Fq(std::get<0>(dynint::get_operators_and_interactions(ad, hyb_coeffs, dynint_coeffs, dynint_ops))),
      Sigma({}, {}),
+     subspace_dims(subspace_dims_of(ad)),
      beta(tau_mesh.beta()),
      r(itops.rank()),
      n(ad.get_fops().size() + dynint_ops.size()), // the extended flavour space
@@ -434,7 +457,7 @@ void DiagramEvaluator::eval_self_energy_fixed_indices(BlockDiagOpFun &Gt, Backbo
 triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_energy(
   triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology) 
   {
-  BlockDiagOpFun Gt(G_ppsc);
+  auto Gt = native_propagator(G_ppsc);
   return compute_self_energy(Gt, topology);
   }
 
@@ -465,7 +488,7 @@ triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_ene
 triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_energy(
   triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, int f_ix) 
   {
-  BlockDiagOpFun Gt(G_ppsc);
+  auto Gt = native_propagator(G_ppsc);
   return compute_self_energy(Gt, topology, f_ix);
 }
 
@@ -473,7 +496,7 @@ triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_ene
   triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, 
   nda::array_const_view<int, 1> f_ix_vec) 
   {
-  BlockDiagOpFun Gt(G_ppsc);
+  auto Gt = native_propagator(G_ppsc);
 
   // Allocate Sigma and set to zero
   Sigma = Gt;
@@ -783,6 +806,23 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(BlockDiagOpFun &Gt, Co
 
 // ========= Public self-energy routines ==========
 
+BlockDiagOpFun DiagramEvaluator::native_propagator(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc) const {
+  long n_sub = subspace_dims.size();
+  if (G_ppsc.size() != n_sub)
+    throw std::invalid_argument("block_sparse::DiagramEvaluator: G_ppsc must have one block per invariant subspace, i.e. " + std::to_string(n_sub)
+                                + " blocks, got " + std::to_string(G_ppsc.size()));
+  for (long b = 0; b < n_sub; ++b) {
+    auto G   = G_ppsc[b].data();
+    long dim = subspace_dims(b);
+    if (G.extent(0) != r || (dim >= 0 && (G.extent(1) != dim || G.extent(2) != dim)))
+      throw std::invalid_argument("block_sparse::DiagramEvaluator: block " + std::to_string(b) + " of G_ppsc has shape (" + std::to_string(G.extent(0))
+                                  + ", " + std::to_string(G.extent(1)) + ", " + std::to_string(G.extent(2)) + "), expected "
+                                  + (dim >= 0 ? "(r, d, d) = (" + std::to_string(r) + ", " + std::to_string(dim) + ", " + std::to_string(dim) + ")"
+                                              : "rank r = " + std::to_string(r)));
+  }
+  return BlockDiagOpFun(G_ppsc);
+}
+
 void DiagramEvaluator::reset() {
   T     = 0;
   U     = 0;
@@ -855,7 +895,7 @@ std::vector<BlockOp> DiagramEvaluator::setup_kap_ops_for_single_ptcle_gf() {
 
 nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(
   triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology) {
-  BlockDiagOpFun Gt(G_ppsc);
+  auto Gt = native_propagator(G_ppsc);
   return compute_single_ptcle_gf(Gt, topology);
 }
 
@@ -870,7 +910,7 @@ nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(
 
 nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(
   triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, int f_ix) {
-  BlockDiagOpFun Gt(G_ppsc);
+  auto Gt = native_propagator(G_ppsc);
   return compute_single_ptcle_gf(Gt, topology, f_ix);
 }
 
@@ -886,7 +926,7 @@ nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(
 nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(
   triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc, nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec) 
   {
-  BlockDiagOpFun Gt(G_ppsc);
+  auto Gt = native_propagator(G_ppsc);
   CorrelatorBackbone backbone(topology, n, n_int);
   auto mu_ops  = setup_mu_ops_for_single_ptcle_gf();
   auto kap_ops = setup_kap_ops_for_single_ptcle_gf();
@@ -949,8 +989,14 @@ nda::array<dcomplex, 3> DiagramEvaluator::compute_one_time_correlator(
   // the statistics is the fermion parity of the operators, not whether they commute, see operator_statistics.hpp
   bool is_fermionic = correlator_statistics(ops_tau, ops_0, "compute_one_time_correlator");
 
-  BlockDiagOpFun Gt(G_ppsc);
+  auto Gt = native_propagator(G_ppsc);
   CorrelatorBackbone backbone(topology, n, n_int);
+
+  // the operator blocks are placed by the subspaces of ad, which have to be those of the evaluator
+  auto ad_dims = subspace_dims_of(ad);
+  bool same    = ad_dims.size() == subspace_dims.size();
+  for (long b = 0; same && b < ad_dims.size(); ++b) same = subspace_dims(b) < 0 || ad_dims(b) == subspace_dims(b);
+  if (!same) throw std::invalid_argument("compute_one_time_correlator: the subspaces of the atom_diag differ from those the evaluator was built for");
 
   auto mu_ops  = setup_ops_from_triqs_2nd_quant_ops(ops_tau, ad);
   auto kap_ops = setup_ops_from_triqs_2nd_quant_ops(ops_0, ad);
