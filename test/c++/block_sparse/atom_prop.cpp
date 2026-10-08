@@ -189,6 +189,48 @@ TEST(AtomProp, blocks_match_dense) {
 }
 
 /**
+ * @brief Check the per-block propagator against the dense construction for a Hamiltonian with a complex hopping
+ */
+TEST(AtomProp, blocks_match_dense_complex_hamiltonian) {
+  double beta   = 2.0;
+  double Lambda = 100 * beta;
+  double eps    = 1e-10;
+
+  auto dlr_rf     = build_dlr_rf(Lambda, eps);
+  auto itops      = imtime_ops(Lambda, dlr_rf);
+  auto dlr_it_abs = rel2abs(itops.get_itnodes());
+
+  using triqs::operators::c;
+  using triqs::operators::c_dag;
+  using triqs::operators::n;
+  triqs::atom_diag::fundamental_operator_set fops;
+  fops.insert("0", 0);
+  fops.insert("0", 1);
+  auto t = dcomplex(0.4, 0.7);
+  triqs::operators::many_body_operator H =
+     t * c_dag("0", 0) * c("0", 1) + std::conj(t) * c_dag("0", 1) * c("0", 0) + 1.3 * n("0", 0) * n("0", 1) - 0.2 * n("0", 0) + 0.1 * n("0", 1);
+  triqs::operators::many_body_operator N = n("0", 0) + n("0", 1);
+
+  for (bool partition : {true, false}) {
+    SCOPED_TRACE(partition ? "particle-number symmetry" : "single subspace");
+
+    auto ad = partition ? triqs::atom_diag::atom_diag<true>(H, fops, {N}) : triqs::atom_diag::atom_diag<true>(H, fops, {});
+    auto ap = test_utils::ad_to_atom_prop(ad, beta, itops);
+
+    auto Gt_dense = test_utils::Hmat_to_Gtmat(test_utils::get_full_h_atomic(ad), beta, dlr_it_abs);
+    ASSERT_GT(nda::max_element(nda::abs(nda::imag(Gt_dense))), 0.01) << "vacuous test: the propagator is real";
+
+    ASSERT_EQ(ap.get_num_block_cols(), ad.n_subspaces());
+    for (int b = 0; b < ad.n_subspaces(); ++b) {
+      SCOPED_TRACE("block " + std::to_string(b));
+      auto dense_block = test_utils::get_tensor_in_atom_diag_subspace(Gt_dense, b, ad);
+      ASSERT_EQ(ap.get_block_size(b), dense_block.extent(1));
+      EXPECT_LE(nda::max_element(nda::abs(nda::make_regular(ap.get_block(b) - dense_block))), 1e-12);
+    }
+  }
+}
+
+/**
  * @brief Check get_tensor_in_full_hilbert_space against its inverse and against the dense construction
  *
  * @details This is the whole-array counterpart of AtomProp.blocks_match_dense above: rather than projecting the

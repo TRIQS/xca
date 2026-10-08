@@ -70,7 +70,7 @@ TEST(BlockDiagOpFun, compute_nonint_gf) {
   auto Gbeta      = nda::zeros<dcomplex>(16, 16);
   Gt_mat          = test_utils::Hmat_to_Gtmat(H_dense, beta, dlr_it_abs);
   for (int i = 0; i < 16; i++) { Gbeta(i, i) = -exp(-beta * H_loc_eval(i)); }
-  Gbeta = matmul(Gbeta, nda::transpose(H_loc_evec));
+  Gbeta = matmul(Gbeta, nda::conj(nda::transpose(H_loc_evec)));
   Gbeta = matmul(H_loc_evec, Gbeta);
 
   // check that trace of noninteracting Green's function from dense
