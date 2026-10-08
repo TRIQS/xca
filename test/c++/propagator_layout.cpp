@@ -14,6 +14,7 @@
 
 using nda::dcomplex;
 
+using triqs::operators::c_dag;
 using triqs::operators::many_body_operator_real;
 using triqs::operators::n;
 
@@ -31,8 +32,9 @@ namespace test_utils   = triqs_xca::test_utils;
  *
  * @details The dense evaluator takes one (r, N, N) block over the full Hilbert space, the block-sparse evaluator one (r, d, d) block per
  * invariant subspace of its atom_diag. The layout of the other evaluator, an empty block_gf, a block of the wrong dimension and a propagator
- * on a DLR mesh of another rank are rejected with std::invalid_argument by every block_gf entry point. The one-time correlator also rejects
- * an atom_diag other than the one the evaluator was built on.
+ * on a DLR mesh of another rank are rejected with std::invalid_argument by every block_gf entry point, the BlockDiagOpFun overloads of the
+ * block-sparse evaluator and block_sparse::expectation_value. The one-time correlator also rejects an atom_diag other than the one the
+ * evaluator was built on, and expectation_value gets no contribution from the blocks of an operator that leave their subspace.
  */
 
 /// @brief Check every wrong layout against every block_gf entry point of both evaluators
@@ -59,13 +61,13 @@ TEST(PropagatorLayout, wrong_layouts_are_rejected) {
   ASSERT_NO_THROW(D_dense.compute_self_energy(G_flat, topology));
   ASSERT_NO_THROW(D_bs.compute_self_energy(G_bs, topology));
 
-  // the block-sparse propagator with one block of dimension > 1 replaced by a 1x1 block
+  // the block-sparse propagator with one block of dimension > 1 replaced by a nonzero 1x1 block
   auto blocks = std::vector<triqs::gfs::gf<mesh_t>>{};
   for (int b = 0; b < G_bs.size(); ++b) blocks.emplace_back(G_bs[b]);
   int b_big = 0;
   while (b_big < G_bs.size() && G_bs[b_big].target_shape()[0] < 2) ++b_big;
   ASSERT_LT(b_big, G_bs.size()) << "vacuous test: no subspace of dimension > 1";
-  blocks[b_big]       = triqs::gfs::gf<mesh_t>(G_bs[0].mesh(), nda::zeros<dcomplex>(G_bs[0].mesh().size(), 1, 1));
+  blocks[b_big]       = triqs::gfs::gf<mesh_t>(G_bs[0].mesh(), nda::ones<dcomplex>(G_bs[0].mesh().size(), 1, 1));
   auto G_bs_wrong_dim = bgf_t{blocks};
 
   auto G_empty     = bgf_t{std::vector<triqs::gfs::gf<mesh_t>>{}};
@@ -105,4 +107,31 @@ TEST(PropagatorLayout, wrong_layouts_are_rejected) {
   ASSERT_NE(ad_other.get_full_hilbert_space_dim(), ad_flat.get_full_hilbert_space_dim());
   EXPECT_THROW(D_dense.compute_one_time_correlator(G_flat, ops, ops, ad_other, topology, f_ix_vec), std::invalid_argument);
   EXPECT_THROW(D_bs.compute_one_time_correlator(G_bs, ops, ops, ad_flat, topology, f_ix_vec), std::invalid_argument);
+
+  // the BlockDiagOpFun overloads of the block-sparse evaluator, which a block-sparse layout from another model reaches unconverted
+  for (auto &[what, G] : wrong_for_bs) {
+    if (G.size() == 0) continue; // BlockDiagOpFun cannot hold an empty propagator
+    SCOPED_TRACE("block-sparse BlockDiagOpFun, " + what);
+    auto Gt = block_sparse::BlockDiagOpFun(G);
+    EXPECT_THROW(D_bs.compute_self_energy(Gt, topology), std::invalid_argument);
+    EXPECT_THROW(D_bs.compute_self_energy(Gt, topology, 0), std::invalid_argument);
+    EXPECT_THROW(D_bs.compute_single_ptcle_gf(Gt, topology), std::invalid_argument);
+    EXPECT_THROW(D_bs.compute_single_ptcle_gf(Gt, topology, 0), std::invalid_argument);
+  }
+  {
+    SCOPED_TRACE("block-sparse BlockDiagOpFun, zero blocks of dimension 1");
+    auto Gt = block_sparse::BlockDiagOpFun(G_bs[0].mesh().size(), nda::ones<int>(G_bs.size()));
+    EXPECT_THROW(D_bs.compute_self_energy(Gt, topology), std::invalid_argument);
+    EXPECT_THROW(D_bs.compute_single_ptcle_gf(Gt, topology), std::invalid_argument);
+  }
+
+  // expectation_value with the layouts of its atom_diag and of another one, and with an operator that leaves the subspaces
+  auto op = many_body_operator_real(n("A", 0));
+  EXPECT_NO_THROW(block_sparse::expectation_value(op, ad, G_bs));
+  for (auto &[what, G] : wrong_for_bs) {
+    if (what == "other rank") continue; // expectation_value reads G on its own mesh
+    SCOPED_TRACE("expectation_value, " + what);
+    EXPECT_THROW(block_sparse::expectation_value(op, ad, G), std::invalid_argument);
+  }
+  EXPECT_EQ(std::abs(block_sparse::expectation_value(many_body_operator_real(c_dag("A", 0)), ad, G_bs)), 0.0);
 }

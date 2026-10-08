@@ -785,14 +785,26 @@ namespace triqs_xca::block_sparse {
   dcomplex expectation_value(triqs::operators::many_body_operator_real const &op, triqs::atom_diag::atom_diag<isComplex> const &ad,
                              triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc) {
 
+    if (G_ppsc.size() != ad.n_subspaces())
+      throw std::invalid_argument("expectation_value: G_ppsc must have one block per subspace of the atom_diag, i.e. " + std::to_string(ad.n_subspaces())
+                                  + " blocks, got " + std::to_string(G_ppsc.size()));
+    for (long b = 0; b < ad.n_subspaces(); ++b) {
+      auto shape = G_ppsc[b].target_shape();
+      long dim   = ad.get_subspace_dim(b);
+      if (shape[0] != dim || shape[1] != dim)
+        throw std::invalid_argument("expectation_value: block " + std::to_string(b) + " of G_ppsc is " + std::to_string(shape[0]) + " x "
+                                    + std::to_string(shape[1]) + ", the subspace has dimension " + std::to_string(dim));
+    }
+
     auto op_blocks = ad.get_op_mat(op);
     auto beta      = G_ppsc[0].mesh().beta();
 
     dcomplex sum = 0;
 
     for (auto bidx : range(op_blocks.block_mat.size())) {
-      assert(op_blocks.connection[bidx] == bidx);
       if (op_blocks.block_mat[bidx].shape(0) == 0) continue; // skip empty blocks
+      // a block that leaves its subspace does not contribute, since the density matrix is block diagonal
+      if (op_blocks.connection[bidx] != bidx) continue;
       auto g_dlr         = make_gf_dlr(G_ppsc[bidx]);
       auto U             = ad.get_unitary_matrix(bidx);
       auto op_mat_transf = U * op_blocks.block_mat[bidx] * nda::conj(nda::transpose(U));

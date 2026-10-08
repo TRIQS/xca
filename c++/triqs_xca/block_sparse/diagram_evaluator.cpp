@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <array>
 #include <stdexcept>
 #include <string>
 #include <iostream>
@@ -464,6 +465,7 @@ triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_ene
 triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_energy(
   BlockDiagOpFun &Gt, nda::array_const_view<int, 2> topology) 
   {
+  check_propagator(Gt);
   // Allocate Sigma and set to zero
   Sigma = Gt; 
   Sigma *= 0;
@@ -525,6 +527,7 @@ triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_ene
 triqs::gfs::block_gf<triqs::mesh::dlr_imtime> DiagramEvaluator::compute_self_energy(
   BlockDiagOpFun &Gt, nda::array_const_view<int, 2> topology, long f_ix) 
   {
+  check_propagator(Gt);
   // Allocate Sigma and set to zero
   Sigma = Gt;
   Sigma *= 0;
@@ -604,6 +607,7 @@ void DiagramEvaluator::integrate_right_edge(nda::array_view<dcomplex, 3> U_buf, 
 
 nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(BlockDiagOpFun &Gt, CorrelatorBackbone &backbone,
     std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops, bool is_fermionic) {
+  check_propagator(Gt);
 
   long f_ix_max = backbone.num_flat_indices(hyb.poles.size());
 
@@ -616,6 +620,7 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(BlockDiagOpFun &Gt, Co
 
 nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(BlockDiagOpFun &Gt, CorrelatorBackbone &backbone, std::vector<BlockOp> mu_ops, std::vector<BlockOp> kap_ops,
                                                           long f_ix, bool is_fermionic) {
+  check_propagator(Gt);
   int m = backbone.m;
   int vct0 = backbone.get_topology(0, 1);
 
@@ -805,21 +810,34 @@ nda::array<dcomplex, 3> DiagramEvaluator::eval_correlator(BlockDiagOpFun &Gt, Co
 
 // ========= Public self-energy routines ==========
 
-BlockDiagOpFun DiagramEvaluator::native_propagator(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc) const {
-  long n_sub = subspace_dims.size();
-  if (G_ppsc.size() != n_sub)
-    throw std::invalid_argument("block_sparse::DiagramEvaluator: G_ppsc must have one block per invariant subspace, i.e. " + std::to_string(n_sub)
-                                + " blocks, got " + std::to_string(G_ppsc.size()));
-  for (long b = 0; b < n_sub; ++b) {
-    auto G   = G_ppsc[b].data();
-    long dim = subspace_dims(b);
-    if (G.extent(0) != r || (dim >= 0 && (G.extent(1) != dim || G.extent(2) != dim)))
-      throw std::invalid_argument("block_sparse::DiagramEvaluator: block " + std::to_string(b) + " of G_ppsc has shape (" + std::to_string(G.extent(0))
-                                  + ", " + std::to_string(G.extent(1)) + ", " + std::to_string(G.extent(2)) + "), expected "
+namespace {
+
+  void check_block_count(long n_blocks, long n_sub) {
+    if (n_blocks != n_sub)
+      throw std::invalid_argument("block_sparse::DiagramEvaluator: the propagator must have one block per invariant subspace, i.e. "
+                                  + std::to_string(n_sub) + " blocks, got " + std::to_string(n_blocks));
+  }
+
+  // a propagator block has shape (r, d, d); only its rank r is checked where the subspace dimension d is unknown (d < 0)
+  void check_block_shape(long b, std::array<long, 3> const &shape, long r, long dim) {
+    if (shape[0] != r || (dim >= 0 && (shape[1] != dim || shape[2] != dim)))
+      throw std::invalid_argument("block_sparse::DiagramEvaluator: block " + std::to_string(b) + " of the propagator has shape (" + std::to_string(shape[0])
+                                  + ", " + std::to_string(shape[1]) + ", " + std::to_string(shape[2]) + "), expected "
                                   + (dim >= 0 ? "(r, d, d) = (" + std::to_string(r) + ", " + std::to_string(dim) + ", " + std::to_string(dim) + ")"
                                               : "rank r = " + std::to_string(r)));
   }
+
+} // namespace
+
+BlockDiagOpFun DiagramEvaluator::native_propagator(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc) const {
+  check_block_count(G_ppsc.size(), subspace_dims.size());
+  for (long b = 0; b < subspace_dims.size(); ++b) check_block_shape(b, G_ppsc[b].data().shape(), r, subspace_dims(b));
   return BlockDiagOpFun(G_ppsc);
+}
+
+void DiagramEvaluator::check_propagator(BlockDiagOpFun const &Gt) const {
+  check_block_count(Gt.get_num_block_cols(), subspace_dims.size());
+  for (long b = 0; b < subspace_dims.size(); ++b) check_block_shape(b, Gt.get_block(b).shape(), r, subspace_dims(b));
 }
 
 void DiagramEvaluator::reset() {
@@ -901,6 +919,7 @@ nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(
   nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(
   BlockDiagOpFun &Gt, nda::array_const_view<int, 2> topology) 
   {
+  check_propagator(Gt);
   CorrelatorBackbone backbone(topology, n, n_int);
   auto mu_ops  = setup_mu_ops_for_single_ptcle_gf();
   auto kap_ops = setup_kap_ops_for_single_ptcle_gf();
@@ -916,6 +935,7 @@ nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(
 nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(
   BlockDiagOpFun &Gt, nda::array_const_view<int, 2> topology, long f_ix) 
   {
+  check_propagator(Gt);
   CorrelatorBackbone backbone(topology, n, n_int);
   auto mu_ops  = setup_mu_ops_for_single_ptcle_gf();
   auto kap_ops = setup_kap_ops_for_single_ptcle_gf();

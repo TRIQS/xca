@@ -32,6 +32,9 @@ class DiagramEvaluator {
   // check that G_ppsc has one (r, d, d) block per invariant subspace of dimension d, in subspace order, and return it as a BlockDiagOpFun
   BlockDiagOpFun native_propagator(triqs::gfs::block_gf_view<triqs::mesh::dlr_imtime> G_ppsc) const;
 
+  // the same check for a propagator already in block-sparse storage
+  void check_propagator(BlockDiagOpFun const &Gt) const;
+
   // Diagram composition routines
   
   void multiply_prefactor(nda::array_view<dcomplex, 3> T_buf, Backbone &backbone);
