@@ -778,6 +778,8 @@ TEST(one_fermion, one_hyb_pole_spgf) {
   // compare
   EXPECT_LE(nda::max_element(nda::abs(third_bs - third_ana)), eps);
   EXPECT_LE(nda::max_element(nda::abs(third_dense - third_ana)), eps);
+  // tpz_tol exceeds max|third_bs_eq|, so this check passes even for a vanishing third_tpz. A finer grid is not needed to fix this: the
+  // quadrature error is a small fraction of the signal and falls as n_quad^-2, so a tolerance relative to max|third_bs_eq| discriminates
   EXPECT_LE(nda::max_element(nda::abs(third_bs_eq - third_tpz)), tpz_tol);
 }
 
