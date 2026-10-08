@@ -34,6 +34,21 @@ namespace triqs_xca::dense::manual {
                                        nda::array_const_view<dcomplex, 3> Gt, nda::array_const_view<dcomplex, 3> Fs,
                                        nda::array_const_view<dcomplex, 3> F_dags);
 
+  /**
+ * @brief Evaluate the OCA single-particle Green's function directly using trapezoidal quadrature
+ *
+ * @details Returns the result on the equispaced grid of n_quad + 1 points; both grid endpoints are left at zero.
+ *
+ * @param[in] hyb_coeffs DLR coefficients of the hybridization
+ * @param[in] hyb_refl_coeffs DLR coefficients of the reflected hybridization hyb(beta - tau), as given by imtime_ops::reflect, without a sign
+ * or a transpose; backward lines use its transpose
+ * @param[in] itops cppdlr imaginary time object
+ * @param[in] beta inverse temperature
+ * @param[in] Gt_coeffs DLR coefficients of the pseudoparticle Green's function
+ * @param[in] Fs annihilation operators
+ * @param[in] n_quad number of quadrature intervals
+ * @return OCA contribution to the single-particle Green's function
+ */
   nda::array<dcomplex, 3> spgf_oca_tpz(nda::array_const_view<dcomplex, 3> hyb_coeffs, nda::array_const_view<dcomplex, 3> hyb_refl_coeffs,
                                      imtime_ops &itops, double beta, nda::array_const_view<dcomplex, 3> Gt_coeffs,
                                      nda::array_const_view<dcomplex, 3> Fs, int n_quad);
@@ -47,7 +62,8 @@ namespace triqs_xca::dense::manual {
  * on the equispaced grid of n_quad + 1 points; both grid endpoints are left at zero.
  *
  * @param[in] hyb_coeffs DLR coefficients of the hybridization
- * @param[in] hyb_refl_coeffs DLR coefficients of the hybridization at negative imaginary times
+ * @param[in] hyb_refl_coeffs DLR coefficients of the reflected hybridization hyb(beta - tau), as given by imtime_ops::reflect, without a sign
+ * or a transpose; backward lines use its transpose
  * @param[in] itops cppdlr imaginary time object
  * @param[in] beta inverse temperature
  * @param[in] Gt_coeffs DLR coefficients of the pseudoparticle Green's function

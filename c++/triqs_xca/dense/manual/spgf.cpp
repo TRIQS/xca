@@ -166,7 +166,8 @@ namespace triqs_xca::dense::manual {
     auto hyb_c = nda::make_regular(hyb_coeffs), hyb_refl_c = nda::make_regular(hyb_refl_coeffs), Gt_c = nda::make_regular(Gt_coeffs);
     for (int i = 0; i <= n_quad; i++) {
       hyb_eq(i, _, _)      = itops.coefs2eval(hyb_c, it_eq(i));
-      hyb_refl_eq(i, _, _) = itops.coefs2eval(hyb_refl_c, it_eq(i));
+      // a backward line enters as the transpose of the reflected hybridization
+      hyb_refl_eq(i, _, _) = nda::transpose(itops.coefs2eval(hyb_refl_c, it_eq(i)));
       Gt_eq(i, _, _)       = itops.coefs2eval(Gt_c, it_eq(i));
     }
 
@@ -237,7 +238,8 @@ namespace triqs_xca::dense::manual {
     auto hyb_c = nda::make_regular(hyb_coeffs), hyb_refl_c = nda::make_regular(hyb_refl_coeffs), Gt_c = nda::make_regular(Gt_coeffs);
     for (int i = 0; i <= n_quad; i++) {
       hyb_eq(i, _, _)      = itops.coefs2eval(hyb_c, it_eq(i));
-      hyb_refl_eq(i, _, _) = itops.coefs2eval(hyb_refl_c, it_eq(i));
+      // a backward line enters as the transpose of the reflected hybridization
+      hyb_refl_eq(i, _, _) = nda::transpose(itops.coefs2eval(hyb_refl_c, it_eq(i)));
       Gt_eq(i, _, _)       = itops.coefs2eval(Gt_c, it_eq(i));
     }
 

@@ -322,9 +322,8 @@ namespace triqs_xca::dense::manual {
     // auto hyb_eq = itops.coefs2eval(hyb, it_eq);
     for (int i = 0; i < n_quad + 1; i++) {
       hyb_eq(i, _, _)      = itops.coefs2eval(hyb_coeffs, it_eq(i));
-      hyb_refl_eq(i, _, _) = itops.coefs2eval(hyb_refl_coeffs, it_eq(i));
-      // added 29 May 2025 v
-      hyb_refl_eq(i, _, _) = nda::transpose(hyb_refl_eq(i, _, _));
+      // a backward line enters as the transpose of the reflected hybridization
+      hyb_refl_eq(i, _, _) = nda::transpose(itops.coefs2eval(hyb_refl_coeffs, it_eq(i)));
       Gt_eq(i, _, _)       = itops.coefs2eval(Gt_coeffs, it_eq(i));
     }
     nda::array<dcomplex, 3> Sigma_eq(n_quad + 1, N, N);
@@ -361,7 +360,8 @@ namespace triqs_xca::dense::manual {
                                        matmul(F3list(mu, _, _),
                                               matmul(Gt_eq(i1 - i2, _, _), matmul(F2list(lam, _, _), matmul(Gt_eq(i2, _, _), F1list(kap, _, _)))))));
 
-                      Sigma_eq(i, _, _) += sfM * w * hyb2(i - i2, lam, nu) * hyb1(i1, mu, kap) * FGFGFGF;
+                      // a line enters as hyb(time difference, index at the later vertex, index at the earlier vertex)
+                      Sigma_eq(i, _, _) += sfM * w * hyb2(i - i2, nu, lam) * hyb1(i1, mu, kap) * FGFGFGF;
                     } // sum over i2
                   } // sum over i1
                 } // sum over i
@@ -406,8 +406,8 @@ namespace triqs_xca::dense::manual {
     nda::array<dcomplex, 3> Gt_eq(n_quad + 1, N, N);
     for (int i = 0; i < n_quad + 1; i++) {
       hyb_eq(i, _, _)      = itops.coefs2eval(hyb_coeffs, it_eq(i));
-      hyb_refl_eq(i, _, _) = itops.coefs2eval(hyb_refl_coeffs, it_eq(i));
-      hyb_refl_eq(i, _, _) = nda::transpose(hyb_refl_eq(i, _, _));
+      // a backward line enters as the transpose of the reflected hybridization
+      hyb_refl_eq(i, _, _) = nda::transpose(itops.coefs2eval(hyb_refl_coeffs, it_eq(i)));
       Gt_eq(i, _, _)       = itops.coefs2eval(Gt_coeffs, it_eq(i));
     }
     nda::array<dcomplex, 3> Sigma_eq(n_quad + 1, N, N);
@@ -463,7 +463,8 @@ namespace triqs_xca::dense::manual {
                                                                                            matmul(F1list(o1, _, _),
                                                                                                   matmul(Gt_eq(j1, _, _), F0list(o0, _, _)))))))))));
 
-                                Sigma_eq(i, _, _) += sfM * w * hyb0(j3, o3, o0) * hyb1(j4 - j1, o1, o4) * hyb2(i - j2, o2, o5) * chain;
+                                // a line enters as hyb(time difference, index at the later vertex, index at the earlier vertex)
+                                Sigma_eq(i, _, _) += sfM * w * hyb0(j3, o3, o0) * hyb1(j4 - j1, o4, o1) * hyb2(i - j2, o5, o2) * chain;
                               } // sum over j1
                             } // sum over j2
                           } // sum over j3
