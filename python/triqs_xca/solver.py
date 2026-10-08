@@ -835,13 +835,7 @@ class Solver(object):
         n_vec = scatter_array_over_ranks(np.arange(n_max, dtype=np.int32))
 
         spgf = self.get_zero_single_particle_greens_function()
-        if self.has_dynamic_interactions:
-            n_orb = spgf.target_shape[0]
-            # FIXME! With the dense solver we compute all operator combinations not only single particle ones
-            # fix this by adjusting the dense spgf calculator
-            spgf.data[:] = self.d.compute_single_ptcle_gf(G, topology, n_vec)[:, :n_orb, :n_orb]  
-        else:
-            spgf.data[:] = self.d.compute_single_ptcle_gf(G, topology, n_vec)
+        spgf.data[:] = self.d.compute_single_ptcle_gf(G, topology, n_vec)
         spgf.data[:] = mpi.all_reduce(spgf.data)
 
         return spgf

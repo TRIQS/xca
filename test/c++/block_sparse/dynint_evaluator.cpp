@@ -447,7 +447,7 @@ namespace {
  * @brief Compare the single-particle Green's function with a dynamical interaction to the dense evaluator on the crossing order-2 topology
  *
  * @details A backbone whose internal line carries the interaction operator drops only that pair, turning the crossing -1 into +1. All three
- * overloads are compared. The dense spgf emits n_ext external legs, so only the leading n_hyb x n_hyb window is comparable.
+ * overloads are compared.
  */
 TEST(BlockSparseDynintEvaluator, spgf_matches_dense_with_dynamical_interactions) {
 
@@ -481,12 +481,12 @@ TEST(BlockSparseDynintEvaluator, spgf_matches_dense_with_dynamical_interactions)
   for (int i = 0; i < nb; ++i) f_ix_vec(i) = i;
 
   auto spgf_dense = D_dense.compute_single_ptcle_gf(G_fl, topology);
-  ASSERT_GE(spgf_dense.extent(1), n_hyb);
+  ASSERT_EQ(spgf_dense.extent(1), n_hyb);
 
   // (a) the whole-topology overload
   {
     SCOPED_TRACE("compute_single_ptcle_gf(G, topology)");
-    auto [err, scale] = test_utils::compare_leading_block(D.compute_single_ptcle_gf(G_bs, topology), spgf_dense, n_hyb);
+    auto [err, scale] = test_utils::compare_spgf(D.compute_single_ptcle_gf(G_bs, topology), spgf_dense);
     ASSERT_GT(scale, 0.05) << "vacuous test: the single-particle Green's function is too small for an absolute tolerance";
     EXPECT_LE(err, corr_tol) << "max|dense| = " << scale << ", max|bs - dense| = " << err;
   }
@@ -495,13 +495,13 @@ TEST(BlockSparseDynintEvaluator, spgf_matches_dense_with_dynamical_interactions)
     SCOPED_TRACE("compute_single_ptcle_gf(G, topology, f_ix)");
     auto acc = nda::zeros<dcomplex>(D.r, n_hyb, n_hyb);
     for (int f = 0; f < nb; ++f) acc += D.compute_single_ptcle_gf(G_bs, topology, f);
-    auto [err, scale] = test_utils::compare_leading_block(acc, spgf_dense, n_hyb);
+    auto [err, scale] = test_utils::compare_spgf(acc, spgf_dense);
     EXPECT_LE(err, corr_tol) << "max|dense| = " << scale << ", max|bs - dense| = " << err;
   }
   // (c) the flat-index-vector overload
   {
     SCOPED_TRACE("compute_single_ptcle_gf(G, topology, f_ix_vec)");
-    auto [err, scale] = test_utils::compare_leading_block(D.compute_single_ptcle_gf(G_bs, topology, f_ix_vec), spgf_dense, n_hyb);
+    auto [err, scale] = test_utils::compare_spgf(D.compute_single_ptcle_gf(G_bs, topology, f_ix_vec), spgf_dense);
     EXPECT_LE(err, corr_tol) << "max|dense| = " << scale << ", max|bs - dense| = " << err;
   }
 }
@@ -785,11 +785,11 @@ TEST(BlockSparseDynintEvaluator, matches_dense_on_the_interleaved_deep_subspace_
     EXPECT_LE(err, sigma_tol * std::max(1.0, scale)) << "max|Sigma_dense| = " << scale << ", max|bs - dense| = " << err;
   }
 
-  // spgf, a trace quantity without bridge, compared on the leading n_hyb window since the dense side emits all n_ext legs
+  // spgf, a trace quantity without bridge
   {
     SCOPED_TRACE("single-particle Green's function");
     auto spgf_dense   = D_dense.compute_single_ptcle_gf(G_flat, topology);
-    auto [err, scale] = test_utils::compare_leading_block(D.compute_single_ptcle_gf(Gt, topology), spgf_dense, n_hyb);
+    auto [err, scale] = test_utils::compare_spgf(D.compute_single_ptcle_gf(Gt, topology), spgf_dense);
     ASSERT_GT(scale, 1.0e-3) << "vacuous test: the spgf is too small to compare";
     EXPECT_LE(err, sigma_tol * std::max(1.0, scale)) << "max|spgf_dense| = " << scale << ", max|bs - dense| = " << err;
   }

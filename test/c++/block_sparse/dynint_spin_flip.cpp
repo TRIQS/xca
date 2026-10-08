@@ -184,7 +184,7 @@ TEST(BlockSparseDynintSpinFlip, self_energy_matches_dense_with_spin_flip_interac
 }
 
 /**
- * @brief Compare the single-particle Green's function to the dense evaluator on the leading n_hyb x n_hyb window
+ * @brief Compare the single-particle Green's function to the dense evaluator
  */
 TEST(BlockSparseDynintSpinFlip, spgf_matches_dense_with_spin_flip_interactions) {
 
@@ -208,15 +208,15 @@ TEST(BlockSparseDynintSpinFlip, spgf_matches_dense_with_spin_flip_interactions) 
   ASSERT_GT(D.get_num_single_ptcle_gf_backbones(topology), D_ferm.get_num_single_ptcle_gf_backbones(topology)) << "vacuous test: n_ext == n_hyb";
 
   auto spgf_dense = D_dense.compute_single_ptcle_gf(G_fl, topology);
-  ASSERT_GE(spgf_dense.extent(1), n_hyb);
+  ASSERT_EQ(spgf_dense.extent(1), n_hyb);
 
-  auto [err, scale] = test_utils::compare_leading_block(D.compute_single_ptcle_gf(G_bs, topology), spgf_dense, n_hyb);
+  auto [err, scale] = test_utils::compare_spgf(D.compute_single_ptcle_gf(G_bs, topology), spgf_dense);
   ASSERT_GT(scale, 1.0e-3) << "vacuous test: the single-particle Green's function is too small";
   EXPECT_LE(err, corr_tol) << "max|dense| = " << scale << ", max|bs - dense| = " << err;
 
   // check that the interaction changes the spgf
   auto spgf_ferm        = D_ferm.compute_single_ptcle_gf(G_bs, topology);
-  auto [d_err, d_scale] = test_utils::compare_leading_block(D.compute_single_ptcle_gf(G_bs, topology), spgf_ferm, n_hyb);
+  auto [d_err, d_scale] = test_utils::compare_spgf(D.compute_single_ptcle_gf(G_bs, topology), spgf_ferm);
   ASSERT_GT(d_err, 1.0e-8) << "vacuous test: the S+/S- interaction does not change the spgf at all";
 }
 

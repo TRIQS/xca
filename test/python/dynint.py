@@ -155,31 +155,12 @@ def test_dynint_chi(
         beta=2.1, eps0=-0.1, g=0.4, omega0=1., w_max=2.0, eps=1e-12,
         order=2, verbose=False, conserved_operators=[]):
 
-    """ Density-density susceptibility chi_nn(tau) = <T n(tau) n(0)> of the same model.
+    """ Density-density susceptibility chi_nn(tau) = <T n(tau) n(0)> of the same model, against ED.
 
     Unlike the single particle Green's function, chi_nn does get contributions from the
     dynamical interaction at every order above the first, so it exercises the interaction
-    vertices on the internal lines of the correlator diagrams.
-
-    The dense diagram evaluator can evaluate chi_nn in two ways:
-
-      A) as a component of the "single particle" correlator. The dynamical interaction
-         operators are appended to the field operators as additional flavours, so the
-         (n_hyb + i, n_hyb + j) component of compute_single_ptcle_gf() is <T O_i(tau) O_j(0)>.
-
-      B) directly, through compute_one_time_correlator(ops_tau=[O_i], ops_0=[O_j]).
-
-    Both sum the same backbone diagrams over the same flat indices, so they must agree
-    topology by topology. This pins down the number of interaction operators, n_int, being
-    handed to the CorrelatorBackbone: without it the interaction vertices on the internal
-    lines are counted as fermionic when the permutation parity is computed, and path A
-    comes out with the opposite sign for the topologies that carry an interaction line
-    (here the second order one, and two of the four at third order).
-
-    Path A used to be wrong for that reason. It did not affect the solver's own observables
-    - eval_one_time_correlator uses path B, and eval_single_particle_greens_function
-    discards the interaction components of path A - so this check reaches past the solver
-    and calls the diagram evaluator directly.
+    vertices on the internal lines of the correlator diagrams. The topology-resolved single
+    particle Green's function is checked to sum to the solver's one.
     """
 
     from triqs.operators import n
@@ -189,13 +170,7 @@ def test_dynint_chi(
                         conserved_operators=conserved_operators)
     S.solve(max_order=order, spgf_max_order=order, maxiter=8, tol=1e-8, verbose=False, hyb_comp=True)
 
-    # Path A reads component (n_hyb, n_hyb) of the single-particle correlator, which the block-sparse
-    # spgf of shape (r, n_hyb, n_hyb) does not have, so the A/B cross-check stays dense-only
-    two_path = S.use_dense_solver
-
     f_mesh = S.mesh_tau
-
-    # -- chi_nn against the ED reference, evaluated on the solver's imaginary time mesh
 
     chi = S.eval_one_time_correlator(
         S.G, max_order=order, ops_tau=[n('0', 0)], ops_0=[n('0', 0)])
@@ -207,31 +182,9 @@ def test_dynint_chi(
     if mpi.is_master_node():
         print(f'chi_nn error vs ED: {chi_error:2.2E}')
 
-    # -- chi_nn evaluated in two ways, topology by topology
-
-    n_hyb = len(S.fundamental_operators)
-    op = n('0', 0)
-
-    errors = []
-    for o in range(1, order + 1) if two_path else []:
-        for sign, topology in all_connected_pairings(o):
-            topology = np.array(topology, dtype=np.int32)
-
-            f_ix_vec = np.arange(
-                S.d.get_num_single_ptcle_gf_backbones(topology), dtype=np.int32)
-
-            chi_flavour = S.d.compute_single_ptcle_gf(
-                S.G, topology, f_ix_vec)[:, n_hyb, n_hyb]
-            chi_direct = S.d.compute_one_time_correlator(
-                S.G, [op], [op], S.atom_diag, topology, f_ix_vec)[:, 0, 0]
-
-            error = np.max(np.abs(chi_flavour - chi_direct))
-            errors.append(error)
-
-            if mpi.is_master_node():
-                print(f'O{o} topology {topology.tolist()}: '
-                      f'|chi_A - chi_B| = {error:2.2E}, |chi_A + chi_B| = '
-                      f'{np.max(np.abs(chi_flavour + chi_direct)):2.2E}')
+    spgf_sum = sum((-1)**o * S.eval_single_particle_greens_function_topology(S.G, np.array(topology, dtype=np.int32)).data
+                   for o in range(1, order + 1) for _, topology in all_connected_pairings(o))
+    spgf_error = np.max(np.abs(S.eval_single_particle_greens_function(S.G, order).data - spgf_sum))
 
     if verbose and mpi.is_master_node():
         from triqs.plot.mpl_interface import oplot, plt
@@ -243,12 +196,8 @@ def test_dynint_chi(
     assert chi_error < 0.1 * g**2, \
         f'chi_nn deviates from the ED reference by {chi_error:2.2E}'
 
-    if two_path:
-        assert np.max(errors) < 1e-10, \
-            f'chi_nn from compute_single_ptcle_gf and from compute_one_time_correlator ' \
-            f'disagree by {np.max(errors):2.2E}'
-    else:
-        assert not errors, 'the A/B cross-check must not run on the block-sparse path'
+    assert spgf_error < 1e-12, \
+        f'the topology-resolved single particle Green\'s function sums to {spgf_error:2.2E} off the solver\'s one'
 
 
 def test_convergence_rate(verbose=False, conserved_operators=[], orders=[1, 2]):

@@ -96,54 +96,65 @@ namespace {
 
 } // namespace
 
+/**
+ * @brief Check that the flat-index overloads of compute_single_ptcle_gf() agree with the whole-topology one with dynamical interactions
+ *
+ * @details The fermionic order-2 spgf of a single level vanishes backbone by backbone, so this uses the single-subspace twin of
+ * unequal_sym_set_model with a density interaction on one orbital, where the parity of the interaction line changes the result.
+ */
 TEST(DenseDynint, spgf_flat_index_overloads_agree) {
 
   double beta   = 2.0;
   double Lambda = 20.0 * beta;
   double eps    = 1.0e-8;
 
-  auto m = dynint_model(beta, Lambda, eps);
+  auto ad     = test_utils::unequal_sym_set_model(false);
+  auto G_ppsc = test_utils::ad_to_atom_prop(ad, beta, Lambda, eps);
+  int n_hyb   = static_cast<int>(ad.get_fops().size());
+  int p       = 2;
+
+  nda::vector<double> hyb_poles = {1.3, -0.8};
+  nda::array<dcomplex, 3> hyb_coeffs(p, n_hyb, n_hyb);
+  for (int l = 0; l < p; ++l)
+    for (int i = 0; i < n_hyb; ++i)
+      for (int j = 0; j < n_hyb; ++j) hyb_coeffs(l, i, j) = dcomplex(0.4 - 0.1 * l + 0.05 * (i - j), 0.03 * (i + 2 * j));
+
+  std::vector<many_body_operator_real> dynint_ops = {n<double>("A", 0)};
+  auto dynint_coeffs                              = nda::zeros<dcomplex>(p, 1, 1);
+  dynint_coeffs(0, 0, 0)                          = 0.9;
+  dynint_coeffs(1, 0, 0)                          = 0.6;
 
   nda::array<int, 2> topology = {{0, 2}, {1, 3}}; // second order: one internal line
 
-  DiagramEvaluator D(m.hyb_poles, m.hyb_coeffs, m.G_ppsc[0].mesh(), m.ad, m.dynint_ops, m.dynint_coeffs);
-
-  ASSERT_EQ(D.n_hyb, 1);
+  DiagramEvaluator D(hyb_poles, hyb_coeffs, G_ppsc[0].mesh(), ad, dynint_ops, dynint_coeffs);
   ASSERT_EQ(D.n_int, 1);
-  ASSERT_EQ(D.n, 2);
 
   // Reference: sums all backbones internally, with n_int passed to the CorrelatorBackbone.
-  auto spgf_all = D.compute_single_ptcle_gf(m.G_ppsc, topology);
+  auto spgf_all = D.compute_single_ptcle_gf(G_ppsc, topology);
 
-  // Guard against a vacuous test: there must be backbones that put the interaction
-  // operator on the internal line, i.e. bosonic vertices whose parity is at stake. (Note
-  // that the total contribution of those backbones may well cancel - what this test
-  // probes is the parity assigned to each of them individually.)
-  DiagramEvaluator D_no_dynint(m.hyb_poles, m.hyb_coeffs, m.G_ppsc[0].mesh(), m.ad);
+  // the external legs are the fermionic flavours only
+  ASSERT_EQ(spgf_all.extent(1), n_hyb);
+  ASSERT_EQ(spgf_all.extent(2), n_hyb);
+  double scale = nda::max_element(nda::abs(spgf_all));
+  ASSERT_GT(scale, 1.0e-2) << "vacuous test: the single-particle Green's function vanishes";
 
-  int n_backbones          = D.get_num_single_ptcle_gf_backbones(topology);
-  int n_backbones_fermonic = D_no_dynint.get_num_single_ptcle_gf_backbones(topology);
-  ASSERT_GT(n_backbones, n_backbones_fermonic) << "vacuous test: no backbone carries the interaction operator";
+  // check that the parity of the interaction line matters, by evaluating with a backbone that calls it fermionic
+  CorrelatorBackbone backbone_without_n_int(topology, D.n, 0);
+  auto spgf_without_n_int =
+     D.eval_correlator(G_ppsc[0].data(), backbone_without_n_int, D.Fset.Fs(nda::range(n_hyb), _, _), D.Fset.F_dags(nda::range(n_hyb), _, _));
+  ASSERT_GT(nda::max_element(nda::abs(spgf_all - spgf_without_n_int)), 1.0e-3 * scale)
+     << "vacuous test: the parity of the interaction line does not change the single-particle Green's function";
+
+  int n_backbones = D.get_num_single_ptcle_gf_backbones(topology);
 
   // Path 1: the vector overload, used by the solver for the MPI distributed evaluation.
   nda::vector<int> f_ix_vec(n_backbones);
   for (int f_ix = 0; f_ix < n_backbones; ++f_ix) f_ix_vec(f_ix) = f_ix;
-  auto spgf_vec = D.compute_single_ptcle_gf(m.G_ppsc, topology, f_ix_vec);
+  auto spgf_vec = D.compute_single_ptcle_gf(G_ppsc, topology, f_ix_vec);
 
   // Path 2: accumulating the single flat index overload.
   auto spgf_single = nda::make_regular(0 * spgf_all);
-  for (int f_ix = 0; f_ix < n_backbones; ++f_ix) spgf_single += D.compute_single_ptcle_gf(m.G_ppsc, topology, f_ix);
-
-  // On failure, report which components disagree: the interaction components are the ones
-  // at risk, since only they can put a bosonic vertex on an internal line.
-  for (int mu = 0; mu < D.n; ++mu) {
-    for (int kap = 0; kap < D.n; ++kap) {
-      double err = nda::max_element(nda::abs(spgf_all(_, mu, kap) - spgf_vec(_, mu, kap)));
-      if (err > 1.0e-12)
-        std::cout << "component (" << mu << ", " << kap << "): max|all - vec| = " << err
-                  << ", max|all| = " << nda::max_element(nda::abs(spgf_all(_, mu, kap))) << "\n";
-    }
-  }
+  for (int f_ix = 0; f_ix < n_backbones; ++f_ix) spgf_single += D.compute_single_ptcle_gf(G_ppsc, topology, f_ix);
 
   EXPECT_LE(nda::max_element(nda::abs(spgf_all - spgf_vec)), 1.0e-12)
      << "compute_single_ptcle_gf(G, topology, f_ix_vec) disagrees with compute_single_ptcle_gf(G, topology)";

@@ -426,8 +426,9 @@ namespace triqs_xca::dense {
   nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(gf_vt G_ppsc, nda::array_const_view<int, 2> topology) {
     CorrelatorBackbone backbone(topology, n, n_int);
 
-    auto mu_ops  = Fset.Fs;
-    auto kap_ops = Fset.F_dags;
+    // the external legs are the fermionic flavours only, not the dynamical-interaction operators appended to Fset
+    auto mu_ops  = Fset.Fs(nda::range(n_hyb), _, _);
+    auto kap_ops = Fset.F_dags(nda::range(n_hyb), _, _);
 
     /*
       auto correlator = triqs::gfs::gf<triqs::mesh::dlr_imtime>(
@@ -440,8 +441,8 @@ namespace triqs_xca::dense {
 
   nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(gf_vt G_ppsc, nda::array_const_view<int, 2> topology, int f_ix) {
     CorrelatorBackbone backbone(topology, n, n_int);
-    auto mu_ops  = Fset.Fs;
-    auto kap_ops = Fset.F_dags;
+    auto mu_ops  = Fset.Fs(nda::range(n_hyb), _, _);
+    auto kap_ops = Fset.F_dags(nda::range(n_hyb), _, _);
 
     /*
       auto correlator = triqs::gfs::gf<triqs::mesh::dlr_imtime>(
@@ -454,8 +455,8 @@ namespace triqs_xca::dense {
 
   nda::array<dcomplex, 3> DiagramEvaluator::compute_single_ptcle_gf(gf_vt G_ppsc, nda::array_const_view<int, 2> topology, nda::array_const_view<int, 1> f_ix_vec) {
     CorrelatorBackbone backbone(topology, n, n_int);
-    auto mu_ops  = Fset.Fs;
-    auto kap_ops = Fset.F_dags;
+    auto mu_ops  = Fset.Fs(nda::range(n_hyb), _, _);
+    auto kap_ops = Fset.F_dags(nda::range(n_hyb), _, _);
 
     /*
       auto correlator = triqs::gfs::gf<triqs::mesh::dlr_imtime>(
