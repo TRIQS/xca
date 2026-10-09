@@ -15,37 +15,52 @@ class Dummy():
     def __init__(self): pass
 
 
-def load_data(filename):
+def load_data(filename, color, markers=False):
     print(f'--> Loading: {filename}')
     with HDFArchive(filename, 'r') as A:
         d = Dummy()
         for key in A.keys():
             setattr(d, key, A[key])
-        d.color = plt.plot([], [])[0].get_color()
+        d.color = color
+        d.markers = markers
 
     return d
+
+
+def plot_g(d, tau, g, ls='-', **kwargs):
+    if d.markers:
+        plt.plot(tau[::5], g[::5], 'o', color=d.color, ms=3, mfc='none', mew=0.75, **kwargs)
+    else:
+        plt.plot(tau, g, ls, color=d.color, alpha=0.75, **kwargs)
     
 if __name__ == '__main__':
 
-    plt.figure(figsize=(3.25, 3.5))
-
-    if False:
-        plt.figure(figsize=(3.25*3, 3.5*3))
-        subp = [6, 2, 1]
-
     #filename = 'data_cro_fastdiag_nca_beta_5.0_soc_0.2.h5'
+    color_1st, color_2nd = '#0072B2', '#D55E00' # Okabe-Ito blue and vermillion
+
     filename = 'data_cro_fastdiag_1_beta_5.0_soc_0.2.h5'
-    nca = load_data(filename)
-    nca.style = '-'
+    nca = load_data(filename, color_1st)
     nca.label = '1st (fastdiag)'
     nca.TrG = np.sum(np.diag(nca.G_faa[-1]))
 
     #filename = 'data_cro_fastdiag_oca_beta_5.0_soc_0.2.h5'
     filename = 'data_cro_fastdiag_2_beta_5.0_soc_0.2.h5'
-    oca = load_data(filename)
-    oca.style = ':'
+    oca = load_data(filename, color_2nd)
     oca.label = '2nd (fastdiag)'
     oca.TrG = np.sum(np.diag(oca.G_faa[-1]))
+
+    filename = 'data_cro_xcabss_1_beta_5.0_soc_0.2.h5'
+    nca_xca = load_data(filename, color_1st, markers=True)
+    nca_xca.label = '1st (xca)'
+    nca_xca.TrG = np.sum(np.diag(nca_xca.G_faa[-1]))
+
+    filename = 'data_cro_xcabss_2_beta_5.0_soc_0.2.h5'
+    oca_xca = load_data(filename, color_2nd, markers=True)
+    oca_xca.label = '2nd (xca)'
+    oca_xca.TrG = np.sum(np.diag(oca_xca.G_faa[-1]))
+
+    print(f'1st order xca vs fastdiag: max|dg| = {np.max(np.abs(nca_xca.g_faa - nca.g_faa)):2.2E}')
+    print(f'2nd order xca vs fastdiag: max|dg| = {np.max(np.abs(oca_xca.g_faa - oca.g_faa)):2.2E}')
     
     #filename = 'data_cro_ppsc_nca_beta_5.0_soc_0.2.h5'
     #nca_ref = load_data(filename)
@@ -62,72 +77,48 @@ if __name__ == '__main__':
     #print(f'nca diff {np.max(np.abs(nca.g_faa - nca_ref.g_faa))}')
     #print(f'oca diff {np.max(np.abs(oca.g_faa - oca_ref.g_faa))}')
     
-    plt.gca().remove()
+    # -- Compare fastdiag and xca: hybridization, pseudo-particle Green's function and self-energy
 
-    if False:
-        results = [oca, oca_ref]
-        #results = [oca]
-        #results = [nca, nca_ref]
+    titles = {'delta_faa': r'\Delta', 'G_faa': r'G', 'Sigma_faa': r'\Sigma'}
 
-        diff = Dummy()
-        diff.G_faa = nca.G_faa - nca_ref.G_faa
-        diff.Sigma_faa = nca.Sigma_faa - nca_ref.Sigma_faa
-        diff.delta_faa = nca.delta_faa - nca_ref.delta_faa
-        diff.tau_f = nca.tau_f
-        diff.style = '-'
-        diff.color = 'r'
+    for ref, xca in [(nca, nca_xca), (oca, oca_xca)]:
 
-        for flt in [np.real, np.imag]:
-            plt.subplot(*subp); subp[-1] += 1
-            for d in results:
-                plt.plot([], [], d.style, color=d.color, label=d.label)
-                for i, j in product(range(d.delta_faa.shape[-1]), repeat=2):
-                    plt.plot(d.tau_f, -flt(d.delta_faa[:, i, j]), d.style, color=d.color, alpha=0.75)
+        plt.figure(figsize=(3.25*3, 3.5*3))
+        subp = [6, 2, 1]
 
-            plt.legend(loc='upper right')
+        for d in [ref, xca]:
+            print(f'{d.label} Tr[G] = {d.TrG}')
 
-            plt.subplot(*subp); subp[-1] += 1
-            d = diff
-            for i, j in product(range(d.delta_faa.shape[-1]), repeat=2):
-                plt.plot(d.tau_f, -flt(d.delta_faa[:, i, j]), d.style, color=d.color, alpha=0.75)
+        for key, title in titles.items():
+            A, B = getattr(ref, key), getattr(xca, key)
+            ij = [ (i, j) for i, j in product(range(A.shape[-1]), repeat=2)
+                   if max(np.max(np.abs(A[:, i, j])), np.max(np.abs(B[:, i, j]))) > 1e-12 ]
+            print(f'order {ref.order}: max|{key} xca - fastdiag| = {np.max(np.abs(B - A)):2.2E}')
 
+            for flt, part in [(np.real, 'Re'), (np.imag, 'Im')]:
+                plt.subplot(*subp); subp[-1] += 1
+                for d in [ref, xca]:
+                    plot_g(d, np.array([]), np.array([]), label=d.label)
+                    for i, j in ij:
+                        plot_g(d, d.tau_f, -flt(getattr(d, key)[:, i, j]))
+                plt.ylabel(rf'$-\mathrm{{{part}}}\, {title}(\tau)$')
+                plt.legend(loc='upper right')
 
-        for flt in [np.real, np.imag]:
-            plt.subplot(*subp); subp[-1] += 1
-            for d in results:
-                print(f'{d.label} Tr[G] = {d.TrG}')
-                plt.plot([], [], d.style, color=d.color, label=d.label)
-                for i, j in product(range(d.Sigma_faa.shape[-1]), repeat=2):
-                    plt.plot(d.tau_f, -flt(d.G_faa[:, i, j]), d.style, color=d.color, alpha=0.75)
+                plt.subplot(*subp); subp[-1] += 1
+                for i, j in ij:
+                    plt.plot(ref.tau_f, -flt(B[:, i, j] - A[:, i, j]), '-', color='k', alpha=0.75)
+                plt.title('xca - fastdiag', fontsize=8)
 
-            plt.legend(loc='upper right')
-
-            plt.subplot(*subp); subp[-1] += 1
-            d = diff
-            for i, j in product(range(d.Sigma_faa.shape[-1]), repeat=2):
-                plt.plot(d.tau_f, -flt(d.G_faa[:, i, j]), d.style, color=d.color, alpha=0.75)
-
-        for flt in [np.real, np.imag]:
-            plt.subplot(*subp); subp[-1] += 1
-            for d in results:
-                plt.plot([], [], d.style, color=d.color, label=d.label)
-                for i, j in product(range(d.Sigma_faa.shape[-1]), repeat=2):
-                    plt.plot(d.tau_f, -flt(d.Sigma_faa[:, i, j]), d.style, color=d.color, alpha=0.75)
-
-            plt.subplot(*subp); subp[-1] += 1
-            d = diff
-            for i, j in product(range(d.Sigma_faa.shape[-1]), repeat=2):
-                plt.plot(d.tau_f, -flt(d.Sigma_faa[:, i, j]), d.style, color=d.color, alpha=0.75)
+        for ax in plt.gcf().axes[-2:]:
+            ax.set_xlabel(r'$\tau$')
 
         plt.tight_layout()
-        #plt.show()
-
-        #exit()
+        plt.savefig(f'figure_cro_compare_order_{ref.order}.pdf')
 
     #results = [nca, nca_ref, oca, oca_ref]
-    results = [nca, oca]
+    results = [nca, oca, nca_xca, oca_xca]
     
-    #plt.figure(figsize=(3.25, 3.5))
+    plt.figure(figsize=(3.25, 3.5))
     subp = [2, 1, 1]
 
     from matplotlib.gridspec import GridSpec
@@ -144,15 +135,15 @@ if __name__ == '__main__':
     plt.subplot(gs[0,:])
     
     for d in results:
-        plt.plot([], [], '-', color=d.color, label=f'{d.label} order')
+        plot_g(d, np.array([]), np.array([]), label=f'{d.label} order')
 
     for d in results:
-        plt.plot(d.tau_f, -d.g_faa[:, 2, 2].real, '--', color=d.color, alpha=0.75)
+        plot_g(d, d.tau_f, -d.g_faa[:, 2, 2].real, '--')
 
     for d in results:
         g_faa = d.g_faa[:, 0, 0] + d.g_faa[:, 1, 1]
         g_faa *= 0.5
-        plt.plot(d.tau_f, -g_faa.real, '-', color=d.color, alpha=0.75)
+        plot_g(d, d.tau_f, -g_faa.real, '-')
         
     plt.plot([], [], '-', color='gray', label=r'$-( G_{xz} + G_{yz} ) / 2$')
     plt.plot([], [], '--', color='gray', label=r'$-G_{xy}$')
@@ -160,14 +151,17 @@ if __name__ == '__main__':
     plt.xlabel(r'$\tau$')
     plt.ylim([0, 1.0])
 
-    plt.legend(fontsize=8)
+    handles, labels = plt.gca().get_legend_handles_labels()
+    order = [0, 1, 4, 2, 3, 5] # fastdiag in the first column, xca in the second
+    plt.legend([handles[i] for i in order], [labels[i] for i in order],
+               fontsize=7, ncol=2, columnspacing=0.8, handlelength=1.5)
 
     #subp = [2, 2, 3]
     #plt.subplot(*subp); subp[-1] += 1
     plt.subplot(gs[1,0])
 
     for d in results:
-        plt.plot(d.tau_f, -d.g_faa[:, 0, 1].imag, '-', color=d.color, lw=1.0, alpha=0.75)
+        plot_g(d, d.tau_f, -d.g_faa[:, 0, 1].imag, '-', lw=1.0)
 
     #plt.plot([], [], '--', color='gray', label=r'$- Im[ G_{xz, yz} ]$')
     plt.xlabel(r'$\tau$', labelpad=-7)
@@ -180,7 +174,7 @@ if __name__ == '__main__':
     for d in results:
         g_faa = d.g_faa[:, 0, 0] - d.g_faa[:, 1, 1]
         g_faa *= 0.5
-        plt.plot(d.tau_f, -g_faa.real, '-', color=d.color, lw=1.0, alpha=0.75)
+        plot_g(d, d.tau_f, -g_faa.real, '-', lw=1.0)
 
         
     #plt.plot([], [], '-', color='gray', label=r'$-( G_{xz} - G_{yz} )$')
